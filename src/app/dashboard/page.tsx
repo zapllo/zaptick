@@ -58,7 +58,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
             <p className="text-muted-foreground">
-              Welcome back! Here's an overview of your WhatsApp Business account.
+              Welcome back! Here&apos;s an overview of your WhatsApp Business account.
             </p>
           </div>
           <div className="flex gap-2">

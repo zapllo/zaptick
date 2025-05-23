@@ -158,7 +158,7 @@ export default function Hero() {
                 <div>
                   <p className="text-xs font-semibold mb-1">John (Customer)</p>
                   <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg text-xs">
-                    Hi there! I'm interested in your products. Can you help me?
+                    Hi there! I&apos;m interested in your products. Can you help me?
                   </div>
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-[10px] text-muted-foreground">2 min ago</span>

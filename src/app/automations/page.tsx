@@ -728,7 +728,7 @@ export default function AutomationsPage() {
                       </div>
                       <div>
                         <h4 className="font-medium">Customer Inactivity</h4>
-                        <p className="text-sm text-muted-foreground">When a customer hasn't engaged for a period</p>
+                        <p className="text-sm text-muted-foreground">When a customer hasn&apos;t engaged for a period</p>
                       </div>
                     </div>
                   </div>
@@ -792,7 +792,7 @@ export default function AutomationsPage() {
                 <label className="text-sm font-medium">Preview</label>
                 <div className="border rounded-md p-4 bg-muted/30">
                   <div className="bg-[#dcf8c6] dark:bg-[#005c4b] p-3 rounded-lg max-w-[85%] ml-auto mb-3">
-                    <p className="text-sm">Hello , welcome to our business! We're excited to have you here. Feel free to reach out if you have any questions.</p>
+                    <p className="text-sm">Hello , welcome to our business! We&apos;re excited to have you here. Feel free to reach out if you have any questions.</p>
                     <div className="flex justify-end mt-1 text-xs opacity-70">
                       Now • Delivered
                     </div>
@@ -883,7 +883,7 @@ export default function AutomationsPage() {
                     <div className="flex items-center gap-2">
                       <Checkbox id="respectTimeZone" />
                       <label htmlFor="respectTimeZone" className="text-sm">
-                        Respect recipient's time zone
+                        Respect recipient&apos;s time zone
                       </label>
                     </div>
                   </div>
@@ -905,7 +905,7 @@ export default function AutomationsPage() {
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="font-medium">Activate immediately</div>
-                      <div className="text-sm text-muted-foreground">Turn on this automation as soon as it's created</div>
+                      <div className="text-sm text-muted-foreground">Turn on this automation as soon as it&apos;s created</div>
                     </div>
                     <Switch defaultChecked />
                   </div>

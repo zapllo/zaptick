@@ -84,7 +84,7 @@ export default function StatsSection() {
           <div>
             <h3 className="text-2xl font-bold mb-4">Real-time business impact</h3>
             <p className="text-muted-foreground mb-6">
-              Our customers typically see a 3x ROI within the first 30 days of implementing ZapTick's WhatsApp Business solution.
+              Our customers typically see a 3x ROI within the first 30 days of implementing ZapTick&apos;s WhatsApp Business solution.
             </p>
             <div className="grid grid-cols-2 gap-4">
               {[

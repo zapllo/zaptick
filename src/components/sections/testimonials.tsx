@@ -144,7 +144,7 @@ export default function TestimonialsSection() {
                       <Quote className="absolute top-0 left-0 h-10 w-10 text-emerald-100 dark:text-emerald-900/50" />
                       <div className="md:pl-12 pt-12 md:pt-0">
                         <p className="text-lg md:text-xl leading-relaxed mb-6">
-                          "{testimonial.content}"
+                          &quot;{testimonial.content}&quot;
                         </p>
                         <div className="flex gap-4">
                           <Button variant="outline" size="sm">Read Case Study</Button>

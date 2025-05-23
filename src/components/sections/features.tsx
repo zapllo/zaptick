@@ -335,7 +335,7 @@ export default function FeaturesSection() {
       <div className="mt-24 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-3xl p-8 md:p-12">
         <div className="text-center mb-12">
           <h3 className="text-2xl md:text-3xl font-bold mb-4">Interactive User Experience</h3>
-          <p className="text-muted-foreground max-w-2xl mx-auto">See how ZapTick's features work together to create a seamless WhatsApp business experience.</p>
+          <p className="text-muted-foreground max-w-2xl mx-auto">See how ZapTick&apos;s features work together to create a seamless WhatsApp business experience.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -355,13 +355,13 @@ export default function FeaturesSection() {
             <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mt-4">
               <div className="flex flex-col gap-2">
                 <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm p-2 rounded-lg">
-                  "Thanks for your interest! Would you like to see our latest collection?"
+                  &quot;Thanks for your interest! Would you like to see our latest collection?&quot;
                 </div>
                 <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-sm p-2 rounded-lg">
-                  "I'd be happy to help you track your order. Could you provide your order number?"
+                  &quot;I&apos;d be happy to help you track your order. Could you provide your order number?&quot;
                 </div>
                 <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-sm p-2 rounded-lg">
-                  "We have a special discount for you! Would you like to learn more?"
+                  &quot;We have a special discount for you! Would you like to learn more?&quot;
                 </div>
               </div>
               <Button variant="ghost" size="sm" className="w-full mt-3 text-xs">Use suggestion</Button>

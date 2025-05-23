@@ -69,7 +69,7 @@ export default function CtaSection() {
                 ) : (
                   <div className="flex items-center gap-2 bg-white/20 p-3 rounded-lg mb-8">
                     <CheckCircle className="h-5 w-5 text-white" />
-                    <p className="text-white">Thanks! We'll be in touch soon.</p>
+                    <p className="text-white">Thanks! We&apos;ll be in touch soon.</p>
                   </div>
                 )}
               </motion.div>

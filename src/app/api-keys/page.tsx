@@ -392,7 +392,7 @@ export default function ApiKeysPage() {
                   <CheckCircle className="h-5 w-5 mr-2 mt-0.5" />
                   <div>
                     <p className="font-medium">API Key created successfully</p>
-                    <p className="mt-1">Make sure to copy your API key now. You won't be able to see it again!</p>
+                    <p className="mt-1">Make sure to copy your API key now. You won&apos;t be able to see it again!</p>
                   </div>
                 </div>
               </div>

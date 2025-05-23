@@ -1171,7 +1171,7 @@ export default function ChatbotsPage() {
                         <div className="border rounded-md p-3 bg-muted/30 h-64 flex flex-col">
                           <div className="flex-1 overflow-y-auto space-y-3 p-2">
                             <div className="bg-muted/50 rounded-lg p-3 max-w-[80%]">
-                              <p className="text-sm">Hello! I'm the {chatbot.name}. How can I help you today?</p>
+                              <p className="text-sm">Hello! I&apos;m the {chatbot.name}. How can I help you today?</p>
                             </div>
 
                             <div className="bg-[#dcf8c6] dark:bg-[#005c4b] p-3 rounded-lg max-w-[80%] ml-auto">
@@ -1179,7 +1179,7 @@ export default function ChatbotsPage() {
                             </div>
 
                             <div className="bg-muted/50 rounded-lg p-3 max-w-[80%]">
-                              <p className="text-sm">I'd be happy to help you with your order. Could you please provide your order number so I can look up the details?</p>
+                              <p className="text-sm">I&apos;d be happy to help you with your order. Could you please provide your order number so I can look up the details?</p>
                             </div>
                           </div>
 

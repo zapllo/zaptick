@@ -356,7 +356,7 @@ export default function ConversationsPage() {
                   <div className="flex flex-col items-center justify-center h-full text-center p-4">
                     <MessageSquare className="h-10 w-10 text-muted-foreground mb-2" />
                     <h3 className="font-medium">No assigned conversations</h3>
-                    <p className="text-sm text-muted-foreground">You don't have any assigned conversations</p>
+                    <p className="text-sm text-muted-foreground">You don&apos;t have any assigned conversations</p>
                   </div>
                 )}
               </TabsContent>

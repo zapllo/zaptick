@@ -628,7 +628,7 @@ export default function TemplatesPage() {
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                Use , etc. for variables. You'll define these in the next step.
+                Use , etc. for variables. You&apos;ll define these in the next step.
               </p>
             </div>
 
