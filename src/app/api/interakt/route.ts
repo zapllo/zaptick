@@ -1,63 +1,72 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/interakt/route.ts (Edge or Node runtime)
 
-const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN!;
-const INTERAKT_API_TOKEN = process.env.INTERAKT_API_TOKEN!;
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';                    // works in Node; in Edge use globalThis.crypto
+
+const HMAC_SECRET = process.env.INTERAKT_WEBHOOK_SECRET!;   // the “Secret Key” in Interakt
 const INTERAKT_ONBOARDING_URL = 'https://api.interakt.ai/v1/organizations/tp-signup/';
 
+/* ---------- Optional GET helper ---------- */
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const mode = url.searchParams.get('hub.mode');
-  const token = url.searchParams.get('hub.verify_token');
-  const challenge = url.searchParams.get('hub.challenge');
+  const { searchParams } = new URL(req.url);
+  const challenge = searchParams.get('hub.challenge');
 
-  if (mode === 'subscribe' && token === VERIFY_TOKEN && challenge) {
-    return new Response(challenge, { status: 200 });
+  // Interakt never calls this, but it’s convenient for health-checks
+  if (challenge) {
+    return new Response(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
   }
+  return new Response('OK', { status: 200 });
+}
 
-  return new Response('Verification failed', { status: 403 });
+/* ---------- Main webhook handler ---------- */
+function validSignature(raw: string, received: string) {
+  const expected =
+    'sha256=' +
+    crypto.createHmac('sha256', HMAC_SECRET).update(raw).digest('hex');
+  // constant-time compare to avoid timing attacks
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    console.log('Webhook Payload:', JSON.stringify(body, null, 2));
+  // Grab the raw body BEFORE parsing!
+  const rawBody = await req.text();
+  const signature = req.headers.get('interakt-signature') || '';
 
-    const event = body?.entry?.[0]?.changes?.[0]?.value?.event;
-    const waba_info = body?.entry?.[0]?.changes?.[0]?.value?.waba_info;
+  if (!validSignature(rawBody, signature)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
 
-    if (event === 'PARTNER_ADDED' && waba_info?.waba_id && waba_info?.solution_id) {
-      const response = await fetch(INTERAKT_ONBOARDING_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: INTERAKT_API_TOKEN,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          entry: [
-            {
-              changes: [
-                {
-                  value: {
-                    event: 'PARTNER_ADDED',
-                    waba_info: {
-                      waba_id: waba_info.waba_id,
-                      solution_id: waba_info.solution_id,
-                    },
+  const body = JSON.parse(rawBody);
+  const event = body?.entry?.[0]?.changes?.[0]?.value?.event;
+  const waba = body?.entry?.[0]?.changes?.[0]?.value?.waba_info;
+
+  if (event === 'PARTNER_ADDED' && waba?.waba_id && waba?.solution_id) {
+    await fetch(INTERAKT_ONBOARDING_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: process.env.INTERAKT_API_TOKEN!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        object: 'tech_partner',
+        entry: [
+          {
+            changes: [
+              {
+                value: {
+                  event,
+                  waba_info: {
+                    waba_id: waba.waba_id,
+                    solution_id: waba.solution_id,
                   },
                 },
-              ],
-            },
-          ],
-          object: 'tech_partner',
-        }),
-      });
-
-      console.log('Triggered Interakt Onboarding:', await response.json());
-    }
-
-    return NextResponse.json({ received: true }, { status: 200 });
-  } catch (err) {
-    console.error('Webhook Error:', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+              },
+            ],
+          },
+        ],
+      }),
+    });
   }
+
+  return NextResponse.json({ received: true }, { status: 200 });
 }
