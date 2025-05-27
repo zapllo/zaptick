@@ -13,14 +13,19 @@ interface MongooseCache {
 }
 
 // Define property on global namespace
+// ... existing code ...
+
+// Define property on global namespace
 declare global {
+  // eslint-disable-next-line no-var
   var mongoose: MongooseCache | undefined;
 }
 
-let cached = global.mongoose;
+// ... existing code ...
+let cached: MongooseCache = (global as any).mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = (global as any).mongoose = { conn: null, promise: null };
 }
 
 async function dbConnect() {
