@@ -116,9 +116,6 @@ export default function ConnectWabaButton() {
   return (
     <Card className="flex flex-col justify-center items-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-dashed border-2 h-full">
       <CardHeader className="text-center">
-        <CardDescription>
-          Connect a new WhatsApp Business Account
-        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-4">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
