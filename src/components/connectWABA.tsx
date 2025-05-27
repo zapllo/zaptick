@@ -22,13 +22,18 @@ export default function ConnectWabaButton() {
   const [isConnecting, setIsConnecting] = useState(false);
   const { user } = useAuth();
 
+  // ... existing code ...
+
   useEffect(() => {
     // Poll until window.FB appears
     const t = setInterval(() => {
       if (window.FB?.init) {
+        console.log('Current domain:', window.location.hostname);
+        console.log('Current origin:', window.location.origin);
+
         window.FB.init({
           appId: process.env.NEXT_PUBLIC_META_APP_ID,
-          xfbml: false,
+          xfbml: true,
           version: "v19.0",
         });
         setSdkReady(true);
@@ -38,10 +43,14 @@ export default function ConnectWabaButton() {
     return () => clearInterval(t);
   }, []);
 
+  // ... rest of the code ... 
+
   // Listen for embedded signup completion events
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== "https://www.facebook.com" && event.origin !== "https://web.facebook.com") {
+      // Allow both facebook.com and web.facebook.com
+      if (event.origin !== "https://www.facebook.com" &&
+        event.origin !== "https://web.facebook.com") {
         return;
       }
 
@@ -80,6 +89,7 @@ export default function ConnectWabaButton() {
     // Launch Facebook login with embedded signup
     window.FB.login(
       (response: any) => {
+        console.log('FB Login Response:', response);
         if (response.authResponse) {
           console.log('Facebook login successful');
           // The embedded signup flow will continue automatically
@@ -89,12 +99,12 @@ export default function ConnectWabaButton() {
         }
       },
       {
-        config_id: process.env.NEXT_PUBLIC_CONFIG_ID, // Your WhatsApp embedded signup config ID
+        config_id: process.env.NEXT_PUBLIC_CONFIG_ID,
         response_type: 'code',
         override_default_response_type: true,
         extras: {
           setup: {
-            userId: user.id, // This will be passed to your Interakt webhook
+            userId: user.id,
           },
         },
       }
