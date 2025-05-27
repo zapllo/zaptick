@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const TP_SIGNUP_URL = 'https://api.interakt.ai/v1/organizations/tp-signup/';
 const INT_API_TOKEN = process.env.INTERAKT_API_TOKEN!;
-
+const SOLUTION_ID = process.env.NEXT_PUBLIC_SOLUTION_ID!;
 export async function POST(request: NextRequest) {
   try {
     const { wabaId, phoneNumberId, businessName, userId } = await request.json();
@@ -25,10 +25,11 @@ export async function POST(request: NextRequest) {
         changes: [{
           value: {
             event: 'PARTNER_ADDED',
+
             waba_info: {
               waba_id: wabaId,
-              phone_number_id: phoneNumberId,
-              business_name: businessName || 'New Business',
+              phone_number: phoneNumberId,
+              solution_id: SOLUTION_ID,
               // Include user ID for tracking in the webhook
               userId: userId,
             }
