@@ -1,72 +1,91 @@
-// app/api/interakt/route.ts (Edge or Node runtime)
+/* app/api/interakt/route.ts */
 
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';                    // works in Node; in Edge use globalThis.crypto
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
 
-const HMAC_SECRET = process.env.INTERAKT_WEBHOOK_SECRET!;   // the “Secret Key” in Interakt
-const INTERAKT_ONBOARDING_URL = 'https://api.interakt.ai/v1/organizations/tp-signup/';
+/** 1️⃣  Use Web-Crypto when "edge" runtime is selected */
+import crypto from 'crypto';              //  remove if runtime='edge'
 
-/* ---------- Optional GET helper ---------- */
+/** 2️⃣  Small helpers */
+const TP_SIGNUP_URL = 'https://api.interakt.ai/v1/organizations/tp-signup/';
+const INT_API_TOKEN = process.env.INTERAKT_API_TOKEN!;
+
+/* ---------- GET (Meta health-ping) ---------- */
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const challenge = searchParams.get('hub.challenge');
-
-  // Interakt never calls this, but it’s convenient for health-checks
-  if (challenge) {
-    return new Response(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
-  }
-  return new Response('OK', { status: 200 });
+  const challenge = new URL(req.url).searchParams.get('hub.challenge');
+  return new Response(challenge ?? 'OK', { status: 200 });
 }
 
-/* ---------- Main webhook handler ---------- */
-function validSignature(raw: string, received: string) {
-  const expected =
-    'sha256=' +
-    crypto.createHmac('sha256', HMAC_SECRET).update(raw).digest('hex');
-  // constant-time compare to avoid timing attacks
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received));
-}
-
+/* ---------- POST (all Interakt events) ---------- */
 export async function POST(req: NextRequest) {
-  // Grab the raw body BEFORE parsing!
-  const rawBody = await req.text();
-  const signature = req.headers.get('interakt-signature') || '';
+  await dbConnect();
+  const raw = await req.text();
+  const sig = req.headers.get('interakt-signature') ?? '';
 
-  if (!validSignature(rawBody, signature)) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-  }
+  const body = JSON.parse(raw);
+  const value = body?.entry?.[0]?.changes?.[0]?.value ?? {};
+  const event = value.event;
+  const waba = value.waba_info;
 
-  const body = JSON.parse(rawBody);
-  const event = body?.entry?.[0]?.changes?.[0]?.value?.event;
-  const waba = body?.entry?.[0]?.changes?.[0]?.value?.waba_info;
-
-  if (event === 'PARTNER_ADDED' && waba?.waba_id && waba?.solution_id) {
-    await fetch(INTERAKT_ONBOARDING_URL, {
+  /* ①  Partner just finished embedded-signup → ask Interakt to attach credit line */
+  if (event === 'PARTNER_ADDED' && waba?.waba_id) {
+    await fetch(TP_SIGNUP_URL, {
       method: 'POST',
       headers: {
-        Authorization: process.env.INTERAKT_API_TOKEN!,
+        Authorization: INT_API_TOKEN,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         object: 'tech_partner',
-        entry: [
-          {
-            changes: [
-              {
-                value: {
-                  event,
-                  waba_info: {
-                    waba_id: waba.waba_id,
-                    solution_id: waba.solution_id,
-                  },
-                },
-              },
-            ],
-          },
-        ],
+        entry: [{ changes: [{ value: { event, waba_info: waba } }] }],
       }),
     });
   }
 
-  return NextResponse.json({ received: true }, { status: 200 });
+  /* ②  Interakt confirms everything is ready → persist for later API calls */
+  if (event === 'WABA_ONBOARDED') {
+    /**
+     * Find the user by email and update their WABA accounts
+     * In real-world, you'd have a mechanism to identify which user added this WABA
+     * For now, we'll assume there's an email field in the webhook response
+     */
+    try {
+      const email = value.email; // This would need to come from your webhook or frontend
+
+      // If you have the user ID from the frontend that initiated the connect
+      const userId = value.userId || value.user_id;
+
+      if (userId) {
+        // Update the user with the new WABA account
+        await User.findByIdAndUpdate(
+          userId,
+          {
+            $push: {
+              wabaAccounts: {
+                wabaId: value.waba_id,
+                phoneNumberId: value.phone_number_id,
+                businessName: value.business_name || 'New Business',
+                phoneNumber: value.phone_number || '',
+                connectedAt: new Date(),
+                status: 'active',
+                isvNameToken: value.isv_name_token || '',
+              }
+            }
+          }
+        );
+
+        console.log(`WABA onboarded and saved to user: ${userId}`);
+      } else {
+        console.log('No user identified for WABA onboarding event');
+      }
+    } catch (error) {
+      console.error('Error updating user with WABA:', error);
+    }
+  }
+
+  /* ③  (Optional)  Handle delivery / inbound message events for analytics */
+  // message_api_sent / delivered / read / failed / message_received …
+
+  return NextResponse.json({ received: true });
 }

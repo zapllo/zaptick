@@ -1,181 +1,82 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import mongoose, { Document, Schema } from 'mongoose';
+import bcrypt from 'bcrypt';
 
 export interface IUser extends Document {
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
   password: string;
-  role: 'admin' | 'manager' | 'agent';
-  company: mongoose.Types.ObjectId;
-  isVerified: boolean;
-  verificationToken?: string;
-  resetPasswordToken?: string;
-  resetPasswordExpire?: Date;
-  lastLogin?: Date;
-  isActive: boolean;
-  profilePicture?: string;
-  phoneNumber?: string;
-  // WhatsApp authentication fields
-  whatsappAuthenticated: boolean;
-  whatsappId?: string;
-  whatsappPhoneNumber?: string;
-  whatsappName?: string;
-  whatsappProfilePic?: string;
-  whatsappAuthToken?: string;
-  // End of WhatsApp authentication fields
-  twoFactorEnabled: boolean;
-  twoFactorSecret?: string;
-  timezone: string;
-  language: string;
+  wabaAccounts: {
+    wabaId: string;
+    phoneNumberId: string;
+    businessName: string;
+    phoneNumber: string;
+    connectedAt: Date;
+    status: 'active' | 'disconnected' | 'pending';
+    isvNameToken: string;
+    templateCount?: number;
+  }[];
   createdAt: Date;
   updatedAt: Date;
-  authMethod: 'email' | 'whatsapp' | 'both';
-  signupCompleted: boolean; // To track if the user has completed all required profile info
-  matchPassword(enteredPassword: string): Promise<boolean>;
-  getSignedJwtToken(): string;
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
-const UserSchema: Schema = new Schema({
-  firstName: {
-    type: String,
-    required: [true, 'Please add a first name'],
-    trim: true,
-    maxlength: [50, 'First name cannot be more than 50 characters']
-  },
-  lastName: {
-    type: String,
-    required: [true, 'Please add a last name'],
-    trim: true,
-    maxlength: [50, 'Last name cannot be more than 50 characters']
-  },
-  email: {
-    type: String,
-    unique: true,
-    sparse: true, // Allows null/undefined values and maintains uniqueness for non-null values
-    match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-      'Please add a valid email'
+const UserSchema = new Schema<IUser>(
+  {
+    name: {
+      type: String,
+      required: [true, 'Please provide your name'],
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: [true, 'Please provide an email'],
+      unique: true,
+      match: [
+        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+        'Please provide a valid email',
+      ],
+    },
+    password: {
+      type: String,
+      required: [true, 'Please provide a password'],
+      minlength: 6,
+    },
+    wabaAccounts: [
+      {
+        wabaId: { type: String, required: true },
+        phoneNumberId: { type: String, required: true },
+        businessName: { type: String, default: '' },
+        phoneNumber: { type: String, default: '' },
+        connectedAt: { type: Date, default: Date.now },
+        status: {
+          type: String,
+          enum: ['active', 'disconnected', 'pending'],
+          default: 'active'
+        },
+        isvNameToken: { type: String },
+        templateCount: { type: Number, default: 0 }
+      }
     ]
   },
-  password: {
-    type: String,
-    minlength: [8, 'Password must be at least 8 characters'],
-    select: false
-  },
-  role: {
-    type: String,
-    enum: ['admin', 'manager', 'agent'],
-    default: 'agent'
-  },
-  company: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Company',
-    required: true
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  verificationToken: String,
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
-  lastLogin: Date,
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  profilePicture: String,
-  phoneNumber: String,
+  { timestamps: true }
+);
 
-  // WhatsApp authentication fields
-  whatsappAuthenticated: {
-    type: Boolean,
-    default: false
-  },
-  whatsappId: String,
-  whatsappPhoneNumber: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
-  whatsappName: String,
-  whatsappProfilePic: String,
-  whatsappAuthToken: String,
+// Hash password before saving
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
 
-  twoFactorEnabled: {
-    type: Boolean,
-    default: false
-  },
-  twoFactorSecret: String,
-  timezone: {
-    type: String,
-    default: 'UTC'
-  },
-  language: {
-    type: String,
-    default: 'en'
-  },
-  authMethod: {
-    type: String,
-    enum: ['email', 'whatsapp', 'both'],
-    default: 'email'
-  },
-  signupCompleted: {
-    type: Boolean,
-    default: false
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-}, {
-  timestamps: true
-});
-
-// Encrypt password using bcrypt
-UserSchema.pre<IUser>('save', async function (next) {
-  // Only hash the password if it's modified and exists
-  if (!this.isModified('password') || !this.password) {
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
-    return;
+  } catch (error: any) {
+    next(error);
   }
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
-// Make either email+password or whatsappAuthenticated required
-UserSchema.pre<IUser>('validate', function (next) {
-  if ((!this.email || !this.password) && !this.whatsappAuthenticated) {
-    this.invalidate('authMethod', 'Either email/password or WhatsApp authentication is required');
-  }
-  next();
-});
-
-// Update authMethod based on available credentials
-UserSchema.pre<IUser>('save', function (next) {
-  if (this.email && this.password && this.whatsappAuthenticated) {
-    this.authMethod = 'both';
-  } else if (this.whatsappAuthenticated) {
-    this.authMethod = 'whatsapp';
-  } else {
-    this.authMethod = 'email';
-  }
-  next();
-});
-
-
-// Match user entered password to hashed password in database
-UserSchema.methods.matchPassword = async function (enteredPassword: string) {
-  if (!this.password) return false;
-  return await bcrypt.compare(enteredPassword, this.password);
+// Method to compare passwords
+UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
