@@ -2,82 +2,117 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const TP_SIGNUP_URL = 'https://api.interakt.ai/v1/organizations/tp-signup/';
 const INT_API_TOKEN = process.env.INTERAKT_API_TOKEN!;
-const SOLUTION_ID = process.env.NEXT_PUBLIC_SOLUTION_ID!;
+
 export async function POST(request: NextRequest) {
   try {
-    const { wabaId, phoneNumberId, businessName, userId } = await request.json();
+    const { wabaId, phoneNumberId, businessName, phoneNumber, userId } = await request.json();
 
-    console.log('=== CALLING INTERAKT TP SIGNUP ===');
+    console.log('=== INTERAKT TP SIGNUP API CALL ===');
     console.log('User ID:', userId);
     console.log('WABA ID:', wabaId);
     console.log('Phone Number ID:', phoneNumberId);
     console.log('Business Name:', businessName);
+    console.log('Phone Number:', phoneNumber);
 
     if (!wabaId || !phoneNumberId) {
       console.error('❌ Missing required WABA data');
-      return NextResponse.json({ error: 'Missing WABA ID or Phone Number ID' }, { status: 400 });
+      return NextResponse.json({
+        error: 'Missing required WABA data',
+        details: 'WABA ID and Phone Number ID are required'
+      }, { status: 400 });
     }
 
-    // Call Interakt's TP Signup API with the actual WABA data
+    if (!INT_API_TOKEN) {
+      console.error('❌ Missing Interakt API token');
+      return NextResponse.json({
+        error: 'Server configuration error',
+        details: 'Missing Interakt API token'
+      }, { status: 500 });
+    }
+
+    // Prepare the payload according to Interakt's TP Signup API specification
     const tpSignupPayload = {
       object: 'tech_partner',
       entry: [{
         changes: [{
           value: {
             event: 'PARTNER_ADDED',
-
             waba_info: {
               waba_id: wabaId,
-              phone_number: phoneNumberId,
-              solution_id: SOLUTION_ID,
-              // Include user ID for tracking in the webhook
-              userId: userId,
+              phone_number_id: phoneNumberId,
+              business_name: businessName || 'New Business',
+              phone_number: phoneNumber || '',
+              // Include user ID in the setup for tracking
+              setup: {
+                userId: userId,
+              }
             }
           }
         }]
       }]
     };
 
-    console.log('📤 Sending to Interakt:', JSON.stringify(tpSignupPayload, null, 2));
+    console.log('📤 Sending to Interakt TP Signup:', JSON.stringify(tpSignupPayload, null, 2));
 
     const response = await fetch(TP_SIGNUP_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${INT_API_TOKEN}`,
+        // According to Interakt docs, use just the token value, not "Bearer {token}"
+        'Authorization': INT_API_TOKEN,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(tpSignupPayload),
     });
 
-    const result = await response.text();
-    console.log('📥 Interakt TP Signup response status:', response.status);
-    console.log('📥 Interakt TP Signup response:', result);
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
+
+    console.log('📥 Interakt response status:', response.status);
+    console.log('📥 Interakt response:', responseData);
 
     if (response.ok) {
-      console.log('✅ Successfully called Interakt TP Signup API');
-      console.log('⏳ Now waiting for WABA_ONBOARDED webhook from Interakt...');
+      console.log('✅ Interakt TP Signup successful');
+      console.log('⏳ Waiting for WABA_ONBOARDED webhook from Interakt...');
 
       return NextResponse.json({
         success: true,
         message: 'TP Signup initiated successfully',
         wabaId,
         phoneNumberId,
-        response: result
+        businessName,
+        response: responseData
       });
     } else {
       console.error('❌ Interakt TP Signup failed');
+
+      let errorMessage = 'TP Signup failed';
+      if (typeof responseData === 'object' && responseData.error) {
+        errorMessage = responseData.error.message || responseData.error;
+      } else if (typeof responseData === 'string') {
+        errorMessage = responseData;
+      }
+
       return NextResponse.json({
         error: 'TP Signup failed',
-        details: result,
-        status: response.status
-      }, { status: 500 });
+        details: errorMessage,
+        status: response.status,
+        wabaId,
+        phoneNumberId
+      }, { status: response.status >= 400 && response.status < 500 ? response.status : 500 });
     }
 
   } catch (error) {
     console.error('❌ Error in TP Signup:', error);
+
     return NextResponse.json({
-      error: 'Internal error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 });
   }
 }
