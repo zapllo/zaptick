@@ -136,6 +136,31 @@ export default function ConnectWabaButton() {
     }
   }, [sdkReady, user?.id]);
 
+  useEffect(() => {
+    if (!sdkReady || !user?.id) return;
+
+    const container = document.getElementById('fb-embedded-signup');
+    if (!container) return;
+
+    // Inject data-setup manually (important)
+    container.setAttribute(
+      'data-setup',
+      JSON.stringify({
+        config_id: process.env.NEXT_PUBLIC_CONFIG_ID,
+        solution_id: process.env.NEXT_PUBLIC_SOLUTION_ID,
+        setup: {
+          userId: user.id,
+        },
+      })
+    );
+
+    console.log("📦 Injected data-setup:", container.getAttribute('data-setup'));
+
+    // Re-parse the container now
+    window.FB.XFBML.parse(document.getElementById('wa-signup-container'));
+  }, [sdkReady, user?.id]);
+
+
   return (
     <Card className="flex flex-col justify-center items-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-dashed border-2 h-full">
       <CardHeader className="text-center">
@@ -150,20 +175,12 @@ export default function ConnectWabaButton() {
         <p className="text-center text-sm text-muted-foreground px-4">
           Connect your WhatsApp Business account to start sending messages
         </p>
-        {sdkReady && user?.id && (
-          <div id="wa-signup-container" className="w-full">
-            <div
-              className="fb-embedded-signup"
-              data-setup={JSON.stringify({
-                config_id: process.env.NEXT_PUBLIC_CONFIG_ID,
-                solution_id: process.env.NEXT_PUBLIC_SOLUTION_ID,
-                setup: {
-                  userId: user.id
-                }
-              })}
-            ></div>
-          </div>
-        )}
+
+        <div id="wa-signup-container" className="w-full">
+          <div id="fb-embedded-signup" className="fb-embedded-signup" />
+
+        </div>
+
       </CardContent>
       <CardFooter>
         <Button disabled className="gap-2">
