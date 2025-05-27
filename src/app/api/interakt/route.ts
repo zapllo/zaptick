@@ -45,39 +45,44 @@ export async function POST(req: NextRequest) {
 
   /* ②  Interakt confirms everything is ready → persist for later API calls */
   if (event === 'WABA_ONBOARDED') {
-    /**
-     * Find the user by email and update their WABA accounts
-     * In real-world, you'd have a mechanism to identify which user added this WABA
-     * For now, we'll assume there's an email field in the webhook response
-     */
     try {
-      const email = value.email; // This would need to come from your webhook or frontend
-
-      // If you have the user ID from the frontend that initiated the connect
-      const userId = value.userId || value.user_id;
+      // Try to get userId from different possible locations in the webhook
+      const userId = value.userId ||
+                     value.user_id ||
+                     value.setup?.userId ||
+                     waba?.setup?.userId ||
+                     body.userId;
 
       if (userId) {
         // Update the user with the new WABA account
-        await User.findByIdAndUpdate(
+        const updatedUser = await User.findByIdAndUpdate(
           userId,
           {
             $push: {
               wabaAccounts: {
-                wabaId: value.waba_id,
-                phoneNumberId: value.phone_number_id,
-                businessName: value.business_name || 'New Business',
-                phoneNumber: value.phone_number || '',
+                wabaId: value.waba_id || waba?.waba_id,
+                phoneNumberId: value.phone_number_id || waba?.phone_number_id,
+                businessName: value.business_name || waba?.business_name || 'New Business',
+                phoneNumber: value.phone_number || waba?.phone_number || '',
                 connectedAt: new Date(),
                 status: 'active',
-                isvNameToken: value.isv_name_token || '',
+                isvNameToken: value.isv_name_token || waba?.isv_name_token || '',
               }
             }
-          }
+          },
+          { new: true }
         );
 
-        console.log(`WABA onboarded and saved to user: ${userId}`);
+        if (updatedUser) {
+          console.log(`WABA onboarded and saved to user: ${userId}`, {
+            wabaId: value.waba_id || waba?.waba_id,
+            phoneNumberId: value.phone_number_id || waba?.phone_number_id
+          });
+        } else {
+          console.error(`User not found: ${userId}`);
+        }
       } else {
-        console.log('No user identified for WABA onboarding event');
+        console.log('No user ID found in WABA onboarding event. Available data:', JSON.stringify(value, null, 2));
       }
     } catch (error) {
       console.error('Error updating user with WABA:', error);

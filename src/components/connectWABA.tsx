@@ -19,6 +19,7 @@ declare global {
 
 export default function ConnectWabaButton() {
   const [sdkReady, setSdkReady] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -37,24 +38,65 @@ export default function ConnectWabaButton() {
     return () => clearInterval(t);
   }, []);
 
-  const openSignup = () => {
-    if (!sdkReady) return;
+  // Listen for embedded signup completion events
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== "https://www.facebook.com" && event.origin !== "https://web.facebook.com") {
+        return;
+      }
 
-    // Make sure the user is logged-in to Meta first
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'WA_EMBEDDED_SIGNUP') {
+          if (data.event === 'FINISH') {
+            const { phone_number_id, waba_id } = data.data;
+            console.log("Phone number ID", phone_number_id, "WhatsApp business account ID", waba_id);
+            setIsConnecting(false);
+            // Optionally show success message or refresh the page
+          } else if (data.event === 'CANCEL') {
+            const { current_step } = data.data;
+            console.warn("Cancel at", current_step);
+            setIsConnecting(false);
+          } else if (data.event === 'ERROR') {
+            const { error_message } = data.data;
+            console.error("error", error_message);
+            setIsConnecting(false);
+          }
+        }
+      } catch (error) {
+        console.log('Non JSON Responses', event.data);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const openSignup = () => {
+    if (!sdkReady || !user?.id) return;
+
+    setIsConnecting(true);
+
+    // Launch Facebook login with embedded signup
     window.FB.login(
-      () => {
-        window.FB.CustomerChat.showDialog({
-          chat_plugin: "wa_embedded_signup",
-          extras: {
-            setup: {
-              solutionID: process.env.NEXT_PUBLIC_SOLUTION_ID,
-              userId: user?.id, // Pass user ID to webhook
-            },
-          },
-        });
+      (response: any) => {
+        if (response.authResponse) {
+          console.log('Facebook login successful');
+          // The embedded signup flow will continue automatically
+        } else {
+          console.log('Facebook login failed or cancelled');
+          setIsConnecting(false);
+        }
       },
       {
-        scope: "business_management,whatsapp_business_management",
+        config_id: process.env.NEXT_PUBLIC_CONFIG_ID, // Your WhatsApp embedded signup config ID
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: {
+          setup: {
+            userId: user.id, // This will be passed to your Interakt webhook
+          },
+        },
       }
     );
   };
@@ -76,12 +118,12 @@ export default function ConnectWabaButton() {
       </CardContent>
       <CardFooter>
         <Button
-          disabled={!sdkReady}
+          disabled={!sdkReady || !user?.id || isConnecting}
           onClick={openSignup}
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
-          Connect WABA
+          {isConnecting ? "Connecting..." : "Connect WABA"}
         </Button>
       </CardFooter>
     </Card>
