@@ -35,16 +35,21 @@ export default function ConnectWabaButton() {
         if (data.type === 'WA_EMBEDDED_SIGNUP') {
           if (data.event === 'FINISH') {
             const { phone_number_id, waba_id } = data.data;
-            console.log("Phone number ID", phone_number_id, "WhatsApp business account ID", waba_id);
+            console.log("WABA connected successfully:", { phone_number_id, waba_id });
+
+            // Since Interakt handles everything, just show success
             setIsConnecting(false);
-            // TODO: Send this data to your backend along with user ID
+
+            // Optionally notify user or refresh page
+            setTimeout(() => {
+              window.location.reload(); // Refresh to show new WABA
+            }, 2000);
+
           } else if (data.event === 'CANCEL') {
-            const { current_step } = data.data;
-            console.warn("Cancel at", current_step);
+            console.warn("User cancelled signup");
             setIsConnecting(false);
           } else if (data.event === 'ERROR') {
-            const { error_message } = data.data;
-            console.error("error", error_message);
+            console.error("Signup error:", data.data.error_message);
             setIsConnecting(false);
           }
         }
@@ -70,34 +75,33 @@ export default function ConnectWabaButton() {
     };
   }, []);
 
-  const fbLoginCallback = (response: any) => {
-    console.log('FB Login Response:', response);
-    if (response.authResponse) {
-      const code = response.authResponse.code;
-      console.log('Authorization code:', code);
-      // The returned code must be transmitted to your backend first and then
-      // perform a server-to-server call from there to our servers for an access token.
-      // TODO: Send code and user ID to your backend
-    }
-    setIsConnecting(false);
-  };
-
   const launchWhatsAppSignup = () => {
     if (!sdkReady || !user?.id) return;
 
     setIsConnecting(true);
 
-    // Launch Facebook login - exactly as per documentation
-    window.FB.login(fbLoginCallback, {
-      config_id: process.env.NEXT_PUBLIC_CONFIG_ID, // Your configuration ID
-      response_type: 'code', // must be set to 'code' for System User access token
-      override_default_response_type: true, // when true, any response types passed in the "response_type" will take precedence over the default types
-      extras: {
-        setup: {
-          userId: user.id, // Pass user ID for your webhook
-        },
+    // Launch Facebook login for Interakt flow
+    window.FB.login(
+      (response: any) => {
+        console.log('FB Login Response:', response);
+        // With Interakt, we don't need to handle the auth response
+        // Interakt will receive the webhook and handle everything
+        if (!response.authResponse) {
+          setIsConnecting(false);
+        }
+        // Keep connecting state - will be cleared by message event
+      },
+      {
+        config_id: process.env.NEXT_PUBLIC_CONFIG_ID,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: {
+          setup: {
+            userId: user.id, // This will reach your Interakt webhook
+          },
+        }
       }
-    });
+    );
   };
 
   return (
