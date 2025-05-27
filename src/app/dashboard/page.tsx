@@ -39,6 +39,7 @@ import {
 import { format } from "date-fns";
 import Layout from "@/components/layout/Layout";
 import ConnectWabaButton from "@/components/connectWABA";
+import ManualWabaConnect from "@/components/ManualWabaConnect";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Empty state component
@@ -50,6 +51,7 @@ const EmptyState = () => (
     <h3 className="text-xl font-medium mb-2">No WhatsApp Accounts Connected</h3>
     <p className="text-center text-muted-foreground mb-6 max-w-md">
       Connect your WhatsApp Business Account to start sending messages and managing your templates.
+      Choose to create a new account or connect an existing one.
     </p>
     <Button size="lg" className="gap-2" asChild>
       <a href="#waba-section">
@@ -79,8 +81,8 @@ const PendingConnectionCard = ({ onRefresh }: { onRefresh: () => void }) => (
           Your WhatsApp Business Account is being processed by Interakt. This usually takes 2-5 minutes.
         </p>
         <div className="text-xs text-yellow-600 dark:text-yellow-400 space-y-1">
-          <div>✅ Facebook authentication completed</div>
-          <div>🔄 Interakt processing your WABA...</div>
+          <div>✅ WABA details submitted</div>
+          <div>🔄 Interakt processing your account...</div>
           <div>⏳ Setting up credit line and verification</div>
         </div>
       </div>
@@ -192,16 +194,27 @@ export default function DashboardPage() {
       console.log('WABA signup started');
       setPendingConnection(true);
       setConnectionTimeout(false);
-      localStorage.setItem(`waba_pending_${user?.id}`, 'true');
-      localStorage.setItem(`waba_pending_timestamp_${user?.id}`, Date.now().toString());
+      if (user?.id) {
+        localStorage.setItem(`waba_pending_${user.id}`, 'true');
+        localStorage.setItem(`waba_pending_timestamp_${user.id}`, Date.now().toString());
+      }
+    };
+
+    const handleWABASignupCompleted = () => {
+      console.log('WABA signup completed, refreshing...');
+      setTimeout(() => {
+        fetchUserData();
+      }, 2000); // Small delay to ensure backend processing
     };
 
     window.addEventListener('wabaConnected', handleWABAConnected);
     window.addEventListener('wabaSignupStarted', handleWABASignupStarted);
+    window.addEventListener('wabaSignupCompleted', handleWABASignupCompleted);
 
     return () => {
       window.removeEventListener('wabaConnected', handleWABAConnected);
       window.removeEventListener('wabaSignupStarted', handleWABASignupStarted);
+      window.removeEventListener('wabaSignupCompleted', handleWABASignupCompleted);
     };
   }, [user?.id]);
 
@@ -348,7 +361,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">WABA ID: {account.wabaId}</span>
+                    <span className="text-sm">WABA: {account.wabaId}</span>
                   </div>
                 </div>
               </CardContent>
@@ -360,8 +373,13 @@ export default function DashboardPage() {
             </Card>
           ))}
 
-          {/* Show connect button only if no pending connection */}
-          {!pendingConnection && <ConnectWabaButton />}
+          {/* Show connection options only if no pending connection */}
+          {!pendingConnection && (
+            <>
+              <ConnectWabaButton />
+              <ManualWabaConnect />
+            </>
+          )}
         </div>
       );
     }
@@ -379,7 +397,10 @@ export default function DashboardPage() {
             <PendingConnectionCard onRefresh={handleRefreshAccounts} />
           )
         ) : (
-          <ConnectWabaButton />
+          <>
+            <ConnectWabaButton />
+            <ManualWabaConnect />
+          </>
         )}
       </div>
     );
@@ -436,7 +457,8 @@ export default function DashboardPage() {
               </div>
             </div>
             <CardDescription>
-              Manage your connected WhatsApp Business Accounts
+              Connect a new WhatsApp Business Account or manage existing ones.
+              You can create a new account through Facebook or connect an existing one directly.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -531,7 +553,41 @@ export default function DashboardPage() {
                 </Card>
               </TabsContent>
 
-              {/* Other tab contents remain the same */}
+              <TabsContent value="messages" className="space-y-4">
+                <Card className="flex flex-col items-center justify-center p-6">
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <MessageSquare className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">No Messages Yet</h3>
+                  <p className="text-center text-muted-foreground mb-6 max-w-md">
+                    Connect your WhatsApp Business Account to start sending and receiving messages.
+                  </p>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="contacts" className="space-y-4">
+                <Card className="flex flex-col items-center justify-center p-6">
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Users className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">No Contacts Yet</h3>
+                  <p className="text-center text-muted-foreground mb-6 max-w-md">
+                    Import your contacts to start managing your customer relationships.
+                  </p>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="templates" className="space-y-4">
+                <Card className="flex flex-col items-center justify-center p-6">
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <FileText className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-medium mb-2">No Templates Yet</h3>
+                  <p className="text-center text-muted-foreground mb-6 max-w-md">
+                    Create message templates to streamline your WhatsApp communications.
+                  </p>
+                </Card>
+              </TabsContent>
             </Tabs>
           </>
         )}
