@@ -78,41 +78,64 @@ export default function ConnectWabaButton() {
 
     setIsConnecting(true);
 
-    // Check if we have all required environment variables
-    const appId = process.env.NEXT_PUBLIC_META_APP_ID;
-    const configId = process.env.NEXT_PUBLIC_CONFIG_ID;
-    const solutionId = process.env.NEXT_PUBLIC_SOLUTION_ID;
-
-    console.log('Environment check:', { appId, configId, solutionId });
-
-    if (!configId) {
-      console.error('Missing NEXT_PUBLIC_CONFIG_ID');
-      setIsConnecting(false);
-      return;
-    }
-
-    // Launch Facebook login with all required parameters
     window.FB.login(
-      (response: any) => {
-        console.log('FB Login Response:', response);
-        if (!response.authResponse) {
+      async (response: any) => {
+        console.log('=== FB LOGIN CALLBACK ===');
+        console.log('Full response:', response);
+
+        if (response.authResponse && response.status === 'connected') {
+          console.log('✅ Facebook embedded signup completed');
+
+          // Now we need to call Interakt's TP Signup API
+          await callInteraktTPSignup(response);
+        } else {
+          console.log('❌ Facebook embedded signup failed');
           setIsConnecting(false);
         }
       },
       {
-        config_id: configId, // Required: WhatsApp embedded signup configuration ID
-        response_type: 'code', // Required: Must be 'code' for System User access token
-        override_default_response_type: true, // Required: Use response_type over defaults
+        config_id: process.env.NEXT_PUBLIC_CONFIG_ID,
+        response_type: 'code',
+        override_default_response_type: true,
+        scope: 'business_management,whatsapp_business_management',
         extras: {
           setup: {
-            ...(solutionId && { solutionID: solutionId }), // Include solution ID if available
-            userId: user.id, // Your user identification
+            solutionID: process.env.NEXT_PUBLIC_SOLUTION_ID,
+            userId: user.id,
           },
         }
       }
     );
   };
 
+  const callInteraktTPSignup = async (facebookResponse: any) => {
+    try {
+      console.log('🔄 Calling Interakt TP Signup API...');
+
+      // Call your backend to handle the TP signup
+      const response = await fetch('/api/interakt/tp-signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          facebookResponse,
+          userId: user?.id,
+        }),
+      });
+
+      if (response.ok) {
+        console.log('✅ TP Signup API called successfully');
+        console.log('⏳ Waiting for WABA_ONBOARDED webhook...');
+      } else {
+        console.error('❌ TP Signup API call failed');
+        setIsConnecting(false);
+      }
+    } catch (error) {
+      console.error('❌ Error calling TP Signup API:', error);
+      setIsConnecting(false);
+    }
+  };
   return (
     <Card className="flex flex-col justify-center items-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-dashed border-2 h-full">
       <CardHeader className="text-center">
