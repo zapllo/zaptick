@@ -36,13 +36,11 @@ export default function ConnectWabaButton() {
           if (data.event === 'FINISH') {
             const { phone_number_id, waba_id } = data.data;
             console.log("WABA connected successfully:", { phone_number_id, waba_id });
-
-            // Since Interakt handles everything, just show success
             setIsConnecting(false);
 
-            // Optionally notify user or refresh page
+            // Optionally refresh to show new WABA
             setTimeout(() => {
-              window.location.reload(); // Refresh to show new WABA
+              window.location.reload();
             }, 2000);
 
           } else if (data.event === 'CANCEL') {
@@ -80,24 +78,35 @@ export default function ConnectWabaButton() {
 
     setIsConnecting(true);
 
-    // Launch Facebook login for Interakt flow
+    // Check if we have all required environment variables
+    const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+    const configId = process.env.NEXT_PUBLIC_CONFIG_ID;
+    const solutionId = process.env.NEXT_PUBLIC_SOLUTION_ID;
+
+    console.log('Environment check:', { appId, configId, solutionId });
+
+    if (!configId) {
+      console.error('Missing NEXT_PUBLIC_CONFIG_ID');
+      setIsConnecting(false);
+      return;
+    }
+
+    // Launch Facebook login with all required parameters
     window.FB.login(
       (response: any) => {
         console.log('FB Login Response:', response);
-        // With Interakt, we don't need to handle the auth response
-        // Interakt will receive the webhook and handle everything
         if (!response.authResponse) {
           setIsConnecting(false);
         }
-        // Keep connecting state - will be cleared by message event
       },
       {
-        config_id: process.env.NEXT_PUBLIC_CONFIG_ID,
-        response_type: 'code',
-        override_default_response_type: true,
+        config_id: configId, // Required: WhatsApp embedded signup configuration ID
+        response_type: 'code', // Required: Must be 'code' for System User access token
+        override_default_response_type: true, // Required: Use response_type over defaults
         extras: {
           setup: {
-            userId: user.id, // This will reach your Interakt webhook
+            ...(solutionId && { solutionID: solutionId }), // Include solution ID if available
+            userId: user.id, // Your user identification
           },
         }
       }
