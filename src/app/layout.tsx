@@ -30,6 +30,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <div id="fb-root"></div>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -38,12 +39,26 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
-            <Script
-              src="https://connect.facebook.com/en_US/sdk.js"
-              strategy="afterInteractive"
-            />
           </AuthProvider>
         </ThemeProvider>
+
+        {/* Facebook SDK Script */}
+        <Script id="facebook-sdk" strategy="afterInteractive">
+          {`
+            window.fbAsyncInit = function() {
+              FB.init({
+                appId            : '${process.env.NEXT_PUBLIC_META_APP_ID}',
+                autoLogAppEvents : true,
+                xfbml            : true,
+                version          : 'v19.0'
+              });
+            };
+          `}
+        </Script>
+        <Script
+          src="https://connect.facebook.net/en_US/sdk.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

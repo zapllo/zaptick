@@ -14,6 +14,7 @@ import { Phone, Plus } from "lucide-react";
 declare global {
   interface Window {
     FB: any;
+    fbAsyncInit: () => void;
   }
 }
 
@@ -22,35 +23,10 @@ export default function ConnectWabaButton() {
   const [isConnecting, setIsConnecting] = useState(false);
   const { user } = useAuth();
 
-  // ... existing code ...
-
   useEffect(() => {
-    // Poll until window.FB appears
-    const t = setInterval(() => {
-      if (window.FB?.init) {
-        console.log('Current domain:', window.location.hostname);
-        console.log('Current origin:', window.location.origin);
-
-        window.FB.init({
-          appId: process.env.NEXT_PUBLIC_META_APP_ID,
-          xfbml: true,
-          version: "v19.0",
-        });
-        setSdkReady(true);
-        clearInterval(t);
-      }
-    }, 300);
-    return () => clearInterval(t);
-  }, []);
-
-  // ... rest of the code ... 
-
-  // Listen for embedded signup completion events
-  useEffect(() => {
+    // Set up the message listener for embedded signup completion
     const handleMessage = (event: MessageEvent) => {
-      // Allow both facebook.com and web.facebook.com
-      if (event.origin !== "https://www.facebook.com" &&
-        event.origin !== "https://web.facebook.com") {
+      if (event.origin !== "https://www.facebook.com" && event.origin !== "https://web.facebook.com") {
         return;
       }
 
@@ -61,7 +37,7 @@ export default function ConnectWabaButton() {
             const { phone_number_id, waba_id } = data.data;
             console.log("Phone number ID", phone_number_id, "WhatsApp business account ID", waba_id);
             setIsConnecting(false);
-            // Optionally show success message or refresh the page
+            // TODO: Send this data to your backend along with user ID
           } else if (data.event === 'CANCEL') {
             const { current_step } = data.data;
             console.warn("Cancel at", current_step);
@@ -78,37 +54,50 @@ export default function ConnectWabaButton() {
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+
+    // Wait for Facebook SDK to be ready
+    const checkFB = () => {
+      if (window.FB) {
+        setSdkReady(true);
+      } else {
+        setTimeout(checkFB, 100);
+      }
+    };
+    checkFB();
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
-  const openSignup = () => {
+  const fbLoginCallback = (response: any) => {
+    console.log('FB Login Response:', response);
+    if (response.authResponse) {
+      const code = response.authResponse.code;
+      console.log('Authorization code:', code);
+      // The returned code must be transmitted to your backend first and then
+      // perform a server-to-server call from there to our servers for an access token.
+      // TODO: Send code and user ID to your backend
+    }
+    setIsConnecting(false);
+  };
+
+  const launchWhatsAppSignup = () => {
     if (!sdkReady || !user?.id) return;
 
     setIsConnecting(true);
 
-    // Launch Facebook login with embedded signup
-    window.FB.login(
-      (response: any) => {
-        console.log('FB Login Response:', response);
-        if (response.authResponse) {
-          console.log('Facebook login successful');
-          // The embedded signup flow will continue automatically
-        } else {
-          console.log('Facebook login failed or cancelled');
-          setIsConnecting(false);
-        }
-      },
-      {
-        config_id: process.env.NEXT_PUBLIC_CONFIG_ID,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: {
-          setup: {
-            userId: user.id,
-          },
+    // Launch Facebook login - exactly as per documentation
+    window.FB.login(fbLoginCallback, {
+      config_id: process.env.NEXT_PUBLIC_CONFIG_ID, // Your configuration ID
+      response_type: 'code', // must be set to 'code' for System User access token
+      override_default_response_type: true, // when true, any response types passed in the "response_type" will take precedence over the default types
+      extras: {
+        setup: {
+          userId: user.id, // Pass user ID for your webhook
         },
       }
-    );
+    });
   };
 
   return (
@@ -129,7 +118,7 @@ export default function ConnectWabaButton() {
       <CardFooter>
         <Button
           disabled={!sdkReady || !user?.id || isConnecting}
-          onClick={openSignup}
+          onClick={launchWhatsAppSignup}
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
