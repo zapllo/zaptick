@@ -282,7 +282,7 @@ export default function CreateTemplatePage() {
           {/* Header Section */}
           <div className="p-5 border border-gray-200 rounded-md">
             <h3 className="text-sm font-medium mb-2">Header (Optional)</h3>
-            <p className="text-sm text-gray-600 mb-4">Add a title, or select the media type you want to get approved for this template's header</p>
+            <p className="text-sm text-gray-600 mb-4">Add a title, or select the media type you want to get approved for this template&apos;s header</p>
 
             <RadioGroup
               value={form.headerType}
@@ -670,7 +670,7 @@ export default function CreateTemplatePage() {
             <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-3 flex items-start">
               <AlertTriangle size={16} className="text-yellow-500 mr-2 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-yellow-800">
-                Click tracking will work only if the template is sent via Interakt Campaigns. It won't work if sent via Interakt's APIs, or via the inbox or any other approach.
+                Click tracking will work only if the template is sent via Interakt Campaigns. It won&apos;t work if sent via Interakt&apos;s APIs, or via the inbox or any other approach.
               </p>
             </div>
           </div>

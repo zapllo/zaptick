@@ -1015,7 +1015,7 @@ export default function EditTemplatePage() {
               {/* Header Section */}
               <div className="p-5 border border-gray-200 rounded-md">
                 <h3 className="text-sm font-medium mb-2">Header (Optional)</h3>
-                <p className="text-sm text-gray-600 mb-4">Add a title, or select the media type you want to get approved for this template's header</p>
+                <p className="text-sm text-gray-600 mb-4">Add a title, or select the media type you want to get approved for this template&apos;s header</p>
 
                 <RadioGroup
                   value={form.headerType}
