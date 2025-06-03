@@ -1,134 +1,75 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IContact extends Document {
-  company: mongoose.Types.ObjectId;
-  phoneNumber: string;
-  waId: string; // WhatsApp ID
-  firstName?: string;
-  lastName?: string;
-  fullName?: string;
+  name: string;
+  phone: string;
   email?: string;
-  profilePicture?: string;
-  labels: mongoose.Types.ObjectId[];
-  contactAttributes: {
-    key: string;
-    value: string;
-  }[];
-  assignedTo?: mongoose.Types.ObjectId;
-  lastMessageTimestamp?: Date;
-  lastMessageContent?: string;
-  lastMessageDirection?: 'inbound' | 'outbound';
-  conversationStatus: 'active' | 'closed' | 'resolved';
-  conversationAssignedAt?: Date;
-  isBlocked: boolean;
-  isSubscribed: boolean;
-  optInStatus: 'opted_in' | 'opted_out' | 'unknown';
-  optInTimestamp?: Date;
-  optOutTimestamp?: Date;
-  lastContactedAt?: Date;
-  tags: string[];
-  notes: string[];
-  metadata: any;
-  createdBy?: mongoose.Types.ObjectId;
+  wabaId: string;
+  phoneNumberId: string;
+  userId: string;
+  whatsappOptIn: boolean;
+  tags?: string[];
+  notes?: string;
+  lastMessageAt?: Date;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const ContactSchema: Schema = new Schema({
-  company: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Company',
-    required: true
-  },
-  phoneNumber: {
+const ContactSchema = new Schema({
+  name: {
     type: String,
-    required: [true, 'Phone number is required'],
-    index: true
+    required: true,
+    trim: true
   },
-  waId: {
+  phone: {
     type: String,
-    required: [true, 'WhatsApp ID is required'],
-    unique: true
+    required: true,
+    trim: true
   },
-  firstName: String,
-  lastName: String,
-  fullName: String,
   email: {
     type: String,
-    match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-      'Please add a valid email'
-    ]
+    trim: true,
+    lowercase: true
   },
-  profilePicture: String,
-  labels: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Label'
-  }],
-  contactAttributes: [{
-    key: String,
-    value: String,
-    _id: false
-  }],
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  lastMessageTimestamp: Date,
-  lastMessageContent: String,
-  lastMessageDirection: {
+  wabaId: {
     type: String,
-    enum: ['inbound', 'outbound']
+    required: true
   },
-  conversationStatus: {
+  phoneNumberId: {
     type: String,
-    enum: ['active', 'closed', 'resolved'],
-    default: 'active'
+    required: true
   },
-  conversationAssignedAt: Date,
-  isBlocked: {
-    type: Boolean,
-    default: false
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  isSubscribed: {
+  whatsappOptIn: {
     type: Boolean,
     default: true
   },
-  optInStatus: {
+  tags: [{
     type: String,
-    enum: ['opted_in', 'opted_out', 'unknown'],
-    default: 'unknown'
+    trim: true
+  }],
+  notes: {
+    type: String,
+    trim: true
   },
-  optInTimestamp: Date,
-  optOutTimestamp: Date,
-  lastContactedAt: Date,
-  tags: [String],
-  notes: [String],
-  metadata: {
-    type: mongoose.Schema.Types.Mixed
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  lastMessageAt: {
+    type: Date
   },
   isActive: {
     type: Boolean,
     default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true
 });
 
-// Create compound index for company + phone number
-ContactSchema.index({ company: 1, phoneNumber: 1 });
+// Create compound index for efficient queries
+ContactSchema.index({ userId: 1, wabaId: 1 });
+ContactSchema.index({ phone: 1, wabaId: 1 }, { unique: true });
 
 export default mongoose.models.Contact || mongoose.model<IContact>('Contact', ContactSchema);

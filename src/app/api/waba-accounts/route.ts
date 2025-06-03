@@ -17,22 +17,30 @@ export async function GET(req: NextRequest) {
     }
 
     await dbConnect();
-    const user = await User.findById(decoded.id).select('-password');
 
+    const user = await User.findById(decoded.id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Ensure wabaAccounts exists and is an array
+    const wabaAccounts = user.wabaAccounts || [];
+
     return NextResponse.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        wabaAccounts: user.wabaAccounts
-      }
+      success: true,
+      accounts: wabaAccounts.map(account => ({
+        wabaId: account.wabaId,
+        businessName: account.businessName || 'Unknown Business',
+        phoneNumber: account.phoneNumber || 'Unknown Number',
+        phoneNumberId: account.phoneNumberId,
+        status: account.status || 'active'
+      }))
     });
+
   } catch (error) {
-    console.error('Auth check error:', error);
-    return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
+    console.error('WABA accounts fetch error:', error);
+    return NextResponse.json({
+      error: 'Failed to fetch WABA accounts'
+    }, { status: 500 });
   }
 }

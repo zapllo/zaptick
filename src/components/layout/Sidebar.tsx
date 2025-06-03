@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -43,6 +43,8 @@ interface SidebarProps {
     email: string;
     image?: string;
   };
+  isCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 interface SidebarItem {
@@ -56,10 +58,25 @@ interface SidebarItem {
   badge?: string;
 }
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, isCollapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(isCollapsed || false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  // Sync with parent component
+  useEffect(() => {
+    if (isCollapsed !== undefined && collapsed !== isCollapsed) {
+      setCollapsed(isCollapsed);
+    }
+  }, [isCollapsed]);
+
+  // Notify parent component when collapsed state changes
+  const handleCollapsedChange = (newCollapsed: boolean) => {
+    setCollapsed(newCollapsed);
+    if (onCollapsedChange) {
+      onCollapsedChange(newCollapsed);
+    }
+  };
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -165,7 +182,7 @@ export default function Sidebar({ user }: SidebarProps) {
             variant="ghost"
             size="icon"
             className={cn("ml-auto", collapsed && "hidden")}
-            onClick={() => setCollapsed(true)}
+            onClick={() => handleCollapsedChange(true)}
           >
             <Menu size={16} />
           </Button>
@@ -174,13 +191,14 @@ export default function Sidebar({ user }: SidebarProps) {
               variant="ghost"
               size="icon"
               className="absolute -right-9 top-3 h-7 w-7 rounded-full border bg-background"
-              onClick={() => setCollapsed(false)}
+              onClick={() => handleCollapsedChange(false)}
             >
               <ChevronRight size={14} />
             </Button>
           )}
         </div>
 
+        {/* Rest of the sidebar code remains unchanged */}
         <div className="flex-1 overflow-auto py-2">
           <nav className="space-y-1 px-2">
             {sidebarItems.map((item) => (

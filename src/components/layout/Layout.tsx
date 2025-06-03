@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,6 +28,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // This would come from your auth service
   const user = {
@@ -37,8 +39,15 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar user={user} />
-      <div className="flex flex-1 flex-col ml-64">
+      <Sidebar
+        user={user}
+        isCollapsed={sidebarCollapsed}
+        onCollapsedChange={setSidebarCollapsed}
+      />
+      <div className={cn(
+        "flex flex-1 flex-col transition-all duration-300",
+        sidebarCollapsed ? "ml-16" : "ml-64"
+      )}>
         {/* Header */}
         <header className="sticky top-0 z-20 flex h-14 items-center border-b bg-background px-4 lg:px-6">
           <div className="flex flex-1 items-center gap-4">

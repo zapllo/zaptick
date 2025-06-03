@@ -1,152 +1,108 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface IMessage {
+  id: string;
+  senderId: 'customer' | 'agent';
+  content: string;
+  messageType: 'text' | 'image' | 'video' | 'document' | 'audio' | 'template';
+  timestamp: Date;
+  status: 'sent' | 'delivered' | 'read' | 'failed';
+  whatsappMessageId?: string;
+  templateName?: string;
+  mediaUrl?: string;
+  mediaCaption?: string;
+}
 
 export interface IConversation extends Document {
-  company: mongoose.Types.ObjectId;
-  contact: mongoose.Types.ObjectId;
-  wabaPhoneNumber: string;
-  wabaId: mongoose.Types.ObjectId;
-  startTimestamp: Date;
-  endTimestamp?: Date;
+  contactId: mongoose.Types.ObjectId;
+  wabaId: string;
+  phoneNumberId: string;
+  userId: string;
+  messages: IMessage[];
   status: 'active' | 'closed' | 'resolved';
-  assignedTo?: mongoose.Types.ObjectId;
-  lastAssigned?: {
-    user: mongoose.Types.ObjectId;
-    timestamp: Date;
-  };
-  messageCount: number;
-  lastMessage?: {
-    content: string;
-    timestamp: Date;
-    direction: 'inbound' | 'outbound';
-  };
-  tags: string[];
-  labels: mongoose.Types.ObjectId[];
-  notes: {
-    text: string;
-    addedBy: mongoose.Types.ObjectId;
-    timestamp: Date;
-  }[];
-  isFollowUpRequired: boolean;
-  followUpDate?: Date;
-  firstResponseTime?: number; // in milliseconds
-  resolution?: {
-    resolvedBy: mongoose.Types.ObjectId;
-    timestamp: Date;
-    reason?: string;
-  };
-  metadata: any;
+  assignedTo?: string;
+  lastMessageAt: Date;
+  lastMessage: string;
+  lastMessageType: string;
+  unreadCount: number;
+  tags?: string[];
+  isWithin24Hours: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const ConversationSchema: Schema = new Schema({
-  company: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Company',
-    required: true
+const MessageSchema = new Schema({
+  id: { type: String, required: true },
+  senderId: { type: String, enum: ['customer', 'agent'], required: true },
+  content: { type: String, required: true },
+  messageType: {
+    type: String,
+    enum: ['text', 'image', 'video', 'document', 'audio', 'template'],
+    default: 'text'
   },
-  contact: {
+  timestamp: { type: Date, default: Date.now },
+  status: {
+    type: String,
+    enum: ['sent', 'delivered', 'read', 'failed'],
+    default: 'sent'
+  },
+  whatsappMessageId: String,
+  templateName: String,
+  mediaUrl: String,
+  mediaCaption: String
+});
+
+const ConversationSchema = new Schema({
+  contactId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Contact',
     required: true
   },
-  wabaPhoneNumber: {
+  wabaId: {
     type: String,
     required: true
   },
-  wabaId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'WhatsAppBusinessAccount',
+  phoneNumberId: {
+    type: String,
     required: true
   },
-  startTimestamp: {
-    type: Date,
-    default: Date.now
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  endTimestamp: Date,
+  messages: [MessageSchema],
   status: {
     type: String,
     enum: ['active', 'closed', 'resolved'],
     default: 'active'
   },
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  assignedTo: String,
+  lastMessageAt: {
+    type: Date,
+    default: Date.now
   },
-  lastAssigned: {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    timestamp: Date,
-    _id: false
+  lastMessage: String,
+  lastMessageType: {
+    type: String,
+    default: 'text'
   },
-  messageCount: {
+  unreadCount: {
     type: Number,
     default: 0
   },
-  lastMessage: {
-    content: String,
-    timestamp: Date,
-    direction: {
-      type: String,
-      enum: ['inbound', 'outbound']
-    },
-    _id: false
-  },
   tags: [String],
-  labels: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Label'
-  }],
-  notes: [{
-    text: {
-      type: String,
-      required: true
-    },
-    addedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    timestamp: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  isFollowUpRequired: {
+  isWithin24Hours: {
     type: Boolean,
-    default: false
-  },
-  followUpDate: Date,
-  firstResponseTime: Number,
-  resolution: {
-    resolvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    timestamp: Date,
-    reason: String,
-    _id: false
-  },
-  metadata: {
-    type: mongoose.Schema.Types.Mixed
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+    default: true
   }
 }, {
   timestamps: true
 });
 
-// Create compound index for company + contact
-ConversationSchema.index({ company: 1, contact: 1 });
-// Create index for assigned agent and status for quick filtering
-ConversationSchema.index({ assignedTo: 1, status: 1 });
+// Create indexes for efficient queries
+ConversationSchema.index({ userId: 1, lastMessageAt: -1 });
+ConversationSchema.index({ contactId: 1 });
+ConversationSchema.index({ wabaId: 1 });
 
 export default mongoose.models.Conversation || mongoose.model<IConversation>('Conversation', ConversationSchema);
