@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      accounts: wabaAccounts.map(account => ({
+      accounts: wabaAccounts.map((account: any) => ({
         wabaId: account.wabaId,
         businessName: account.businessName || 'Unknown Business',
         phoneNumber: account.phoneNumber || 'Unknown Number',

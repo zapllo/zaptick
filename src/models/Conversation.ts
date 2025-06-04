@@ -2,15 +2,16 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMessage {
   id: string;
-  senderId: 'customer' | 'agent';
+  senderId: 'customer' | 'agent' | 'system'; // Added 'system' as valid sender
   content: string;
-  messageType: 'text' | 'image' | 'video' | 'document' | 'audio' | 'template';
+  messageType: 'text' | 'image' | 'video' | 'document' | 'audio' | 'template' | 'system' | 'note'; // Added 'system' and 'note'
   timestamp: Date;
   status: 'sent' | 'delivered' | 'read' | 'failed';
   whatsappMessageId?: string;
   templateName?: string;
   mediaUrl?: string;
   mediaCaption?: string;
+  senderName?: string; // Added senderName for displaying who sent the message
 }
 
 export interface IConversation extends Document {
@@ -19,7 +20,8 @@ export interface IConversation extends Document {
   phoneNumberId: string;
   userId: string;
   messages: IMessage[];
-  status: 'active' | 'closed' | 'resolved';
+  labels?: string[];
+  status: 'active' | 'closed' | 'resolved' | 'pending'; // Added 'pending' status
   assignedTo?: string;
   lastMessageAt: Date;
   lastMessage: string;
@@ -33,11 +35,11 @@ export interface IConversation extends Document {
 
 const MessageSchema = new Schema({
   id: { type: String, required: true },
-  senderId: { type: String, enum: ['customer', 'agent'], required: true },
+  senderId: { type: String, enum: ['customer', 'agent', 'system'], required: true }, // Added 'system'
   content: { type: String, required: true },
   messageType: {
     type: String,
-    enum: ['text', 'image', 'video', 'document', 'audio', 'template'],
+    enum: ['text', 'image', 'video', 'document', 'audio', 'template', 'system', 'note'], // Added 'system' and 'note'
     default: 'text'
   },
   timestamp: { type: Date, default: Date.now },
@@ -49,7 +51,8 @@ const MessageSchema = new Schema({
   whatsappMessageId: String,
   templateName: String,
   mediaUrl: String,
-  mediaCaption: String
+  mediaCaption: String,
+  senderName: String // Added senderName field
 });
 
 const ConversationSchema = new Schema({
@@ -72,9 +75,10 @@ const ConversationSchema = new Schema({
     required: true
   },
   messages: [MessageSchema],
+  labels: [String],
   status: {
     type: String,
-    enum: ['active', 'closed', 'resolved'],
+    enum: ['active', 'closed', 'resolved', 'pending'], // Added 'pending'
     default: 'active'
   },
   assignedTo: String,

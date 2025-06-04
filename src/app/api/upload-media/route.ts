@@ -36,7 +36,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       'DOCUMENT': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     };
 
-    if (!allowedTypes[type]?.includes(file.type)) {
+    if (!type || !allowedTypes[type as keyof typeof allowedTypes]?.includes(file.type)) {
       return NextResponse.json(
         { error: 'Invalid file type for selected media type' },
         { status: 400 }

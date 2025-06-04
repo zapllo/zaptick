@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find the WABA account
-    const wabaAccount = user.wabaAccounts.find(account => account.wabaId === wabaId);
+    const wabaAccount = user.wabaAccounts.find((account: any) => account.wabaId === wabaId);
     if (!wabaAccount) {
       return NextResponse.json({ error: 'WABA account not found' }, { status: 404 });
     }
@@ -92,8 +93,8 @@ export async function POST(req: NextRequest) {
       {
         method: 'POST',
         headers: {
-          'x-access-token': INT_TOKEN,
-          'x-waba-id': wabaId,
+          'x-access-token': INT_TOKEN || '',
+          'x-waba-id': String(wabaId),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(interaktPayload)
@@ -178,7 +179,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -216,8 +218,8 @@ export async function GET(req: NextRequest) {
           {
             method: 'GET',
             headers: {
-              'x-access-token': INT_TOKEN,
-              'x-waba-id': wabaId,
+              'x-access-token': INT_TOKEN || '',
+              'x-waba-id': String(wabaId),
               'Content-Type': 'application/json'
             }
           }
@@ -233,7 +235,7 @@ export async function GET(req: NextRequest) {
 
             // Create a map of WhatsApp template IDs to their statuses
             const whatsappTemplateMap = new Map();
-            whatsappTemplates.forEach(wTemplate => {
+            whatsappTemplates.forEach((wTemplate: any) => {
               whatsappTemplateMap.set(wTemplate.id, {
                 status: wTemplate.status.toUpperCase(),
                 rejectionReason: wTemplate.rejection_reason
@@ -313,16 +315,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       templates: filteredTemplates.map(template => {
-        const hasMediaHeader = template.components.some(c => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format));
+        const hasMediaHeader = template.components.some((c: any) => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format));
         return {
           id: template._id,
           name: template.name,
           category: template.category.toLowerCase(),
           language: template.language,
           status: template.status.toLowerCase(),
-          content: template.components.find(c => c.type === 'BODY')?.text || '',
+          content: template.components.find((c: any) => c.type === 'BODY')?.text || '',
           variables: template.components
-            .find(c => c.type === 'BODY')?.text
+            .find((c: any) => c.type === 'BODY')?.text
             ?.match(/\{\{(\d+)\}\}/g)?.length || 0,
           createdAt: template.createdAt,
           updatedAt: template.updatedAt,
@@ -331,7 +333,7 @@ export async function GET(req: NextRequest) {
           useCount: template.useCount,
           rejectionReason: template.rejectionReason,
           type: hasMediaHeader ? 'media' : 'text',
-          mediaType: hasMediaHeader ? template.components.find(c => c.type === 'HEADER')?.format : null,
+          mediaType: hasMediaHeader ? template.components.find((c: any) => c.type === 'HEADER')?.format : null,
           createdBy: template.createdBy || "Unknown"
         };
       })

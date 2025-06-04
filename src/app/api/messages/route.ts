@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     // Ensure wabaAccounts exists and find the WABA account
     const wabaAccounts = user.wabaAccounts || [];
-    const wabaAccount = wabaAccounts.find(account => account.wabaId === contact.wabaId);
+    const wabaAccount = wabaAccounts.find((account: { wabaId: string }) => account.wabaId === contact.wabaId);
     if (!wabaAccount) {
       return NextResponse.json({ error: 'WABA account not found' }, { status: 404 });
     }
@@ -155,7 +155,8 @@ export async function POST(req: NextRequest) {
       messageType: 'text',
       timestamp: new Date(),
       status: 'sent' as const,
-      whatsappMessageId: interaktData.messages?.[0]?.id
+      whatsappMessageId: interaktData.messages?.[0]?.id,
+      senderName: (await req.json()).senderName || 'Agent' // Add this line to save the sender's name
     };
 
     if (conversation) {

@@ -14,7 +14,8 @@ export async function GET(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -31,11 +32,11 @@ export async function GET(
     }
 
     // If template has a WhatsApp template ID, fetch status from Interakt
-    let updatedTemplate = template;
-    if (template.whatsappTemplateId && template.wabaId) {
+    let updatedTemplate = template as any;
+    if (updatedTemplate.whatsappTemplateId && updatedTemplate.wabaId) {
       try {
         const interaktResponse = await fetch(
-          `https://amped-express.interakt.ai/api/v17.0/${template.wabaId}/message_templates/id/${template.whatsappTemplateId}`,
+          `https://amped-express.interakt.ai/api/v17.0/${updatedTemplate.wabaId}/message_templates/id/${updatedTemplate.whatsappTemplateId}`,
           {
             method: 'GET',
             headers: {
@@ -50,7 +51,7 @@ export async function GET(
 
           // Map Interakt status to our database status
           const interaktStatus = interaktData.status?.toUpperCase();
-          let mappedStatus = template.status;
+          let mappedStatus = (template as any).status;
 
           // Map Interakt statuses to our statuses
           switch (interaktStatus) {
@@ -72,14 +73,14 @@ export async function GET(
           }
 
           // Update database if status has changed
-          if (mappedStatus !== template.status) {
+          if (mappedStatus !== (template as any).status) {
             const updateData: any = {
               status: mappedStatus,
               updatedAt: new Date()
             };
 
             // Set approvedAt if status changed to APPROVED
-            if (mappedStatus === 'APPROVED' && template.status !== 'APPROVED') {
+            if (mappedStatus === 'APPROVED' && (template as any).status !== 'APPROVED') {
               updateData.approvedAt = new Date();
             }
 
@@ -88,7 +89,7 @@ export async function GET(
               updateData.rejectionReason = interaktData.rejection_reason;
             }
 
-            await Template.findByIdAndUpdate(template._id, updateData);
+            await Template.findByIdAndUpdate((template as any)._id, updateData);
 
             // Update our template object with new status
             updatedTemplate = {
@@ -96,7 +97,7 @@ export async function GET(
               ...updateData
             };
 
-            console.log(`Template ${template._id} status updated from ${template.status} to ${mappedStatus}`);
+            console.log(`Template ${(template as any)._id} status updated from ${(template as any).status} to ${mappedStatus}`);
           }
         } else {
           console.warn(`Failed to fetch template status from Interakt: ${interaktResponse.status}`);
@@ -109,7 +110,7 @@ export async function GET(
     }
 
     // Transform the template data
-    const hasMediaHeader = updatedTemplate.components.some(c => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format));
+    const hasMediaHeader = updatedTemplate.components?.some((c: any) => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format)) || false;
 
     return NextResponse.json({
       success: true,
@@ -119,9 +120,9 @@ export async function GET(
         category: updatedTemplate.category.toLowerCase(),
         language: updatedTemplate.language,
         status: updatedTemplate.status.toLowerCase(),
-        content: updatedTemplate.components.find(c => c.type === 'BODY')?.text || '',
+        content: updatedTemplate.components?.find((c: any) => c.type === 'BODY')?.text || '',
         variables: updatedTemplate.components
-          .find(c => c.type === 'BODY')?.text
+          ?.find((c: any) => c.type === 'BODY')?.text
           ?.match(/\{\{(\d+)\}\}/g)?.length || 0,
         createdAt: updatedTemplate.createdAt,
         updatedAt: updatedTemplate.updatedAt,
@@ -130,7 +131,7 @@ export async function GET(
         useCount: updatedTemplate.useCount || 0,
         rejectionReason: updatedTemplate.rejectionReason,
         type: hasMediaHeader ? 'media' : 'text',
-        mediaType: hasMediaHeader ? updatedTemplate.components.find(c => c.type === 'HEADER')?.format : null,
+        mediaType: hasMediaHeader ? updatedTemplate.components?.find((c: any) => c.type === 'HEADER')?.format : null,
         components: updatedTemplate.components,
         whatsappTemplateId: updatedTemplate.whatsappTemplateId,
         wabaId: updatedTemplate.wabaId
@@ -156,7 +157,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -173,9 +175,9 @@ export async function DELETE(
     }
 
     // If template has a WhatsApp template ID, delete it from Interakt using the correct endpoint
-    if (template.whatsappTemplateId && template.wabaId && template.name) {
+    if ((template as any).whatsappTemplateId && (template as any).wabaId && template.name) {
       try {
-        const deleteUrl = `https://amped-express.interakt.ai/api/v17.0/${template.wabaId}/message_templates?hsm_id=${template.whatsappTemplateId}&name=${encodeURIComponent(template.name)}`;
+        const deleteUrl = `https://amped-express.interakt.ai/api/v17.0/${(template as any).wabaId}/message_templates?hsm_id=${(template as any).whatsappTemplateId}&name=${encodeURIComponent(template.name)}`;
 
         const interaktResponse = await fetch(deleteUrl, {
           method: 'DELETE',

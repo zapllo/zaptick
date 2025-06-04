@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find the WABA account
-    const wabaAccount = user.wabaAccounts.find(account => account.wabaId === wabaId);
+    const wabaAccount = user.wabaAccounts.find((account: any) => account.wabaId === wabaId);
     if (!wabaAccount) {
       return NextResponse.json({ error: 'WABA account not found' }, { status: 404 });
     }
@@ -95,7 +95,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

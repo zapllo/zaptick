@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+
+    const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -39,16 +40,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       templates: templates.map(template => {
-        const hasMediaHeader = template.components.some(c => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format));
+        const hasMediaHeader = template.components.some((c: any) => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format));
         return {
           id: template._id,
           name: template.name,
           category: template.category.toLowerCase(),
           language: template.language,
           status: template.status.toLowerCase(),
-          content: template.components.find(c => c.type === 'BODY')?.text || '',
+          content: template.components.find((c: any) => c.type === 'BODY')?.text || '',
           variables: template.components
-            .find(c => c.type === 'BODY')?.text
+            .find((c: any) => c.type === 'BODY')?.text
             ?.match(/\{\{(\d+)\}\}/g)?.length || 0,
           createdAt: template.createdAt,
           updatedAt: template.updatedAt,
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
           useCount: template.useCount,
           rejectionReason: template.rejectionReason,
           type: hasMediaHeader ? 'media' : 'text',
-          mediaType: hasMediaHeader ? template.components.find(c => c.type === 'HEADER')?.format : null,
+          mediaType: hasMediaHeader ? template.components.find((c: any) => c.type === 'HEADER')?.format : null,
           createdBy: template.createdBy || "Unknown"
         };
       })

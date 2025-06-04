@@ -61,10 +61,10 @@ export async function POST(req: NextRequest) {
     try {
       // Try multiple ways to get user ID
       const userId = value.userId ||
-                     value.user_id ||
-                     value.setup?.userId ||
-                     waba?.setup?.userId ||
-                     body.userId;
+        value.user_id ||
+        value.setup?.userId ||
+        waba?.setup?.userId ||
+        body.userId;
 
       if (userId) {
         const wabaAccount = {
@@ -121,7 +121,7 @@ async function processIncomingMessages(value: any) {
   }
 
   const wabaAccount = user.wabaAccounts.find(
-    account => account.phoneNumberId === phoneNumberId
+    (account: any) => account.phoneNumberId === phoneNumberId
   );
 
   if (!wabaAccount) {
