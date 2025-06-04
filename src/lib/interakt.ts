@@ -43,9 +43,13 @@ export async function getWaDownloadUrl(
   };
 }
 
+/* …rest of file untouched … */
+
 /**
- * Step 2 – **immediately** download the media bytes
- * (the signed URL expires after ~1 minute).
+ * Download the raw media bytes right after we obtained the URL.
+ * ⚠︎  Some WABA setups need the same headers that were used for the
+ *    lookup call, others return a public (pre-signed) URL.
+ *    → try with headers, if that fails retry without.
  */
 export async function downloadFromInterakt(
   phoneNumberId: string,
@@ -56,15 +60,30 @@ export async function downloadFromInterakt(
   const { url, mime_type, file_name } =
         await getWaDownloadUrl(phoneNumberId, wabaId, mediaId);
 
-  const r = await fetch(url, { redirect: 'follow' });
-  if (!r.ok) {
-    throw new Error(`media download failed → ${r.status} ${r.statusText}`);
+  const headers = {
+    'x-access-token': INT_TOKEN,
+    'x-waba-id'     : wabaId,
+  };
+
+  const attempt = async (useHeaders: boolean) => {
+    const r = await fetch(url, {
+      redirect: 'follow',
+      headers : useHeaders ? headers : undefined,
+    });
+    if (!r.ok) throw new Error(`${r.status}`);
+    return Buffer.from(await r.arrayBuffer());
+  };
+
+  let buf: Buffer;
+  try {
+    buf = await attempt(true);          // ① with headers
+  } catch (e) {
+    if ((e as Error).message === '401' || (e as Error).message === '403') {
+      buf = await attempt(false);       // ② retry header-less
+    } else {
+      throw new Error(`media download failed → ${(e as Error).message}`);
+    }
   }
 
-  const arrayBuf = await r.arrayBuffer();
-  return {
-    buffer   : Buffer.from(arrayBuf),
-    mime     : mime_type,
-    fileName : file_name,
-  };
+  return { buffer: buf, mime: mime_type, fileName: file_name };
 }
