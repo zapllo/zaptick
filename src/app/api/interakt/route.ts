@@ -9,7 +9,7 @@ import Contact               from '@/models/Contact';
 import Conversation          from '@/models/Conversation';
 import { v4 as uuidv4 }      from 'uuid';
 
-import { downloadFromInterakt } from '@/lib/interakt';
+import {  downloadWaMedia } from '@/lib/interakt';
 import { uploadToS3 }           from '@/lib/s3';
 
 /* ---------- hub challenge ------------------------------------------------ */
@@ -120,35 +120,35 @@ async function processMessage(
       break;
     }
 
-    case 'image':
-    case 'video':
-    case 'audio':
-    case 'document': {
-      const mediaId = m[m.type].id;
+   case 'image':
+case 'video':
+case 'audio':
+case 'document': {
+  const mediaId = m[m.type].id;
 
-      const { buffer, mime, fileName } =
-            await downloadFromInterakt(
-              wabaAcc.phoneNumberId,  // path
-              wabaAcc.wabaId,         // header
-              mediaId,
-            );
+  /* Interakt does both hops for us now */
+  const { buf, mime, name } = await downloadWaMedia(
+    wabaAcc.phoneNumberId,
+    mediaId,
+  );
 
-      const s3Url = await uploadToS3(
-        buffer,
-        mime,
-        `wa/${m.type}`,
-        fileName ?? `${mediaId}.${mime.split('/')[1]}`,
-      );
+  /* push to S3 */
+  const s3Url = await uploadToS3(
+    buf,
+    mime,
+    `wa/${m.type}`,
+    name ?? `${mediaId}.${mime.split('/')[1]}`,
+  );
 
-      newMsg.messageType  = m.type;
-      newMsg.mediaId      = mediaId;
-      newMsg.mediaUrl     = s3Url;
-      newMsg.mimeType     = mime;
-      newMsg.fileName     = fileName;
-      newMsg.mediaCaption = m[m.type]?.caption || fileName || '';
-      newMsg.content      = newMsg.mediaCaption || m.type;
-      break;
-    }
+  newMsg.messageType  = m.type;
+  newMsg.mediaId      = mediaId;
+  newMsg.mediaUrl     = s3Url;
+  newMsg.mimeType     = mime;
+  newMsg.fileName     = name;
+  newMsg.mediaCaption = m[m.type]?.caption || name || '';
+  newMsg.content      = newMsg.mediaCaption || m.type;
+  break;
+ }
 
     default:
       newMsg.messageType = 'text';
