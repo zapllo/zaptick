@@ -12,34 +12,34 @@ export interface WaMeta {
 
 /**
  * Download a WA media-id through Interakt’s proxy.
- * No headers leak to Facebook, no 401/403, always raw bytes.
+ * 1)  /{PHONE_ID}/media/{MEDIA_ID}        → facebook URL
+ * 2)  /{PHONE_ID}/media?url=<fb-url>      → raw bytes
  */
 export async function downloadWaMedia(
   phoneNumberId: string,
   mediaId      : string,
 ): Promise<WaMeta> {
 
-  /* step-1 ─ Get facebook URL */
+  /* ── step-1 : facebook URL */
   const metaRes = await fetch(
     `${BASE}/${phoneNumberId}/media/${mediaId}`,
-    { headers:{ 'x-access-token': TOKEN, 'content-type':'application/json' } }
+    { headers:{ 'x-access-token': TOKEN } },
   );
-  if (!metaRes.ok) throw new Error(`meta → ${metaRes.status}`);
+  if (!metaRes.ok) {
+    throw new Error(`meta → ${metaRes.status} ${metaRes.statusText}`);
+  }
   const meta = await metaRes.json();   // { url, mime_type, file_name,… }
 
-  /* step-2 ─ Ask Interakt to stream the bytes back to us */
+  /* ── step-2 : Interakt proxy download (url in QUERY) */
+  const dataUrl = `${BASE}/${phoneNumberId}/media?url=${encodeURIComponent(meta.url)}`;
+
   const dataRes = await fetch(
-    `${BASE}/${phoneNumberId}/media`,
-    {
-      method : 'POST',
-      headers: {
-        'x-access-token': TOKEN,
-        'content-type'  : 'application/json',
-      },
-      body: JSON.stringify({ url: meta.url }),
-    }
+    dataUrl,
+    { headers:{ 'x-access-token': TOKEN } },
   );
-  if (!dataRes.ok) throw new Error(`bytes → ${dataRes.status}`);
+  if (!dataRes.ok) {
+    throw new Error(`bytes → ${dataRes.status} ${dataRes.statusText}`);
+  }
 
   return {
     mime : dataRes.headers.get('content-type') || meta.mime_type,

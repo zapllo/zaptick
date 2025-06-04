@@ -3,14 +3,14 @@
    ---------------------------------------------------------------- */
 
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect             from '@/lib/mongodb';
-import User                  from '@/models/User';
-import Contact               from '@/models/Contact';
-import Conversation          from '@/models/Conversation';
-import { v4 as uuidv4 }      from 'uuid';
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
+import Contact from '@/models/Contact';
+import Conversation from '@/models/Conversation';
+import { v4 as uuidv4 } from 'uuid';
 
-import {  downloadWaMedia } from '@/lib/interakt';
-import { uploadToS3 }           from '@/lib/s3';
+import { downloadWaMedia } from '@/lib/interakt';
+import { uploadToS3 } from '@/lib/s3';
 
 /* ---------- hub challenge ------------------------------------------------ */
 
@@ -24,10 +24,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   await dbConnect();
 
-  const raw  = await req.text();
+  const raw = await req.text();
   console.log('Interakt webhook received:', raw);
 
-  const body  = JSON.parse(raw);
+  const body = JSON.parse(raw);
   const value = body?.entry?.[0]?.changes?.[0]?.value ?? {};
 
   if (value.messaging_product === 'whatsapp' && value.messages) {
@@ -61,16 +61,16 @@ async function processIncomingMessages(v: any) {
 }
 
 async function processMessage(
-  m      : any,
+  m: any,
   contacts: any[],
-  userId : string,
+  userId: string,
   wabaAcc: any,
 ) {
   /* ---- sender + timestamps ------------------------------------------- */
 
-  const waId        = m.from;
+  const waId = m.from;
   const senderPhone = waId.replace(/^\+?/, '');
-  const ts          = new Date(+m.timestamp * 1000);
+  const ts = new Date(+m.timestamp * 1000);
 
   /* ---- contact ------------------------------------------------------- */
 
@@ -87,13 +87,13 @@ async function processMessage(
   if (!contact) {
     const waContact = contacts.find((c: any) => c.wa_id === waId);
     contact = await Contact.create({
-      name           : waContact?.profile?.name || `+${senderPhone}`,
-      phone          : `+${senderPhone}`,
-      wabaId         : wabaAcc.wabaId,
-      phoneNumberId  : wabaAcc.phoneNumberId,
+      name: waContact?.profile?.name || `+${senderPhone}`,
+      phone: `+${senderPhone}`,
+      wabaId: wabaAcc.wabaId,
+      phoneNumberId: wabaAcc.phoneNumberId,
       userId,
-      whatsappOptIn  : true,
-      lastMessageAt  : ts,
+      whatsappOptIn: true,
+      lastMessageAt: ts,
     });
   } else {
     contact.lastMessageAt = ts;
@@ -104,10 +104,10 @@ async function processMessage(
   /* ---- new message object ------------------------------------------- */
 
   const newMsg: any = {
-    id               : uuidv4(),
-    senderId         : 'customer',
-    timestamp        : ts,
-    status           : 'delivered',
+    id: uuidv4(),
+    senderId: 'customer',
+    timestamp: ts,
+    status: 'delivered',
     whatsappMessageId: m.id,
   };
 
@@ -116,43 +116,44 @@ async function processMessage(
   switch (m.type) {
     case 'text': {
       newMsg.messageType = 'text';
-      newMsg.content     = m.text?.body ?? '';
+      newMsg.content = m.text?.body ?? '';
       break;
     }
 
-   case 'image':
-case 'video':
-case 'audio':
-case 'document': {
-  const mediaId = m[m.type].id;
+    /* inside processMessage() switch block */
+    case 'image':
+    case 'video':
+    case 'audio':
+    case 'document': {
+      const mediaId = m[m.type].id;
 
-  /* Interakt does both hops for us now */
-  const { buf, mime, name } = await downloadWaMedia(
-    wabaAcc.phoneNumberId,
-    mediaId,
-  );
+      // ①  two-hop download via Interakt
+      const { buf, mime, name } = await downloadWaMedia(
+        wabaAcc.phoneNumberId,
+        mediaId,
+      );
 
-  /* push to S3 */
-  const s3Url = await uploadToS3(
-    buf,
-    mime,
-    `wa/${m.type}`,
-    name ?? `${mediaId}.${mime.split('/')[1]}`,
-  );
+      // ②  push to S3  (no ACL!)
+      const s3Url = await uploadToS3(
+        buf,
+        mime,
+        `wa/${m.type}`,
+        name ?? `${mediaId}.${mime.split('/')[1]}`,
+      );
 
-  newMsg.messageType  = m.type;
-  newMsg.mediaId      = mediaId;
-  newMsg.mediaUrl     = s3Url;
-  newMsg.mimeType     = mime;
-  newMsg.fileName     = name;
-  newMsg.mediaCaption = m[m.type]?.caption || name || '';
-  newMsg.content      = newMsg.mediaCaption || m.type;
-  break;
- }
+      newMsg.messageType = m.type;
+      newMsg.mediaId = mediaId;
+      newMsg.mediaUrl = s3Url;
+      newMsg.mimeType = mime;
+      newMsg.fileName = name;
+      newMsg.mediaCaption = m[m.type]?.caption || name || '';
+      newMsg.content = newMsg.mediaCaption || m.type;
+      break;
+    }
 
     default:
       newMsg.messageType = 'text';
-      newMsg.content     = `Unsupported WA type: ${m.type}`;
+      newMsg.content = `Unsupported WA type: ${m.type}`;
   }
 
   /* ---- conversation upsert ------------------------------------------ */
@@ -160,23 +161,23 @@ case 'document': {
   let conv = await Conversation.findOne({ contactId: contact._id });
   if (!conv) {
     conv = new Conversation({
-      contactId      : contact._id,
-      wabaId         : wabaAcc.wabaId,
-      phoneNumberId  : wabaAcc.phoneNumberId,
+      contactId: contact._id,
+      wabaId: wabaAcc.wabaId,
+      phoneNumberId: wabaAcc.phoneNumberId,
       userId,
-      messages       : [],
-      unreadCount    : 0,
-      status         : 'active',
+      messages: [],
+      unreadCount: 0,
+      status: 'active',
       isWithin24Hours: true,
     });
   }
 
   conv.messages.push(newMsg);
-  conv.lastMessage      = newMsg.content;
-  conv.lastMessageType  = newMsg.messageType;
-  conv.lastMessageAt    = ts;
-  conv.unreadCount      = (conv.unreadCount ?? 0) + 1;
-  conv.isWithin24Hours  = ts.getTime() > Date.now() - 86_400_000;
+  conv.lastMessage = newMsg.content;
+  conv.lastMessageType = newMsg.messageType;
+  conv.lastMessageAt = ts;
+  conv.unreadCount = (conv.unreadCount ?? 0) + 1;
+  conv.isWithin24Hours = ts.getTime() > Date.now() - 86_400_000;
 
   await conv.save();
 }
