@@ -140,9 +140,12 @@ async function processIncomingMessages(value: any) {
 }
 
 async function processMessage(message: any, contacts: any[], userId: string, wabaAccount: any) {
-  const senderPhone = message.from;
+  let senderPhone = message.from;
   const messageId = message.id;
   const timestamp = new Date(parseInt(message.timestamp) * 1000);
+
+  // Normalize phone number by removing leading '+' and any whitespace
+  senderPhone = senderPhone.replace(/\s+/g, '').replace(/^\+/, '');
 
   let messageContent = '';
   let messageType = 'text';
@@ -170,20 +173,25 @@ async function processMessage(message: any, contacts: any[], userId: string, wab
 
   console.log(`Processing ${messageType} message from ${senderPhone}: ${messageContent}`);
 
-  // Find or create contact
+  // Find contact using normalized phone number (checking multiple variants)
   let contact = await Contact.findOne({
-    phone: senderPhone,
+    $or: [
+      { phone: senderPhone },
+      { phone: `+${senderPhone}` },
+      { phone: senderPhone.replace(/^91/, '') }, // Remove country code if present
+      { phone: `+${senderPhone.replace(/^91/, '')}` } // With + but without country code
+    ],
     wabaId: wabaAccount.wabaId
   });
 
   if (!contact) {
     // Get contact name from webhook contacts array
-    const contactInfo = contacts.find(c => c.wa_id === senderPhone);
+    const contactInfo = contacts.find(c => c.wa_id === message.from);
     const contactName = contactInfo?.profile?.name || `Contact ${senderPhone}`;
 
     contact = new Contact({
       name: contactName,
-      phone: senderPhone,
+      phone: `+${senderPhone}`, // Store with + prefix for consistency
       wabaId: wabaAccount.wabaId,
       phoneNumberId: wabaAccount.phoneNumberId,
       userId: userId,
@@ -192,11 +200,18 @@ async function processMessage(message: any, contacts: any[], userId: string, wab
     });
 
     await contact.save();
-    console.log(`Created new contact: ${contactName} (${senderPhone})`);
+    console.log(`Created new contact: ${contactName} (+${senderPhone})`);
   } else {
     // Update existing contact
     contact.lastMessageAt = timestamp;
     contact.whatsappOptIn = true; // Update opt-in status
+
+    // Standardize phone format if it's not already in the preferred format
+    if (contact.phone !== `+${senderPhone}`) {
+      console.log(`Updating phone format from ${contact.phone} to +${senderPhone}`);
+      contact.phone = `+${senderPhone}`;
+    }
+
     await contact.save();
   }
 
