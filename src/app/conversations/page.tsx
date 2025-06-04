@@ -166,6 +166,30 @@ interface TeamMember {
   updatedAt: string;
 }
 
+// First, add these interfaces for template components
+interface TemplateParameter {
+  type: 'text' | 'image' | 'document' | 'video';
+  text?: string;
+  image?: { link: string };
+  document?: { link: string, filename?: string };
+  video?: { link: string };
+}
+
+interface TemplateComponent {
+  type: 'header' | 'body' | 'footer' | 'button';
+  parameters?: TemplateParameter[];
+  sub_type?: string;
+  index?: number;
+}
+
+function compute24hWindow(messages: Message[]): boolean {
+  const lastCustomer = [...messages].reverse()
+    .find(m => m.senderId === 'customer');
+  if (!lastCustomer) return false;
+  return Date.now() - new Date(lastCustomer.timestamp).getTime() < 86_400_000;
+}
+
+
 function ConversationsPageContent() {
   const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -199,6 +223,10 @@ function ConversationsPageContent() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  // Let's add a dialog to handle variable input
+  const [templateVariables, setTemplateVariables] = useState<{ [key: string]: string }>({});
+  const [showTemplateVariablesDialog, setShowTemplateVariablesDialog] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<{ type: string, url: string } | null>(null);
 
   // Helper functions
   const formatMessageTime = (timestamp: string) => {
@@ -307,6 +335,14 @@ function ConversationsPageContent() {
     }
   };
 
+  useEffect(() => {
+    if (!activeConversation) return;
+    const within = compute24hWindow(messages);
+    setActiveConversation(cv =>
+      cv ? { ...cv, isWithin24Hours: within } : cv);
+  }, [messages]);
+
+
   const fetchConversations = async () => {
     setIsLoading(true);
     try {
@@ -407,6 +443,17 @@ function ConversationsPageContent() {
     }
   };
   console.log(currentUser, 'current user');
+
+  if (!isWithin24Hours()) {
+    toast({
+      title: "24-hour window closed",
+      description: "Please use an approved template.",
+      variant: "destructive",
+    });
+    setShowTemplateDialog(true);
+    return;
+  }
+
   const sendMessage = async () => {
     if (!messageInput.trim() || isSending) return;
     const targetContact = getCurrentContact();
@@ -453,21 +500,80 @@ function ConversationsPageContent() {
     }
   };
 
-  const sendTemplate = async (template: Template) => {
+  // Modified sendTemplate function
+  const sendTemplate = async (template: Template, skipVariables = false) => {
     const targetContact = getCurrentContact();
     if (!targetContact || isSending) return;
 
+    // Check if template has components that need variables
+    const needsVariables = template.components?.some(comp =>
+      comp.type === 'body' && comp.text?.includes('{{') ||
+      comp.type === 'header' && (comp.format === 'IMAGE' || comp.format === 'VIDEO' || comp.format === 'DOCUMENT')
+    );
+
+    // If template needs variables and we haven't collected them yet
+    if (needsVariables && !skipVariables) {
+      setSelectedTemplate(template);
+      setTemplateVariables({}); // Reset variables
+      setSelectedMedia(null); // Reset media
+      setShowTemplateVariablesDialog(true);
+      return;
+    }
+
     setIsSending(true);
     try {
-      const response = await fetch('/api/messages/template', {
+      // Prepare components with variables
+      let templateComponents: TemplateComponent[] = [];
+
+      if (template.components && template.components.length > 0) {
+        templateComponents = template.components.map(component => {
+          // Create a base component
+          const templateComponent: TemplateComponent = {
+            type: component.type
+          };
+
+          // For header with media
+          if (component.type === 'header' && component.format) {
+            if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format) && selectedMedia) {
+              templateComponent.parameters = [{
+                type: component.format.toLowerCase() as 'image' | 'video' | 'document',
+                [component.format.toLowerCase()]: {
+                  link: selectedMedia.url,
+                  ...(component.format === 'DOCUMENT' && { filename: selectedMedia.url.split('/').pop() })
+                }
+              }];
+            }
+          }
+
+          // For body with text variables
+          if (component.type === 'body' && component.text) {
+            // Extract variables from the template text
+            const variables = (component.text.match(/\{\{[^}]+\}\}/g) || [])
+              .map((v: string) => v.replace(/\{\{|\}\}/g, '').trim());
+
+            if (variables.length > 0) {
+              templateComponent.parameters = variables.map((varName: string) => ({
+                type: 'text',
+                text: templateVariables[varName] || `[${varName}]` // Use entered value or placeholder
+              }));
+            }
+          }
+
+          return templateComponent;
+        }).filter(comp => comp.type); // Filter out any invalid components
+      }
+
+      const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contactId: targetContact.id,
           wabaId: selectedWabaId,
+          messageType: 'template',
           templateId: template.id,
           templateName: template.name,
           language: template.language,
+          templateComponents: templateComponents.length > 0 ? templateComponents : undefined,
           conversationId: activeConversation?.id,
           senderName: currentUser.name
         }),
@@ -488,17 +594,113 @@ function ConversationsPageContent() {
         }
 
         setShowTemplateDialog(false);
+        setShowTemplateVariablesDialog(false);
         toast({ title: "Template sent successfully" });
       } else {
-        toast({ title: data.message || "Failed to send template", variant: "destructive" });
+        toast({
+          title: "Failed to send template",
+          description: data.error || "Please try again",
+          variant: "destructive"
+        });
       }
     } catch (error) {
+      console.error("Template sending error:", error);
       toast({ title: "Failed to send template", variant: "destructive" });
     } finally {
       setIsSending(false);
     }
   };
 
+
+  const TemplateVariablesDialog = () => {
+    if (!selectedTemplate) return null;
+
+    // Extract variable names from template
+    const variableNames: string[] = [];
+    let hasMediaHeader = false;
+    let mediaType = '';
+
+    selectedTemplate.components?.forEach(component => {
+      if (component.type === 'body' && component.text) {
+        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+        matches.forEach((match: string) => {
+          const varName = match.replace(/\{\{|\}\}/g, '').trim();
+          if (!variableNames.includes(varName)) {
+            variableNames.push(varName);
+          }
+        });
+      }
+
+      if (component.type === 'header' && component.format) {
+        if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
+          hasMediaHeader = true;
+          mediaType = component.format.toLowerCase();
+        }
+      }
+    });
+
+    return (
+      <Dialog open={showTemplateVariablesDialog} onOpenChange={setShowTemplateVariablesDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Template Variables</DialogTitle>
+            <DialogDescription>
+              Enter values for the variables in this template
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Media upload if needed */}
+            {hasMediaHeader && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Upload {mediaType}</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    placeholder={`Enter ${mediaType} URL`}
+                    value={selectedMedia?.url || ''}
+                    onChange={(e) => setSelectedMedia({ type: mediaType, url: e.target.value })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter a publicly accessible URL for your {mediaType}
+                </p>
+              </div>
+            )}
+
+            {/* Text variables */}
+            {variableNames.map((varName, index) => (
+              <div key={index} className="space-y-2">
+                <label className="text-sm font-medium">{varName}</label>
+                <Input
+                  placeholder={`Enter value for ${varName}`}
+                  value={templateVariables[varName] || ''}
+                  onChange={(e) => setTemplateVariables(prev => ({
+                    ...prev,
+                    [varName]: e.target.value
+                  }))}
+                />
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTemplateVariablesDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => selectedTemplate && sendTemplate(selectedTemplate, true)}
+            >
+              Send Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
   const selectContactForChat = (contact: Contact) => {
     const existingConversation = conversations.find(conv => conv.contact.id === contact.id);
     if (existingConversation) {
@@ -1422,40 +1624,46 @@ function ConversationsPageContent() {
 
             <ScrollArea className="h-[350px]">
               <div className="space-y-3">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    className={cn(
-                      "p-4 rounded-md border cursor-pointer transition-colors",
-                      selectedTemplate?.id === template.id
-                        ? "border-primary bg-primary/5"
-                        : "hover:border-primary/50 hover:bg-accent/50"
-                    )}
-                    onClick={() => setSelectedTemplate(template)}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h4 className="font-medium text-foreground">{template.name}</h4>
-                        <Badge
-                          variant="outline"
-                          className="mt-1"
-                        >
-                          {template.category}
-                        </Badge>
+                {templates.map((template) => {
+                  // Determine if template has variables or media
+                  const hasVariables = template.components?.some(comp =>
+                    (comp.type === 'body' && comp.text?.includes('{{')) ||
+                    (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
+                  );
+
+                  return (
+                    <div
+                      key={template.id}
+                      className={cn(
+                        "p-4 rounded-md border cursor-pointer transition-colors",
+                        selectedTemplate?.id === template.id
+                          ? "border-primary bg-primary/5"
+                          : "hover:border-primary/50 hover:bg-accent/50"
+                      )}
+                      onClick={() => setSelectedTemplate(template)}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-medium text-foreground">{template.name}</h4>
+                          <div className="flex gap-2 mt-1">
+                            <Badge variant="outline">{template.category}</Badge>
+                            {hasVariables && (
+                              <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                                Variables
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Badge variant="secondary">{template.language}</Badge>
                       </div>
-                      <Badge
-                        variant="secondary"
-                      >
-                        {template.language}
-                      </Badge>
+                      <div className="bg-muted p-3 rounded-md text-sm">
+                        <p className="text-muted-foreground">
+                          {template?.components?.find(c => c.type === 'BODY')?.text || 'Template preview not available'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="bg-muted p-3 rounded-md text-sm">
-                      <p className="text-muted-foreground">
-                        {template?.components?.find(c => c.type === 'BODY')?.text || 'Template preview not available'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {templates.length === 0 && (
                   <div className="text-center py-8">
@@ -1599,6 +1807,7 @@ function ConversationsPageContent() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <TemplateVariablesDialog />
       </div>
     </Layout>
   );

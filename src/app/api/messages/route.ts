@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
+// ... existing code ...
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -15,7 +17,6 @@ export async function POST(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-
 
     const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
@@ -31,11 +32,34 @@ export async function POST(req: NextRequest) {
 
     // Read the request body ONCE and store it
     const requestData = await req.json();
-    const { contactId, message, messageType = 'text', senderName } = requestData;
+    const {
+      contactId,
+      message,
+      messageType = 'text',
+      senderName,
+      templateName,
+      templateId,
+      language = 'en',
+      templateComponents
+    } = requestData;
 
-    if (!contactId || !message) {
+    if (!contactId) {
       return NextResponse.json({
-        error: 'Missing required fields: contactId, message'
+        error: 'Missing required field: contactId'
+      }, { status: 400 });
+    }
+
+    // For text messages, validate message content
+    if (messageType === 'text' && !message) {
+      return NextResponse.json({
+        error: 'Missing required field: message for text message'
+      }, { status: 400 });
+    }
+
+    // For template messages, validate required fields
+    if (messageType === 'template' && !templateName) {
+      return NextResponse.json({
+        error: 'Missing required field: templateName for template message'
       }, { status: 400 });
     }
 
@@ -58,17 +82,41 @@ export async function POST(req: NextRequest) {
       phoneNumber = '+' + phoneNumber;
     }
 
-    // Prepare WhatsApp message payload
-    const whatsappPayload = {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: phoneNumber,
-      type: "text",
-      text: {
-        preview_url: false,
-        body: message
+    // Prepare WhatsApp message payload based on message type
+    let whatsappPayload;
+
+    if (messageType === 'template') {
+      // Basic template structure
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "template",
+        template: {
+          name: templateName,
+          language: {
+            code: language
+          }
+        }
+      };
+
+      // Add components if provided (for templates with variables or media)
+      if (templateComponents && Array.isArray(templateComponents) && templateComponents.length > 0) {
+        (whatsappPayload.template as any).components = templateComponents;
       }
-    };
+    } else {
+      // Default text message payload
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: message
+        }
+      };
+    }
 
     console.log('Sending message to WhatsApp:');
     console.log('Phone Number ID:', wabaAccount.phoneNumberId);
@@ -151,20 +199,26 @@ export async function POST(req: NextRequest) {
     // Create or update conversation
     let conversation = await Conversation.findOne({ contactId: contact._id });
 
+    // Determine content for displaying in the conversation
+    const messageContent = messageType === 'template'
+      ? `Template: ${templateName}`
+      : message;
+
     const newMessage = {
       id: uuidv4(),
       senderId: 'agent' as const,
-      content: message,
+      content: messageContent,
       messageType: messageType,
       timestamp: new Date(),
       status: 'sent' as const,
       whatsappMessageId: interaktData.messages?.[0]?.id,
-      senderName: senderName || user.name || 'Agent' // Use provided senderName or fall back to user name
+      senderName: senderName || user.name || 'Agent',
+      templateName: messageType === 'template' ? templateName : undefined
     };
 
     if (conversation) {
       conversation.messages.push(newMessage);
-      conversation.lastMessage = message;
+      conversation.lastMessage = messageContent;
       conversation.lastMessageType = messageType;
       conversation.lastMessageAt = new Date();
       conversation.status = 'active';
@@ -180,7 +234,7 @@ export async function POST(req: NextRequest) {
         phoneNumberId: contact.phoneNumberId,
         userId: decoded.id,
         messages: [newMessage],
-        lastMessage: message,
+        lastMessage: messageContent,
         lastMessageType: messageType,
         lastMessageAt: new Date(),
         isWithin24Hours: true
@@ -201,7 +255,8 @@ export async function POST(req: NextRequest) {
         timestamp: newMessage.timestamp,
         status: newMessage.status,
         whatsappMessageId: newMessage.whatsappMessageId,
-        senderName: newMessage.senderName
+        senderName: newMessage.senderName,
+        templateName: newMessage.templateName
       },
       conversationId: conversation._id
     });

@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
       console.error('Error processing incoming messages:', error);
     }
   }
+  if (value.statuses) {
+    await processStatuses(value.statuses, value.metadata?.phone_number_id);
+  }
 
   /* ①  Partner just finished embedded-signup → ask Interakt to attach credit line */
   if (event === 'PARTNER_ADDED' && waba?.waba_id) {
@@ -263,4 +266,23 @@ async function processMessage(message: any, contacts: any[], userId: string, wab
 
   await conversation.save();
   console.log(`Message saved to conversation: ${conversation._id}`);
+}
+
+/* ---- new helper ------------------------------------------- */
+async function processStatuses(statuses: any[], phoneNumberId: string) {
+  for (const st of statuses) {
+    if (st.status !== 'failed') continue;                     // we only care about failures
+    if (st.errors?.[0]?.code !== 131047) continue;            // 24-h error only
+
+    const recipient = st.recipient_id;                        // e.g. "917064267635"
+    // locate conversation by wa_id + phoneNumberId
+    const conv = await Conversation.findOne({
+      'contact.phone': { $regex: recipient.slice(-10) },      // loose match
+      phoneNumberId,
+    });
+    if (conv && conv.isWithin24Hours) {
+      conv.isWithin24Hours = false;
+      await conv.save();
+    }
+  }
 }
