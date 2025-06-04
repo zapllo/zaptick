@@ -434,8 +434,32 @@ function ConversationsPageContent() {
     if (activeConversation) {
       fetchMessages(activeConversation.id);
       setSelectedContact(null);
+
+      // Ensure contact details are available for sending messages
+      if (!activeConversation.contact) {
+        // If for some reason contact details are missing, fetch them
+        fetchConversationDetails(activeConversation.id);
+      }
     }
   }, [activeConversation]);
+
+  // Add this new function to fetch conversation details if needed
+  const fetchConversationDetails = async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}`);
+      const data = await response.json();
+      if (data.success && data.conversation) {
+        // Update the active conversation with complete details
+        setActiveConversation(data.conversation);
+      }
+    } catch (error) {
+      console.error('Error fetching conversation details:', error);
+      toast({
+        title: "Failed to load complete conversation details",
+        variant: "destructive"
+      });
+    }
+  };
 
   useEffect(() => { scrollToBottom(); }, [messages]);
   const createLabel = async () => {
@@ -480,7 +504,7 @@ function ConversationsPageContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contactId: targetContact.id,
+          contactId: targetContact.id || selectedContact?.id,
           wabaId: selectedWabaId,
           message: messageInput.trim(),
           messageType: 'text',
@@ -1012,7 +1036,7 @@ function ConversationsPageContent() {
                       ? "bg-accent text-accent-foreground"
                       : "hover:bg-muted"
                   )}
-                  onClick={() => setActiveConversation(conversation)}
+                  onClick={() => setActiveConversation(conversation) }
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
@@ -1363,7 +1387,70 @@ function ConversationsPageContent() {
                                     : "bg-card text-card-foreground rounded-bl-none"
                                 )}
                               >
-                                <p className="text-sm">{message.content}</p>
+                                {/* Handle different message types */}
+                                {message.messageType === 'text' && (
+                                  <p className="text-sm">{message.content}</p>
+                                )}
+
+                                {message.messageType === 'image' && (
+                                  <div className="space-y-2">
+                                    <img
+                                      src={message.mediaUrl}
+                                      alt={message.mediaCaption || "Image"}
+                                      className="rounded-md max-w-full max-h-[300px] object-contain"
+                                      onClick={() => window.open(message.mediaUrl, '_blank')}
+                                    />
+                                    {message.mediaCaption && (
+                                      <p className="text-sm">{message.mediaCaption}</p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {message.messageType === 'video' && (
+                                  <div className="space-y-2">
+                                    <video
+                                      src={message.mediaUrl}
+                                      controls
+                                      className="rounded-md max-w-full max-h-[300px]"
+                                    />
+                                    {message.mediaCaption && (
+                                      <p className="text-sm">{message.mediaCaption}</p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {message.messageType === 'audio' && (
+                                  <div className="space-y-2">
+                                    <audio
+                                      src={message.mediaUrl}
+                                      controls
+                                      className="w-full"
+                                    />
+                                    {message.mediaCaption && (
+                                      <p className="text-sm">{message.mediaCaption}</p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {message.messageType === 'document' && (
+                                  <div className="space-y-2">
+                                    <a
+                                      href={message.mediaUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center p-3 bg-accent/50 rounded-md hover:bg-accent"
+                                    >
+                                      <FileText className="h-6 w-6 mr-2 text-primary" />
+                                      <div>
+                                        <p className="text-sm font-medium">
+                                          {message.mediaCaption || message.mediaUrl?.split('/').pop() || "Document"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">Click to open</p>
+                                      </div>
+                                    </a>
+                                  </div>
+                                )}
+
                                 {message.templateName && (
                                   <div className="flex items-center gap-1 mt-2 text-xs opacity-75">
                                     <FileText className="h-3 w-3" />

@@ -9,8 +9,15 @@ export interface IMessage {
   status: 'sent' | 'delivered' | 'read' | 'failed';
   whatsappMessageId?: string;
   templateName?: string;
-  mediaUrl?: string;
+
+
+  /*  NEW  */
+  mediaId?: string;        // original WA media-id
+  mediaUrl?: string;       // **permanent S3 URL**
+  mimeType?: string;
+  fileName?: string;
   mediaCaption?: string;
+
   senderName?: string; // Added senderName for displaying who sent the message
 }
 
@@ -50,7 +57,10 @@ const MessageSchema = new Schema({
   },
   whatsappMessageId: String,
   templateName: String,
+  mediaId: String,
   mediaUrl: String,
+  mimeType: String,
+  fileName: String,
   mediaCaption: String,
   senderName: String // Added senderName field
 });
