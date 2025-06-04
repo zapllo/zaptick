@@ -45,45 +45,40 @@ export async function getWaDownloadUrl(
 
 /* …rest of file untouched … */
 
-/**
- * Download the raw media bytes right after we obtained the URL.
- * ⚠︎  Some WABA setups need the same headers that were used for the
- *    lookup call, others return a public (pre-signed) URL.
- *    → try with headers, if that fails retry without.
- */
+/* …existing imports / INT_TOKEN / BASE … */
+
 export async function downloadFromInterakt(
   phoneNumberId: string,
   wabaId       : string,
   mediaId      : string,
 ): Promise<{ buffer: Buffer; mime: string; fileName?: string }> {
 
-  const { url, mime_type, file_name } =
-        await getWaDownloadUrl(phoneNumberId, wabaId, mediaId);
+  const meta = await getWaDownloadUrl(phoneNumberId, wabaId, mediaId);
 
-  const headers = {
-    'x-access-token': INT_TOKEN,
-    'x-waba-id'     : wabaId,
-  };
-
-  const attempt = async (useHeaders: boolean) => {
-    const r = await fetch(url, {
+  const tryFetch = async (withHdr: boolean) => {
+    const r = await fetch(meta.url, {
       redirect: 'follow',
-      headers : useHeaders ? headers : undefined,
+      headers : withHdr ? {
+        'x-access-token': INT_TOKEN,
+        'x-waba-id'     : wabaId,
+      } : undefined,
     });
-    if (!r.ok) throw new Error(`${r.status}`);
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
     return Buffer.from(await r.arrayBuffer());
   };
 
   let buf: Buffer;
   try {
-    buf = await attempt(true);          // ① with headers
+    buf = await tryFetch(true);                // ① first: with headers
   } catch (e) {
-    if ((e as Error).message === '401' || (e as Error).message === '403') {
-      buf = await attempt(false);       // ② retry header-less
+    const msg = (e as Error).message;
+    // 👇  loosen the check – just look for the code anywhere in the msg
+    if (msg.includes('401') || msg.includes('403')) {
+      buf = await tryFetch(false);             // ② retry header-less
     } else {
-      throw new Error(`media download failed → ${(e as Error).message}`);
+      throw new Error(`media download failed → ${msg}`);
     }
   }
 
-  return { buffer: buf, mime: mime_type, fileName: file_name };
+  return { buffer: buf, mime: meta.mime_type, fileName: meta.file_name };
 }
