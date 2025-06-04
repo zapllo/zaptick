@@ -9,8 +9,8 @@ import Contact from '@/models/Contact';
 import Conversation from '@/models/Conversation';
 import { v4 as uuidv4 } from 'uuid';
 
-import { downloadWaMedia } from '@/lib/interakt';
 import { uploadToS3 } from '@/lib/s3';
+import { fetchWaAsset } from '@/lib/interakt';
 
 /* ---------- hub challenge ------------------------------------------------ */
 
@@ -120,33 +120,34 @@ async function processMessage(
       break;
     }
 
-    /* inside processMessage() switch block */
+    /* inside processMessage() switch */
     case 'image':
     case 'video':
     case 'audio':
     case 'document': {
       const mediaId = m[m.type].id;
 
-      // ①  two-hop download via Interakt
-      const { buf, mime, name } = await downloadWaMedia(
-        wabaAcc.phoneNumberId,
+      /* ① download via Interakt (now passes both IDs) */
+      const asset = await fetchWaAsset(
+        wabaAcc.phoneNumberId,   // path part
+        wabaAcc.wabaId,          // header part
         mediaId,
       );
 
-      // ②  push to S3  (no ACL!)
+      /* ② push to S3 (no ACL) */
       const s3Url = await uploadToS3(
-        buf,
-        mime,
+        asset.buf,
+        asset.mime,
         `wa/${m.type}`,
-        name ?? `${mediaId}.${mime.split('/')[1]}`,
+        asset.name ?? `${mediaId}.${asset.mime.split('/')[1]}`,
       );
 
       newMsg.messageType = m.type;
       newMsg.mediaId = mediaId;
       newMsg.mediaUrl = s3Url;
-      newMsg.mimeType = mime;
-      newMsg.fileName = name;
-      newMsg.mediaCaption = m[m.type]?.caption || name || '';
+      newMsg.mimeType = asset.mime;
+      newMsg.fileName = asset.name;
+      newMsg.mediaCaption = m[m.type]?.caption || asset.name || '';
       newMsg.content = newMsg.mediaCaption || m.type;
       break;
     }
