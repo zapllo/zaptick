@@ -143,7 +143,11 @@ async function processMessage(
     case 'document': {
       const mediaId = m[m.type].id;
       const { url, mime_type, file_name } =
-        await getWaDownloadUrl(wabaAcc.phoneNumberId, mediaId);
+        await getWaDownloadUrl(
+          wabaAcc.phoneNumberId,   // path
+          wabaAcc.wabaId,          // header ✅
+          mediaId,
+        );
       console.log(mediaId, 'media id ohhh!!!')
       const waRes = await fetch(url);
       const buffer = Buffer.from(await waRes.arrayBuffer());
