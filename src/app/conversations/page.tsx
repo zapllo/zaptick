@@ -500,22 +500,22 @@ function ConversationsPageContent() {
     }
   };
 
-  // Modified sendTemplate function
+  // The modified sendTemplate function (make sure it's not conditionally defined)
   const sendTemplate = async (template: Template, skipVariables = false) => {
     const targetContact = getCurrentContact();
     if (!targetContact || isSending) return;
 
     // Check if template has components that need variables
     const needsVariables = template.components?.some(comp =>
-      comp.type === 'body' && comp.text?.includes('{{') ||
-      comp.type === 'header' && (comp.format === 'IMAGE' || comp.format === 'VIDEO' || comp.format === 'DOCUMENT')
+      (comp.type === 'body' && comp.text?.includes('{{')) ||
+      (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
     );
 
     // If template needs variables and we haven't collected them yet
     if (needsVariables && !skipVariables) {
       setSelectedTemplate(template);
-      setTemplateVariables({}); // Reset variables
-      setSelectedMedia(null); // Reset media
+      setTemplateVariables({});
+      setSelectedMedia(null);
       setShowTemplateVariablesDialog(true);
       return;
     }
@@ -523,12 +523,12 @@ function ConversationsPageContent() {
     setIsSending(true);
     try {
       // Prepare components with variables
-      let templateComponents: TemplateComponent[] = [];
+      let templateComponents: any[] = [];
 
       if (template.components && template.components.length > 0) {
         templateComponents = template.components.map(component => {
           // Create a base component
-          const templateComponent: TemplateComponent = {
+          const templateComponent: any = {
             type: component.type
           };
 
@@ -536,7 +536,7 @@ function ConversationsPageContent() {
           if (component.type === 'header' && component.format) {
             if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format) && selectedMedia) {
               templateComponent.parameters = [{
-                type: component.format.toLowerCase() as 'image' | 'video' | 'document',
+                type: component.format.toLowerCase(),
                 [component.format.toLowerCase()]: {
                   link: selectedMedia.url,
                   ...(component.format === 'DOCUMENT' && { filename: selectedMedia.url.split('/').pop() })
@@ -549,10 +549,10 @@ function ConversationsPageContent() {
           if (component.type === 'body' && component.text) {
             // Extract variables from the template text
             const variables = (component.text.match(/\{\{[^}]+\}\}/g) || [])
-              .map((v: string) => v.replace(/\{\{|\}\}/g, '').trim());
+              .map(v => v.replace(/\{\{|\}\}/g, '').trim());
 
             if (variables.length > 0) {
-              templateComponent.parameters = variables.map((varName: string) => ({
+              templateComponent.parameters = variables.map(varName => ({
                 type: 'text',
                 text: templateVariables[varName] || `[${varName}]` // Use entered value or placeholder
               }));
