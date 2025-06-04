@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
+
     const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
@@ -28,7 +29,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { contactId, message, messageType = 'text' } = await req.json();
+    // Read the request body ONCE and store it
+    const requestData = await req.json();
+    const { contactId, message, messageType = 'text', senderName } = requestData;
 
     if (!contactId || !message) {
       return NextResponse.json({
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     // Ensure wabaAccounts exists and find the WABA account
     const wabaAccounts = user.wabaAccounts || [];
-    const wabaAccount = wabaAccounts.find((account: { wabaId: string }) => account.wabaId === contact.wabaId);
+    const wabaAccount = wabaAccounts.find((account: any) => account.wabaId === contact.wabaId);
     if (!wabaAccount) {
       return NextResponse.json({ error: 'WABA account not found' }, { status: 404 });
     }
@@ -152,17 +155,17 @@ export async function POST(req: NextRequest) {
       id: uuidv4(),
       senderId: 'agent' as const,
       content: message,
-      messageType: 'text',
+      messageType: messageType,
       timestamp: new Date(),
       status: 'sent' as const,
       whatsappMessageId: interaktData.messages?.[0]?.id,
-      senderName: (await req.json()).senderName || 'Agent' // Add this line to save the sender's name
+      senderName: senderName || user.name || 'Agent' // Use provided senderName or fall back to user name
     };
 
     if (conversation) {
       conversation.messages.push(newMessage);
       conversation.lastMessage = message;
-      conversation.lastMessageType = 'text';
+      conversation.lastMessageType = messageType;
       conversation.lastMessageAt = new Date();
       conversation.status = 'active';
 
@@ -178,7 +181,7 @@ export async function POST(req: NextRequest) {
         userId: decoded.id,
         messages: [newMessage],
         lastMessage: message,
-        lastMessageType: 'text',
+        lastMessageType: messageType,
         lastMessageAt: new Date(),
         isWithin24Hours: true
       });
@@ -197,7 +200,8 @@ export async function POST(req: NextRequest) {
         content: newMessage.content,
         timestamp: newMessage.timestamp,
         status: newMessage.status,
-        whatsappMessageId: newMessage.whatsappMessageId
+        whatsappMessageId: newMessage.whatsappMessageId,
+        senderName: newMessage.senderName
       },
       conversationId: conversation._id
     });
