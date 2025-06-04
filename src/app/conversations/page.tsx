@@ -342,16 +342,7 @@ function ConversationsPageContent() {
       cv ? { ...cv, isWithin24Hours: within } : cv);
   }, [messages]);
 
-  useEffect(() => {
-    if (activeConversation && !isWithin24Hours()) {
-      toast({
-        title: "24-hour window closed",
-        description: "Please use an approved template.",
-        variant: "destructive",
-      });
-      setShowTemplateDialog(true);
-    }
-  }, [activeConversation]);
+
   const fetchConversations = async () => {
     setIsLoading(true);
     try {
