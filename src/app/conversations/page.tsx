@@ -255,6 +255,8 @@ function ConversationsPageContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+
+
   const getCurrentContact = () => activeConversation?.contact || selectedContact;
   const getCurrentChatTitle = () => getCurrentContact()?.name || "Select a conversation";
   const isWithin24Hours = () => activeConversation?.isWithin24Hours || Boolean(selectedContact);
@@ -295,32 +297,33 @@ function ConversationsPageContent() {
   };
 
   // API functions
-  const fetchCurrentUser = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      const data = await response.json();
-      console.log('User data response:', data);
+const fetchCurrentUser = useCallback(async () => {
+  try {
+    const response = await fetch('/api/auth/me');
+    const data = await response.json();
+    console.log('User data response:', data);
 
-      if (data.user) {
-        const firstName = data.user.name.split(' ')[0];
-        setCurrentUser({
-          id: data.user.id,
-          name: data.user.name,
-          firstName
-        });
-        console.log('Current user set:', {
-          id: data.user.id,
-          name: data.user.name,
-          firstName
-        });
-      } else {
-        console.error('No user data in response:', data);
-      }
-    } catch (error) {
-      console.error('Error fetching current user:', error);
+    if (data.user) {
+      const firstName = data.user.name.split(' ')[0];
+      setCurrentUser({
+        id: data.user.id,
+        name: data.user.name,
+        firstName
+      });
+      console.log('Current user set:', {
+        id: data.user.id,
+        name: data.user.name,
+        firstName
+      });
+    } else {
+      console.error('No user data in response:', data);
     }
+  } catch (error) {
+    console.error('Error fetching current user:', error);
   }
-  const fetchWabaAccounts = async () => {
+}, []);
+
+  const fetchWabaAccounts = useCallback(async () => {
     try {
       const response = await fetch('/api/waba-accounts');
       const data = await response.json();
@@ -333,8 +336,7 @@ function ConversationsPageContent() {
     } catch (error) {
       console.error('Error fetching WABA accounts:', error);
     }
-  };
-
+  }, []);
   // With this version
   useEffect(() => {
     if (!activeConversation) return;
@@ -397,25 +399,53 @@ function ConversationsPageContent() {
   };
 
 
-  const fetchLabels = async () => {
-    try {
-      const response = await fetch('/api/labels');
-      const data = await response.json();
-      if (data.success) setLabels(data.labels);
-    } catch (error) {
-      console.error('Error fetching labels:', error);
-    }
-  };
+const fetchLabels = useCallback(async () => {
+  try {
+    const response = await fetch('/api/labels');
+    const data = await response.json();
+    if (data.success) setLabels(data.labels);
+  } catch (error) {
+    console.error('Error fetching labels:', error);
+  }
+}, []);
 
-  const fetchTeamMembers = async () => {
-    try {
-      const response = await fetch('/api/team-members');
-      const data = await response.json();
-      if (data.success) setTeamMembers(data.teamMembers);
-    } catch (error) {
-      console.error('Error fetching team members:', error);
+
+const fetchTeamMembers = useCallback(async () => {
+  try {
+    const response = await fetch('/api/team-members');
+    const data = await response.json();
+    if (data.success) setTeamMembers(data.teamMembers);
+  } catch (error) {
+    console.error('Error fetching team members:', error);
+  }
+}, []);
+
+
+  // Effects
+  useEffect(() => {
+    fetchWabaAccounts();
+    fetchLabels();
+    fetchTeamMembers();
+    fetchCurrentUser();
+  }, []);
+
+  // With this version
+  useEffect(() => {
+    if (selectedWabaId) {
+      fetchConversations();
+      fetchContacts();
+      fetchTemplates();
     }
-  };
+  }, [selectedWabaId, statusFilter, fetchConversations, fetchContacts, fetchTemplates]);
+
+  useEffect(() => {
+    if (activeConversation) {
+      fetchMessages(activeConversation.id);
+      setSelectedContact(null);
+    }
+  }, [activeConversation]);
+
+  useEffect(() => { scrollToBottom(); }, [messages]);
 
   const createLabel = async () => {
     if (!newLabelName.trim()) return;
@@ -763,31 +793,7 @@ function ConversationsPageContent() {
     }
   };
 
-  // Effects
-  useEffect(() => {
-    fetchWabaAccounts();
-    fetchLabels();
-    fetchTeamMembers();
-    fetchCurrentUser();
-  }, []);
 
-  // With this version
-  useEffect(() => {
-    if (selectedWabaId) {
-      fetchConversations();
-      fetchContacts();
-      fetchTemplates();
-    }
-  }, [selectedWabaId, statusFilter, fetchConversations, fetchContacts, fetchTemplates]);
-
-  useEffect(() => {
-    if (activeConversation) {
-      fetchMessages(activeConversation.id);
-      setSelectedContact(null);
-    }
-  }, [activeConversation]);
-
-  useEffect(() => { scrollToBottom(); }, [messages]);
 
   if (wabaAccounts.length === 0) {
     return (
