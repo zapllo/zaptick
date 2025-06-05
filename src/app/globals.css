@@ -1,19 +1,24 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
 :root {
-  --background: oklch(0.976 0.004 311.32); /* #F6F4F7 */
+  --background: oklch(0.976 0.004 311.32);
+  /* #F6F4F7 */
   --foreground: oklch(0 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0 0 0);
   --popover: oklch(0.976 0.004 311.32);
   --popover-foreground: oklch(0 0 0);
-  --primary: oklch(0.566 0.12 150.5); /* #4A8870 */
+  --primary: oklch(0.566 0.12 150.5);
+  /* #4A8870 */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.932 0.007 170); /* #EBF2F0 */
+  --secondary: oklch(0.932 0.007 170);
+  /* #EBF2F0 */
   --secondary-foreground: oklch(0 0 0);
   --muted: oklch(0.960 0.004 311.32);
   --muted-foreground: oklch(0.44 0 0);
-  --accent: oklch(0.932 0.007 170); /* same as secondary */
+  --accent: oklch(0.932 0.007 170);
+  /* same as secondary */
   --accent-foreground: oklch(0 0 0);
   --destructive: oklch(0.6300 0.1900 23.0300);
   --destructive-foreground: oklch(1 0 0);
@@ -56,9 +61,11 @@
   --card-foreground: oklch(1 0 0);
   --popover: oklch(0.1800 0 0);
   --popover-foreground: oklch(1 0 0);
-  --primary: oklch(0.566 0.12 150.5); /* #4A8870 */
+  --primary: oklch(0.566 0.12 150.5);
+  /* #4A8870 */
   --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.3 0.01 150); /* dark variant of #EBF2F0 */
+  --secondary: oklch(0.3 0.01 150);
+  /* dark variant of #EBF2F0 */
   --secondary-foreground: oklch(1 0 0);
   --muted: oklch(0.2300 0 0);
   --muted-foreground: oklch(0.7200 0 0);
@@ -154,6 +161,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -257,7 +265,8 @@
 
 /* WhatsApp read receipt styling */
 .read-receipt {
-  color: #53bdeb; /* WhatsApp blue check mark color */
+  color: #53bdeb;
+  /* WhatsApp blue check mark color */
 }
 
 /* Voice message player styling */
@@ -393,4 +402,3 @@
 .dark .online-indicator {
   background-color: #00a884;
 }
-

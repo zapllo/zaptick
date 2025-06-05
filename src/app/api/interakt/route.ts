@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
     await processIncomingMessages(value);
   }
 
+  // Add this block to process status updates
+  if (value.messaging_product === 'whatsapp' && value.statuses) {
+    await processStatusUpdates(value);
+  }
+
   /* status-callbacks, onboarding events … (unchanged / optional) */
 
   return NextResponse.json({ received: true });
@@ -56,6 +61,54 @@ async function processIncomingMessages(v: any) {
       await processMessage(m, v.contacts ?? [], user._id, wabaAcc);
     } catch (err) {
       console.error('processMessage error', err);
+    }
+  }
+}
+
+
+// Add this new function to process status updates
+async function processStatusUpdates(v: any) {
+  if (!v.statuses || !v.statuses.length) return;
+
+  const phoneNumberId = v.metadata?.phone_number_id;
+  if (!phoneNumberId) return;
+
+  // Process each status update
+  for (const status of v.statuses) {
+    try {
+      const whatsappMessageId = status.id;
+      const statusValue = status.status; // 'sent', 'delivered', 'read', etc.
+      const timestamp = new Date(parseInt(status.timestamp) * 1000);
+
+      console.log(`Processing status update: ${whatsappMessageId} => ${statusValue}`);
+
+      // Find the conversation with this message
+      const conversation = await Conversation.findOne({
+        "messages.whatsappMessageId": whatsappMessageId
+      });
+
+      if (conversation) {
+        // Update the message status in the conversation
+        const updatedConversation = await Conversation.findOneAndUpdate(
+          {
+            _id: conversation._id,
+            "messages.whatsappMessageId": whatsappMessageId
+          },
+          {
+            $set: {
+              "messages.$.status": statusValue,
+              "messages.$.timestamp": timestamp // Update the timestamp if needed
+            }
+          },
+          { new: true }
+        );
+
+        console.log(`Updated message status to ${statusValue} for message ${whatsappMessageId}`);
+      } else {
+        console.log(`Could not find conversation with message ID: ${whatsappMessageId}`);
+      }
+    } catch (err) {
+      console.error('Error processing status update:', err);
     }
   }
 }

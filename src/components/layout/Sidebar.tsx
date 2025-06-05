@@ -166,16 +166,11 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
         <div className="flex h-14 items-center border-b px-3 py-4">
           {!collapsed ? (
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <MessageSquare size={18} />
-              </div>
-              <span>ZapTick</span>
+              <img src='/zaptick.png' className="h-32" />
             </Link>
           ) : (
-            <Link href="/dashboard" className="mx-auto">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <MessageSquare size={18} />
-              </div>
+            <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+              <img src='/tick.png' className="scale-150" />
             </Link>
           )}
           <Button
