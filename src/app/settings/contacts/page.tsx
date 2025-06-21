@@ -549,7 +549,7 @@ export default function ContactCustomFieldsPage() {
             <DialogHeader>
               <DialogTitle>Edit Custom Field</DialogTitle>
               <DialogDescription>
-                Update this custom field's properties
+                Update this custom field&apos;s properties
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">

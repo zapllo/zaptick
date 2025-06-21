@@ -618,7 +618,7 @@ const AudienceFilter = ({
                 htmlFor="whatsapp-opted"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                Only include customers whose 'WhatsApp opted' is true
+                Only include customers whose &apos;WhatsApp opted&apos; is true
               </label>
               <p className="text-sm text-muted-foreground">
                 Filter to only contacts who have opted in to WhatsApp communications

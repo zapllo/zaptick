@@ -264,7 +264,7 @@ export default function InsightsPage() {
                   Optimize template usage
                 </h3>
                 <p className="text-sm text-muted-foreground mb-2">
-                  You're currently using many one-time templates. Creating
+                  You&apos;re currently using many one-time templates. Creating
                   reusable templates could save you approximately ₹90 per
                   month.
                 </p>

@@ -533,7 +533,7 @@ export default function Profile() {
                   <div className="space-y-3">
                     <Label className="text-base">Session Timeout</Label>
                     <p className="text-sm text-muted-foreground">
-                      Time before you're automatically logged out due to inactivity
+                      Time before you&apos;re automatically logged out due to inactivity
                     </p>
                     <div className="flex gap-3">
                       {[15, 30, 60, 120].map(minutes => (
@@ -1232,7 +1232,7 @@ export default function Profile() {
               <div>
                 <p className="text-amber-800 font-medium">This will affect your conversations</p>
                 <p className="text-sm text-amber-700 mt-1">
-                  After disconnecting, you won't be able to send or receive messages through this account until you reconnect it.
+                  After disconnecting, you won&apos;t be able to send or receive messages through this account until you reconnect it.
                 </p>
               </div>
             </div>

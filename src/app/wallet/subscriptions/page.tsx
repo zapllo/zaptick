@@ -216,7 +216,7 @@ export default function SubscriptionsPage() {
                   <DialogHeader>
                     <DialogTitle>Cancel Subscription?</DialogTitle>
                     <DialogDescription>
-                      Are you sure you want to cancel your subscription? You'll
+                      Are you sure you want to cancel your subscription? You&apos;ll
                       lose access to all premium features at the end of your
                       current billing period.
                     </DialogDescription>

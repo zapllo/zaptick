@@ -22,7 +22,8 @@ import {
   UserCog,
   Code2,
   MessageCircle,
-  Wallet
+  Wallet,
+  ArrowUpRight
 } from "lucide-react";
 import {
   DropdownMenu,

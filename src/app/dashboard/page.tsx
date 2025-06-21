@@ -82,6 +82,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Link from "next/link";
 
 // Stat Card Component
 interface StatCardProps {
@@ -569,7 +570,7 @@ export default function DashboardPage() {
                     className="flex-1"
                     asChild
                   >
-                    <a href="/templates">View Templates</a>
+                    <Link href="/templates">View Templates</Link>
                   </Button>
                   <Button
                     size="sm"
@@ -630,7 +631,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              {user ? `Welcome back, ${user.name}!` : 'Welcome!'} Here's an overview of your WhatsApp Business account.
+              {user ? `Welcome back, ${user.name}!` : 'Welcome!'} Here&apos;s an overview of your WhatsApp Business account.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -686,7 +687,7 @@ export default function DashboardPage() {
               </a>
             </Card>
             <Card className="cursor-pointer hover:shadow-md rounded-lg transition-shadow">
-              <a href="/templates">
+              <Link href="/templates">
                 <CardContent className="p-4 flex flex-col">
                   <div className="self-start p-2 rounded-md mb-3 bg-blue-500/10 text-blue-500">
                     <FileText className="h-5 w-5" />
@@ -694,7 +695,7 @@ export default function DashboardPage() {
                   <h3 className="font-medium">Create Template</h3>
                   <p className="text-xs text-muted-foreground mt-1">Design reusable message templates</p>
                 </CardContent>
-              </a>
+              </Link>
             </Card>
             <Card className="cursor-pointer hover:shadow-md rounded-lg transition-shadow">
               <a href="/contacts">
@@ -767,7 +768,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Stats row */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 title="Total Messages"
                 value={analytics?.totalMessages || 0}
@@ -804,7 +805,7 @@ export default function DashboardPage() {
                 icon={FileText}
                 loading={analyticsLoading}
               />
-            </div>
+            </div> */}
 
             {/* Analytics and Recent Messages */}
             <div className="grid gap-4 lg:grid-cols-7">
@@ -1078,10 +1079,10 @@ export default function DashboardPage() {
                         <FileText className="h-8 w-8 text-muted-foreground mx-auto" />
                         <h3 className="font-medium">No template data available</h3>
                         <p className="text-sm text-muted-foreground">
-                          Templates will appear here once you've used them to send messages
+                          Templates will appear here once you&apos;ve used them to send messages
                         </p>
                         <Button size="sm" className="mt-2" asChild>
-                          <a href="/templates">Create Template</a>
+                          <Link href="/templates">Create Template</Link>
                         </Button>
                       </div>
                     )}
@@ -1319,9 +1320,9 @@ export default function DashboardPage() {
                       ) : (
                         <>
                           <div className="text-2xl font-bold">
-                            {analytics?.totalContacts ?
+                            {/* {analytics?.totalContacts ?
                               Math.round((parseFloat(analytics.contactMetrics.engagementRate) / 100) * analytics.totalContacts)
-                              : 0}
+                              : 0} */}
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
                             Contacts with conversations
@@ -1356,11 +1357,11 @@ export default function DashboardPage() {
                           <div className="mt-4 pt-4 border-t">
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-muted-foreground">Growth Rate</span>
-                              <span className="font-medium">
+                              {/* <span className="font-medium">
                                 {analytics?.totalContacts && analytics?.contactMetrics?.new
                                   ? `+${((analytics.contactMetrics.new / analytics.totalContacts) * 100).toFixed(1)}%`
                                   : '0%'}
-                              </span>
+                              </span> */}
                             </div>
                           </div>
                         </>
@@ -1421,11 +1422,11 @@ export default function DashboardPage() {
                               <div className="h-3 w-3 rounded-full bg-primary"></div>
                               <span>Active Contacts</span>
                             </div>
-                            <span className="font-medium">
+                            {/* <span className="font-medium">
                               {analytics?.totalContacts ?
                                 Math.round((parseFloat(analytics.contactMetrics.engagementRate) / 100) * analytics.totalContacts)
                                 : 0} ({analytics?.contactMetrics?.engagementRate || 0}%)
-                            </span>
+                            </span> */}
                           </div>
                           <Progress value={parseFloat(analytics?.contactMetrics?.engagementRate || "0")} className="h-2" />
                         </div>
@@ -1435,11 +1436,14 @@ export default function DashboardPage() {
                               <div className="h-3 w-3 rounded-full bg-blue-500"></div>
                               <span>Inactive Contacts</span>
                             </div>
-                            <span className="font-medium">
-                              {analytics?.totalContacts ?
-                                analytics.totalContacts - Math.round((parseFloat(analytics.contactMetrics.engagementRate) / 100) * analytics.totalContacts)
-                                : 0} ({analytics?.contactMetrics?.engagementRate ? (100 - parseFloat(analytics.contactMetrics.engagementRate)).toFixed(1) : 0}%)
-                            </span>
+                            {/* <span className="font-medium">
+                              {analytics?.contactMetrics?.new || 0}{' '}
+                              ({(() => {
+                                if (!analytics?.totalContacts) return '0';
+                                const percentage = ((analytics.contactMetrics.new / analytics.totalContacts) * 100).toFixed(1);
+                                return percentage;
+                              })()}%)
+                            </span> */}
                           </div>
                           <Progress
                             value={analytics?.contactMetrics?.engagementRate ? 100 - parseFloat(analytics.contactMetrics.engagementRate) : 0}
@@ -1453,17 +1457,17 @@ export default function DashboardPage() {
                               <div className="h-3 w-3 rounded-full bg-green-500"></div>
                               <span>New Contacts</span>
                             </div>
-                            <span className="font-medium">
+                            {/* <span className="font-medium">
                               {analytics?.contactMetrics?.new || 0} ({analytics?.totalContacts ?
                                 ((analytics?.contactMetrics?.new / analytics.totalContacts) * 100).toFixed(1) : 0}%)
-                            </span>
+                            </span> */}
                           </div>
-                          <Progress
+                          {/* <Progress
                             value={analytics?.totalContacts ?
                               (analytics?.contactMetrics?.new / analytics.totalContacts) * 100 : 0}
                             className="h-2 bg-muted"
                             indicatorClassName="bg-green-500"
-                          />
+                          /> */}
                         </div>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center text-sm">
@@ -1659,10 +1663,10 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex justify-center">
                   <Button className="gap-2" asChild>
-                    <a href="/templates">
+                    <Link href="/templates">
                       <FileText className="h-4 w-4" />
                       Create New Template
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </TabsContent>

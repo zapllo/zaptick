@@ -1766,7 +1766,7 @@ const CreateCampaignPage = () => {
                                                keyword.matchType === 'starts' ? 'Starts with' :
                                                keyword.matchType === 'ends' ? 'Ends with' : 'Contains'}
                                             </Badge>
-                                            <span className="font-medium">"{keyword.trigger}"</span>
+                                            <span className="font-medium">&quot;{keyword.trigger}&quot;</span>
                                           </div>
 
                                           <Button
@@ -1913,7 +1913,7 @@ const CreateCampaignPage = () => {
                               <div className="border rounded-lg p-5">
                                 <h3 className="font-medium mb-3">Default Response</h3>
                                 <p className="text-sm text-gray-500 mb-4">
-                                  Set up a response for messages that don't match any keywords
+                                  Set up a response for messages that don&apos;t match any keywords
                                 </p>
 
                                 <div>
@@ -1984,7 +1984,7 @@ const CreateCampaignPage = () => {
                               <Bell className="h-8 w-8 text-gray-400 mx-auto mb-3" />
                               <h3 className="font-medium mb-2">No Response Handling</h3>
                               <p className="text-sm text-gray-500 max-w-md mx-auto">
-                                You haven't configured automated responses. Enable this feature to handle customer replies automatically.
+                                You haven&apos;t configured automated responses. Enable this feature to handle customer replies automatically.
                               </p>
                             </div>
                           )}
@@ -2278,7 +2278,7 @@ const CreateCampaignPage = () => {
                               <BarChart className="h-8 w-8 text-gray-400 mx-auto mb-3" />
                               <h3 className="font-medium mb-2">No Conversion Tracking</h3>
                               <p className="text-sm text-gray-500 max-w-md mx-auto">
-                                You haven't set up conversion tracking. Enable this feature to track the effectiveness of your campaign.
+                                You haven&apos;t set up conversion tracking. Enable this feature to track the effectiveness of your campaign.
                               </p>
                             </div>
                           )}
@@ -2402,7 +2402,7 @@ const CreateCampaignPage = () => {
                               <div>
                                 <h4 className="font-medium text-blue-700 mb-1">Scheduling Information</h4>
                                 <p className="text-sm text-blue-700">
-                                  If you don't select a date and time, your campaign will be sent immediately when launched.
+                                  If you don&apos;t select a date and time, your campaign will be sent immediately when launched.
                                   Messages will only be sent to contacts who have opted in to receive WhatsApp messages.
                                 </p>
                               </div>
@@ -2511,7 +2511,7 @@ const CreateCampaignPage = () => {
                               <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-3" />
                               <h3 className="font-medium mb-2">No Retry Configuration</h3>
                               <p className="text-sm text-gray-500 max-w-md mx-auto">
-                                Without retry configuration, failed message delivery attempts won't be retried automatically.
+                                Without retry configuration, failed message delivery attempts won&apos;t be retried automatically.
                               </p>
                             </div>
                           )}
@@ -2634,7 +2634,7 @@ const CreateCampaignPage = () => {
                                     <div>
                                       <h4 className="font-medium text-green-700 mb-1">Message Template Selected</h4>
                                       <p className="text-sm text-green-700">
-                                        You've selected a message template that will be sent to your audience.
+                                        You&apos;ve selected a message template that will be sent to your audience.
                                       </p>
                                       <p className="text-sm font-medium mt-2">
                                         Template: {templates.find(t => t.id === campaign.message.template)?.name || "Unknown"}
@@ -2650,7 +2650,7 @@ const CreateCampaignPage = () => {
                                     <div>
                                       <h4 className="font-medium text-amber-700 mb-1">Custom Message</h4>
                                       <p className="text-sm text-amber-700">
-                                        You've created a custom message. Remember, this can only be sent to users who have messaged you in the last 24 hours.
+                                        You&apos;ve created a custom message. Remember, this can only be sent to users who have messaged you in the last 24 hours.
                                       </p>
                                       <div className="mt-2 p-3 bg-white rounded border border-amber-200">
                                         <p className="text-sm whitespace-pre-wrap">{campaign.message.customMessage}</p>

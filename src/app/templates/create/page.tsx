@@ -703,7 +703,7 @@ export default function CreateTemplatePage() {
                 generate the code based on your settings below.
               </p>
               <p className="text-xs text-blue-600 mt-3">
-                Authentication templates don't require content, variables, or buttons. WhatsApp will
+                Authentication templates don&apos;t require content, variables, or buttons. WhatsApp will
                 generate the message with verification code automatically.
               </p>
             </div>
@@ -732,7 +732,7 @@ export default function CreateTemplatePage() {
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500">
-              The length and format of the authentication code you'll send
+              The length and format of the authentication code you&apos;ll send
             </p>
           </div>
 
@@ -1917,7 +1917,7 @@ const handleCreateTemplate = async () => {
                 <div>
                   <h4 className="font-medium mb-2">Template Review Information</h4>
                   <p className="text-sm text-gray-700">
-                    Meta will review this template and its variables to ensure compliance with WhatsApp's Business Policy.
+                    Meta will review this template and its variables to ensure compliance with WhatsApp&apos;s Business Policy.
                     Providing clear example values helps expedite the approval process.
                   </p>
                 </div>
@@ -1935,8 +1935,8 @@ const handleCreateTemplate = async () => {
                 </div>
 
                 <p className="text-sm text-gray-500 mb-6">
-                  Provide example values for each variable you've added to your template.
-                  These examples should represent actual content you'll send to customers.
+                  Provide example values for each variable you&apos;ve added to your template.
+                  These examples should represent actual content you&apos;ll send to customers.
                 </p>
 
                 <div className="space-y-4">
@@ -1964,7 +1964,7 @@ const handleCreateTemplate = async () => {
                       <div className="p-4">
                         <Label className="text-sm font-medium mb-2 block">Example value</Label>
                         <p className="text-xs text-gray-500 mb-3">
-                          Enter a sample value that represents what you'll send to this variable
+                          Enter a sample value that represents what you&apos;ll send to this variable
                         </p>
                         <div className="flex gap-3">
                           <Input
@@ -2024,7 +2024,7 @@ const handleCreateTemplate = async () => {
                   </div>
                   <h4 className="text-lg font-medium mb-2">No variables to configure</h4>
                   <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
-                    Your message doesn't contain any variables. Variables allow you to personalize
+                    Your message doesn&apos;t contain any variables. Variables allow you to personalize
                     messages by dynamically inserting content.
                   </p>
                   <Button

@@ -134,7 +134,7 @@ export default function BusinessSettings() {
                     maxLength={256}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Maximum 256 characters | Your description will include "Powered by Zatick"
+                    Maximum 256 characters 
                   </p>
                 </div>
 
