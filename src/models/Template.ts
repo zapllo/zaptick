@@ -4,7 +4,7 @@ export interface ITemplate extends Document {
   name: string;
   category: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY';
   language: string;
-  components: {
+  components?: {
     type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
     format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
     text?: string;
@@ -32,6 +32,10 @@ export interface ITemplate extends Document {
   approvedAt?: Date;
   lastUsed?: Date;
   useCount: number;
+  authSettings?: {
+    codeExpirationMinutes: number;
+    codeLength: number;
+  };
 }
 
 const TemplateSchema = new Schema<ITemplate>(
@@ -91,11 +95,11 @@ const TemplateSchema = new Schema<ITemplate>(
       type: String,
       required: [true, 'User ID is required']
     },
-   status: {
-  type: String,
-  enum: ['PENDING', 'APPROVED', 'REJECTED', 'DISABLED', 'DELETED'],
-  default: 'PENDING'
-},
+    status: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'DISABLED', 'DELETED'],
+      default: 'PENDING'
+    },
     whatsappTemplateId: String,
     rejectionReason: String,
     approvedAt: Date,
@@ -103,6 +107,16 @@ const TemplateSchema = new Schema<ITemplate>(
     useCount: {
       type: Number,
       default: 0
+    },
+    authSettings: {
+      codeExpirationMinutes: {
+        type: Number,
+        default: 10
+      },
+      codeLength: {
+        type: Number,
+        default: 6
+      }
     }
   },
   { timestamps: true }

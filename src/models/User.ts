@@ -5,6 +5,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  companyId: mongoose.Types.ObjectId;
   wabaAccounts: {
     wabaId: string;
     phoneNumberId: string;
@@ -15,6 +16,7 @@ export interface IUser extends Document {
     isvNameToken: string;
     templateCount?: number;
   }[];
+  role: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -40,6 +42,16 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, 'Please provide a password'],
       minlength: 6,
+    },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
+      required: [true, 'Company ID is required'],
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'user'],
+      default: 'admin'
     },
     wabaAccounts: [
       {

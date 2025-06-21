@@ -13,7 +13,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string, companyName:string) => Promise<void>;
   logout: () => void;
 };
 
@@ -73,7 +73,7 @@ const login = async (email: string, password: string) => {
   }
 };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, password: string, companyName:string) => {
     setLoading(true);
     try {
       const response = await fetch('/api/auth/signup', {
@@ -81,7 +81,7 @@ const login = async (email: string, password: string) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, companyName }),
       });
 
       const data = await response.json();

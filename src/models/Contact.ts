@@ -7,6 +7,8 @@ export interface IContact extends Document {
   wabaId: string;
   phoneNumberId: string;
   userId: string;
+  companyId: mongoose.Types.ObjectId;
+  customFields?: Record<string, any>;
   whatsappOptIn: boolean;
   tags?: string[];
   notes?: string;
@@ -40,10 +42,20 @@ const ContactSchema = new Schema({
     type: String,
     required: true
   },
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    required: true
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  customFields: {
+    type: Map,
+    of: Schema.Types.Mixed,
+    default: {}
   },
   whatsappOptIn: {
     type: Boolean,

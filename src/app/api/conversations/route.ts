@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     if (contactId) query.contactId = contactId;
 
     const conversations = await Conversation.find(query)
-      .populate('contactId', 'name phone email whatsappOptIn')
+      .populate('contactId', 'name phone email whatsappOptIn tags')
       .sort({ lastMessageAt: -1 })
       .lean();
 

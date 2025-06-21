@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
+import Company from '@/models/Company';
 import { createToken } from '@/lib/jwt';
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const { name, email, password } = await req.json();
+    const { name, email, password, companyName } = await req.json();
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -17,11 +18,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create new user
+    // Create new company
+    const company = await Company.create({
+      name: companyName,
+    });
+
+    // Create new user with company reference
     const user = await User.create({
       name,
       email,
       password,
+      companyId: company._id,
+      role: 'admin', // First user is admin
     });
 
     // Generate token
@@ -34,6 +42,8 @@ export async function POST(req: NextRequest) {
         id: user._id,
         name: user.name,
         email: user.email,
+        companyId: user.companyId,
+        role: user.role
       },
     });
   } catch (error) {

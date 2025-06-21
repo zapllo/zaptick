@@ -82,13 +82,13 @@ export default function ManualWabaConnect() {
   };
 
   return (
-    <Card className="flex flex-col justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-dashed border-2 border-blue-200 dark:border-blue-800">
+    <Card className="flex flex-col mt-4 w-full justify-center ">
       <CardHeader className="text-center">
-        <CardTitle className="flex items-center justify-center gap-2 text-blue-900 dark:text-blue-100">
+        <CardTitle className="flex items-center justify- gap-2 ">
           <Link className="h-5 w-5" />
           Connect Existing WABA
         </CardTitle>
-        <CardDescription className="text-blue-700 dark:text-blue-300">
+        <CardDescription className="text-blue-900 text-start dark:text-blue-900">
           Already have a WhatsApp Business Account? Connect it directly
         </CardDescription>
       </CardHeader>
@@ -103,7 +103,7 @@ export default function ManualWabaConnect() {
             placeholder="e.g., 123456789012345"
             value={wabaId}
             onChange={(e) => setWabaId(e.target.value)}
-            className="bg-white dark:bg-gray-950"
+            className=""
           />
         </div>
 
@@ -116,7 +116,7 @@ export default function ManualWabaConnect() {
             placeholder="e.g., 987654321098765"
             value={phoneNumberId}
             onChange={(e) => setPhoneNumberId(e.target.value)}
-            className="bg-white dark:bg-gray-950"
+            className=""
           />
         </div>
 
@@ -129,12 +129,12 @@ export default function ManualWabaConnect() {
             placeholder="Your Business Name (optional)"
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
-            className="bg-white dark:bg-gray-950"
+            className=""
           />
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
-          <p className="text-xs text-blue-700 dark:text-blue-300">
+        <div className=" py-3 rounded-lg">
+          <p className="text-xs text-blue-900">
             💡 <strong>Where to find these IDs:</strong><br/>
             Go to <strong>Facebook Business Manager</strong> → <strong>WhatsApp Accounts</strong> → Select your account → View the WABA ID and Phone Number ID in the account details.
           </p>
@@ -145,7 +145,7 @@ export default function ManualWabaConnect() {
         <Button
           disabled={!wabaId || !phoneNumberId || !user?.id || isConnecting}
           onClick={handleConnect}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          className="w-full bg-blue-900 hover:bg-blue-900/80 text-white"
         >
           {isConnecting ? (
             <>

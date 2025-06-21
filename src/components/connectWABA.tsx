@@ -28,7 +28,7 @@ export default function ConnectWabaButton() {
     const handleMessage = (event: MessageEvent) => {
       // Only accept messages from Facebook
       if (event.origin !== "https://www.facebook.com" &&
-          event.origin !== "https://web.facebook.com") {
+        event.origin !== "https://web.facebook.com") {
         return;
       }
 
@@ -184,12 +184,12 @@ export default function ConnectWabaButton() {
   };
 
   return (
-    <Card className="flex flex-col justify-center items-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-dashed border-2 h-full">
-      <CardHeader className="text-center">
-        <CardDescription>
-          Connect a new WhatsApp Business Account
-        </CardDescription>
-      </CardHeader>
+    <Card className="flex h-72 justify-center items-center border-2 ">
+      <h1>
+
+        Connect a new WhatsApp Business Account
+
+      </h1>
       <CardContent className="flex flex-col items-center gap-4">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
           <Phone className="h-8 w-8 text-primary" />

@@ -87,3 +87,43 @@ export async function GET(
     }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const token = req.cookies.get('token')?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token) as { id: string };
+    if (!decoded || !decoded.id) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    await dbConnect();
+
+    // Find and delete the conversation
+    const conversation = await Conversation.findOneAndDelete({
+      _id: params.id,
+      userId: decoded.id
+    });
+
+    if (!conversation) {
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Conversation deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting conversation:', error);
+    return NextResponse.json({
+      error: 'Failed to delete conversation'
+    }, { status: 500 });
+  }
+}

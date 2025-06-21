@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { signup } = useAuth();
@@ -30,7 +31,7 @@ export default function SignupPage() {
     setError("");
 
     try {
-      await signup(name, email, password);
+      await signup(name, email, password, companyName);
     } catch (err: any) {
       setError(err.message || "Failed to create account. Please try again.");
     } finally {
@@ -81,6 +82,16 @@ export default function SignupPage() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  placeholder="Your company name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                   required
                 />
               </div>

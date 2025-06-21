@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { IoIosSearch, IoMdCheckmark } from "react-icons/io";
+import { LiaCheckDoubleSolid } from "react-icons/lia";
+import { BiCheckDouble } from "react-icons/bi";
 import {
   Search,
   Send,
@@ -52,8 +55,12 @@ import {
   Share,
   Copy,
   ExternalLink,
-  Download
+  Download,
+  Trash2,
+  ChevronRight,
+  ChevronLeft
 } from "lucide-react";
+import { FaRegUserCircle } from "react-icons/fa";
 import Layout from "@/components/layout/Layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -106,7 +113,9 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-
+import { FaSearch } from "react-icons/fa";
+import EmojiPicker from 'emoji-picker-react';
+import { type EmojiClickData } from 'emoji-picker-react';
 // Interface definitions aligned with our models
 interface Contact {
   id: string;
@@ -263,7 +272,14 @@ function ConversationsPageContent() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  // Add a function to handle emoji selection
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setMessageInput(prev => prev + emojiData.emoji);
+    // Optionally close the picker after selection
+    // setShowEmojiPicker(false);
+  };
   // Filter states
   const [filters, setFilters] = useState<ConversationFilters>({
     status: [],
@@ -280,11 +296,251 @@ function ConversationsPageContent() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
+  // Add these state variables
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+
+
+  // Update this in your useEffect hooks section
+
+  // Add this near the top of your component where other useEffects are defined
+  useEffect(() => {
+    const handleContactIdFromUrl = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const contactId = searchParams.get('contactId');
+
+      if (contactId && contacts.length > 0) {
+        // Find the contact with the matching ID
+        const matchingContact = contacts.find(contact => contact.id === contactId);
+
+        if (matchingContact) {
+          console.log('Found matching contact from URL param:', matchingContact);
+
+          // Check if there's an existing conversation with this contact
+          const existingConversation = conversations.find(
+            conv => conv.contact && (conv.contact.id === contactId || conv.contact._id === contactId)
+          );
+
+          if (existingConversation) {
+            console.log('Opening existing conversation:', existingConversation);
+            setActiveConversation(existingConversation);
+            setSelectedContact(null);
+          } else {
+            console.log('Starting new conversation with contact:', matchingContact);
+            setSelectedContact(matchingContact);
+            setActiveConversation(null);
+            setMessages([]);
+          }
+
+          // Clear the URL parameter without page reload
+          window.history.replaceState({}, document.title, '/conversations');
+        } else {
+          console.log('Contact ID from URL not found in contacts list:', contactId);
+          // If contacts are loaded but the specified contact isn't found, fetch it directly
+          if (selectedWabaId) {
+            try {
+              const response = await fetch(`/api/contacts/${contactId}`);
+              const data = await response.json();
+
+              if (data.success && data.contact) {
+                console.log('Fetched contact directly:', data.contact);
+                setSelectedContact(data.contact);
+                setActiveConversation(null);
+                setMessages([]);
+
+                // Clear the URL parameter without page reload
+                window.history.replaceState({}, document.title, '/conversations');
+              }
+            } catch (error) {
+              console.error('Error fetching specific contact:', error);
+              toast({
+                title: "Error",
+                description: "Couldn't find the specified contact",
+                variant: "destructive"
+              });
+            }
+          }
+        }
+      }
+    };
+
+    handleContactIdFromUrl();
+  }, [contacts, conversations, selectedWabaId]);
+
+
+  // Add these helper functions
+  const formatTemplatePreview = (text: string) => {
+    if (!text) return '';
+
+    // Replace variables with sample values
+    let formattedText = text.replace(/\{\{[^}]+\}\}/g, (match) => {
+      const varName = match.replace(/\{\{|\}\}/g, '').trim();
+      return `[${varName}]`;
+    });
+
+    return formattedText;
+  };
+
+  const hasTemplateVariables = (template: Template) => {
+    return template.components?.some(comp =>
+      (comp.type === 'body' && comp.text?.includes('{{')) ||
+      (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
+    );
+  };
   // Template dialog states
   const [templateVariables, setTemplateVariables] = useState<{ [key: string]: string }>({});
   const [showTemplateVariablesDialog, setShowTemplateVariablesDialog] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<{ type: string, url: string } | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Add scroll functions
+  const checkScrollability = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth);
+    }
+  };
+
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  };
+
+  // Add useEffect to check scrollability when content changes
+  useEffect(() => {
+    checkScrollability();
+  }, [contacts, conversations]);
+  // Bulk selection states
+  const [selectedConversations, setSelectedConversations] = useState<string[]>([]);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [isBulkSelectMode, setIsBulkSelectMode] = useState(false);
+  const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
+  const [showBulkTagDialog, setShowBulkTagDialog] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [bulkAssignUserId, setBulkAssignUserId] = useState("");
+  const [bulkTagName, setBulkTagName] = useState("");
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [selectedBulkTags, setSelectedBulkTags] = useState<string[]>([]);
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
+
+  // Helper function to get unique tags from all contacts
+  const getUniqueTags = () => {
+    return Array.from(new Set(contacts.flatMap(contact => contact.tags || [])))
+      .filter(tag => tag && tag.trim().length > 0)
+      .sort();
+  };
+
+  // Updated bulkAddTags function to handle _id property
+  const bulkAddTags = async () => {
+    if (selectedBulkTags.length === 0 || selectedConversations.length === 0) return;
+
+    setIsBulkProcessing(true);
+    console.log("Starting bulk tag operation...");
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      // Process each conversation one by one
+      for (const conversationId of selectedConversations) {
+        // Find the conversation in our local state
+        const conversation = conversations.find(c => c.id === conversationId);
+
+        console.log(`Processing conversation:`, conversation);
+
+        if (!conversation) {
+          console.error(`Conversation ${conversationId} not found in state`);
+          failCount++;
+          continue;
+        }
+
+        // Check if contact exists
+        if (!conversation.contact) {
+          console.error(`Conversation ${conversationId} has no contact property`);
+          failCount++;
+          continue;
+        }
+
+        // Get contact ID - handle both id and _id properties
+        const contactId = conversation.contact.id || conversation.contact._id;
+
+        if (!contactId) {
+          console.error(`Contact in conversation ${conversationId} has no id or _id property`);
+          failCount++;
+          continue;
+        }
+
+        console.log(`Processing contact ${contactId} from conversation ${conversationId}`);
+
+        // Process each tag for this contact
+        for (const tag of selectedBulkTags) {
+          if (!tag.trim()) continue;
+
+          console.log(`Adding tag "${tag}" to contact ${contactId}`);
+
+          try {
+            const response = await fetch(`/api/contacts/${contactId}/tags`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tag: tag.trim() }),
+            });
+
+            if (response.ok) {
+              successCount++;
+              console.log(`Successfully added tag "${tag}" to contact ${contactId}`);
+            } else {
+              failCount++;
+              const errorData = await response.json();
+              console.error(`Failed to add tag "${tag}" to contact ${contactId}:`, errorData);
+            }
+          } catch (error) {
+            failCount++;
+            console.error(`Error adding tag "${tag}" to contact ${contactId}:`, error);
+          }
+        }
+      }
+
+      // Refresh data
+      await fetchConversations();
+      await fetchContacts();
+
+      const message = failCount > 0
+        ? `Added tags with ${successCount} successes and ${failCount} failures`
+        : `Successfully added tags to all selected conversations`;
+
+      toast({
+        title: "Tags updated",
+        description: message,
+        variant: failCount > 0 ? "default" : "default"
+      });
+
+      // Reset the dialog state
+      setShowBulkTagDialog(false);
+      setSelectedBulkTags([]);
+      setBulkTagName("");
+      setTagSearchQuery("");
+      clearSelection();
+
+    } catch (error) {
+      console.error("Error in bulk tag operation:", error);
+      toast({
+        title: "Failed to add tags",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
   // Helper functions
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -295,9 +551,8 @@ function ConversationsPageContent() {
 
   const formatFullMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
-    return format(date, "HH:mm");
-  };
-
+    return format(date, "h:mm a"); // Changed from "HH:mm" to "h:mm a"
+  }
   const getDateGroupLabel = (timestamp: string) => {
     const date = new Date(timestamp);
     if (isToday(date)) return "Today";
@@ -340,29 +595,175 @@ function ConversationsPageContent() {
   const getStatusIcon = (status: string) => {
     const iconClass = "h-3 w-3";
     switch (status) {
-      case 'sent': return <Check className={cn(iconClass, "text-muted-foreground")} />;
-      case 'delivered': return <CheckCircle className={cn(iconClass, "text-primary")} />;
-      case 'read': return <CheckCircle className={cn(iconClass, "text-primary")} />;
-      case 'failed': return <AlertCircle className={cn(iconClass, "text-destructive")} />;
-      default: return <Clock className={cn(iconClass, "text-muted-foreground")} />;
+      case 'sent': return <Check className={cn(iconClass, "text-muted-foreground")} />; // Single gray check
+      case 'delivered': return (<BiCheckDouble className="scale-150 text-blue-500" />
+      ); // Double gray checks
+      case 'read': return (
+        <div className="relative">
+          <Check className={cn(iconClass, "text-blue-500")} />
+          <Check className={cn(iconClass, "text-blue-500 absolute -right-1")} />
+        </div>
+      ); // Double blue checks
+      case 'failed': return <AlertCircle className={cn(iconClass, "text-red-500")} />; // Red alert for failed
+      default: return <Clock className={cn(iconClass, "text-muted-foreground")} />; // Clock for pending
     }
   };
-
 
   const [showAddTagDialog, setShowAddTagDialog] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
 
+  // Bulk selection functions
+  const toggleConversationSelection = (conversationId: string) => {
+    setSelectedConversations(prev =>
+      prev.includes(conversationId)
+        ? prev.filter(id => id !== conversationId)
+        : [...prev, conversationId]
+    );
+  };
+
+  const selectAllConversations = () => {
+    setSelectedConversations(filteredConversations.map(conv => conv.id));
+  };
+
+  const clearSelection = () => {
+    setSelectedConversations([]);
+  };
+
+  const exitBulkMode = () => {
+    setIsBulkSelectMode(false);
+    clearSelection();
+  };
+
+  // Bulk action functions
+  const bulkAssignConversations = async () => {
+    if (!bulkAssignUserId || selectedConversations.length === 0) return;
+
+    setIsBulkProcessing(true);
+    try {
+      const promises = selectedConversations.map(conversationId =>
+        fetch(`/api/conversations/${conversationId}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignedTo: bulkAssignUserId }),
+        })
+      );
+
+      await Promise.all(promises);
+
+      // Refresh conversations
+      await fetchConversations();
+
+      const assignedUser = teamMembers.find(m => m.id === bulkAssignUserId);
+      toast({
+        title: `${selectedConversations.length} conversations assigned to ${assignedUser?.name}`
+      });
+
+      setShowBulkAssignDialog(false);
+      setBulkAssignUserId("");
+      clearSelection();
+    } catch (error) {
+      toast({
+        title: "Failed to assign conversations",
+        variant: "destructive"
+      });
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const bulkAddTag = async () => {
+    if (!bulkTagName.trim() || selectedConversations.length === 0) return;
+
+    setIsBulkProcessing(true);
+    try {
+      // Get contact IDs from selected conversations
+      const contactPromises = selectedConversations.map(async (conversationId) => {
+        const conversation = conversations.find(c => c.id === conversationId);
+        if (conversation?.contact?.id) {
+          return fetch(`/api/contacts/${conversation.contact.id}/tags`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tag: bulkTagName.trim() }),
+          });
+        }
+        return null;
+      });
+
+      const responses = await Promise.all(contactPromises);
+      const successful = responses.filter(r => r !== null).length;
+
+      // Refresh data
+      await fetchConversations();
+      await fetchContacts();
+
+      toast({
+        title: `Tag "${bulkTagName}" added to ${successful} contacts`
+      });
+
+      setShowBulkTagDialog(false);
+      setBulkTagName("");
+      clearSelection();
+    } catch (error) {
+      toast({
+        title: "Failed to add tags",
+        variant: "destructive"
+      });
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const bulkDeleteConversations = async () => {
+    if (selectedConversations.length === 0) return;
+
+    setIsBulkProcessing(true);
+    try {
+      const promises = selectedConversations.map(conversationId =>
+        fetch(`/api/conversations/${conversationId}`, {
+          method: 'DELETE',
+        })
+      );
+
+      await Promise.all(promises);
+
+      // Refresh conversations
+      await fetchConversations();
+
+      toast({
+        title: `${selectedConversations.length} conversations deleted`
+      });
+
+      setShowBulkDeleteDialog(false);
+      clearSelection();
+
+      // If active conversation was deleted, clear it
+      if (activeConversation && selectedConversations.includes(activeConversation.id)) {
+        setActiveConversation(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      toast({
+        title: "Failed to delete conversations",
+        variant: "destructive"
+      });
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
   // Add these functions to handle tags
-  const handleAddTag = async () => {
-    if (!newTag.trim() || !getCurrentContact()) return;
+  // Modify the handleAddTag function to accept an optional tag parameter
+  const handleAddTag = async (existingTag?: string) => {
+    const tagToAdd = existingTag || newTag.trim();
+    if (!tagToAdd || !getCurrentContact()) return;
 
     try {
       const response = await fetch(`/api/contacts/${getCurrentContact()?.id}/tags`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tag: newTag.trim(),
+          tag: tagToAdd,
         }),
       });
 
@@ -372,22 +773,23 @@ function ConversationsPageContent() {
         if (selectedContact) {
           setSelectedContact({
             ...selectedContact,
-            tags: [...(selectedContact.tags || []), newTag.trim()]
+            tags: [...(selectedContact.tags || []), tagToAdd]
           });
         } else if (activeConversation) {
           setActiveConversation({
             ...activeConversation,
             contact: {
               ...activeConversation.contact,
-              tags: [...(activeConversation.contact.tags || []), newTag.trim()]
+              tags: [...(activeConversation.contact.tags || []), tagToAdd]
             }
           });
         }
 
         // Refresh contacts list to update tags
         fetchContacts();
-        setNewTag("");
-        setShowAddTagDialog(false);
+        if (!existingTag) {
+          setNewTag("");
+        }
         toast({ title: "Tag added successfully" });
       } else {
         toast({ title: "Failed to add tag", variant: "destructive" });
@@ -435,10 +837,20 @@ function ConversationsPageContent() {
       toast({ title: "Failed to remove tag", variant: "destructive" });
     }
   };
+  // Add this helper function to safely check for tags
+  const hasTag = (conversation: Conversation, tagName: string) => {
+    if (!conversation.contact) return false;
+    if (!conversation.contact.tags) return false;
+    if (!Array.isArray(conversation.contact.tags)) return false;
+    return conversation.contact.tags.includes(tagName);
+  };
+
+
 
   // Filter functions
-  const applyFilters = (conversations: Conversation[]) => {
-    let filtered = [...conversations];
+  // Update the applyFilters function
+  const applyFilters = (convs: Conversation[]) => {
+    let filtered = [...convs];
 
     // Text search
     if (searchQuery.trim()) {
@@ -449,6 +861,24 @@ function ConversationsPageContent() {
       );
     }
 
+    // Tag filter - this should be the primary filter when activeTagFilter is set
+    if (activeTagFilter) {
+      console.log(`Filtering by tag "${activeTagFilter}"`);
+
+      filtered = filtered.filter(conversation => {
+        // Ensure the contact exists and has tags that include the active filter
+        return conversation.contact &&
+          Array.isArray(conversation.contact.tags) &&
+          conversation.contact.tags.includes(activeTagFilter);
+      });
+
+      console.log(`After tag filter: ${filtered.length} conversations remaining`);
+
+      // When tag filter is active, skip other filters to avoid conflicts
+      return filtered;
+    }
+
+    // Only apply other filters if no tag filter is active
     // Status filter
     if (filters.status.length > 0) {
       filtered = filtered.filter(conv => filters.status.includes(conv.status));
@@ -475,11 +905,7 @@ function ConversationsPageContent() {
     if (filters.messageType.length > 0) {
       filtered = filtered.filter(conv => filters.messageType.includes(conv.lastMessageType));
     }
-    if (activeTagFilter) {
-      filtered = filtered.filter(conversation =>
-        conversation.contact.tags && conversation.contact.tags.includes(activeTagFilter)
-      );
-    }
+
     // Date range filter
     if (filters.dateRange !== 'all') {
       const now = new Date();
@@ -522,7 +948,7 @@ function ConversationsPageContent() {
       );
     }
 
-    // Has notes filter (assuming we track this somehow)
+    // Has notes filter
     if (filters.hasNotes) {
       filtered = filtered.filter(conv =>
         conv.contact.notes && conv.contact.notes.trim().length > 0
@@ -570,9 +996,13 @@ function ConversationsPageContent() {
   };
 
   // Update filtered conversations when filters or conversations change
+  // Update this useEffect to include activeTagFilter in the dependency array
   useEffect(() => {
-    setFilteredConversations(applyFilters(conversations));
-  }, [conversations, searchQuery, filters]);
+    const filtered = applyFilters(conversations);
+    setFilteredConversations(filtered);
+  }, [searchQuery, filters, conversations, activeTagFilter]);
+
+
 
   // Reset filters function
   const resetFilters = () => {
@@ -691,13 +1121,17 @@ function ConversationsPageContent() {
     }
   };
 
+  // Add this near your fetchContacts function
   const fetchContacts = async () => {
     try {
       const params = new URLSearchParams();
       if (selectedWabaId) params.append('wabaId', selectedWabaId);
       const response = await fetch(`/api/contacts?${params}`);
       const data = await response.json();
-      if (data.success) setContacts(data.contacts);
+      if (data.success) {
+        setContacts(data.contacts);
+        console.log("Fetched contacts with tags:", data.contacts.map(c => ({ name: c.name, tags: c.tags })));
+      }
     } catch (error) {
       console.error('Error fetching contacts:', error);
     }
@@ -746,6 +1180,7 @@ function ConversationsPageContent() {
     }
   };
 
+  // Effects
   // Effects
   useEffect(() => {
     fetchWabaAccounts();
@@ -1376,7 +1811,7 @@ function ConversationsPageContent() {
               <AlignJustify className="h-5 w-5" />
             </Button>
             <h1 className="text-lg font-semibold hidden md:block">Conversations</h1>
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <Select value={selectedWabaId} onValueChange={setSelectedWabaId} >
                 <SelectTrigger>
                   <SelectValue placeholder="Select account" />
@@ -1389,36 +1824,105 @@ function ConversationsPageContent() {
                   ))}
                 </SelectContent>
               </Select>
-
-            </div>
+            </div> */}
           </div>
-          <ScrollArea className="w-full ml-4 h-9">
-            <Tabs
-              value={activeTagFilter === null ? "all" : activeTagFilter}
-              onValueChange={(value) => setActiveTagFilter(value === "all" ? null : value)}
-              className="w-full"
-            >
-              <TabsList className=" border bg-transparent">
-                <TabsTrigger
-                  value="all"
-                  className="text- px-3 h-7 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  All
-                </TabsTrigger>
 
-                {/* Get unique tags from all contacts */}
-                {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).map((tag, index) => (
-                  <TabsTrigger
-                    key={index}
-                    value={tag}
-                    className="text- px-3 h-7 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                  >
-                    {tag}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </ScrollArea>
+
+
+
+
+
+          {/* Pill list section */}
+          {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).length > 0 ? (
+            <div className="relative">
+              {/* ← arrow */}
+              <div className="absolute bg-white border cursor-pointer left-0 top-0 h-[42px] flex items-center ml-4 rounded rounded-r-none z-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={scrollLeft}
+                  className="h-8 w-8"
+                  disabled={!canScrollLeft}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* scrollable pill list */}
+              <div
+                ref={scrollContainerRef}
+                onScroll={checkScrollability}
+                className="ml-12 h-[42px] overflow-x-auto w-full max-w-[600px] border rounded rounded-l-none overflow-y-hidden scrollbar-hide scroll-smooth"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              >
+                <Tabs
+                  value={activeTagFilter ?? "all"}
+                  onValueChange={(v) => setActiveTagFilter(v === "all" ? null : v)}
+                  className="w-full"
+                >
+                  <TabsList className="flex items-center  gap-2 bg-transparent h-full px-12">
+                    {/* ALL */}
+                    <TabsTrigger
+                      value="all"
+                      className="flex items-center gap-2 px-3  h-8 rounded-md text-sm font-medium whitespace-nowrap
+             data-[state=inactive]:cursor-pointer data-[state=inactive]:border-gray-200
+             data-[state=inactive]:text-gray-700 data-[state=inactive]:bg-white
+             data-[state=active]:border data-[state=active]:border-primary -300
+             data-[state=active]:text-primary -900 data-[state=active]:bg-primary/20
+             hover:bg-gray-50 transition-colors"
+                    >
+                      All
+                    </TabsTrigger>
+
+                    {/* DYNAMIC TAGS */}
+                    {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).map((tag, index) => {
+                      // Count conversations with contacts that have this tag
+                      const tagCount = conversations.filter(conv => {
+                        return conv.contact &&
+                          Array.isArray(conv.contact.tags) &&
+                          conv.contact.tags.includes(tag);
+                      }).length;
+
+                      // Only show tabs for tags that have conversations
+                      if (tagCount === 0) return null;
+                      return (
+                        <TabsTrigger
+                          key={tag}
+                          value={tag}
+                          className="flex items-center gap-2 px-3 h-8 rounded-md text-sm font-medium whitespace-nowrap
+                 data-[state=inactive]:cursor-pointer data-[state=inactive]:border-gray-200
+                 data-[state=inactive]:text-gray-700 data-[state=inactive]:bg-white
+                 data-[state=active]:border data-[state=active]:border-primary -300
+                 data-[state=active]:text-primary -900 data-[state=active]:bg-primary/20
+                 hover:bg-gray-50 transition-colors"
+                        >
+                          <h1 className='text-black'>{tag}</h1>
+                          <span className="text-xs text-gray-500 bg-[#e1dfe1] px-1.5 py-0.5 rounded">
+                            {tagCount}
+                          </span>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Right gradient fade */}
+              <div className="absolute bg-white right-0 top-0 h-[42px] border rounded-r bg-gradient-to-l from-white via-white to-transparent flex items-center pr-2 pointer-events-none z-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={scrollRight}
+                  className="h-7 w-7 pointer-events-auto"
+                >
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+
+
           <div className="flex items-center gap-2">
             <TooltipProvider>
               <Tooltip>
@@ -1451,6 +1955,9 @@ function ConversationsPageContent() {
               </Tooltip>
             </TooltipProvider>
 
+            {/* Bulk Select Toggle */}
+
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -1478,162 +1985,145 @@ function ConversationsPageContent() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* Conversations List Sidebar */}
+
+          {/* Conversations List Sidebar */}
           <div className={cn(
-            "w-full md:w-80 lg:w-96 flex flex-col bg-card border-r overflow-hidden",
+            "w-full md:w-80 lg:w-96 flex flex-col bg-white border-r overflow-hidden",
             !isMobileMenuOpen && "hidden md:flex",
             isMobileMenuOpen && "absolute inset-0 z-50 md:relative"
           )}>
-            {/* Mobile Header */}
-            <div className="md:hidden flex items-center justify-between p-4 border-b">
-              <h2 className="font-semibold">Conversations</h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(false)}>
-                <X className="h-5 w-5" />
-              </Button>
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+              {isBulkSelectMode ? (
+                <div className="flex items-center gap-2 w-full">
+                  <Button variant="ghost" size="icon" onClick={exitBulkMode} className="p-1">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <span className="font-medium">{selectedConversations.length} chat{selectedConversations.length !== 1 ? 's' : ''} selected</span>
+                </div>
+              ) : (
+                <h2 className="font-medium text-lg">Inbox</h2>
+              )}
+              <div className="flex items-center relative gap-1">
+
+                {isBulkSelectMode ? (
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    setShowBulkActions(!showBulkActions);
+                  }}>
+                    <MoreVertical className="h-5 w-5 text-gray-500" />
+                  </Button>
+                ) : (
+                  <Button variant="ghost" size="icon" onClick={() => setIsBulkSelectMode(true)}>
+                    <LiaCheckDoubleSolid className="h-5 w-5 scale-150 text-primary" />
+                  </Button>
+                )}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={getActiveFilterCount() > 0 ? "default" : "ghost"}
+                        size="icon"
+                        onClick={() => setShowFilterDialog(true)}
+                        className={getActiveFilterCount() > 0 ? "relative" : ""}
+                      >
+                        <Filter className="h-5 w-5 scale-125 text-primary" />
+                        {getActiveFilterCount() > 0 && (
+                          <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium flex items-center justify-center rounded-full">
+                            {getActiveFilterCount()}
+                          </span>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {getActiveFilterCount() > 0 ? `${getActiveFilterCount()} filters active` : "Filter conversations"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {isBulkSelectMode && selectedConversations.length > 0 && showBulkActions && (
+                  <div className="absolute top-12 w-56 -right-12 bg-white shadow-lg rounded-md z-50 border">
+                    <div className="py-1">
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => setShowBulkTagDialog(true)}>
+                        Apply tag
+                      </button>
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => { }}>
+                        Add to broadcast list
+                      </button>
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => setShowBulkAssignDialog(true)}>
+                        Assign to
+                      </button>
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => { }}>
+                        Unassign chats
+                      </button>
+                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500" onClick={() => setShowBulkDeleteDialog(true)}>
+                        Delete chats
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Search and Filters */}
-            <div className="p-4 border-b">
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search conversations"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowContactDialog(true)}
-                  className="px-3"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Chat
-                </Button>
-
-                <Button
-                  variant={getActiveFilterCount() > 0 ? "default" : "outline"}
-                  size="sm"
-                  className="px-3"
-                  onClick={() => setShowFilterDialog(true)}
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  {getActiveFilterCount() > 0 ? `Filters (${getActiveFilterCount()})` : "Filters"}
-                </Button>
-
-              </div>
-
-              {/* Active Filters Display */}
-              {getActiveFilterCount() > 0 && (
-                <div className="mt-4 p-3 bg-muted rounded-md">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Active Filters</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={resetFilters}
-                      className="h-6 px-2 text-xs"
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {filters.status.length > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        Status: {filters.status.join(', ')}
-                      </Badge>
-                    )}
-                    {filters.assigned.length > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        Assigned: {filters.assigned.length} selected
-                      </Badge>
-                    )}
-                    {filters.labels.length > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        Labels: {filters.labels.length} selected
-                      </Badge>
-                    )}
-                    {filters.messageType.length > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        Type: {filters.messageType.join(', ')}
-                      </Badge>
-                    )}
-                    {filters.dateRange !== 'all' && (
-                      <Badge variant="secondary" className="text-xs">
-                        Date: {filters.dateRange}
-                      </Badge>
-                    )}
-                    {filters.unreadOnly && (
-                      <Badge variant="secondary" className="text-xs">
-                        Unread Only
-                      </Badge>
-                    )}
-                    {filters.within24Hours && (
-                      <Badge variant="secondary" className="text-xs">
-                        24h Window
-                      </Badge>
-                    )}
-                    {filters.hasMedia && (
-                      <Badge variant="secondary" className="text-xs">
-                        Has Media
-                      </Badge>
-                    )}
-                    {filters.hasNotes && (
-                      <Badge variant="secondary" className="text-xs">
-                        Has Notes
-                      </Badge>
-                    )}
-                  </div>
+            {/* Search bar */}
+            <div className="p-2 border-b">
+              <div className="flex items-center gap-2">
+                {searchQuery.trim().length > 0 && (
+                  <Button variant="ghost" size="icon" onClick={() => setSearchQuery("")} className="p-1">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                )}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search conversations"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn("pl-10", searchQuery.trim().length > 0 ? "flex-1" : "w-full")}
+                  />
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Conversations List */}
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                {/* New conversation indicator */}
-                {selectedContact && (
-                  <Card
-                    className={cn(
-                      "p-3 cursor-pointer hover:bg-accent/50 transition-colors",
-                      "border-primary/30 bg-primary/5"
-                    )}
-                    onClick={() => {
-                      console.log('Clicking on new conversation with contact:', selectedContact);
-                      setIsMobileMenuOpen(false);
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {selectedContact.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-foreground truncate">{selectedContact.name}</h4>
-                          <Badge variant="secondary" className="ml-2 text-xs bg-primary text-primary-foreground">New</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">Start conversation</p>
-                      </div>
+            <div className="flex-1 overflow-y-auto">
+              {/* New conversation indicator */}
+              {selectedContact && (
+                <div
+                  className="flex items-center border-b p-3 cursor-pointer hover:bg-gray-50 bg-primary/5"
+                  onClick={() => {
+                    console.log('Clicking on new conversation with contact:', selectedContact);
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
+                  <div className="relative mr-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {selectedContact.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{selectedContact.name}</h3>
+                      <Badge variant="secondary" className="ml-2 text-xs bg-primary text-primary-foreground">New</Badge>
                     </div>
-                  </Card>
-                )}
+                    <p className="text-sm text-gray-600 truncate">Start conversation</p>
+                  </div>
+                </div>
+              )}
 
-                {/* Existing conversations */}
-                {filteredConversations.map((conversation) => (
-                  <Card
-                    key={conversation.id}
-                    className={cn(
-                      "p-3 cursor-pointer transition-colors",
-                      activeConversation?.id === conversation.id
-                        ? "bg-accent border-accent text-accent-foreground"
-                        : "hover:bg-accent/50"
-                    )}
-                    onClick={() => {
+              {/* Existing conversations */}
+              {filteredConversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  className={cn(
+                    "flex items-center border-b p-3 cursor-pointer hover:bg-gray-50",
+                    activeConversation?.id === conversation.id && !isBulkSelectMode ? "bg-accent" : "",
+                    selectedConversations.includes(conversation.id) && "bg-green-50"
+                  )}
+                  onClick={() => {
+                    if (isBulkSelectMode) {
+                      toggleConversationSelection(conversation.id);
+                    } else {
                       console.log('Selecting conversation with contact:', conversation.contact);
                       if (!conversation.contact?.id) {
                         // If contact ID is missing, fetch complete conversation data
@@ -1642,12 +2132,26 @@ function ConversationsPageContent() {
                       setActiveConversation(conversation);
                       setSelectedContact(null);
                       setIsMobileMenuOpen(false);
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
+                    }
+                  }}
+                >
+                  {/* Contact Avatar with Selection */}
+                  <div className="relative mr-3">
+                    {isBulkSelectMode ? (
+                      <div className={cn(
+                        "h-8 w-8 rounded-full flex items-center justify-center border-2",
+                        selectedConversations.includes(conversation.id)
+                          ? "border-primary -500 bg-green-100"
+                          : "border-gray-200 bg-gray-100"
+                      )}>
+                        {selectedConversations.includes(conversation.id) && (
+                          <IoMdCheckmark className="h-5 w-5  text-primary -500" />
+                        )}
+                      </div>
+                    ) : (
                       <div className="relative">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback>
+                        <Avatar className="h-12 w-12">
+                          <AvatarFallback className="bg-gray-200 text-gray-700">
                             {conversation.contact.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -1655,126 +2159,117 @@ function ConversationsPageContent() {
                           <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-background"></span>
                         )}
                       </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium truncate">{conversation.contact.name}</h4>
-                          <span className="text-xs text-muted-foreground">
-                            {formatMessageTime(conversation.lastMessageAt)}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {conversation.labels && conversation.labels.length > 0 && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] h-4 px-1.5",
-                                `bg-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-100 text-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-800`
-                              )}
-                            >
-                              {labels.find(l => l.id === conversation.labels[0])?.name || "Label"}
-                            </Badge>
-                          )}
-                          {conversation.assignedTo && (
-                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-blue-50 text-blue-700">
-                              {teamMembers.find(u => u.id === conversation.assignedTo)?.name.split(' ')[0] || "Assigned"}
-                            </Badge>
-                          )}
-                          {conversation.status !== 'active' && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] h-4 px-1.5",
-                                conversation.status === 'resolved' && "bg-green-50 text-green-700",
-                                conversation.status === 'pending' && "bg-amber-50 text-amber-700",
-                                conversation.status === 'closed' && "bg-slate-50 text-slate-700",
-                              )}
-                            >
-                              {conversation.status.charAt(0).toUpperCase() + conversation.status.slice(1)}
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-xs text-muted-foreground truncate max-w-[160px]">
-                            {conversation.lastMessageType === "image" ? (
-                              <span className="flex items-center gap-1">
-                                <ImageIcon className="h-3 w-3" />
-                                Photo
-                              </span>
-                            ) : conversation.lastMessageType === "video" ? (
-                              <span className="flex items-center gap-1">
-                                <Video className="h-3 w-3" />
-                                Video
-                              </span>
-                            ) : conversation.lastMessageType === "document" ? (
-                              <span className="flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                Document
-                              </span>
-                            ) : conversation.lastMessageType === "template" ? (
-                              <span className="flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                Template
-                              </span>
-                            ) : (
-                              conversation.lastMessage
-                            )}
-                          </p>
-
-                          <div className="flex items-center gap-1">
-                            {conversation.isWithin24Hours && (
-                              <Zap className="h-3 w-3 text-green-500" />
-                            )}
-                            {conversation.unreadCount > 0 && (
-                              <Badge variant="default" className="text-xs h-5 min-w-5 flex items-center justify-center rounded-full">
-                                {conversation.unreadCount}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-
-                {filteredConversations.length === 0 && !selectedContact && (
-                  <div className="text-center py-10 px-4">
-                    {getActiveFilterCount() > 0 ? (
-                      <>
-                        <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
-                          <Filter className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-medium text-foreground mb-1">No conversations match filters</h3>
-                        <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters to see more results</p>
-                        <Button
-                          onClick={resetFilters}
-                          size="sm"
-                          variant="outline"
-                        >
-                          Clear Filters
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
-                          <MessageSquare className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-medium text-foreground mb-1">No conversations</h3>
-                        <p className="text-muted-foreground text-sm mb-4">Start your first conversation</p>
-                        <Button
-                          onClick={() => setShowContactDialog(true)}
-                          size="sm"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          New Chat
-                        </Button>
-                      </>
                     )}
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+
+                  {/* Message Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{conversation.contact.name}</h3>
+                      <span className="text-xs text-gray-500">{formatMessageTime(conversation.lastMessageAt)}</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {conversation.labels && conversation.labels.length > 0 && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-4 px-1.5",
+                            `bg-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-100 text-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-800`
+                          )}
+                        >
+                          {labels.find(l => l.id === conversation.labels[0])?.name || "Label"}
+                        </Badge>
+                      )}
+                      {conversation.assignedTo && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-blue-50 text-blue-700">
+                          {teamMembers.find(u => u.id === conversation.assignedTo)?.name.split(' ')[0] || "Assigned"}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-sm text-gray-600 truncate max-w-[160px]">
+                        {conversation.lastMessageType === "image" ? (
+                          <span className="flex items-center gap-1">
+                            <ImageIcon className="h-3 w-3" />
+                            Photo
+                          </span>
+                        ) : conversation.lastMessageType === "video" ? (
+                          <span className="flex items-center gap-1">
+                            <Video className="h-3 w-3" />
+                            Video
+                          </span>
+                        ) : conversation.lastMessageType === "document" ? (
+                          <span className="flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Document
+                          </span>
+                        ) : conversation.lastMessageType === "template" ? (
+                          <span className="flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Template
+                          </span>
+                        ) : (
+                          conversation.lastMessage
+                        )}
+                      </p>
+
+                      <div className="flex items-center gap-1">
+                        {conversation.isWithin24Hours && (
+                          <Zap className="h-3 w-3 text-green-500" />
+                        )}
+                        {conversation.unreadCount > 0 && (
+                          <div className="flex items-center justify-center bg-green-500 text-white text-xs h-5 min-w-5 px-1.5 rounded-full">
+                            {conversation.unreadCount}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {filteredConversations.length === 0 && !selectedContact && (
+                <div className="text-center py-10 px-4">
+                  {getActiveFilterCount() > 0 ? (
+                    <>
+                      <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
+                        <Filter className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <h3 className="font-medium text-foreground mb-1">No conversations match filters</h3>
+                      <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters to see more results</p>
+                      <Button
+                        onClick={resetFilters}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Clear Filters
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
+                        <MessageSquare className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <h3 className="font-medium text-foreground mb-1">No conversations</h3>
+                      <p className="text-muted-foreground text-sm mb-4">Start your first conversation</p>
+                      <Button
+                        onClick={() => setShowContactDialog(true)}
+                        size="sm"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Chat
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+
+            {/* Context Menu for Bulk Actions */}
+
           </div>
 
           {/* Chat Area */}
@@ -1817,24 +2312,19 @@ function ConversationsPageContent() {
                               activeConversation?.status === 'resolved' ? 'Resolved' : 'Pending'}
                       </span>
 
-                      {/* {getCurrentContact()?.whatsappOptIn && (
-                        <Badge variant="outline" className="text-xs h-5 px-1.5 border-green-200 text-green-700 bg-green-50">
-                          WhatsApp
-                        </Badge>
-                      )} */}
-
-                      {/* {activeConversation?.isWithin24Hours && (
-                        <Badge variant="outline" className="text-xs h-5 px-1.5 border-green-200 text-green-700 bg-green-50">
-                          24h Window
-                        </Badge>
-                      )} */}
-
-                      {activeConversation?.assignedTo && (
-                        <Badge variant="outline" className="text-xs h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
-                          Assigned: {teamMembers.find(u => u.id === activeConversation.assignedTo)?.name.split(' ')[0] || 'Agent'}
-                        </Badge>
+                      {getCurrentContact()?.tags && getCurrentContact()?.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1  max-w-[200px]">
+                          {getCurrentContact()?.tags.map((tag, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs h-5 px-1.5 bg-primary/10 text-primary border-primary/20"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
-
                       {activeConversation?.labels && activeConversation.labels.length > 0 && (
                         <Badge
                           variant="outline"
@@ -1851,180 +2341,242 @@ function ConversationsPageContent() {
                     </div>
                   </div>
                 </div>
-                {getCurrentContact()?.tags && getCurrentContact()?.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1 max-w-[200px]">
-                    {getCurrentContact()?.tags.map((tag, index) => (
-                      <Badge
-                        key={index}
-                        variant="outline"
-                        className="text-xs h-5 px-1.5 bg-primary/10 text-primary border-primary/20"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
+
+                <div className="flex items-center  gap4">
+                  {activeConversation?.assignedTo ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="h-8 border-primary border  cursor-pointer"
+                        >
+                          <User className="h-3 w-3" />
+                          {teamMembers.find(u => u.id === activeConversation.assignedTo)?.name.split(' ')[0] || 'Agent'}
+                          <ChevronDown className="h-3 w-3 ml-0.5" />
+                        </Badge>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            <span>Reassign to</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            {teamMembers.map(member => (
+                              <DropdownMenuItem
+                                key={member.id}
+                                onClick={() => assignConversation(member.id)}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex items-center w-full">
+                                  <User className="h-4 w-4 mr-2" />
+                                  <span>{member.name}</span>
+                                  {member.id === activeConversation.assignedTo && (
+                                    <Check className="h-4 w-4 ml-auto" />
+                                  )}
+                                </div>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                          onClick={() => assignConversation('')}
+                          className="text-red-600 cursor-pointer"
+                        >
+                          <UserX className="h-4 w-4 mr-2" />
+                          <span>Unassign</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="text-xs h-5 px-1.5 bg-gray-50 text-gray-600 border-gray-200 cursor-pointer hover:bg-gray-100 flex items-center gap-1"
+                        >
+                          <UserPlus className="h-3 w-3" />
+                          Assign
+                          <ChevronDown className="h-3 w-3 ml-0.5" />
+                        </Badge>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {teamMembers.map(member => (
+                          <DropdownMenuItem
+                            key={member.id}
+                            onClick={() => assignConversation(member.id)}
+                            className="cursor-pointer"
+                          >
+                            <User className="h-4 w-4 mr-2" />
+                            <span>{member.name}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  <div className='flex items-center gap-2 ml-4'>
+                    {/* Add Tag Button */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="cursor-pointer" asChild>
+
+                        <Tag className="h-4 w-4 scale-125 text-primary" />
+
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        {/* Existing contact tags to toggle */}
+                        {getCurrentContact()?.tags && getCurrentContact()?.tags.map((tag, index) => (
+                          <DropdownMenuCheckboxItem
+                            key={index}
+                            checked={true}
+                            onCheckedChange={() => handleRemoveTag(tag)}
+                          >
+                            {tag}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setShowAddTagDialog(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add New Tag
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Chat Actions Dropdown - enhanced UI */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild className="cursor-pointer">
+
+                        <MoreVertical className="h-4 scale-125 text-primary" />
+
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        {/* Assign to team member */}
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            <span>Assign to</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-48">
+                            {teamMembers.map(member => (
+                              <DropdownMenuItem
+                                key={member.id}
+                                onClick={() => assignConversation(member.id)}
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                <span>{member.name}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        {/* Add label */}
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <Tag className="h-4 w-4 mr-2" />
+                            <span>Add label</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-48">
+                            {labels.map(label => (
+                              <DropdownMenuItem
+                                key={label.id}
+                                onClick={() => addLabelToConversation(label.id)}
+                                className={`bg-${label.color}-100 text-${label.color}-800 hover:bg-${label.color}-200`}
+                              >
+                                <span>{label.name}</span>
+                              </DropdownMenuItem>
+                            ))}
+
+                            {labels.length > 0 && <DropdownMenuSeparator />}
+
+                            <DropdownMenuItem
+                              onClick={() => setShowCreateLabelDialog(true)}
+                              className="text-primary hover:bg-primary/10"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              <span>Create new label</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        {/* Add note */}
+                        <DropdownMenuItem onClick={() => setShowNoteDialog(true)}>
+                          <Clipboard className="h-4 w-4 mr-2" />
+                          <span>Add note</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        {/* Status management */}
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <Clock className="h-4 w-4 mr-2" />
+                            <span>Change status</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-48">
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('active')}
+                              className="text-green-700"
+                            >
+                              <Circle className="h-4 w-4 mr-2 fill-green-500 text-green-500" />
+                              <span>Active</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('pending')}
+                              className="text-amber-700"
+                            >
+                              <Circle className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
+                              <span>Pending</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('resolved')}
+                              className="text-blue-700"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2 text-blue-500" />
+                              <span>Resolved</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('closed')}
+                              className="text-slate-700"
+                            >
+                              <Archive className="h-4 w-4 mr-2 text-slate-500" />
+                              <span>Closed</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+
+                        {/* Send template */}
+                        <DropdownMenuItem onClick={() => setShowTemplateDialog(true)}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          <span>Send template</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="cursor-pointer rounded-full"
+                            onClick={() => setShowInfoPanel(true)}
+                          >
+                            <FaRegUserCircle className='scale-125 text-primary' />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Contact info</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                )}
-                <div className="flex items-center gap-1">
-                  {/* Add Tag Button */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8">
-                        <Tag className="h-4 w-4 mr-2" />
-                        Tags
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      {/* Existing contact tags to toggle */}
-                      {getCurrentContact()?.tags && getCurrentContact()?.tags.map((tag, index) => (
-                        <DropdownMenuCheckboxItem
-                          key={index}
-                          checked={true}
-                          onCheckedChange={() => handleRemoveTag(tag)}
-                        >
-                          {tag}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setShowAddTagDialog(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add New Tag
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Chat Actions Dropdown - enhanced UI */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8">
-                        Actions
-                        <ChevronDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      {/* Assign to team member */}
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          <span>Assign to</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-48">
-                          {teamMembers.map(member => (
-                            <DropdownMenuItem
-                              key={member.id}
-                              onClick={() => assignConversation(member.id)}
-                            >
-                              <User className="h-4 w-4 mr-2" />
-                              <span>{member.name}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      {/* Add label */}
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Tag className="h-4 w-4 mr-2" />
-                          <span>Add label</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-48">
-                          {labels.map(label => (
-                            <DropdownMenuItem
-                              key={label.id}
-                              onClick={() => addLabelToConversation(label.id)}
-                              className={`bg-${label.color}-100 text-${label.color}-800 hover:bg-${label.color}-200`}
-                            >
-                              <span>{label.name}</span>
-                            </DropdownMenuItem>
-                          ))}
-
-                          {labels.length > 0 && <DropdownMenuSeparator />}
-
-                          <DropdownMenuItem
-                            onClick={() => setShowCreateLabelDialog(true)}
-                            className="text-primary hover:bg-primary/10"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            <span>Create new label</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      {/* Add note */}
-                      <DropdownMenuItem onClick={() => setShowNoteDialog(true)}>
-                        <Clipboard className="h-4 w-4 mr-2" />
-                        <span>Add note</span>
-                      </DropdownMenuItem>
-
-                      <DropdownMenuSeparator />
-
-                      {/* Status management */}
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
-                          <Clock className="h-4 w-4 mr-2" />
-                          <span>Change status</span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-48">
-                          <DropdownMenuItem
-                            onClick={() => changeConversationStatus('active')}
-                            className="text-green-700"
-                          >
-                            <Circle className="h-4 w-4 mr-2 fill-green-500 text-green-500" />
-                            <span>Active</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => changeConversationStatus('pending')}
-                            className="text-amber-700"
-                          >
-                            <Circle className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
-                            <span>Pending</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => changeConversationStatus('resolved')}
-                            className="text-blue-700"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2 text-blue-500" />
-                            <span>Resolved</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => changeConversationStatus('closed')}
-                            className="text-slate-700"
-                          >
-                            <Archive className="h-4 w-4 mr-2 text-slate-500" />
-                            <span>Closed</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      <DropdownMenuSeparator />
-
-                      {/* Send template */}
-                      <DropdownMenuItem onClick={() => setShowTemplateDialog(true)}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        <span>Send template</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full"
-                          onClick={() => setShowInfoPanel(true)}
-                        >
-                          <Info className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Contact info</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                 </div>
               </div>
 
               {/* Messages Area - keeping the existing styling for the chat area */}
-              <ScrollArea className="flex-1 h-[300px] p-4 bg-[#F2EAE4]">
+              <ScrollArea style={{ backgroundImage: "url('/bg.png')" }} className="flex-1 object-contain h-[300px] p-4 ">
                 <div className="space-y-4 max-w-3xl mx-auto">
                   {selectedContact && messages.length === 0 && (
                     <div className="text-center py-10">
@@ -2052,12 +2604,15 @@ function ConversationsPageContent() {
                         </div>
 
                         {/* Messages for this date */}
+
+
+                        {/* Messages for this date */}
                         {dateMessages.map((message) => {
                           // For system messages (assignments, status changes, notes)
                           if (message.messageType === 'system' || message.messageType === 'note') {
                             return (
                               <div key={message.id} className="flex justify-center">
-                                <div className="bg-muted px-3 py-1.5 rounded-full text-xs text-muted-foreground max-w-[80%] text-center">
+                                <div className="bg-[#e1dfe1] px-3 py-1.5 rounded-xl text-xs text-muted-foreground max-w-[80%] text-center">
                                   {message.content}
                                 </div>
                               </div>
@@ -2088,13 +2643,43 @@ function ConversationsPageContent() {
                                   className={cn(
                                     "px-2 py-3 rounded-lg relative",
                                     message.senderId === "agent"
-                                      ? "bg-[#eafeef] text-black -foreground rounded-br-none"
+                                      ? "bg-[#eafeef] text-black rounded-br-none"
                                       : "bg-card text-card-foreground rounded-bl-none"
                                   )}
                                 >
+                                  {/* Message Tail */}
+
+
+                                  {/* Message Tail */}
+                                  <div
+                                    className={cn(
+                                      "absolute w-[20px] h-[20px] rounded-[10px] bottom-[7px]",
+                                      message.senderId === "agent"
+                                        ? "right-[-14px]"
+                                        : "left-[-14px]"
+                                    )}
+                                    style={{
+                                      boxShadow: message.senderId === "agent"
+                                        ? 'rgb(234, 254, 239) -6px 6px 0px 0px' // Negative x-offset for right-side tail
+                                        : 'rgb(255, 255, 255) 6px 6px 0px 0px',  // Positive x-offset for left-side tail
+                                      backgroundColor: 'transparent',
+                                      cursor: 'auto'
+                                    }}
+                                  />
+
+
                                   {/* Handle different message types */}
                                   {message.messageType === 'text' && (
-                                    <p className="text-sm">{message.content}</p>
+                                    <div className="flex gap-8">
+                                      <p className="text-sm">{message.content}</p>
+                                      <div className={cn(
+                                        "flex items-center mt-3 gap-1 text-xs text-muted-foreground opacity-70",
+                                        message.senderId === "agent" ? "justify-end" : "justify-start"
+                                      )}>
+                                        <span>{formatFullMessageTime(message.timestamp)}</span>
+                                        {message.senderId === "agent" && getStatusIcon(message.status)}
+                                      </div>
+                                    </div>
                                   )}
 
                                   {message.messageType === 'image' && (
@@ -2102,8 +2687,8 @@ function ConversationsPageContent() {
                                       <img
                                         src={message.mediaUrl}
                                         alt={message.mediaCaption || "Image"}
-                                        className="rounded-md  w-full max-h-[200px] h-full object-cover cursor-pointer"
-                                        onClick={() => setSelectedImageUrl(message.mediaUrl)} // Changed from window.open to this
+                                        className="rounded-md w-full max-h-[200px] h-full object-cover cursor-pointer"
+                                        onClick={() => setSelectedImageUrl(message.mediaUrl)}
                                       />
                                       {message.mediaCaption && (
                                         <p className="text-sm">{message.mediaCaption}</p>
@@ -2129,7 +2714,7 @@ function ConversationsPageContent() {
                                       <audio
                                         src={message.mediaUrl}
                                         controls
-                                        className="w-full"
+                                        className="w-64"
                                       />
                                       {message.mediaCaption && (
                                         <p className="text-sm">{message.mediaCaption}</p>
@@ -2163,17 +2748,11 @@ function ConversationsPageContent() {
                                     </div>
                                   )}
                                 </div>
-                                <div className={cn(
-                                  "flex items-center gap-1 text-xs text-muted-foreground opacity-70",
-                                  message.senderId === "agent" ? "justify-end" : "justify-start"
-                                )}>
-                                  <span>{formatFullMessageTime(message.timestamp)}</span>
-                                  {message.senderId === "agent" && getStatusIcon(message.status)}
-                                </div>
                               </div>
                             </div>
                           );
                         })}
+
                       </div>
                     );
                   })}
@@ -2183,41 +2762,65 @@ function ConversationsPageContent() {
               </ScrollArea>
 
               {/* Message Input - enhanced UI */}
-              <div className="bg-card border-t p-4">
+              <div className="bg-gradient-to-r from-card to-card/90 border-t shadow-sm px-4 py-3">
                 {isWithin24Hours() ? (
-                  <div className="flex items-end gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="icon" className="rounded-full h-10 w-10">
-                                <Paperclip className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                              <DropdownMenuItem>
-                                <ImageIcon className="h-4 w-4 mr-2" />
-                                Photo or Video
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <FileText className="h-4 w-4 mr-2" />
-                                Document
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setShowTemplateDialog(true)}>
-                                <FileText className="h-4 w-4 mr-2" />
-                                Template
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TooltipTrigger>
-                        <TooltipContent>Attach files</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  <div className="flex items-end gap-3 max-w-4xl mx-auto">
+                    <div className="flex gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="rounded-full h-10 w-10 bg-accent hover:bg-accent/80 text-accent-foreground transition-all"
+                                >
+                                  <Paperclip className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-56 p-2">
+                                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-md focus:bg-accent">
+                                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <ImageIcon className="h-4 w-4 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">Photo or Video</p>
+                                    <p className="text-xs text-muted-foreground">Send media files</p>
+                                  </div>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-md focus:bg-accent mt-1">
+                                  <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                                    <FileText className="h-4 w-4 text-orange-600" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">Document</p>
+                                    <p className="text-xs text-muted-foreground">Share files</p>
+                                  </div>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setShowTemplateDialog(true)}
+                                  className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-md focus:bg-accent mt-1"
+                                >
+                                  <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+                                    <FileText className="h-4 w-4 text-purple-600" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">Template</p>
+                                    <p className="text-xs text-muted-foreground">Use saved templates</p>
+                                  </div>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Attach files</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
 
                     <div className="flex-1 relative">
                       <Textarea
-                        placeholder="Type a message"
+                        placeholder="Type a message..."
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
                         onKeyDown={(e) => {
@@ -2226,23 +2829,42 @@ function ConversationsPageContent() {
                             sendMessage();
                           }
                         }}
-                        className="min-h-[40px] max-h-32 resize-none pr-10 py-2 focus-visible:ring-primary "
+                        className="min-h-[48px] max-h-32 resize-none pr-12 py-3 pl-4 rounded-2xl bg-white shadow-sm border-muted focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
                         rows={1}
                       />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 rounded-full"
-                            >
-                              <Smile className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Add emoji</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                        <div className="relative">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-full hover:bg-accent/50"
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                          >
+                            <Smile className={`h-5 w-5 ${showEmojiPicker ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors`} />
+                          </Button>
+
+                          {showEmojiPicker && (
+                            <div className="absolute bottom-10 right-0 z-50">
+                              <div
+                                className="fixed inset-0"
+                                onClick={() => setShowEmojiPicker(false)}
+                              ></div>
+                              <div className="relative z-50 shadow-lg rounded-lg border border-border">
+                                <EmojiPicker
+                                  onEmojiClick={handleEmojiClick}
+                                  searchDisabled={false}
+                                  skinTonesDisabled={false}
+                                  width={320}
+                                  height={400}
+                                  previewConfig={{
+                                    showPreview: true
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <TooltipProvider>
@@ -2252,35 +2874,38 @@ function ConversationsPageContent() {
                             onClick={sendMessage}
                             disabled={!messageInput.trim() || isSending}
                             size="icon"
-                            className="rounded-full h-10 w-10"
+                            className="rounded-full h-12 w-12 bg-primary hover:bg-primary/90 transition-all shadow-md disabled:opacity-70"
                           >
                             {isSending ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
+                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent"></div>
                             ) : (
-                              <Send className="h-4 w-4" />
+                              <Send className="h-5 w-5 ml-0.5" />
                             )}
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Send message</TooltipContent>
+                        <TooltipContent side="top">Send message</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                 ) : (
-                  <Card className="bg-amber-50 border-amber-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-4">
-                        <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-amber-800 mb-1">
+                  <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200 shadow-sm overflow-hidden h-fit max-w-4xl mx-auto">
+                    <CardContent className="p-0">
+                      <div className="flex items-start">
+                        <div className="bg-amber-200/60 p-5 ml-2 flex items-center rounded-full justify-center">
+                          <AlertCircle className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <div className="flex-1 p-4">
+                          <h4 className="font-medium text-amber-900 mb-1 text-lg">
                             24-hour messaging window expired
                           </h4>
-                          <p className="text-amber-700 text-sm mb-3">
-                            You can only send pre-approved message templates to continue this conversation.
+                          <p className="text-amber-700 text-sm mb-4 leading-relaxed">
+                            For WhatsApp policy compliance, you can only send pre-approved message templates
+                            when the 24-hour conversation window has expired.
                           </p>
                           <Button
                             onClick={() => setShowTemplateDialog(true)}
                             variant="outline"
-                            className="border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
+                            className="border-amber-300 cursor-pointer bg-amber-100 text-amber-800 hover:bg-amber-200 px-4 py-2 h-auto shadow-sm"
                           >
                             <FileText className="h-4 w-4 mr-2" />
                             Choose Template
@@ -2293,30 +2918,29 @@ function ConversationsPageContent() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-accent/10">
-              <Card className="max-w-5xl w-full mx-4 shadow-sm">
-                <CardHeader className="text-center pb-2">
-                  <div className="bg-primary/10 p-6 rounded-full w-fit mx-auto mb-4">
-                    <MessageSquare className="h-10 w-10 text-primary" />
-                  </div>
-                  <CardTitle className="text-xl">Your conversations</CardTitle>
-                  <CardDescription className="text-muted-foreground mt-2">
-                    Select an existing conversation or start a new one to begin messaging with your customers.
-                  </CardDescription>
-                </CardHeader>
-                <CardFooter className="flex justify-center pt-2 pb-6">
-                  <Button
-                    onClick={() => setShowContactDialog(true)}
-                    size="lg"
-                    className="gap-2"
-                  >
-                    <PlusCircle className="h-5 w-5" />
-                    New Conversation
-                  </Button>
-                </CardFooter>
-              </Card>
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-accent/5">
+              <div className="text-center p-8 max-w-md">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6">
+                  <MessageSquare className="h-8 w-8 text-primary" />
+                </div>
+                <h2 className="text-2xl font-semibold text-foreground mb-3">
+                  No conversation selected
+                </h2>
+                <p className="text-muted-foreground mb-8 leading-relaxed">
+                  Choose a conversation from the sidebar or start a new one
+                </p>
+                <Button
+                  onClick={() => setShowContactDialog(true)}
+                  className="h-11 px-6 rounded-lg font-medium shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Start conversation
+                </Button>
+              </div>
             </div>
           )}
+
+
 
           {/* Contact Info Side Panel - enhanced with Card components */}
           <Sheet open={showInfoPanel} onOpenChange={setShowInfoPanel}>
@@ -2424,7 +3048,8 @@ function ConversationsPageContent() {
             </DialogContent>
           </Dialog>
 
-          {/* Template Selection Dialog - enhanced with Card components */}
+          {/* Template Selection Dialog - modernized with improved preview */}
+          {/* Template Selection Dialog - improved with better preview */}
           <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
@@ -2434,82 +3059,166 @@ function ConversationsPageContent() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="relative">
+              <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search templates..."
-                  className="pl-10 mb-4"
+                  className="pl-10"
                 />
               </div>
 
-              <ScrollArea className="h-[350px] pr-4">
-                <div className="space-y-3">
-                  {templates.map((template) => {
-                    // Determine if template has variables or media
-                    const hasVariables = template.components?.some(comp =>
-                      (comp.type === 'body' && comp.text?.includes('{{')) ||
-                      (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
-                    );
+              {/* Template list and preview side by side */}
+              <div className="flex gap-4 h-[350px]">
+                {/* Templates list - single column */}
+                <ScrollArea className="w-1/2 pr-2 border-r">
+                  <div className="space-y-2 pb-2">
+                    {templates.map((template) => {
+                      // Determine if template has variables or media
+                      const hasVariables = template.components?.some(comp =>
+                        (comp.type === 'body' && comp.text?.includes('{{')) ||
+                        (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
+                      );
 
-                    return (
-                      <Card
-                        key={template.id}
-                        className={cn(
-                          "cursor-pointer transition-colors",
-                          selectedTemplate?.id === template.id
-                            ? "border-primary bg-primary/5"
-                            : "hover:border-primary/50 hover:bg-accent/50"
-                        )}
-                        onClick={() => setSelectedTemplate(template)}
-                      >
-                        <CardHeader className="pb-2">
+                      return (
+                        <div
+                          key={template.id}
+                          className={cn(
+                            "p-3 border rounded-md cursor-pointer transition-all",
+                            selectedTemplate?.id === template.id
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-primary/50 hover:bg-accent/20"
+                          )}
+                          onClick={() => setSelectedTemplate(template)}
+                        >
                           <div className="flex justify-between items-start">
                             <div>
-                              <CardTitle className="text-base">{template.name}</CardTitle>
+                              <h4 className="font-medium text-sm">{template.name}</h4>
                               <div className="flex gap-2 mt-1">
-                                <Badge variant="outline">{template.category}</Badge>
+                                <Badge variant="outline" className="text-xs">{template.category}</Badge>
                                 {hasVariables && (
-                                  <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                                  <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
                                     Variables
                                   </Badge>
                                 )}
                               </div>
                             </div>
-                            <Badge variant="secondary">{template.language}</Badge>
+                            <Badge variant="secondary" className="text-xs">{template.language}</Badge>
                           </div>
-                        </CardHeader>
-                        <CardContent className="pb-4">
-                          <div className="bg-muted p-3 rounded-md text-sm">
-                            <p className="text-muted-foreground">
-                              {template?.components?.find(c => c.type === 'BODY')?.text || 'Template preview not available'}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                        </div>
+                      );
+                    })}
 
-                  {templates.length === 0 && (
-                    <div className="text-center py-8">
-                      <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
-                        <FileText className="h-6 w-6 text-muted-foreground" />
+                    {templates.length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
+                          <FileText className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <h3 className="font-medium text-foreground mb-2">No templates</h3>
+                        <p className="text-muted-foreground text-sm mb-4">
+                          No templates available
+                        </p>
                       </div>
-                      <h3 className="font-medium text-foreground mb-2">No templates available</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Create and get approval for message templates to send outside the 24-hour messaging window
-                      </p>
-                      <Button
-                        onClick={() => window.location.href = '/templates'}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Create Templates
-                      </Button>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                {/* Active template preview */}
+                <div className="w-1/2">
+                  {selectedTemplate ? (
+                    <div className="h-full flex flex-col">
+                      <div className="bg-muted/40 rounded-md p-3 mb-2 flex items-center justify-between">
+                        <h4 className="font-medium text-sm">Template Preview</h4>
+                        <Badge variant="secondary" className="text-xs">
+                          {selectedTemplate.language}
+                        </Badge>
+                      </div>
+                      <ScrollArea className="flex-1 border rounded-md p-4 bg-white">
+                        <div className="space-y-4">
+                          {/* Template header if exists */}
+                          {selectedTemplate.components?.find(c => c.type === 'header') && (
+                            <div className="font-medium">
+                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'TEXT' &&
+                                selectedTemplate.components?.find(c => c.type === 'header')?.text}
+                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'IMAGE' && (
+                                <div className="text-center p-2 bg-blue-50 rounded border border-blue-100 text-blue-700">
+                                  <ImageIcon className="h-4 w-4 mx-auto mb-1" />
+                                  <span className="text-xs">Image Header</span>
+                                </div>
+                              )}
+                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'VIDEO' && (
+                                <div className="text-center p-2 bg-purple-50 rounded border border-purple-100 text-purple-700">
+                                  <Video className="h-4 w-4 mx-auto mb-1" />
+                                  <span className="text-xs">Video Header</span>
+                                </div>
+                              )}
+                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'DOCUMENT' && (
+                                <div className="text-center p-2 bg-amber-50 rounded border border-amber-100 text-amber-700">
+                                  <FileText className="h-4 w-4 mx-auto mb-1" />
+                                  <span className="text-xs">Document Header</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Template body - highlight variables */}
+                          <div className="text-sm">
+                            {selectedTemplate.components?.find(c => c.type === 'body')?.text?.split(/(\{\{[^}]+\}\})/).map((part, index) => {
+                              if (part.match(/\{\{[^}]+\}\}/)) {
+                                return (
+                                  <span key={index} className="bg-blue-100 text-blue-800 px-1 rounded">
+                                    {part}
+                                  </span>
+                                );
+                              }
+                              return <span key={index}>{part}</span>;
+                            }) || 'No body content available'}
+                          </div>
+
+                          {/* Template footer if exists */}
+                          {selectedTemplate.components?.find(c => c.type === 'footer') && (
+                            <div className="text-xs text-muted-foreground border-t pt-2 mt-2">
+                              {selectedTemplate.components?.find(c => c.type === 'footer')?.text}
+                            </div>
+                          )}
+
+                          {/* Template buttons if exist */}
+                          {selectedTemplate.components?.some(c => c.type === 'buttons') && (
+                            <div className="pt-2 mt-2 border-t">
+                              <Button variant="outline" className="w-full justify-center text-center h-8 text-xs" disabled>
+                                Example Button
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </ScrollArea>
+
+                      {/* Variable requirements */}
+                      {selectedTemplate.components?.some(comp =>
+                        (comp.type === 'body' && comp.text?.includes('{{')) ||
+                        (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
+                      ) && (
+                          <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-100 text-xs text-blue-700">
+                            <div className="flex items-center">
+                              <Info className="h-3.5 w-3.5 mr-1.5" />
+                              This template requires variable values to be entered before sending
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center border rounded-md bg-muted/20">
+                      <div className="text-center p-4">
+                        <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">
+                          Select a template to preview
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
 
-              <DialogFooter>
+              <DialogFooter className="mt-4">
                 <Button
                   variant="outline"
                   onClick={() => setShowTemplateDialog(false)}
@@ -2531,6 +3240,77 @@ function ConversationsPageContent() {
                       Send Template
                     </>
                   )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Template Preview Dialog - Add this near your other Dialog components */}
+          <Dialog open={!!previewTemplate} onOpenChange={(open) => !open && setPreviewTemplate(null)}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>{previewTemplate?.name}</DialogTitle>
+                <DialogDescription>
+                  Template preview with sample variable values
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="bg-accent/20 p-4 rounded-lg border border-border/40">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                      <MessageCircle className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="space-y-3 flex-1">
+                      {/* Header, if any */}
+                      {previewTemplate?.components?.find(c => c.type === 'header')?.text && (
+                        <div className="font-medium">
+                          {previewTemplate?.components?.find(c => c.type === 'header')?.text}
+                        </div>
+                      )}
+
+                      {/* Body */}
+                      <div className="text-sm text-foreground/90 whitespace-pre-line">
+                        {formatTemplatePreview(previewTemplate?.components?.find(c => c.type === 'body')?.text || '')}
+                      </div>
+
+                      {/* Footer, if any */}
+                      {previewTemplate?.components?.find(c => c.type === 'footer')?.text && (
+                        <div className="text-xs text-muted-foreground mt-2">
+                          {previewTemplate?.components?.find(c => c.type === 'footer')?.text}
+                        </div>
+                      )}
+
+                      {/* Buttons, if any */}
+                      {previewTemplate?.components?.some(c => c.type === 'button') && (
+                        <div className="pt-2">
+                          <Button variant="outline" className="w-full justify-center text-center h-9" disabled>
+                            Example Button
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPreviewTemplate(null)}>
+                  Close Preview
+                </Button>
+                <Button onClick={() => {
+                  if (previewTemplate) {
+                    setSelectedTemplate(previewTemplate);
+                    setPreviewTemplate(null);
+                    // Open variables dialog if needed
+                    if (hasTemplateVariables(previewTemplate)) {
+                      setShowTemplateVariablesDialog(true);
+                    } else {
+                      sendTemplate(previewTemplate);
+                    }
+                  }
+                }}>
+                  Use Template
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -2641,7 +3421,338 @@ function ConversationsPageContent() {
             </DialogContent>
           </Dialog>
 
+          {/* Replace your existing Bulk Tag Dialog with this implementation */}
+          <Dialog open={showBulkTagDialog} onOpenChange={setShowBulkTagDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add Tags to Conversations</DialogTitle>
+                <DialogDescription>
+                  Add tags to {selectedConversations.length} selected conversations
+                </DialogDescription>
+              </DialogHeader>
 
+              <div className="space-y-4 py-2">
+                {/* Search/Create input for new tag */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Create new tag</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter new tag name"
+                      value={bulkTagName}
+                      onChange={(e) => setBulkTagName(e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (bulkTagName.trim()) {
+                          // Add to selected tags if not already there
+                          setSelectedBulkTags(prev =>
+                            prev.includes(bulkTagName.trim())
+                              ? prev
+                              : [...prev, bulkTagName.trim()]
+                          );
+                          setBulkTagName("");
+                        }
+                      }}
+                      disabled={!bulkTagName.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <Separator />
+
+                {/* Search existing tags */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select existing tags</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search tags..."
+                      className="pl-10"
+                      value={tagSearchQuery}
+                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Existing tags with checkboxes */}
+                <ScrollArea className="h-48 border rounded-md">
+                  <div className="p-2 space-y-1">
+                    {getUniqueTags()
+                      .filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase()))
+                      .map((tag, index) => (
+                        <div key={index} className="flex items-center space-x-2 p-1.5 hover:bg-accent rounded-md">
+                          <Checkbox
+                            id={`tag-${index}`}
+                            checked={selectedBulkTags.includes(tag)}
+                            onCheckedChange={(checked) => {
+                              setSelectedBulkTags(prev =>
+                                checked
+                                  ? [...prev, tag]
+                                  : prev.filter(t => t !== tag)
+                              );
+                            }}
+                          />
+                          <label
+                            htmlFor={`tag-${index}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full cursor-pointer"
+                          >
+                            {tag}
+                          </label>
+                        </div>
+                      ))}
+
+                    {getUniqueTags().filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase())).length === 0 && (
+                      <div className="p-2 text-center text-sm text-muted-foreground">
+                        {tagSearchQuery.trim()
+                          ? `No tags matching "${tagSearchQuery}"`
+                          : "No tags available"
+                        }
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                {/* Selected tags display */}
+                {selectedBulkTags.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Selected tags</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedBulkTags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="px-2 py-1">
+                          {tag}
+                          <X
+                            className="h-3 w-3 ml-1.5 cursor-pointer"
+                            onClick={() => setSelectedBulkTags(prev => prev.filter(t => t !== tag))}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowBulkTagDialog(false);
+                    setSelectedBulkTags([]);
+                    setBulkTagName("");
+                    setTagSearchQuery("");
+                  }}
+                  disabled={isBulkProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={bulkAddTags}
+                  disabled={selectedBulkTags.length === 0 || isBulkProcessing}
+                >
+                  {isBulkProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Tag className="h-4 w-4 mr-2" />
+                      Add Tags
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Bulk Tag Dialog */}
+          <Dialog open={showBulkTagDialog} onOpenChange={setShowBulkTagDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add Tags to Conversations</DialogTitle>
+                <DialogDescription>
+                  Add tags to {selectedConversations.length} selected conversations
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                {/* Search/Create input for new tag */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Create new tag</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter new tag name"
+                      value={bulkTagName}
+                      onChange={(e) => setBulkTagName(e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (bulkTagName.trim()) {
+                          // Add to selected tags if not already there
+                          setSelectedBulkTags(prev =>
+                            prev.includes(bulkTagName.trim())
+                              ? prev
+                              : [...prev, bulkTagName.trim()]
+                          );
+                          setBulkTagName("");
+                        }
+                      }}
+                      disabled={!bulkTagName.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <Separator />
+
+                {/* Search existing tags */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select existing tags</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search tags..."
+                      className="pl-10"
+                      value={tagSearchQuery}
+                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Existing tags with checkboxes */}
+                <ScrollArea className="h-48 border rounded-md">
+                  <div className="p-2 space-y-1">
+                    {getUniqueTags()
+                      .filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase()))
+                      .map((tag, index) => (
+                        <div key={index} className="flex items-center space-x-2 p-1.5 hover:bg-accent rounded-md">
+                          <Checkbox
+                            id={`tag-${index}`}
+                            checked={selectedBulkTags.includes(tag)}
+                            onCheckedChange={(checked) => {
+                              setSelectedBulkTags(prev =>
+                                checked
+                                  ? [...prev, tag]
+                                  : prev.filter(t => t !== tag)
+                              );
+                            }}
+                          />
+                          <label
+                            htmlFor={`tag-${index}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full cursor-pointer"
+                          >
+                            {tag}
+                          </label>
+                        </div>
+                      ))}
+
+                    {getUniqueTags().filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase())).length === 0 && (
+                      <div className="p-2 text-center text-sm text-muted-foreground">
+                        {tagSearchQuery.trim()
+                          ? `No tags matching "${tagSearchQuery}"`
+                          : "No tags available"
+                        }
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                {/* Selected tags display */}
+                {selectedBulkTags.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Selected tags</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedBulkTags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="px-2 py-1">
+                          {tag}
+                          <X
+                            className="h-3 w-3 ml-1.5 cursor-pointer"
+                            onClick={() => setSelectedBulkTags(prev => prev.filter(t => t !== tag))}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowBulkTagDialog(false);
+                    setSelectedBulkTags([]);
+                    setBulkTagName("");
+                    setTagSearchQuery("");
+                  }}
+                  disabled={isBulkProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={bulkAddTags}
+                  disabled={selectedBulkTags.length === 0 || isBulkProcessing}
+                >
+                  {isBulkProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Tag className="h-4 w-4 mr-2" />
+                      Add Tags
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Bulk Delete Dialog */}
+          <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Delete Conversations</DialogTitle>
+                <DialogDescription className="text-destructive">
+                  Are you sure you want to delete {selectedConversations.length} selected conversations? This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBulkDeleteDialog(false)}
+                  disabled={isBulkProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={bulkDeleteConversations}
+                  disabled={isBulkProcessing}
+                >
+                  {isBulkProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
             <DialogOverlay className="backdrop-blur-xs" />
@@ -3009,41 +4120,134 @@ function ConversationsPageContent() {
             </DialogContent>
           </Dialog>
 
-          {/* Add Tag Dialog */}
+          {/* Add Tag Dialog - Updated to match bulk tag dialog style */}
           <Dialog open={showAddTagDialog} onOpenChange={setShowAddTagDialog}>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Add Tag</DialogTitle>
+                <DialogTitle>Add Tag to Contact</DialogTitle>
                 <DialogDescription>
-                  Add a tag to categorize this contact
+                  Add or remove tags for {getCurrentContact()?.name}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 py-2">
-                <Input
-                  placeholder="Enter tag name"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                />
+                {/* Search/Create input for new tag */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Create new tag</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter new tag name"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (newTag.trim()) {
+                          handleAddTag();
+                        }
+                      }}
+                      disabled={!newTag.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <Separator />
+
+                {/* Search existing tags */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Manage existing tags</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search tags..."
+                      className="pl-10"
+                      value={tagSearchQuery}
+                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Existing tags with checkboxes */}
+                <ScrollArea className="h-48 border rounded-md">
+                  <div className="p-2 space-y-1">
+                    {getUniqueTags()
+                      .filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase()))
+                      .map((tag, index) => {
+                        const isTagged = getCurrentContact()?.tags?.includes(tag) || false;
+
+                        return (
+                          <div key={index} className="flex items-center space-x-2 p-1.5 hover:bg-accent rounded-md">
+                            <Checkbox
+                              id={`single-tag-${index}`}
+                              checked={isTagged}
+                              onCheckedChange={(checked) => {
+                                if (checked && !isTagged) {
+                                  handleAddTag(tag);
+                                } else if (!checked && isTagged) {
+                                  handleRemoveTag(tag);
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={`single-tag-${index}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full cursor-pointer"
+                            >
+                              {tag}
+                              {isTagged && <span className="ml-2 text-xs text-primary">(applied)</span>}
+                            </label>
+                          </div>
+                        );
+                      })}
+
+                    {getUniqueTags().filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase())).length === 0 && (
+                      <div className="p-2 text-center text-sm text-muted-foreground">
+                        {tagSearchQuery.trim()
+                          ? `No tags matching "${tagSearchQuery}"`
+                          : "No tags available"
+                        }
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                {/* Current contact tags display */}
+                {getCurrentContact()?.tags && getCurrentContact()?.tags.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Current tags</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {getCurrentContact()?.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="px-2 py-1">
+                          {tag}
+                          <X
+                            className="h-3 w-3 ml-1.5 cursor-pointer"
+                            onClick={() => handleRemoveTag(tag)}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <DialogFooter>
                 <Button
                   variant="outline"
-                  onClick={() => setShowAddTagDialog(false)}
+                  onClick={() => {
+                    setShowAddTagDialog(false);
+                    setNewTag("");
+                    setTagSearchQuery("");
+                  }}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddTag}
-                  disabled={!newTag.trim()}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Tag
+                  Close
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
           {/* Template Variables Dialog - enhanced UI */}
           <TemplateVariablesDialog />
         </div>
@@ -3093,22 +4297,6 @@ function ConversationsPageContent() {
             </div>
           </div>
         </div>
-
-        {/* Quick Actions Bar */}
-        {/* <div className="grid grid-cols-3 gap-2 mb-2">
-          <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 px-2">
-            <Phone className="h-4 w-4 mb-1 text-blue-500" />
-            <span className="text-xs">Call</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 px-2">
-            <MessageSquare className="h-4 w-4 mb-1 text-green-500" />
-            <span className="text-xs">Message</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex flex-col h-auto py-3 px-2">
-            <Share className="h-4 w-4 mb-1 text-purple-500" />
-            <span className="text-xs">Share</span>
-          </Button>
-        </div> */}
 
         {/* Conversation Stats - Card with visual indicators */}
         {activeConversation && (
@@ -3200,7 +4388,7 @@ function ConversationsPageContent() {
         {/* Tags Section - Interactive tags */}
         <div className="bg-card rounded-lg border border-border/50 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-foreground flex items-center gap-2 text-primary">
+            <h4 className="font-medium  flex items-center gap-2 text-primary">
               <Tag className="h-4 w-4" />
               Tags
             </h4>
@@ -3265,38 +4453,11 @@ function ConversationsPageContent() {
             </div>
           )}
         </div>
-
-        {/* Actions - Styled with more visual cues */}
-        {/* <div className="space-y-2 pt-2">
-          <Button
-            variant="outline"
-            className="w-full justify-start hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 transition-colors"
-            size="sm"
-          >
-            <Star className="h-4 w-4 mr-2 text-amber-500" />
-            <span>Add to Favorites</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full justify-start hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
-            size="sm"
-          >
-            <Archive className="h-4 w-4 mr-2 text-primary" />
-            <span>Archive Conversation</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full justify-start text-destructive hover:text-white hover:bg-destructive/90 hover:border-destructive transition-colors"
-            size="sm"
-          >
-            <AlertCircle className="h-4 w-4 mr-2" />
-            <span>Block Contact</span>
-          </Button>
-        </div> */}
       </div>
     );
   }
 }
+
 export default function ConversationsPage() {
   return (
     <Suspense fallback={

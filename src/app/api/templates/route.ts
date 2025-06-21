@@ -1,3 +1,5 @@
+// src/app/api/templates/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
@@ -13,7 +15,6 @@ export async function POST(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-
 
     const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
@@ -33,28 +34,14 @@ export async function POST(req: NextRequest) {
       category,
       language,
       wabaId,
-      components
+      components,
+      authSettings
     } = body;
 
     // Validate required fields
-    if (!name || !category || !language || !wabaId || !components) {
+    if (!name || !category || !language || !wabaId) {
       return NextResponse.json({
-        error: 'Missing required fields: name, category, language, wabaId, components'
-      }, { status: 400 });
-    }
-
-    // Validate components array
-    if (!Array.isArray(components) || components.length === 0) {
-      return NextResponse.json({
-        error: 'Components must be a non-empty array'
-      }, { status: 400 });
-    }
-
-    // Ensure there's at least a BODY component
-    const hasBodyComponent = components.some(comp => comp.type === 'BODY');
-    if (!hasBodyComponent) {
-      return NextResponse.json({
-        error: 'Template must have at least a BODY component'
+        error: 'Missing required fields: name, category, language, wabaId'
       }, { status: 400 });
     }
 
@@ -64,12 +51,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'WABA account not found' }, { status: 404 });
     }
 
-    const interaktPayload = {
+    // Prepare payload based on template type
+    let interaktPayload: any = {
       name: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
       category: category.toUpperCase(),
       allow_category_change: true,
-      language: language,
-      components: components.map(component => {
+      language: language
+    };
+
+    // For authentication templates, create a default component set
+    if (category === 'AUTHENTICATION') {
+      // Add authentication specific fields
+      if (authSettings) {
+        if (authSettings.codeExpirationMinutes) {
+          interaktPayload.code_expiration_minutes = authSettings.codeExpirationMinutes;
+        }
+        if (authSettings.codeLength) {
+          interaktPayload.code_length = authSettings.codeLength;
+        }
+      }
+
+      // Create minimal required components for authentication template
+      interaktPayload.components = [
+        {
+          type: 'BODY',
+          text: 'Your verification code is: {{1}}'
+        }
+      ];
+
+      // Add button component if code entry option is enabled
+      if (authSettings && authSettings.addCodeEntryOption) {
+        interaktPayload.components.push({
+          type: 'BUTTONS',
+          buttons: [
+            {
+              type: 'COPY_CODE',
+              text: 'Enter code',
+              copy_code: '{{1}}'
+            }
+          ]
+        });
+      }
+    } else {
+      // For other templates, include components
+      if (!components || !Array.isArray(components) || components.length === 0) {
+        return NextResponse.json({
+          error: 'Components must be a non-empty array for non-authentication templates'
+        }, { status: 400 });
+      }
+
+      interaktPayload.components = components.map(component => {
         // Handle media header components
         if (component.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
           return {
@@ -81,8 +112,8 @@ export async function POST(req: NextRequest) {
           };
         }
         return component;
-      })
-    };
+      });
+    }
 
     console.log('Sending payload to Interakt:', JSON.stringify(interaktPayload, null, 2));
     console.log('Using WABA ID:', wabaId);
@@ -129,19 +160,30 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Save template to database
-    const template = new Template({
+    // Prepare the template object for database
+    const templateData: any = {
       name: interaktPayload.name,
       category: interaktPayload.category,
       language: interaktPayload.language,
-      components: interaktPayload.components,
+      components: interaktPayload.components, // Always include components now
       wabaId,
       phoneNumberId: wabaAccount.phoneNumberId,
       userId: decoded.id,
       whatsappTemplateId: interaktData.id,
       status: 'PENDING'
-    });
+    };
 
+    // Add auth settings for authentication templates
+    if (category === 'AUTHENTICATION' && authSettings) {
+      templateData.authSettings = {
+        codeExpirationMinutes: authSettings.codeExpirationMinutes || 10,
+        codeLength: authSettings.codeLength || 6,
+        addCodeEntryOption: authSettings.addCodeEntryOption !== false
+      };
+    }
+
+    // Save template to database
+    const template = new Template(templateData);
     await template.save();
 
     // Update template count
@@ -158,7 +200,8 @@ export async function POST(req: NextRequest) {
         status: template.status,
         whatsappTemplateId: template.whatsappTemplateId,
         createdAt: template.createdAt,
-        components: template.components
+        components: template.components,
+        authSettings: template.authSettings
       }
     });
 

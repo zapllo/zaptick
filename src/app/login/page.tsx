@@ -35,7 +35,7 @@ export default function LoginPage() {
       await login(email, password);
       console.log('Login successful, should redirect to dashboard...');
       // Add explicit redirect here as a backup
-      window.location.href = '/dashboard';
+      window.location.href = '/home';
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || "Failed to login. Please check your credentials.");

@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Search,
-  Plus,
-  MoreHorizontal,
+  FileText,
   RefreshCw,
   Loader2,
-  Filter,
-  Copy
+  Copy,
+  Edit,
+  Trash2,
+  Code,
+  LayoutGrid,
+  List,
+  ChevronDown,
+  ArrowUpDown,
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -29,8 +34,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format } from "date-fns";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 // Interfaces
 interface Template {
@@ -60,6 +71,13 @@ interface WabaAccount {
   status: string;
 }
 
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function TemplatesPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,15 +85,24 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [deletedTemplates, setDeletedTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("template-library");
   const [wabaAccounts, setWabaAccounts] = useState<WabaAccount[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string | null;
+    direction: 'ascending' | 'descending' | null;
+  }>({ key: null, direction: null });
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string>("all");
 
   // Fetch user's WABA accounts and templates on mount
   useEffect(() => {
     fetchUserData();
     fetchTemplates();
+    fetchTeamMembers();
     // Set a mock last synced time - in real app this would come from the API
     setLastSynced(new Date().toISOString());
   }, []);
@@ -90,6 +117,18 @@ export default function TemplatesPage() {
     } catch (error) {
       console.error('Failed to fetch user data:', error);
       toast.error('Failed to fetch user data');
+    }
+  };
+
+  const fetchTeamMembers = async () => {
+    try {
+      const response = await fetch('/api/team-members');
+      if (response.ok) {
+        const data = await response.json();
+        setTeamMembers(data.teamMembers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch team members:', error);
     }
   };
 
@@ -173,12 +212,58 @@ export default function TemplatesPage() {
       if (response.ok) {
         toast.success('Template deleted successfully');
         fetchTemplates();
+        setSelectedTemplates(prev => prev.filter(id => id !== templateId));
       } else {
         toast.error('Failed to delete template');
       }
     } catch (error) {
       console.error('Failed to delete template:', error);
       toast.error('Failed to delete template');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedTemplates.length === 0) {
+      toast.info('No templates selected');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedTemplates.length} template(s)?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const id of selectedTemplates) {
+        const response = await fetch(`/api/templates/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully deleted ${successCount} template(s)`);
+      }
+
+      if (failCount > 0) {
+        toast.error(`Failed to delete ${failCount} template(s)`);
+      }
+
+      setSelectedTemplates([]);
+      fetchTemplates();
+    } catch (error) {
+      console.error('Failed to bulk delete templates:', error);
+      toast.error('Failed to delete templates');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -208,18 +293,54 @@ export default function TemplatesPage() {
     router.push(`/templates/${templateId}`);
   };
 
-  // Filter templates based on search query
-  const filteredTemplates = templates.filter(template => {
-    return searchQuery === "" ||
-      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const requestSort = (key: string) => {
+    let direction: 'ascending' | 'descending' | null = 'ascending';
 
-  const filteredDeletedTemplates = deletedTemplates.filter(template => {
-    return searchQuery === "" ||
-      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.content.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+    if (sortConfig.key === key) {
+      if (sortConfig.direction === 'ascending') {
+        direction = 'descending';
+      } else if (sortConfig.direction === 'descending') {
+        direction = null;
+      }
+    }
+
+    setSortConfig({ key, direction });
+  };
+
+  // Sort templates based on current sort configuration
+  const sortedTemplates = useMemo(() => {
+    let sortableTemplates = [...(showDeleted ? deletedTemplates : templates)];
+
+    if (sortConfig.key && sortConfig.direction) {
+      sortableTemplates.sort((a, b) => {
+        if (a[sortConfig.key as keyof Template] < b[sortConfig.key as keyof Template]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key as keyof Template] > b[sortConfig.key as keyof Template]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableTemplates;
+  }, [templates, deletedTemplates, sortConfig, showDeleted]);
+
+  // Filter templates based on search query and selected agent
+  const filteredTemplates = useMemo(() => {
+    return sortedTemplates.filter(template => {
+      const matchesSearch =
+        searchQuery === "" ||
+        template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        template.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesAgent =
+        selectedAgent === "all" ||
+        template.createdBy === selectedAgent;
+
+      return matchesSearch && matchesAgent;
+    });
+  }, [sortedTemplates, searchQuery, selectedAgent]);
 
   // Get status display with colored dot
   const getStatusDisplay = (status: string) => {
@@ -240,309 +361,511 @@ export default function TemplatesPage() {
     );
   };
 
+  const handleSelectAll = () => {
+    if (selectedTemplates.length === filteredTemplates.length) {
+      setSelectedTemplates([]);
+    } else {
+      setSelectedTemplates(filteredTemplates.map(t => t.id));
+    }
+  };
+
+  const handleSelectTemplate = (templateId: string) => {
+    setSelectedTemplates(prev =>
+      prev.includes(templateId)
+        ? prev.filter(id => id !== templateId)
+        : [...prev, templateId]
+    );
+  };
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-gray-400" />;
+    }
+
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-green-600" />;
+    }
+
+    if (sortConfig.direction === 'descending') {
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-green-600 rotate-180" />;
+    }
+
+    return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-gray-400" />;
+  };
+
   return (
     <Layout>
-      <div className="space-y-6 p-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">Templates</h2>
-          <Button
-            onClick={() => router.push('/templates/create')}
-            disabled={wabaAccounts.length === 0}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create New
-          </Button>
-        </div>
-
-        <div>
-          <h3 className="text-md font-medium">Managing WhatsApp Templates</h3>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="border-b w-full rounded-none justify-start bg-transparent p-0">
-            <TabsTrigger
-              value="template-library"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-2 px-4 data-[state=active]:shadow-none"
-            >
-              Template Library
-            </TabsTrigger>
-            <TabsTrigger
-              value="active"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-2 px-4 data-[state=active]:shadow-none"
-            >
-              Active
-            </TabsTrigger>
-            <TabsTrigger
-              value="deleted"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none py-2 px-4 data-[state=active]:shadow-none"
-            >
-              Deleted
-            </TabsTrigger>
-          </TabsList>
-
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search a template by name"
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">Status is:</span>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border rounded px-2 py-1 text-sm"
-              >
-                <option value="ANY">ANY</option>
-                <option value="APPROVED">Approved</option>
-                <option value="PENDING">Pending</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">
-              Showing {
-                activeTab === "deleted"
-                  ? `${filteredDeletedTemplates.length} of ${deletedTemplates.length}`
-                  : `${filteredTemplates.length} of ${templates.length}`
-              } templates
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                Last synced on: {lastSynced ? format(new Date(lastSynced), "HH:mm, dd/MM/yy") : 'Never'}
+      <div className="h-full bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-medium text-gray-900">Templates</h1>
+              <span className="bg- rounded-full shadow px-4 bg-primary/20 text-green-700 font-medium">
+                {showDeleted ? deletedTemplates.length : templates.length} total
               </span>
+            </div>
+            <div className="flex items-center gap-3">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSyncTemplates}
-                disabled={wabaAccounts.length === 0 || syncing}
+                onClick={() => router.push('/templates/create')}
+                disabled={wabaAccounts.length === 0}
+                className="bg-primary -600 hover:bg-primary/80 cursor-pointer text-white px-4 py-2"
               >
-                {syncing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                <span className="ml-2">Sync</span>
+                <FileText className="h-4 w-4 mr-2" />
+                New Template
               </Button>
             </div>
           </div>
+        </div>
 
-          <TabsContent value="template-library" className="m-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-48">
-                <Loader2 className="h-8 w-8 animate-spin" />
+        {/* Filters */}
+        <div className="bg-white border-b px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              {/* Search */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search template..."
+                  className="pl-10 bg-gray-50 border-gray-200"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-            ) : (
-              <TemplateTable
-                templates={filteredTemplates}
-                onDelete={handleDeleteTemplate}
-                onDuplicate={handleDuplicateTemplate}
-                onView={handleViewTemplate}
-                getStatusDisplay={getStatusDisplay}
-              />
-            )}
-          </TabsContent>
 
-          <TabsContent value="active" className="m-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-48">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : (
-              <TemplateTable
-                templates={filteredTemplates.filter(t => t.status !== 'deleted')}
-                onDelete={handleDeleteTemplate}
-                onDuplicate={handleDuplicateTemplate}
-                onView={handleViewTemplate}
-                getStatusDisplay={getStatusDisplay}
-              />
-            )}
-          </TabsContent>
+              {/* Filter Dropdowns */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
+                    All WABAs
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem>All WABAs</DropdownMenuItem>
+                  {wabaAccounts.map(account => (
+                    <DropdownMenuItem key={account.wabaId}>
+                      {account.businessName}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-          <TabsContent value="deleted" className="m-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-48">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : (
-              <DeletedTemplateTable
-                templates={filteredDeletedTemplates}
-                onRestore={handleRestoreTemplate}
-                getStatusDisplay={getStatusDisplay}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                 <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
+                    {showDeleted ? 'Deleted' : (selectedStatus === 'ANY' ? 'All Status' : selectedStatus)}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedStatus('ANY');
+                    setShowDeleted(false);
+                  }}>All Status</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedStatus('APPROVED');
+                    setShowDeleted(false);
+                  }}>Approved</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedStatus('PENDING');
+                    setShowDeleted(false);
+                  }}>Pending</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedStatus('REJECTED');
+                    setShowDeleted(false);
+                  }}>Rejected</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setShowDeleted(true);
+                  }}>Deleted</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
+                    All categories
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem>All categories</DropdownMenuItem>
+                  <DropdownMenuItem>MARKETING</DropdownMenuItem>
+                  <DropdownMenuItem>UTILITY</DropdownMenuItem>
+                  <DropdownMenuItem>AUTHENTICATION</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                 <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
+                    {selectedAgent === "all" ? "All agents" :
+                      teamMembers.find(m => m.id === selectedAgent)?.name || "All agents"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setSelectedAgent("all")}>
+                    All agents
+                  </DropdownMenuItem>
+                  {teamMembers.map(member => (
+                    <DropdownMenuItem
+                      key={member.id}
+                      onClick={() => setSelectedAgent(member.id)}
+                    >
+                      {member.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Right side icons */}
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleSyncTemplates}
+                      disabled={wabaAccounts.length === 0 || syncing}
+                      className="text-gray-500"
+                    >
+                      {syncing ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sync Templates</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`text-gray-500 ${viewMode === 'grid' ? 'bg-primary text-white -100' : ''}`}
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <LayoutGrid className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Grid View</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`text-gray-500 ${viewMode === 'list' ? 'bg-primary text-white' : ''}`}
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>List View</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <>
+              {selectedTemplates.length > 0 && (
+                <div className="p-2 mb-4 bg-white rounded-lg border flex items-center justify-between">
+                  <div className="text-sm text-gray-500 pl-4">
+                    {selectedTemplates.length} template(s) selected
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleBulkDelete}
+                      className="h-8"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" /> Bulk Delete
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {viewMode === 'list' ? (
+                <div className="bg-white rounded-lg border">
+                  <Table>
+                    <TableHeader className="bg-accent font-bold">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedTemplates.length === filteredTemplates.length && filteredTemplates.length > 0}
+                            onCheckedChange={handleSelectAll}
+                          />
+                        </TableHead>
+                        <TableHead
+                          className="text-gray-600 font-semibold cursor-pointer"
+                          onClick={() => requestSort('name')}
+                        >
+                          Template name
+                          {getSortIcon('name')}
+                        </TableHead>
+                        <TableHead className="text-gray-600 font-semibold">Content</TableHead>
+                        <TableHead
+                          className="text-gray-600 font-semibold cursor-pointer"
+                          onClick={() => requestSort('wabaId')}
+                        >
+                          WABA
+                          {getSortIcon('wabaId')}
+                        </TableHead>
+                        <TableHead
+                          className="text-gray-600 font-semibold cursor-pointer"
+                          onClick={() => requestSort('category')}
+                        >
+                          Category
+                          {getSortIcon('category')}
+                        </TableHead>
+                        <TableHead className="text-gray-600 font-semibold text-center">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTemplates.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                            No templates found. Try adjusting your search or create a new one.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredTemplates.map((template) => (
+                          <TableRow key={template.id} className="border-b hover:bg-gray-50">
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedTemplates.includes(template.id)}
+                                onCheckedChange={() => handleSelectTemplate(template.id)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium text-gray-900">{template.name}</div>
+                              <div className="text-xs text-gray-400">{getStatusDisplay(template.status)}</div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-gray-600 max-w-xs">
+                                <div className="truncate">{template.content}</div>
+                                <div className="text-gray-400 text-sm">...</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-gray-700">
+                                {wabaAccounts[0]?.businessName || 'DoubleTick'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-gray-700 uppercase">
+                                {template.category}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-1">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                        onClick={() => handleDuplicateTemplate(template)}
+                                      >
+                                        <Copy className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Duplicate Template</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                        onClick={() => handleViewTemplate(template.id)}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Edit Template</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                        onClick={() =>
+                                          template.status === 'deleted'
+                                            ? handleRestoreTemplate(template.id)
+                                            : handleDeleteTemplate(template.id)
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {template.status === 'deleted' ? 'Restore Template' : 'Delete Template'}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+
+                                {/* <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                      >
+                                        <Code className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>API Integration</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider> */}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredTemplates.length === 0 ? (
+                    <div className="col-span-full text-center py-12 text-gray-500">
+                      No templates found. Try adjusting your search or create a new one.
+                    </div>
+                  ) : (
+                    filteredTemplates.map((template) => (
+                      <Card key={template.id} className="overflow-hidden h-fit">
+                        <div className="p-4 border-b flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedTemplates.includes(template.id)}
+                              onCheckedChange={() => handleSelectTemplate(template.id)}
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900 truncate max-w-[180px]">
+                                {template.name}
+                              </div>
+                              <div className="text-xs">
+                                {getStatusDisplay(template.status)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500 uppercase">
+                            {template.category}
+                          </div>
+                        </div>
+                        <CardContent className="p-4">
+                          <div className="text-gray-600 h-20 overflow-hidden text-sm">
+                            {template.content}
+                          </div>
+                        </CardContent>
+                        <CardFooter className="p-2 bg-gray-50 border-t -mt-16 flex justify-end gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                  onClick={() => handleDuplicateTemplate(template)}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Duplicate Template</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                              onClick={() => handleViewTemplate(template.id)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit Template</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                  onClick={() =>
+                                    template.status === 'deleted'
+                                      ? handleRestoreTemplate(template.id)
+                                      : handleDeleteTemplate(template.id)
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {template.status === 'deleted' ? 'Restore Template' : 'Delete Template'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          {/* <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                >
+                                  <Code className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>API Integration</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider> */}
+                        </CardFooter>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </Layout>
-  );
-}
-
-// Component for template table
-function TemplateTable({
-  templates,
-  onDelete,
-  onDuplicate,
-  onView,
-  getStatusDisplay
-}: {
-  templates: Template[],
-  onDelete: (id: string) => void,
-  onDuplicate: (template: Template) => void,
-  onView: (id: string) => void,
-  getStatusDisplay: (status: string) => React.ReactNode
-}) {
-  return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[300px]">Template Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Language(s)</TableHead>
-            <TableHead>Created By</TableHead>
-            <TableHead className="text-right"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {templates.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                No templates found. Try adjusting your search or create a new one.
-              </TableCell>
-            </TableRow>
-          ) : (
-            templates.map((template) => (
-              <TableRow key={template.id} className="group">
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{template.name}</div>
-                    <div className="text-sm text-muted-foreground truncate max-w-[280px]">
-                      {template.name}_{template.id.substring(0, 8)}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {getStatusDisplay(template.status)}
-                </TableCell>
-                <TableCell className="capitalize">
-                  {template.category}
-                </TableCell>
-                <TableCell>
-                  {template.language}
-                </TableCell>
-                <TableCell>
-                  {template.createdBy || "Unknown"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onDuplicate(template)}>
-                          <Copy className="mr-2 h-4 w-4" />
-                          <span>Duplicate</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDelete(template.id)} className="text-destructive focus:text-destructive">
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-// Component for deleted template table
-function DeletedTemplateTable({
-  templates,
-  onRestore,
-  getStatusDisplay
-}: {
-  templates: Template[],
-  onRestore: (id: string) => void,
-  getStatusDisplay: (status: string) => React.ReactNode
-}) {
-  return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[300px]">Template Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Language(s)</TableHead>
-            <TableHead>Created By</TableHead>
-            <TableHead className="text-right"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {templates.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                No deleted templates found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            templates.map((template) => (
-              <TableRow key={template.id} className="group">
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{template.name}</div>
-                    <div className="text-sm text-muted-foreground truncate max-w-[280px]">
-                      {template.name}_{template.id.substring(0, 8)}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {getStatusDisplay('deleted')}
-                </TableCell>
-                <TableCell className="capitalize">
-                  {template.category}
-                </TableCell>
-                <TableCell>
-                  {template.language}
-                </TableCell>
-                <TableCell>
-                  {template.createdBy || "Unknown"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onRestore(template.id)}
-                  >
-                    Restore
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
   );
 }

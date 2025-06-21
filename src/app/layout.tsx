@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import Script from "next/script";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { Toaster } from "@/components/ui/toaster";
 
 const roboto = Roboto({
   weight: ['400', '500', '700'],
@@ -29,6 +30,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="afterInteractive" // Ensures the script loads before your app's JavaScript
+          async
+        />
+      </head>
       <body
         className={`${roboto.variable} ${robotoMono.variable} antialiased`}
       >
@@ -39,6 +47,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster />
           <AuthProvider>
             {children}
           </AuthProvider>
