@@ -22,37 +22,40 @@ export default function Header() {
   }, []);
 
   return (
-    <header className={`sticky top-0 z-50 w-full transition-all duration-200 ${
-      isScrolled ? "bg-background/95 backdrop-blur-md shadow-sm" : "bg-transparent"
-    }`}>
+    <header className={`sticky top-0 z-50 w-full transition-all duration-200 ${isScrolled ? "bg-background/95 backdrop-blur-md shadow-sm" : "bg-transparent"
+      }`}>
       <div className="container mx-auto py-4 px-4 md:px-8 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <Image src="/icons/zapllo.png" alt="ZapTick Logo" width={40} height={40} />
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-green-500">ZapTick</span>
+          <Image src="/zapzap.png" alt="ZapTick Logo" width={150} height={150} />
         </div>
 
         <div className="hidden md:flex items-center gap-8">
           <Link href="#features" className="text-sm hover:text-primary transition-colors">Features</Link>
           <Link href="#integrations" className="text-sm hover:text-primary transition-colors">Integrations</Link>
           <Link href="#testimonials" className="text-sm hover:text-primary transition-colors">Testimonials</Link>
-          <Link href="#pricing" className="text-sm hover:text-primary transition-colors">Pricing</Link>
-          <Link href="#support" className="text-sm hover:text-primary transition-colors">Support</Link>
+          {/* <Link href="#pricing" className="text-sm hover:text-primary transition-colors">Pricing</Link>
+          <Link href="#support" className="text-sm hover:text-primary transition-colors">Support</Link> */}
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme">
+          {/* <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme">
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
-          <Button variant="outline" size="sm">Log in</Button>
-          <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600">
-            Get Started
-          </Button>
+          </Button> */}
+          <Link href='/login'>
+            <Button variant="outline" className='cursor-pointer' size="sm">Log in</Button>
+          </Link>
+          <Link href='/signup'>
+            <Button size="sm" className="bg-gradient-to-r cursor-pointer
+             from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600">
+              Get Started
+            </Button>
+          </Link>
         </div>
 
         <div className="md:hidden flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme">
+          {/* <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme">
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
+          </Button> */}
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -60,12 +63,14 @@ export default function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent>
-              <div className="flex flex-col gap-6 mt-8">
+              <img src='/zapzap.png' className="h-fit mt-4 w-1/2" />
+
+              <div className="flex flex-col gap-6 p-6 mt-8">
                 <Link href="#features" className="text-lg hover:text-primary transition-colors">Features</Link>
                 <Link href="#integrations" className="text-lg hover:text-primary transition-colors">Integrations</Link>
                 <Link href="#testimonials" className="text-lg hover:text-primary transition-colors">Testimonials</Link>
-                <Link href="#pricing" className="text-lg hover:text-primary transition-colors">Pricing</Link>
-                <Link href="#support" className="text-lg hover:text-primary transition-colors">Support</Link>
+                {/* <Link href="#pricing" className="text-lg hover:text-primary transition-colors">Pricing</Link> */}
+                {/* <Link href="#support" className="text-lg hover:text-primary transition-colors">Support</Link> */}
                 <div className="flex flex-col gap-3 mt-4">
                   <Button variant="outline" size="sm">Log in</Button>
                   <Button size="sm" className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600">

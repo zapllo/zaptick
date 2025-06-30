@@ -6,13 +6,13 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Define paths that are public
-  const isPublicPath = path === '/login' || path === '/signup' || path === '/' || path.startsWith('/api/');
+  const isPublicPath = path === '/login' || path === '/signup' || path === '/' || path === '/forgot-password' || path === '/reset-password' || path.startsWith('/api/');
 
   // Get the token from the cookies
   const hasToken = request.cookies.has('token');
 
-  console.log('Middleware Path:', path);
-  console.log('Has Token:', hasToken);
+  // console.log('Middleware Path:', path);
+  // console.log('Has Token:', hasToken);
 
   // Redirect authenticated users away from login/signup pages
   if (hasToken && (path === '/login' || path === '/signup')) {
@@ -22,16 +22,16 @@ export function middleware(request: NextRequest) {
 
   // Redirect unauthenticated users to login page if trying to access protected routes
   if (!hasToken && !isPublicPath) {
-    console.log('Redirecting to login from protected route');
+    // console.log('Redirecting to login from protected route');
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
 }
 
-// Configure the paths middleware should run on
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.svg).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|ico|webp|gif|avif)).*)',
   ],
 };
+
