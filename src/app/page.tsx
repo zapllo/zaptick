@@ -976,7 +976,6 @@ export default function Home() {
           </motion.div>
 
           <div className="max-w-6xl mx-auto">
-            {/* Define all integrations once */}
             {(() => {
               // All integrations data
               const allIntegrations = [
@@ -1002,17 +1001,8 @@ export default function Home() {
                 { src: "/integrations/interakt.jpeg", alt: "Interakt", category: "Communication" }
               ];
 
-              // Define the tabs categories
-              const categories = ['all', 'e-commerce', 'payment', 'marketing', 'support', 'communication', 'business', 'logistics'];
-
-              // Integration card component
-              const IntegrationCard = ({ integration, index }) => (
-                <motion.div
-                  key={index}
-
-                  className="bg-white rounded-xl p-5 flex flex-col items-center justify-center text-center shadow-sm border border-gray-100 hover:shadow-md transition-all group relative"
-                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                >
+              const IntegrationCard = ({ integration }) => (
+                <div className="bg-white rounded-xl p-5 flex flex-col items-center justify-center text-center shadow-sm border border-gray-100 hover:shadow-md transition-all group relative">
                   <div className="h-12 w-full mb-4 flex items-center justify-center">
                     <Image
                       src={integration.src}
@@ -1030,23 +1020,32 @@ export default function Home() {
                   <p className="text-xs text-gray-500 mt-1">{integration.category}</p>
 
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-purple-600 bg-opacity-90 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-purple-600 bg-opacity-80 rounded-xl opacity-0 group-hover:opacity-80 transition-opacity duration-300 flex items-center justify-center">
                     <span className="text-white font-medium px-3 py-1.5 rounded-full bg-white/20 text-sm flex items-center">
                       Connect <ArrowRight className="ml-1 h-3.5 w-3.5" />
                     </span>
                   </div>
-                </motion.div>
+                </div>
               );
 
               return (
-                <Tabs defaultValue="all" className="w-full mb-12">
-                  <div className="flex justify-center">
-                    <TabsList className="bg-white rounded-full shadow-sm border border-gray-100 p-1 flex flex-wrap justify-center">
-                      {['All Integrations', 'E-commerce', 'Payment', 'Marketing', 'Support', 'Communication', 'Business', 'Logistics'].map((category) => (
+                <Tabs defaultValue="all-integrations" className="w-full mb-12">
+                  <div className="flex justify-center overflow-x-auto py-2">
+                    <TabsList className="bg-white rounded-full shadow-sm border border-gray-100 p-1 flex flex-nowrap">
+                      {[
+                        'All Integrations',
+                        'E-commerce',
+                        'Payment',
+                        'Marketing',
+                        'Support',
+                        'Communication',
+                        'Business',
+                        'Logistics'
+                      ].map((category) => (
                         <TabsTrigger
                           key={category}
                           value={category.toLowerCase().replace(/\s+/g, '-')}
-                          className="rounded-full px-4 py-2 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700"
+                          className="rounded-full px-4 py-2 whitespace-nowrap data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700"
                         >
                           {category}
                         </TabsTrigger>
@@ -1054,36 +1053,46 @@ export default function Home() {
                     </TabsList>
                   </div>
 
-                  {/* Generate tab content for each category */}
-                  {categories.map((category) => {
-                    // Filter integrations based on category
-                    const filteredIntegrations = category === 'all'
-                      ? allIntegrations
-                      : allIntegrations.filter(integration =>
-                        integration.category.toLowerCase() === category.replace('-', ' '));
+                  {/* All Integrations Tab */}
+                  <TabsContent value="all-integrations" className="mt-8">
+                    <motion.div
+                      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {allIntegrations.map((integration, index) => (
+                        <IntegrationCard key={`all-${index}`} integration={integration} />
+                      ))}
+                    </motion.div>
+                  </TabsContent>
+
+                  {/* Category specific tabs */}
+                  {['e-commerce', 'payment', 'marketing', 'support', 'communication', 'business', 'logistics'].map((category) => {
+                    const filteredIntegrations = allIntegrations.filter(
+                      integration => integration.category.toLowerCase() === category
+                    );
 
                     return (
                       <TabsContent key={category} value={category} className="mt-8">
-                        {category !== 'all' && (
-                          <motion.p
-                            className="text-center text-gray-500 mb-8"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            Showing {filteredIntegrations.length} {category.replace('-', ' ')} integrations
-                          </motion.p>
-                        )}
+                        <motion.p
+                          className="text-center text-gray-500 mb-8"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          Showing {filteredIntegrations.length} {category} integrations
+                        </motion.p>
 
                         <motion.div
-                          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6"
-
-                          initial="hidden"
-                          animate="show"
+                          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
                         >
                           {filteredIntegrations.length > 0 ? (
                             filteredIntegrations.map((integration, index) => (
-                              <IntegrationCard key={`${category}-${index}`} integration={integration} index={index} />
+                              <IntegrationCard key={`${category}-${index}`} integration={integration} />
                             ))
                           ) : (
                             <div className="col-span-full py-16 text-center">
@@ -1143,16 +1152,10 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-
-            {/*
-              <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white px-8 h-12 shadow-md">
-                Explore Integration Marketplace <ChevronRight className="ml-1 h-4 w-4" />
-              </Button> */}
               <p className="text-sm text-gray-500 mt-4">
-                Don&apos;t see what you need? Request a custom integration at support@zapllo.com.
+                Don&apos;t see what you need? Request a custom integration at <span className="font-medium">support@zapllo.com</span>
               </p>
-              </motion.div>
-            {/* </motion.div> */}
+            </motion.div>
           </div>
         </div>
       </section>
