@@ -423,13 +423,13 @@ export default function AutomationsPage() {
   });
 
   return (
-    <Layout>
+    <>
       <div className="container mx-auto p-6 py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Automations</h1>
+            <h1 className="text-3xl font-bold">Auto Replies</h1>
             <p className="text-muted-foreground mt-1">
-              Set up automated responses and workflows for your WhatsApp Business
+              Set up automated responses for your WhatsApp Business
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)}>
@@ -615,7 +615,7 @@ export default function AutomationsPage() {
                   <TableHead className="font-semibold">Reply Type</TableHead>
                   <TableHead className="font-semibold">Match Type</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Usage</TableHead>
+                  {/* <TableHead className="font-semibold">Usage</TableHead> */}
                   <TableHead className="font-semibold">Last Triggered</TableHead>
                   <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
@@ -681,12 +681,12 @@ export default function AutomationsPage() {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <div className="text-sm">
                         <div className="font-medium">{autoReply.usageCount || 0}</div>
                         <div className="text-muted-foreground">triggers</div>
                       </div>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell>
                       {autoReply.lastTriggered ? (
                         <div className="text-sm">
@@ -1189,6 +1189,6 @@ export default function AutomationsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </Layout>
+    </>
   );
 }
