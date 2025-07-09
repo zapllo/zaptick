@@ -11,6 +11,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { uploadToS3 } from '@/lib/s3';
 import { fetchWaAsset } from '@/lib/interakt';
+import AutoReply from '@/models/AutoReply';
+
+const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
 /* ---------- hub challenge ------------------------------------------------ */
 
@@ -234,4 +237,185 @@ async function processMessage(
   conv.isWithin24Hours = ts.getTime() > Date.now() - 86_400_000;
 
   await conv.save();
+
+
+  // Check for auto replies (only for text messages from customers)
+  if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
+    await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
+  }
+}
+
+// New function to handle auto replies
+async function checkAndSendAutoReply(
+  messageContent: string,
+  contact: any,
+  wabaAcc: any,
+  userId: string
+) {
+  try {
+    // Get all active auto replies for this WABA, sorted by priority
+    const autoReplies = await AutoReply.find({
+      userId,
+      wabaId: wabaAcc.wabaId,
+      isActive: true
+    }).sort({ priority: -1, createdAt: 1 });
+
+    if (!autoReplies.length) return;
+
+    // Check each auto reply for matches
+    for (const autoReply of autoReplies) {
+      const isMatch = checkTriggerMatch(messageContent, autoReply);
+
+      if (isMatch) {
+        console.log(`Auto reply triggered: ${autoReply.name} for message: "${messageContent}"`);
+
+        // Send the auto reply
+        await sendAutoReplyMessage(contact, autoReply, wabaAcc);
+
+        // Update usage statistics
+        autoReply.usageCount = (autoReply.usageCount || 0) + 1;
+        autoReply.lastTriggered = new Date();
+        await autoReply.save();
+
+        // Only send one auto reply per message (first match wins)
+        break;
+      }
+    }
+  } catch (error) {
+    console.error('Error processing auto reply:', error);
+  }
+}
+
+function checkTriggerMatch(messageContent: string, autoReply: any): boolean {
+  const content = autoReply.caseSensitive ? messageContent : messageContent.toLowerCase();
+
+  return autoReply.triggers.some((trigger: string) => {
+    const triggerText = autoReply.caseSensitive ? trigger : trigger.toLowerCase();
+
+    switch (autoReply.matchType) {
+      case 'exact':
+        return content === triggerText;
+      case 'starts_with':
+        return content.startsWith(triggerText);
+      case 'ends_with':
+        return content.endsWith(triggerText);
+      case 'contains':
+      default:
+        return content.includes(triggerText);
+    }
+  });
+}
+
+async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) {
+  try {
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    let whatsappPayload;
+
+    if (autoReply.replyType === 'template') {
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "template",
+        template: {
+          name: autoReply.templateName,
+          language: {
+            code: autoReply.templateLanguage || 'en'
+          }
+        }
+      };
+
+      if (autoReply.templateComponents?.length) {
+        (whatsappPayload.template as any).components = autoReply.templateComponents;
+      }
+    } else {
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: autoReply.replyMessage
+        }
+      };
+    }
+
+    console.log('Sending auto reply:', JSON.stringify(whatsappPayload, null, 2));
+
+    const response = await fetch(
+      `https://amped-express.interakt.ai/api/v17.0/${wabaAcc.phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'x-access-token': INT_TOKEN!,
+          'x-waba-id': wabaAcc.wabaId,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(whatsappPayload)
+      }
+    );
+
+    const responseText = await response.text();
+    console.log('Auto reply response:', responseText);
+
+    if (response.ok) {
+      // Record the auto reply in the conversation
+      const responseData = JSON.parse(responseText);
+      await recordAutoReplyInConversation(
+        contact,
+        autoReply,
+        responseData.messages?.[0]?.id
+      );
+    } else {
+      console.error('Failed to send auto reply:', responseText);
+    }
+
+  } catch (error) {
+    console.error('Error sending auto reply message:', error);
+  }
+}
+
+async function recordAutoReplyInConversation(
+  contact: any,
+  autoReply: any,
+  whatsappMessageId?: string
+) {
+  try {
+    const conversation = await Conversation.findOne({ contactId: contact._id });
+    if (!conversation) return;
+
+    const messageContent = autoReply.replyType === 'template'
+      ? `Template: ${autoReply.templateName}`
+      : autoReply.replyMessage;
+
+    const autoReplyMessage = {
+      id: uuidv4(),
+      senderId: 'agent' as const,
+      content: messageContent,
+      messageType: autoReply.replyType,
+      timestamp: new Date(),
+      status: 'sent' as const,
+      whatsappMessageId,
+      senderName: 'Auto Reply',
+      templateName: autoReply.replyType === 'template' ? autoReply.templateName : undefined
+    };
+
+    conversation.messages.push(autoReplyMessage);
+    conversation.lastMessage = messageContent;
+    conversation.lastMessageType = autoReply.replyType;
+    conversation.lastMessageAt = new Date();
+
+    await conversation.save();
+    console.log('Auto reply recorded in conversation');
+
+  } catch (error) {
+    console.error('Error recording auto reply in conversation:', error);
+  }
+
 }

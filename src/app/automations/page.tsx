@@ -1,58 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Search,
   Plus,
-  MoreHorizontal,
-  Settings,
-  Play,
-  Pause,
-  RotateCcw,
-  Trash,
-  Copy,
-  Edit,
-  MessageSquare,
-  ArrowRight,
-  Check,
-  Clock,
-  Calendar,
+  Search,
   Filter,
-  Activity,
-  ShoppingCart,
-  Tag,
-  CalendarClock,
-  User,
-  AlarmClock,
+  MoreVertical,
+  Edit,
+  Trash2,
   Zap,
-  Info,
+  MessageSquare,
+  Settings,
+  BarChart3,
+  Clock,
   CheckCircle,
-  XCircle,
+  AlertCircle,
+  RefreshCw,
+  Bot,
+  Workflow,
+  Reply,
+  Copy,
+  Eye,
+  Power,
+  PowerOff
 } from "lucide-react";
+
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -72,1081 +51,1144 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { format, subDays } from "date-fns";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { Separator } from "@/components/ui/separator";
 
-// Mock data for automations
-const automations = [
-  {
-    id: 1,
-    name: "Welcome Message",
-    description: "Send a welcome message to new subscribers",
-    status: "active",
-    trigger: "subscription",
-    action: "send_message",
-    template: "welcome_message",
-    createdAt: new Date(2023, 3, 15),
-    lastTriggered: new Date(2023, 5, 16, 14, 35),
-    totalExecutions: 248,
-    successRate: 98.4,
-    stats: {
-      delivered: 244,
-      read: 215,
-      replied: 87,
-      failed: 4
-    },
-    icon: "user"
-  },
-  {
-    id: 2,
-    name: "Abandoned Cart Reminder",
-    description: "Remind customers about items left in their cart",
-    status: "active",
-    trigger: "abandoned_cart",
-    action: "send_message",
-    template: "cart_reminder",
-    createdAt: new Date(2023, 4, 20),
-    lastTriggered: new Date(2023, 5, 16, 9, 42),
-    totalExecutions: 156,
-    successRate: 95.5,
-    stats: {
-      delivered: 149,
-      read: 132,
-      replied: 53,
-      failed: 7
-    },
-    icon: "cart"
-  },
-  {
-    id: 3,
-    name: "Order Confirmation",
-    description: "Send order confirmation after purchase",
-    status: "active",
-    trigger: "new_order",
-    action: "send_message",
-    template: "order_confirmation",
-    createdAt: new Date(2023, 2, 10),
-    lastTriggered: new Date(2023, 5, 16, 15, 12),
-    totalExecutions: 892,
-    successRate: 99.2,
-    stats: {
-      delivered: 885,
-      read: 872,
-      replied: 134,
-      failed: 7
-    },
-    icon: "cart"
-  },
-  {
-    id: 4,
-    name: "Appointment Reminder",
-    description: "Remind customers about upcoming appointments",
-    status: "paused",
-    trigger: "scheduled_event",
-    action: "send_message",
-    template: "appointment_reminder",
-    createdAt: new Date(2023, 5, 1),
-    lastTriggered: new Date(2023, 5, 12, 10, 0),
-    totalExecutions: 87,
-    successRate: 100,
-    stats: {
-      delivered: 87,
-      read: 85,
-      replied: 67,
-      failed: 0
-    },
-    icon: "calendar"
-  },
-  {
-    id: 5,
-    name: "Re-engagement Campaign",
-    description: "Reach out to inactive customers",
-    status: "draft",
-    trigger: "inactivity",
-    action: "send_message",
-    template: "re_engagement",
-    createdAt: new Date(2023, 5, 10),
-    lastTriggered: null,
-    totalExecutions: 0,
-    successRate: 0,
-    stats: {
-      delivered: 0,
-      read: 0,
-      replied: 0,
-      failed: 0
-    },
-    icon: "activity"
-  },
-  {
-    id: 6,
-    name: "Product Feedback Request",
-    description: "Ask for feedback after product delivery",
-    status: "active",
-    trigger: "time_after_event",
-    action: "send_message",
-    template: "feedback_request",
-    createdAt: new Date(2023, 4, 5),
-    lastTriggered: new Date(2023, 5, 15, 16, 25),
-    totalExecutions: 243,
-    successRate: 97.1,
-    stats: {
-      delivered: 236,
-      read: 198,
-      replied: 121,
-      failed: 7
-    },
-    icon: "tag"
-  },
-];
+interface AutoReply {
+  _id: string;
+  name: string;
+  isActive: boolean;
+  triggers: string[];
+  replyMessage: string;
+  replyType: 'text' | 'template';
+  templateName?: string;
+  templateLanguage?: string;
+  matchType: 'exact' | 'contains' | 'starts_with' | 'ends_with';
+  caseSensitive: boolean;
+  priority: number;
+  usageCount: number;
+  lastTriggered?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-type AutomationStatus = "active" | "paused" | "draft";
-
-// Helper function to get the status badge color
-const getStatusColor = (status: AutomationStatus) => {
-  switch (status) {
-    case "active":
-      return "bg-green-500/10 text-green-500 border-green-500/20";
-    case "paused":
-      return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-    case "draft":
-      return "bg-gray-500/10 text-gray-500 border-gray-500/20";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
-
-// Helper function to get the trigger name
-const getTriggerName = (trigger: string) => {
-  switch (trigger) {
-    case "subscription":
-      return "New Subscription";
-    case "abandoned_cart":
-      return "Abandoned Cart";
-    case "new_order":
-      return "New Order";
-    case "scheduled_event":
-      return "Scheduled Event";
-    case "inactivity":
-      return "Customer Inactivity";
-    case "time_after_event":
-      return "Time After Event";
-    default:
-      return trigger.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  }
-};
-
-// Helper function to get trigger icon
-const getTriggerIcon = (icon: string) => {
-  switch (icon) {
-    case "user":
-      return <User className="h-5 w-5" />;
-    case "cart":
-      return <ShoppingCart className="h-5 w-5" />;
-    case "calendar":
-      return <Calendar className="h-5 w-5" />;
-    case "activity":
-      return <Activity className="h-5 w-5" />;
-    case "tag":
-      return <Tag className="h-5 w-5" />;
-    default:
-      return <Zap className="h-5 w-5" />;
-  }
-};
+interface WabaAccount {
+  wabaId: string;
+  businessName: string;
+  phoneNumber: string;
+  phoneNumberId: string;
+}
 
 export default function AutomationsPage() {
+  const [autoReplies, setAutoReplies] = useState<AutoReply[]>([]);
+  const [wabaAccounts, setWabaAccounts] = useState<WabaAccount[]>([]);
+  const [selectedWabaId, setSelectedWabaId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [createAutomationOpen, setCreateAutomationOpen] = useState(false);
-  const [selectedAutomation, setSelectedAutomation] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Filter automations based on search and status
-  const filteredAutomations = automations.filter(automation => {
-    // Search filter
-    const matchesSearch = searchQuery === "" ||
-      automation.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      automation.description.toLowerCase().includes(searchQuery.toLowerCase());
+  // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedAutoReply, setSelectedAutoReply] = useState<AutoReply | null>(null);
 
-    // Status filter
-    const matchesStatus = selectedStatus === "" || automation.status === selectedStatus;
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    triggers: [""],
+    replyMessage: "",
+    replyType: "text" as 'text' | 'template',
+    templateName: "",
+    templateLanguage: "en",
+    matchType: "contains" as 'exact' | 'contains' | 'starts_with' | 'ends_with',
+    caseSensitive: false,
+    priority: 0,
+    isActive: true
+  });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchWabaAccounts();
+  }, []);
+
+  useEffect(() => {
+    if (selectedWabaId) {
+      fetchAutoReplies();
+    }
+  }, [selectedWabaId]);
+
+  const fetchWabaAccounts = async () => {
+    try {
+      const response = await fetch('/api/waba-accounts');
+      const data = await response.json();
+      if (data.success) {
+        setWabaAccounts(data.accounts);
+        if (data.accounts.length > 0) {
+          setSelectedWabaId(data.accounts[0].wabaId);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching WABA accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch WhatsApp accounts",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchAutoReplies = async () => {
+    if (!selectedWabaId) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/auto-replies?wabaId=${selectedWabaId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setAutoReplies(data.autoReplies);
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to fetch auto replies",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching auto replies:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch auto replies",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateAutoReply = async () => {
+    if (!formData.name || !formData.triggers.filter(Boolean).length || !formData.replyMessage) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auto-replies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          wabaId: selectedWabaId,
+          triggers: formData.triggers.filter(Boolean)
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Auto reply created successfully",
+        });
+        setIsCreateDialogOpen(false);
+        resetForm();
+        fetchAutoReplies();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create auto reply",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error creating auto reply:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create auto reply",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateAutoReply = async () => {
+    if (!selectedAutoReply) return;
+
+    try {
+      const response = await fetch(`/api/auto-replies/${selectedAutoReply._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          triggers: formData.triggers.filter(Boolean)
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Auto reply updated successfully",
+        });
+        setIsEditDialogOpen(false);
+        resetForm();
+        fetchAutoReplies();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update auto reply",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating auto reply:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update auto reply",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAutoReply = async () => {
+    if (!selectedAutoReply) return;
+
+    try {
+      const response = await fetch(`/api/auto-replies/${selectedAutoReply._id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Auto reply deleted successfully",
+        });
+        setIsDeleteDialogOpen(false);
+        setSelectedAutoReply(null);
+        fetchAutoReplies();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to delete auto reply",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting auto reply:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete auto reply",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleStatus = async (autoReply: AutoReply) => {
+    try {
+      const response = await fetch(`/api/auto-replies/${autoReply._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isActive: !autoReply.isActive
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: `Auto reply ${!autoReply.isActive ? 'activated' : 'deactivated'} successfully`,
+        });
+        fetchAutoReplies();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update auto reply status",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling auto reply status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update auto reply status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      triggers: [""],
+      replyMessage: "",
+      replyType: "text",
+      templateName: "",
+      templateLanguage: "en",
+      matchType: "contains",
+      caseSensitive: false,
+      priority: 0,
+      isActive: true
+    });
+  };
+
+  const openEditDialog = (autoReply: AutoReply) => {
+    setSelectedAutoReply(autoReply);
+    setFormData({
+      name: autoReply.name,
+      triggers: autoReply.triggers.length ? autoReply.triggers : [""],
+      replyMessage: autoReply.replyMessage,
+      replyType: autoReply.replyType,
+      templateName: autoReply.templateName || "",
+      templateLanguage: autoReply.templateLanguage || "en",
+      matchType: autoReply.matchType,
+      caseSensitive: autoReply.caseSensitive,
+      priority: autoReply.priority,
+      isActive: autoReply.isActive
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const addTrigger = () => {
+    setFormData({
+      ...formData,
+      triggers: [...formData.triggers, ""]
+    });
+  };
+
+  const removeTrigger = (index: number) => {
+    const newTriggers = formData.triggers.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      triggers: newTriggers.length ? newTriggers : [""]
+    });
+  };
+
+  const updateTrigger = (index: number, value: string) => {
+    const newTriggers = [...formData.triggers];
+    newTriggers[index] = value;
+    setFormData({
+      ...formData,
+      triggers: newTriggers
+    });
+  };
+
+  const filteredAutoReplies = autoReplies.filter(autoReply => {
+    const matchesSearch = autoReply.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      autoReply.triggers.some(trigger =>
+        trigger.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "active" && autoReply.isActive) ||
+      (statusFilter === "inactive" && !autoReply.isActive);
 
     return matchesSearch && matchesStatus;
   });
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="container mx-auto p-6 py-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Automations</h2>
-            <p className="text-muted-foreground">
-              Create automated workflows to engage with your contacts
+            <h1 className="text-3xl font-bold">Automations</h1>
+            <p className="text-muted-foreground mt-1">
+              Set up automated responses and workflows for your WhatsApp Business
             </p>
           </div>
-          <Button onClick={() => setCreateAutomationOpen(true)}>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Create Automation
+            Create Auto Reply
           </Button>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search automations..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="All Statuses" />
+        {/* WABA Account Selector */}
+        <div className="mb-6">
+          <Label htmlFor="waba-select" className="text-sm font-medium mb-2 block">
+            WhatsApp Business Account
+          </Label>
+          <Select value={selectedWabaId} onValueChange={setSelectedWabaId}>
+            <SelectTrigger id="waba-select" className="w-full max-w-md">
+              <SelectValue placeholder="Select WhatsApp Business Account" />
+            </SelectTrigger>
+            <SelectContent>
+              {wabaAccounts.map((account) => (
+                <SelectItem key={account.wabaId} value={account.wabaId}>
+                  {account.businessName} ({account.phoneNumber})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Auto Replies</p>
+                  <p className="text-2xl font-bold">{autoReplies.length}</p>
+                </div>
+                <Bot className="h-8 w-8 text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active</p>
+                  <p className="text-2xl font-bold">{autoReplies.filter(ar => ar.isActive).length}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Triggers</p>
+                  <p className="text-2xl font-bold">
+                    {autoReplies.reduce((sum, ar) => sum + (ar.usageCount || 0), 0)}
+                  </p>
+                </div>
+                <Zap className="h-8 w-8 text-amber-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Response Rate</p>
+                  <p className="text-2xl font-bold">
+                    {autoReplies.length > 0 ? Math.round((autoReplies.filter(ar => ar.usageCount > 0).length / autoReplies.length) * 100) : 0}%
+                  </p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search auto replies or triggers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="paused">Paused</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="flex border rounded-md overflow-hidden">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setViewMode("grid")}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-              >
-                <path d="M2 2.5C2 2.22386 2.22386 2 2.5 2H5.5C5.77614 2 6 2.22386 6 2.5V5.5C6 5.77614 5.77614 6 5.5 6H2.5C2.22386 6 2 5.77614 2 5.5V2.5ZM9 2.5C9 2.22386 9.22386 2 9.5 2H12.5C12.7761 2 13 2.22386 13 2.5V5.5C13 5.77614 12.7761 6 12.5 6H9.5C9.22386 6 9 5.77614 9 5.5V2.5ZM2 9.5C2 9.22386 2.22386 9 2.5 9H5.5C5.77614 9 6 9.22386 6 9.5V12.5C6 12.7761 5.77614 13 5.5 13H2.5C2.22386 13 2 12.7761 2 12.5V9.5ZM9 9.5C9 9.22386 9.22386 9 9.5 9H12.5C12.7761 9 13 9.22386 13 9.5V12.5C13 12.7761 12.7761 13 12.5 13H9.5C9.22386 13 9 12.7761 9 12.5V9.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-              </svg>
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setViewMode("table")}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-              >
-                <path d="M1.5 2C1.22386 2 1 2.22386 1 2.5V12.5C1 12.7761 1.22386 13 1.5 13H13.5C13.7761 13 14 12.7761 14 12.5V2.5C14 2.22386 13.7761 2 13.5 2H1.5ZM2 3H13V7H2V3ZM2 8H7V12H2V8ZM8 8H13V12H8V8Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-              </svg>
+            <Button variant="outline" onClick={fetchAutoReplies}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
             </Button>
           </div>
         </div>
 
-        {viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredAutomations.length === 0 ? (
-              <div className="col-span-full flex items-center justify-center h-48 bg-muted/20 rounded-lg border">
-                <p className="text-muted-foreground">No automations found. Try adjusting your search or create a new one.</p>
+        {/* Auto Replies Table */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+              <p className="text-lg font-medium">Loading auto replies...</p>
+            </div>
+          </div>
+        ) : filteredAutoReplies.length === 0 ? (
+          <div className="bg-white border rounded-lg p-12 text-center">
+            <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No auto replies found</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              {searchQuery || statusFilter !== "all"
+                ? "No auto replies match your current filters. Try adjusting your search or filter criteria."
+                : "Get started by creating your first auto reply to automatically respond to customer messages."}
+            </p>
+           {/* // In the empty state section, replace the existing content with: */}
+            {!searchQuery && statusFilter === "all" && (
+              <div className="space-y-4">
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Auto Reply
+                </Button>
+                <Button
+                  variant="outline"
+                  className='ml-2'
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/auto-replies/samples', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ wabaId: selectedWabaId }),
+                      });
+
+                      const data = await response.json();
+
+                      if (data.success) {
+                        toast({
+                          title: "Success",
+                          description: data.message,
+                        });
+                        fetchAutoReplies();
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: data.error || "Failed to create samples",
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to create sample auto replies",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  <Bot className="h-4 w-4 mr-2" />
+                  Create Sample Auto Replies
+                </Button>
               </div>
-            ) : (
-              filteredAutomations.map((automation) => (
-                <Card key={automation.id} className="group">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex gap-3 items-start">
-                        <div className={`rounded-md p-2 ${
-                          automation.icon === "user" ? "bg-blue-500/10 text-blue-500" :
-                          automation.icon === "cart" ? "bg-green-500/10 text-green-500" :
-                          automation.icon === "calendar" ? "bg-purple-500/10 text-purple-500" :
-                          automation.icon === "activity" ? "bg-orange-500/10 text-orange-500" :
-                          automation.icon === "tag" ? "bg-indigo-500/10 text-indigo-500" :
-                          "bg-primary/10 text-primary"
-                        }`}>
-                          {getTriggerIcon(automation.icon)}
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{automation.name}</CardTitle>
-                          <CardDescription className="line-clamp-1">{automation.description}</CardDescription>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setSelectedAutomation(automation.id)}>
-                            <Info className="mr-2 h-4 w-4" />
-                            <span>View Details</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Copy className="mr-2 h-4 w-4" />
-                            <span>Duplicate</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            <span>Edit</span>
-                          </DropdownMenuItem>
-                          {automation.status === "active" && (
-                            <DropdownMenuItem>
-                              <Pause className="mr-2 h-4 w-4" />
-                              <span>Pause</span>
-                            </DropdownMenuItem>
-                          )}
-                          {automation.status === "paused" && (
-                            <DropdownMenuItem>
-                              <Play className="mr-2 h-4 w-4" />
-                              <span>Activate</span>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-3">
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Trigger: {getTriggerName(automation.trigger)}</span>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={getStatusColor(automation.status as AutomationStatus)}
-                      >
-                        {automation.status.charAt(0).toUpperCase() + automation.status.slice(1)}
-                      </Badge>
-                    </div>
-
-                    {automation.status !== "draft" && (
-                      <div className="space-y-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Success Rate</span>
-                            <span className="font-medium">{automation.successRate}%</span>
-                          </div>
-                          <Progress value={automation.successRate} className="h-1.5" />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-center text-sm">
-                          <div className="bg-muted/30 rounded-md p-2">
-                            <div className="font-medium">{automation.totalExecutions}</div>
-                            <div className="text-xs text-muted-foreground">Total Executions</div>
-                          </div>
-                          <div className="bg-muted/30 rounded-md p-2">
-                            <div className="font-medium">{automation.stats.replied}</div>
-                            <div className="text-xs text-muted-foreground">Replies</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Created</span>
-                        <span>{format(automation.createdAt, "MMM d, yyyy")}</span>
-                      </div>
-                      {automation.lastTriggered && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Last Triggered</span>
-                          <span>{format(automation.lastTriggered, "MMM d, h:mm a")}</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                  <CardFooter className="border-t pt-3">
-                    {automation.status === "draft" ? (
-                      <Button size="sm" className="w-full">
-                        <Play className="mr-2 h-4 w-4" />
-                        Activate
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => setSelectedAutomation(automation.id)}>
-                        <Info className="mr-2 h-4 w-4" />
-                        View Details
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))
             )}
           </div>
         ) : (
-          <div className="border rounded-md">
+          <div className="bg-white rounded-lg border overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Automation</TableHead>
-                  <TableHead>Trigger</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Success Rate</TableHead>
-                  <TableHead>Last Triggered</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-[#E4EAE8]">
+                  <TableHead className="font-semibold">Name</TableHead>
+                  <TableHead className="font-semibold">Triggers</TableHead>
+                  <TableHead className="font-semibold">Reply Type</TableHead>
+                  <TableHead className="font-semibold">Match Type</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Usage</TableHead>
+                  <TableHead className="font-semibold">Last Triggered</TableHead>
+                  <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAutomations.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                      No automations found. Try adjusting your search or create a new one.
+                {filteredAutoReplies.map((autoReply) => (
+                  <TableRow key={autoReply._id} className="group">
+                    <TableCell className="font-medium">
+                      <div
+                        className="hover:text-primary cursor-pointer"
+                        onClick={() => {
+                          setSelectedAutoReply(autoReply);
+                          setIsViewDialogOpen(true);
+                        }}
+                      >
+                        {autoReply.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Priority: {autoReply.priority}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {autoReply.triggers.slice(0, 2).map((trigger, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {trigger}
+                          </Badge>
+                        ))}
+                        {autoReply.triggers.length > 2 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{autoReply.triggers.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {autoReply.replyType === 'template' ? 'Template' : 'Text'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {autoReply.matchType.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={autoReply.isActive ? "default" : "secondary"}
+                          className={autoReply.isActive ? "bg-green-100 text-green-700 border-green-200" : ""}
+                        >
+                          {autoReply.isActive ? (
+                            <>
+                              <Power className="h-3 w-3 mr-1" />
+                              Active
+                            </>
+                          ) : (
+                            <>
+                              <PowerOff className="h-3 w-3 mr-1" />
+                              Inactive
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">{autoReply.usageCount || 0}</div>
+                        <div className="text-muted-foreground">triggers</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {autoReply.lastTriggered ? (
+                        <div className="text-sm">
+                          {format(new Date(autoReply.lastTriggered), "MMM dd, yyyy")}
+                          <div className="text-muted-foreground">
+                            {format(new Date(autoReply.lastTriggered), "HH:mm")}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Never</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleStatus(autoReply)}
+                          className="h-8"
+                        >
+                          {autoReply.isActive ? (
+                            <PowerOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Power className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">More</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedAutoReply(autoReply);
+                                setIsViewDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEditDialog(autoReply)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                // Duplicate logic would go here
+                                toast({
+                                  title: "Feature Coming Soon",
+                                  description: "Duplicate functionality will be available soon",
+                                });
+                              }}
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => {
+                                setSelectedAutoReply(autoReply);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredAutomations.map((automation) => (
-                    <TableRow key={automation.id} className="group">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className={`rounded-md p-1.5 ${
-                            automation.icon === "user" ? "bg-blue-500/10 text-blue-500" :
-                            automation.icon === "cart" ? "bg-green-500/10 text-green-500" :
-                            automation.icon === "calendar" ? "bg-purple-500/10 text-purple-500" :
-                            automation.icon === "activity" ? "bg-orange-500/10 text-orange-500" :
-                            automation.icon === "tag" ? "bg-indigo-500/10 text-indigo-500" :
-                            "bg-primary/10 text-primary"
-                          }`}>
-                            {getTriggerIcon(automation.icon)}
-                          </div>
-                          <div>
-                            <div className="font-medium">{automation.name}</div>
-                            <div className="text-sm text-muted-foreground line-clamp-1">{automation.description}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getTriggerName(automation.trigger)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={getStatusColor(automation.status as AutomationStatus)}
-                        >
-                          {automation.status.charAt(0).toUpperCase() + automation.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {automation.status !== "draft" ? (
-                       <div className="flex items-center gap-2">
-                            <span>{automation.successRate}%</span>
-                            <Progress value={automation.successRate} className="h-1.5 w-12" />
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {automation.lastTriggered ?
-                          format(automation.lastTriggered, "MMM d, h:mm a") :
-                          <span className="text-muted-foreground">Never</span>
-                        }
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100"
-                            onClick={() => setSelectedAutomation(automation.id)}
-                          >
-                            <Info className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {automation.status === "active" ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100"
-                            >
-                              <Pause className="h-4 w-4" />
-                            </Button>
-                          ) : automation.status === "paused" ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100"
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          ) : null}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="opacity-0 group-hover:opacity-100"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedAutomation(automation.id)}>
-                                <Info className="mr-2 h-4 w-4" />
-                                <span>View Details</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Copy className="mr-2 h-4 w-4" />
-                                <span>Duplicate</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="mr-2 h-4 w-4" />
-                                <span>Edit</span>
-                              </DropdownMenuItem>
-                              {automation.status === "active" && (
-                                <DropdownMenuItem>
-                                  <Pause className="mr-2 h-4 w-4" />
-                                  <span>Pause</span>
-                                </DropdownMenuItem>
-                              )}
-                              {automation.status === "paused" && (
-                                <DropdownMenuItem>
-                                  <Play className="mr-2 h-4 w-4" />
-                                  <span>Activate</span>
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash className="mr-2 h-4 w-4" />
-                                <span>Delete</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
         )}
-      </div>
 
-      {/* Create Automation Dialog */}
-      <Dialog open={createAutomationOpen} onOpenChange={setCreateAutomationOpen}>
-        <DialogContent className="sm:max-w-xl h-fit max-h-screen m-auto overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create Automation</DialogTitle>
-            <DialogDescription>
-              Set up an automated message workflow triggered by specific events
-            </DialogDescription>
-          </DialogHeader>
+        {/* Create/Edit Auto Reply Dialog */}
+        <Dialog
+          open={isCreateDialogOpen || isEditDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsCreateDialogOpen(false);
+              setIsEditDialogOpen(false);
+              resetForm();
+              setSelectedAutoReply(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {isCreateDialogOpen ? "Create Auto Reply" : "Edit Auto Reply"}
+              </DialogTitle>
+              <DialogDescription>
+                Set up automatic responses to specific customer messages or keywords.
+              </DialogDescription>
+            </DialogHeader>
 
-          <Tabs defaultValue="trigger" className="mt-2">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="trigger">Trigger</TabsTrigger>
-              <TabsTrigger value="message">Message</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
+            <div className="space-y-6 py-4">
+              {/* Basic Settings */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-muted-foreground">BASIC SETTINGS</h3>
 
-            <TabsContent value="trigger" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="automationName" className="text-sm font-medium">
-                  Automation Name <span className="text-destructive">*</span>
-                </label>
-                <Input id="automationName" placeholder="e.g. Welcome Message" />
-              </div>
+                <div className="grid grid-cols-2 space-y-2 gap-4">
+                  <div className='space-y-2'>
+                    <Label htmlFor="name">Auto Reply Name *</Label>
+                    <Input
+                      id="name"
 
-              <div className="space-y-2">
-                <label htmlFor="automationDescription" className="text-sm font-medium">
-                  Description
-                </label>
-                <Input id="automationDescription" placeholder="Briefly describe what this automation does" />
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <label className="text-sm font-medium">
-                  Trigger Type <span className="text-destructive">*</span>
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="border rounded-md p-3 cursor-pointer hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-blue-500/10 text-blue-500 p-2 rounded-md">
-                        <User className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">New Subscription</h4>
-                        <p className="text-sm text-muted-foreground">When a user opts in to your WhatsApp business</p>
-                      </div>
-                    </div>
+                      placeholder="e.g., Welcome Message"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
                   </div>
-
-                  <div className="border rounded-md p-3 cursor-pointer hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-500/10 text-green-500 p-2 rounded-md">
-                        <ShoppingCart className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">New Order</h4>
-                        <p className="text-sm text-muted-foreground">When a customer places a new order</p>
-                      </div>
-                    </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor="priority">Priority</Label>
+                    <Input
+                      id="priority"
+                      type="number"
+                      placeholder="0"
+                      value={formData.priority}
+                      onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Higher numbers = higher priority</p>
                   </div>
+                </div>
 
-                  <div className="border rounded-md p-3 cursor-pointer hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-purple-500/10 text-purple-500 p-2 rounded-md">
-                        <Calendar className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Scheduled Event</h4>
-                        <p className="text-sm text-muted-foreground">Send messages based on upcoming events</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-md p-3 cursor-pointer hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-orange-500/10 text-orange-500 p-2 rounded-md">
-                        <Activity className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Customer Inactivity</h4>
-                        <p className="text-sm text-muted-foreground">When a customer hasn&apos;t engaged for a period</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-md p-3 cursor-pointer hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-500/10 text-green-500 p-2 rounded-md">
-                        <ShoppingCart className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Abandoned Cart</h4>
-                        <p className="text-sm text-muted-foreground">When items are left in shopping cart</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border rounded-md p-3 cursor-pointer hover:border-primary/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-md">
-                        <AlarmClock className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Time After Event</h4>
-                        <p className="text-sm text-muted-foreground">Send follow-up after a specific event</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isActive"
+                    checked={formData.isActive}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  />
+                  <Label htmlFor="isActive">Active</Label>
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end">
-                <Button>
-                  Next: Message
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </TabsContent>
+              {/* Trigger Settings */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-muted-foreground">TRIGGER SETTINGS</h3>
 
-            <TabsContent value="message" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Message Template <span className="text-destructive">*</span>
-                </label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="welcome_message">Welcome Message</SelectItem>
-                    <SelectItem value="order_confirmation">Order Confirmation</SelectItem>
-                    <SelectItem value="appointment_reminder">Appointment Reminder</SelectItem>
-                    <SelectItem value="cart_reminder">Cart Reminder</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Choose from your approved message templates
-                </p>
-              </div>
-
-              <div className="space-y-2 mt-4">
-                <label className="text-sm font-medium">Preview</label>
-                <div className="border rounded-md p-4 bg-muted/30">
-                  <div className="bg-[#dcf8c6] dark:bg-[#005c4b] p-3 rounded-lg max-w-[85%] ml-auto mb-3">
-                    <p className="text-sm">Hello , welcome to our business! We&apos;re excited to have you here. Feel free to reach out if you have any questions.</p>
-                    <div className="flex justify-end mt-1 text-xs opacity-70">
-                      Now • Delivered
-                    </div>
-                  </div>
-
-                  <div className="mx-auto text-center text-xs text-muted-foreground">
-                    <p>This is a preview of how your message will appear to recipients</p>
+                <div>
+                  <Label>Trigger Keywords/Phrases *</Label>
+                  <div className="space-y-2 mt-2">
+                    {formData.triggers.map((trigger, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          placeholder={`Trigger ${index + 1} (e.g., hello, hi, start)`}
+                          value={trigger}
+                          onChange={(e) => updateTrigger(index, e.target.value)}
+                        />
+                        {formData.triggers.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeTrigger(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addTrigger}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Another Trigger
+                    </Button>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-2 mt-4">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium">
-                    Variable Mappings
-                  </label>
-                  <Button type="button" variant="ghost" size="sm" className="h-7 text-xs">
-                    <Settings className="h-3.5 w-3.5 mr-1" />
-                    Advanced Settings
-                  </Button>
-                </div>
-
-                <div className="border rounded-md p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium w-12 text-center">
-                      {/* {{first_name}} */}
-                    </div>
-                    <Select defaultValue="contact.first_name">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className='space-y-2'>
+                    <Label htmlFor="matchType">Match Type</Label>
+                    <Select
+                      value={formData.matchType}
+                      onValueChange={(value: any) => setFormData({ ...formData, matchType: value })}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="contact.first_name">Contact First Name</SelectItem>
-                        <SelectItem value="contact.last_name">Contact Last Name</SelectItem>
-                        <SelectItem value="custom">Custom Value</SelectItem>
+                        <SelectItem value="contains">Contains</SelectItem>
+                        <SelectItem value="exact">Exact Match</SelectItem>
+                        <SelectItem value="starts_with">Starts With</SelectItem>
+                        <SelectItem value="ends_with">Ends With</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-between">
-                <Button variant="outline">
-                  Back: Trigger
-                </Button>
-                <Button>
-                  Next: Settings
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Audience Targeting</h3>
-                <div className="border rounded-md p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="allContacts" defaultChecked />
-                      <label htmlFor="allContacts" className="text-sm">
-                        Send to all eligible contacts
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button variant="outline" size="sm">
-                      <Filter className="h-3.5 w-3.5 mr-1" />
-                      Add Filters
-                    </Button>
+                  <div className="flex items-center space-x-2 pt-6">
+                    <Switch
+                      id="caseSensitive"
+                      checked={formData.caseSensitive}
+                      onCheckedChange={(checked) => setFormData({ ...formData, caseSensitive: checked })}
+                    />
+                    <Label htmlFor="caseSensitive">Case Sensitive</Label>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Timing</h3>
-                <div className="border rounded-md p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="sendImmediately" defaultChecked />
-                      <label htmlFor="sendImmediately" className="text-sm">
-                        Send immediately when triggered
-                      </label>
-                    </div>
-                  </div>
+              {/* Reply Settings */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-muted-foreground">REPLY SETTINGS</h3>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="respectTimeZone" />
-                      <label htmlFor="respectTimeZone" className="text-sm">
-                        Respect recipient&apos;s time zone
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="businessHours" />
-                      <label htmlFor="businessHours" className="text-sm">
-                        Only send during business hours (9 AM - 5 PM)
-                      </label>
-                    </div>
-                  </div>
+                <div className='space-y-2'>
+                  <Label htmlFor="replyType">Reply Type</Label>
+                  <Select
+                    value={formData.replyType}
+                    onValueChange={(value: any) => setFormData({ ...formData, replyType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Text Message</SelectItem>
+                      <SelectItem value="template">Template Message</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Automation Status</h3>
-                <div className="border rounded-md p-4 space-y-3">
-                  <div className="flex justify-between items-center">
+                {formData.replyType === 'text' ? (
+                  <div className='space-y-2'>
+                    <Label htmlFor="replyMessage">Reply Message *</Label>
+                    <Textarea
+                      id="replyMessage"
+                      placeholder="Enter your auto reply message..."
+                      value={formData.replyMessage}
+                      onChange={(e) => setFormData({ ...formData, replyMessage: e.target.value })}
+                      rows={4}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="font-medium">Activate immediately</div>
-                      <div className="text-sm text-muted-foreground">Turn on this automation as soon as it&apos;s created</div>
+                      <Label htmlFor="templateName">Template Name *</Label>
+                      <Input
+                        id="templateName"
+                        placeholder="Template name"
+                        value={formData.templateName}
+                        onChange={(e) => setFormData({ ...formData, templateName: e.target.value })}
+                      />
                     </div>
-                    <Switch defaultChecked />
+                    <div>
+                      <Label htmlFor="templateLanguage">Language</Label>
+                      <Select
+                        value={formData.templateLanguage}
+                        onValueChange={(value) => setFormData({ ...formData, templateLanguage: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="es">Spanish</SelectItem>
+                          <SelectItem value="fr">French</SelectItem>
+                          <SelectItem value="de">German</SelectItem>
+                          <SelectItem value="hi">Hindi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-between">
-                <Button variant="outline">
-                  Back: Message
-                </Button>
-                <Button>
-                  Create Automation
-                  <Check className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Automation Details Dialog */}
-      <Dialog open={selectedAutomation !== null} onOpenChange={() => setSelectedAutomation(null)}>
-        <DialogContent className="sm:max-w-3xl h-fit max-h-screen m-auto overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <span className="mr-2">Automation Details</span>
-              {selectedAutomation !== null && (
-                <Badge
-                  variant="outline"
-                  className={getStatusColor(automations.find(a => a.id === selectedAutomation)?.status as AutomationStatus)}
-                >
-                  {/* {selectedAutomation !== null &&
-                    automations.find(a => a.id === selectedAutomation)?.status.charAt(0).toUpperCase() +
-                    automations.find(a => a.id === selectedAutomation)?.status.slice(1)
-                  } */}
-                </Badge>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedAutomation !== null && automations.find(a => a.id === selectedAutomation)?.name}
-            </DialogDescription>
-          </DialogHeader>
-
-          {(() => {
-            if (selectedAutomation === null) return null;
-            const automation = automations.find(a => a.id === selectedAutomation);
-            if (!automation) return null;
-
-            return (
-              <div className="py-4">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="flex-1 space-y-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Automation Overview</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <dl className="space-y-3 text-sm">
-                          <div className="flex justify-between">
-                            <dt className="text-muted-foreground">Status</dt>
-                            <dd>
-                              <Badge
-                                variant="outline"
-                                className={getStatusColor(automation.status as AutomationStatus)}
-                              >
-                                {automation.status.charAt(0).toUpperCase() + automation.status.slice(1)}
-                              </Badge>
-                            </dd>
-                          </div>
-                          <div className="flex justify-between">
-                            <dt className="text-muted-foreground">Trigger</dt>
-                            <dd>{getTriggerName(automation.trigger)}</dd>
-                          </div>
-                          <div className="flex justify-between">
-                            <dt className="text-muted-foreground">Message Template</dt>
-                            <dd>{automation.template}</dd>
-                          </div>
-                          <div className="flex justify-between">
-                            <dt className="text-muted-foreground">Created</dt>
-                            <dd>{format(automation.createdAt, "MMM d, yyyy")}</dd>
-                          </div>
-                          {automation.lastTriggered && (
-                            <div className="flex justify-between">
-                              <dt className="text-muted-foreground">Last Triggered</dt>
-                              <dd>{format(automation.lastTriggered, "MMM d, yyyy 'at' h:mm a")}</dd>
-                            </div>
-                          )}
-                        </dl>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Execution Statistics</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Success Rate</span>
-                              <span className="font-medium">{automation.successRate}%</span>
-                            </div>
-                            <Progress value={automation.successRate} className="h-2" />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="border rounded-md p-3">
-                              <div className="text-sm text-muted-foreground">Total Executions</div>
-                              <div className="text-2xl font-bold mt-1">{automation.totalExecutions.toLocaleString()}</div>
-                            </div>
-                            <div className="border rounded-md p-3">
-                              <div className="text-sm text-muted-foreground">Replies Received</div>
-                              <div className="text-2xl font-bold mt-1">{automation.stats.replied.toLocaleString()}</div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-2 text-center">
-                            <div className="bg-muted/30 rounded-md p-2">
-                              <div className="text-xs text-muted-foreground">Delivered</div>
-                              <div className="font-medium">{automation.stats.delivered.toLocaleString()}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {Math.round((automation.stats.delivered / automation.totalExecutions) * 100)}%
-                              </div>
-                            </div>
-                            <div className="bg-muted/30 rounded-md p-2">
-                              <div className="text-xs text-muted-foreground">Read</div>
-                              <div className="font-medium">{automation.stats.read.toLocaleString()}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {Math.round((automation.stats.read / automation.stats.delivered) * 100)}%
-                              </div>
-                            </div>
-                            <div className="bg-muted/30 rounded-md p-2">
-                              <div className="text-xs text-muted-foreground">Failed</div>
-                              <div className="font-medium">{automation.stats.failed.toLocaleString()}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {Math.round((automation.stats.failed / automation.totalExecutions) * 100)}%
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="flex-1 space-y-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Message Preview</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="border rounded-md p-3 bg-muted/30">
-                          <div className="bg-[#dcf8c6] dark:bg-[#005c4b] p-3 rounded-lg max-w-[90%] ml-auto">
-                            <p className="text-sm">
-                              {automation.template === "welcome_message"
-                                ? "Hello John, welcome to our business! We're excited to have you here. Feel free to reach out if you have any questions."
-                                : automation.template === "cart_reminder"
-                                ? "Hello John, you still have items in your cart! Complete your purchase now to get free shipping."
-                                : automation.template === "order_confirmation"
-                                ? "Hello John, your order #12345 has been confirmed. Thank you for your purchase!"
-                                : automation.template === "appointment_reminder"
-                                ? "Hello John, this is a reminder that you have an appointment scheduled for tomorrow at 2:00 PM."
-                                : automation.template === "feedback_request"
-                                ? "Hello John, we'd love to hear your feedback about your recent purchase. How would you rate it?"
-                                : "Hello John, we noticed you haven't visited us in a while. Come back and check out our latest offers!"}
-                            </p>
-                            <div className="flex justify-end mt-1 text-xs opacity-70">
-                              {format(new Date(), "h:mm a")} • Delivered
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Recent Activity</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {[...Array(5)].map((_, idx) => (
-                            <div key={idx} className="flex gap-3 pb-3 border-b last:border-0 last:pb-0">
-                              <div className={`rounded-full p-1.5 h-6 w-6 flex items-center justify-center ${
-                                idx % 3 === 0 ? "bg-green-500/10 text-green-500" :
-                                idx % 3 === 1 ? "bg-blue-500/10 text-blue-500" :
-                                "bg-yellow-500/10 text-yellow-500"
-                              }`}>
-                                {idx % 3 === 0 ? <CheckCircle className="h-3 w-3" /> :
-                                 idx % 3 === 1 ? <MessageSquare className="h-3 w-3" /> :
-                                 <Clock className="h-3 w-3" />}
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-sm">
-                                  {idx % 3 === 0 ? "Message delivered to +1 (555) 123-4567" :
-                                   idx % 3 === 1 ? "Reply received from +1 (555) 987-6543" :
-                                   "Automation triggered for new subscriber"}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {format(subDays(new Date(), idx), "MMM d, yyyy 'at' h:mm a")}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          <DialogFooter>
-            <div className="flex w-full justify-between">
-              {selectedAutomation !== null && (
-                <div>
-                  {automations.find(a => a.id === selectedAutomation)?.status === "active" ? (
-                    <Button variant="outline" size="sm">
-                      <Pause className="h-4 w-4 mr-2" />
-                      Pause
-                    </Button>
-                  ) : automations.find(a => a.id === selectedAutomation)?.status === "paused" ? (
-                    <Button variant="outline" size="sm">
-                      <Play className="h-4 w-4 mr-2" />
-                      Activate
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setSelectedAutomation(null)}>
-                  Close
-                </Button>
-                <Button>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Automation
-                </Button>
+                )}
               </div>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCreateDialogOpen(false);
+                  setIsEditDialogOpen(false);
+                  resetForm();
+                  setSelectedAutoReply(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={isCreateDialogOpen ? handleCreateAutoReply : handleUpdateAutoReply}
+              >
+                {isCreateDialogOpen ? "Create Auto Reply" : "Update Auto Reply"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Auto Reply Dialog */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            {selectedAutoReply && (
+              <>
+                <DialogHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <DialogTitle>{selectedAutoReply.name}</DialogTitle>
+                      <DialogDescription className="flex items-center gap-2 mt-1">
+                        <Badge
+                          variant={selectedAutoReply.isActive ? "default" : "secondary"}
+                          className={selectedAutoReply.isActive ? "bg-green-100 text-green-700 border-green-200" : ""}
+                        >
+                          {selectedAutoReply.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        <Badge variant="outline" className="capitalize">
+                          {selectedAutoReply.replyType}
+                        </Badge>
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+
+                <Tabs defaultValue="settings" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="settings">Settings</TabsTrigger>
+                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="settings" className="space-y-4 pt-4">
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Trigger Keywords</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedAutoReply.triggers.map((trigger, index) => (
+                            <Badge key={index} variant="secondary">
+                              {trigger}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Match Type:</span>
+                          <div className="font-medium capitalize">
+                            {selectedAutoReply.matchType.replace('_', ' ')}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Case Sensitive:</span>
+                          <div className="font-medium">
+                            {selectedAutoReply.caseSensitive ? "Yes" : "No"}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Priority:</span>
+                          <div className="font-medium">{selectedAutoReply.priority}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Reply Type:</span>
+                          <div className="font-medium capitalize">{selectedAutoReply.replyType}</div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Reply Content</h4>
+                        {selectedAutoReply.replyType === 'template' ? (
+                          <div className="bg-muted/40 p-3 rounded-md text-sm">
+                            <div className="font-medium">Template: {selectedAutoReply.templateName}</div>
+                            <div className="text-muted-foreground">
+                              Language: {selectedAutoReply.templateLanguage}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-muted/40 p-3 rounded-md text-sm">
+                            {selectedAutoReply.replyMessage}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="analytics" className="space-y-4 pt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">{selectedAutoReply.usageCount || 0}</div>
+                            <div className="text-sm text-muted-foreground">Total Triggers</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">
+                              {selectedAutoReply.lastTriggered ?
+                                format(new Date(selectedAutoReply.lastTriggered), "MMM dd") :
+                                "Never"
+                              }
+                            </div>
+                            <div className="text-sm text-muted-foreground">Last Triggered</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="text-center py-8">
+                      <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-lg font-medium mb-2">Detailed Analytics Coming Soon</p>
+                      <p className="text-muted-foreground max-w-md mx-auto">
+                        Detailed analytics with charts and insights will be available in a future update.
+                      </p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="pt-4 border-t">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsViewDialogOpen(false);
+                        setTimeout(() => openEditDialog(selectedAutoReply), 100);
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Auto Reply
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setIsViewDialogOpen(false);
+                        setTimeout(() => setIsDeleteDialogOpen(true), 100);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Delete Auto Reply?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. The auto reply will be permanently deleted.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedAutoReply && (
+              <div className="py-4">
+                <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
+                  <Bot className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium">{selectedAutoReply.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {selectedAutoReply.triggers.length} trigger{selectedAutoReply.triggers.length !== 1 ? 's' : ''}
+                      {selectedAutoReply.usageCount > 0 && ` • ${selectedAutoReply.usageCount} uses`}
+                    </div>
+                  </div>
+                </div>
+                {selectedAutoReply.isActive && (
+                  <div className="mt-4 flex items-start gap-2 p-3 rounded-md bg-amber-50 text-amber-800">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Warning: This auto reply is currently active</p>
+                      <p className="text-sm">
+                        Deleting an active auto reply will stop automatic responses to the configured triggers.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAutoReply}
+              >
+                Delete Auto Reply
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </Layout>
   );
 }
