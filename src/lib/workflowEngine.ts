@@ -1,7 +1,10 @@
 import Workflow from '@/models/Workflow';
 import Contact from '@/models/Contact';
 import Conversation from '@/models/Conversation';
+import User from '@/models/User';
 import { v4 as uuidv4 } from 'uuid';
+
+const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
 export interface WorkflowExecution {
   workflowId: string;
@@ -154,10 +157,131 @@ class WorkflowEngine {
     node: any,
     workflow: any
   ): Promise<string | null> {
-    // Send message logic would go here
-    // For now, just find the next node
-    const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
-    return nextEdge?.target || null;
+    try {
+      // Get contact and user information
+      const contact = await Contact.findById(execution.contactId);
+      if (!contact) {
+        console.error('Contact not found for workflow execution');
+        return null;
+      }
+
+      const user = await User.findById(workflow.userId);
+      if (!user) {
+        console.error('User not found for workflow execution');
+        return null;
+      }
+
+      // Find the WABA account
+      const wabaAccount = user.wabaAccounts?.find((account: any) => account.wabaId === contact.wabaId);
+      if (!wabaAccount) {
+        console.error('WABA account not found for workflow execution');
+        return null;
+      }
+
+      // Get message content from node configuration
+      const messageContent = node.data.config?.message || 'Automated message from workflow';
+      const messageType = node.data.config?.messageType || 'text';
+
+      // Validate phone number format
+      let phoneNumber = contact.phone;
+      if (!phoneNumber.startsWith('+')) {
+        phoneNumber = '+' + phoneNumber;
+      }
+
+      // Prepare WhatsApp message payload
+      let whatsappPayload;
+
+      if (messageType === 'template') {
+        whatsappPayload = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: phoneNumber,
+          type: "template",
+          template: {
+            name: node.data.config?.templateName,
+            language: {
+              code: node.data.config?.templateLanguage || 'en'
+            }
+          }
+        };
+
+        // Add components if provided
+        if (node.data.config?.templateComponents?.length) {
+          (whatsappPayload.template as any).components = node.data.config.templateComponents;
+        }
+      } else {
+        // Default text message payload
+        whatsappPayload = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: phoneNumber,
+          type: "text",
+          text: {
+            preview_url: false,
+            body: messageContent
+          }
+        };
+      }
+
+      console.log('Workflow sending message:', JSON.stringify(whatsappPayload, null, 2));
+
+      // Validate required environment variables
+      if (!INT_TOKEN) {
+        console.error('INTERAKT_API_TOKEN is not set');
+        return null;
+      }
+
+      // Send message via Interakt API
+      const interaktResponse = await fetch(
+        `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'x-access-token': INT_TOKEN,
+            'x-waba-id': contact.wabaId,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(whatsappPayload)
+        }
+      );
+
+      const responseText = await interaktResponse.text();
+      console.log('Workflow message response:', responseText);
+
+      if (!interaktResponse.ok) {
+        console.error('Failed to send workflow message:', responseText);
+        return null;
+      }
+
+      let interaktData;
+      try {
+        interaktData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse workflow message response:', parseError);
+        return null;
+      }
+
+      // Record the message in conversation
+      await this.recordMessageInConversation(
+        contact,
+        messageContent,
+        messageType,
+        interaktData.messages?.[0]?.id,
+        user.name || 'Workflow',
+        node.data.config?.templateName
+      );
+
+      console.log('Workflow message sent successfully');
+
+      // Find next node
+      const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
+      return nextEdge?.target || null;
+
+    } catch (error) {
+      console.error('Error executing action node:', error);
+      return null;
+    }
   }
 
   private async executeConditionNode(
@@ -165,14 +289,47 @@ class WorkflowEngine {
     node: any,
     workflow: any
   ): Promise<string | null> {
-    // Evaluate condition logic would go here
-    // For now, randomly choose yes/no path
-    const result = Math.random() > 0.5 ? 'yes' : 'no';
+    try {
+      const conditionType = node.data.config?.conditionType;
+      const conditionValue = node.data.config?.conditionValue;
+      const messageContent = execution.variables.messageContent?.toLowerCase() || '';
 
-    const nextEdge = workflow.edges.find((edge: any) =>
-      edge.source === node.id && edge.sourceHandle === result
-    );
-    return nextEdge?.target || null;
+      let result = false;
+
+      if (conditionType && conditionValue) {
+        const checkValue = conditionValue.toLowerCase();
+
+        switch (conditionType) {
+          case 'contains':
+            result = messageContent.includes(checkValue);
+            break;
+          case 'equals':
+            result = messageContent === checkValue;
+            break;
+          case 'starts_with':
+            result = messageContent.startsWith(checkValue);
+            break;
+          case 'ends_with':
+            result = messageContent.endsWith(checkValue);
+            break;
+          default:
+            result = messageContent.includes(checkValue);
+        }
+      }
+
+      console.log(`Condition evaluation: "${messageContent}" ${conditionType} "${conditionValue}" = ${result}`);
+
+      // Find the appropriate edge based on condition result
+      const targetHandle = result ? 'yes' : 'no';
+      const nextEdge = workflow.edges.find((edge: any) =>
+        edge.source === node.id && edge.sourceHandle === targetHandle
+      );
+
+      return nextEdge?.target || null;
+    } catch (error) {
+      console.error('Error executing condition node:', error);
+      return null;
+    }
   }
 
   private async executeDelayNode(
@@ -180,7 +337,10 @@ class WorkflowEngine {
     node: any,
     workflow: any
   ): Promise<void> {
-    const delayMs = node.data.config?.delayMs || 300000; // 5 minutes default
+    const delayMinutes = node.data.config?.duration || 5; // Default 5 minutes
+    const delayMs = delayMinutes * 60 * 1000;
+
+    console.log(`Workflow delay: ${delayMinutes} minutes`);
 
     setTimeout(async () => {
       const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
@@ -200,9 +360,102 @@ class WorkflowEngine {
     node: any,
     workflow: any
   ): Promise<string | null> {
-    // Webhook execution logic would go here
-    const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
-    return nextEdge?.target || null;
+    try {
+      const webhookUrl = node.data.config?.webhookUrl;
+      const webhookMethod = node.data.config?.webhookMethod || 'POST';
+
+      if (!webhookUrl) {
+        console.error('Webhook URL not configured');
+        return null;
+      }
+
+      const webhookPayload = {
+        workflowId: execution.workflowId,
+        contactId: execution.contactId,
+        executionId: execution.workflowId,
+        variables: execution.variables,
+        timestamp: new Date().toISOString()
+      };
+
+      const webhookResponse = await fetch(webhookUrl, {
+        method: webhookMethod,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      console.log(`Webhook executed: ${webhookMethod} ${webhookUrl} - Status: ${webhookResponse.status}`);
+
+      // Find next node
+      const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
+      return nextEdge?.target || null;
+
+    } catch (error) {
+      console.error('Error executing webhook node:', error);
+      return null;
+    }
+  }
+
+  private async recordMessageInConversation(
+    contact: any,
+    messageContent: string,
+    messageType: string,
+    whatsappMessageId?: string,
+    senderName?: string,
+    templateName?: string
+  ): Promise<void> {
+    try {
+      // Create or update conversation
+      let conversation = await Conversation.findOne({ contactId: contact._id });
+
+      const newMessage = {
+        id: uuidv4(),
+        senderId: 'agent' as const,
+        content: messageContent,
+        messageType: messageType,
+        timestamp: new Date(),
+        status: 'sent' as const,
+        whatsappMessageId: whatsappMessageId,
+        senderName: senderName || 'Workflow',
+        templateName: messageType === 'template' ? templateName : undefined
+      };
+
+      if (conversation) {
+        conversation.messages.push(newMessage);
+        conversation.lastMessage = messageContent;
+        conversation.lastMessageType = messageType;
+        conversation.lastMessageAt = new Date();
+        conversation.status = 'active';
+
+        // Check if still within 24 hours
+        const now = new Date();
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        conversation.isWithin24Hours = conversation.lastMessageAt > last24Hours;
+      } else {
+        conversation = new Conversation({
+          contactId: contact._id,
+          wabaId: contact.wabaId,
+          phoneNumberId: contact.phoneNumberId,
+          userId: contact.userId,
+          messages: [newMessage],
+          lastMessage: messageContent,
+          lastMessageType: messageType,
+          lastMessageAt: new Date(),
+          isWithin24Hours: true
+        });
+      }
+
+      await conversation.save();
+
+      // Update contact's last message time
+      contact.lastMessageAt = new Date();
+      await contact.save();
+
+      console.log('Workflow message recorded in conversation');
+    } catch (error) {
+      console.error('Error recording workflow message in conversation:', error);
+    }
   }
 
   getExecution(executionId: string): WorkflowExecution | undefined {

@@ -73,6 +73,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
+import AutomationsLayout from "@/components/layout/automation-layout";
 
 interface AutoReply {
   _id: string;
@@ -423,7 +424,7 @@ export default function AutomationsPage() {
   });
 
   return (
-    <>
+    <AutomationsLayout>
       <div className="container mx-auto p-6 py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div>
@@ -1189,6 +1190,6 @@ export default function AutomationsPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </>
+    </AutomationsLayout>
   );
 }
