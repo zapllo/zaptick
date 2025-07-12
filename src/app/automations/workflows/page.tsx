@@ -69,6 +69,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import AutomationsLayout from "@/components/layout/automation-layout";
 
 interface Workflow {
   _id: string;
@@ -321,6 +322,7 @@ export default function WorkflowsPage() {
   };
 
   return (
+    <AutomationsLayout>
     <div className="h-full overflow-auto">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
@@ -721,5 +723,6 @@ export default function WorkflowsPage() {
         </Dialog>
       </div>
     </div>
+    </AutomationsLayout>
   );
 }

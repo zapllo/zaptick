@@ -12,6 +12,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { uploadToS3 } from '@/lib/s3';
 import { fetchWaAsset } from '@/lib/interakt';
 import AutoReply from '@/models/AutoReply';
+import Workflow from '@/models/Workflow';
+import WorkflowEngine from '@/lib/workflowEngine';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -242,6 +244,64 @@ async function processMessage(
   // Check for auto replies (only for text messages from customers)
   if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
     await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
+  }
+
+  // Check for workflow triggers (only for text messages from customers)
+  if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
+    await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+  }
+
+}
+
+// Add this function after the existing helper functions
+async function checkAndTriggerWorkflows(
+  messageContent: string,
+  contact: any,
+  wabaAcc: any,
+  userId: string
+) {
+  try {
+    // Get all active workflows for this WABA
+    const workflows = await Workflow.find({
+      userId,
+      wabaId: wabaAcc.wabaId,
+      isActive: true
+    });
+
+    if (!workflows.length) return;
+
+    const workflowEngine = WorkflowEngine.getInstance();
+
+    // Check each workflow for trigger conditions
+    for (const workflow of workflows) {
+      const triggerNode = workflow.nodes.find((node: any) => node.type === 'trigger');
+      if (!triggerNode) continue;
+
+      // Check if message matches trigger conditions
+      const shouldTrigger = workflow.triggers.some((trigger: string) =>
+        messageContent.toLowerCase().includes(trigger.toLowerCase())
+      );
+
+      if (shouldTrigger) {
+        console.log(`Triggering workflow: ${workflow.name} for contact: ${contact.phone}`);
+
+        await workflowEngine.triggerWorkflow(
+          workflow._id.toString(),
+          contact._id.toString(),
+          {
+            messageContent,
+            contactPhone: contact.phone,
+            contactName: contact.name,
+            timestamp: new Date()
+          }
+        );
+
+        // Only trigger first matching workflow
+        break;
+      }
+    }
+  } catch (error) {
+    console.error('Error checking workflows:', error);
   }
 }
 
