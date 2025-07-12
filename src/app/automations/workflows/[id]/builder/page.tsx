@@ -123,41 +123,41 @@ const nodeTemplates = [
     type: "trigger",
     label: "Message Trigger",
     icon: MessageSquare,
-    description: "Start workflow when a message is received",
+
     color: "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-700",
-    category: "Triggers",
+
   },
   {
     type: "condition",
     label: "Condition",
     icon: GitBranch,
-    description: "Branch workflow based on conditions",
+
     color: "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 text-blue-700",
-    category: "Logic",
+
   },
   {
     type: "action",
     label: "Send Message",
     icon: Send,
-    description: "Send a message to the customer",
+
     color: "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 text-purple-700",
-    category: "Actions",
+
   },
   {
     type: "delay",
     label: "Delay",
     icon: Timer,
-    description: "Wait for a specified amount of time",
+
     color: "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 text-amber-700",
-    category: "Timing",
+
   },
   {
     type: "webhook",
     label: "Webhook",
     icon: Webhook,
-    description: "Send data to external service",
+
     color: "bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200 text-rose-700",
-    category: "Integration",
+
   },
 ];
 
@@ -188,7 +188,7 @@ function WorkflowBuilderContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [isExecuting, setIsExecuting] = useState(false);
-
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   // History management
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -553,7 +553,7 @@ function WorkflowBuilderContent() {
 
   return (
     <Layout>
-      <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="h-screen flex flex-col ">
         {/* Header */}
         <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -612,27 +612,16 @@ function WorkflowBuilderContent() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* View Mode Toggle */}
-              {/* <div className="flex items-center gap-1 p-1 bg-gray-100/80 rounded-lg">
-                <Button
-                  variant={viewMode === 'edit' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('edit')}
-                  className="h-8 px-3"
-                >
-                  <Settings className="h-3 w-3 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant={viewMode === 'preview' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('preview')}
-                  className="h-8 px-3"
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  Preview
-                </Button>
-              </div> */}
+              {/* Sidebar Toggle Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                className="h-8 w-8 p-0"
+                title={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+              >
+                <Layers className="h-4 w-4" />
+              </Button>
 
               <div className="h-8 w-px bg-gray-200" />
 
@@ -728,7 +717,7 @@ function WorkflowBuilderContent() {
               <Button
                 onClick={saveWorkflow}
                 disabled={isSaving}
-                className=" text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? "Saving..." : "Save"}
@@ -780,128 +769,168 @@ function WorkflowBuilderContent() {
         </div>
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar */}
-          <div className={cn(
-            "bg-white/80 backdrop-blur-lg border-r border-gray-200/60 flex flex-col transition-all duration-300",
-            sidebarCollapsed ? "w-16" : "w-80"
-          )}>
-            <div className="p-4 border-b border-gray-200/60">
-              <div className="flex items-center justify-between">
+          {/* Collapsible Sidebar */}
+          {sidebarVisible && (
+            <div className={cn(
+              "bg-white/80 backdrop-blur-lg border-r border-gray-200/60 flex flex-col transition-all duration-300 shadow-lg",
+              sidebarCollapsed ? "w-16" : "w-64"
+            )}>
+              {/* Sidebar Header */}
+              <div className="p-4 border-b border-gray-200/60 flex items-center justify-between">
                 {!sidebarCollapsed && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Layers className="h-5 w-5" />
-                      Node Library
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Drag nodes onto the canvas to build your workflow
-                    </p>
-                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <Layers className="h-4 w-4" />
+                    Nodes
+                  </h3>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                  title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                 >
-                  <Layers className="h-4 w-4" />
+                  {sidebarCollapsed ? <Maximize className="h-4 w-4" /> : <Move className="h-4 w-4" />}
                 </Button>
               </div>
-            </div>
 
-            {!sidebarCollapsed && (
-              <>
-                <div className="flex-1 p-4 overflow-y-auto">
-                  <div className="space-y-4">
-                    {Object.entries(
-                      nodeTemplates.reduce((acc, template) => {
-                        if (!acc[template.category]) acc[template.category] = [];
-                        acc[template.category].push(template);
-                        return acc;
-                      }, {} as Record<string, typeof nodeTemplates>)
-                    ).map(([category, templates]) => (
-                      <div key={category} className="space-y-2">
-                        <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wide">
-                          {category}
-                        </h4>
-                        <div className="space-y-2">
-                          {templates.map((nodeTemplate) => (
-                            <Card
-                              key={nodeTemplate.type}
-                              className={cn(
-                                "cursor-grab active:cursor-grabbing border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] group",
-                                nodeTemplate.color
-                              )}
-                              draggable
-                              onDragStart={(event) => onDragStart(event, nodeTemplate.type)}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="p-2 bg-white/60 rounded-lg group-hover:bg-white/80 transition-colors">
-                                    <nodeTemplate.icon className="h-4 w-4" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="font-medium text-sm truncate">{nodeTemplate.label}</h5>
-                                    <p className="text-xs opacity-75 mt-1 line-clamp-2">{nodeTemplate.description}</p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
+              {!sidebarCollapsed && (
+                <>
+                  {/* Node Templates */}
+                  <div className="flex-1 p-3 overflow-y-auto">
+                    <div className="space-y-2">
+                      {nodeTemplates.map((template) => (
+                        <div
+                          key={template.type}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-sm group",
+                            template.color
+                          )}
+                          draggable
+                          onDragStart={(event) => onDragStart(event, template.type)}
+                        >
+                          <div className="p-1.5 bg-white/60 rounded-md group-hover:bg-white/80 transition-colors">
+                            <template.icon className="h-4 w-4" />
+                          </div>
+                          <span className="text-sm font-medium truncate">{template.label}</span>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Quick Actions */}
+                  <div className="p-3 border-t border-gray-200/60 space-y-2">
+                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                      Quick Actions
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addNode("trigger")}
+                        className="h-8 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Trigger
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addNode("action")}
+                        className="h-8 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Action
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Settings */}
+                  <div className="p-3 border-t border-gray-200/60">
+                    <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                      Canvas
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-700">Grid</span>
+                        <Switch
+                          checked={showGrid}
+                          onCheckedChange={handleGridToggle}
+                          className="scale-75"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-700">Snap</span>
+                        <Switch
+                          checked={snapToGrid}
+                          onCheckedChange={handleSnapToggle}
+                          className="scale-75"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="p-3 border-t border-gray-200/60">
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="text-center">
+                        <div className="font-semibold text-gray-900">{nodes.length}</div>
+                        <div className="text-gray-500">Nodes</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-gray-900">{edges.length}</div>
+                        <div className="text-gray-500">Edges</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-gray-900">{Math.round(zoom * 100)}%</div>
+                        <div className="text-gray-500">Zoom</div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Collapsed Sidebar */}
+              {sidebarCollapsed && (
+                <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+                  {nodeTemplates.map((template) => (
+                    <div
+                      key={template.type}
+                      className={cn(
+                        "p-2 rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-sm group",
+                        template.color
+                      )}
+                      draggable
+                      onDragStart={(event) => onDragStart(event, template.type)}
+                      title={template.label}
+                    >
+                      <template.icon className="h-4 w-4 mx-auto" />
+                    </div>
+                  ))}
                 </div>
-
-                <div className="p-4 border-t border-gray-200/60 space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Grid3X3 className="h-4 w-4" />
-                        Show Grid
-                      </Label>
-                      <Switch
-                        checked={showGrid}
-                        onCheckedChange={handleGridToggle}
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                      <Move className="h-4 w-4" />
-                        Snap to Grid
-                      </Label>
-                      <Switch
-                        checked={snapToGrid}
-                        onCheckedChange={handleSnapToggle}
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-gray-200" />
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Canvas Settings</Label>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                        <div className={cn("h-2 w-2 rounded-full", showGrid ? "bg-green-500" : "bg-gray-400")} />
-                        <span>Grid: {showGrid ? 'ON' : 'OFF'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                        <div className={cn("h-2 w-2 rounded-full", snapToGrid ? "bg-green-500" : "bg-gray-400")} />
-                        <span>Snap: {snapToGrid ? 'ON' : 'OFF'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Canvas */}
           <div className="flex-1 relative bg-gradient-to-br from-gray-50 to-gray-100">
+            {/* Floating Sidebar Toggle (when sidebar is hidden) */}
+            {!sidebarVisible && (
+              <div className="absolute top-4 left-4 z-10">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setSidebarVisible(true)}
+                  className="shadow-lg hover:shadow-xl transition-all duration-200 bg-white/90 backdrop-blur-lg border border-gray-200/60 text-gray-700 hover:bg-white"
+                >
+                  <Layers className="h-4 w-4 mr-2" />
+                  Show Nodes
+                </Button>
+              </div>
+            )}
+
             <div ref={reactFlowWrapper} className="h-full">
               <ReactFlow
                 nodes={nodes}
@@ -937,10 +966,10 @@ function WorkflowBuilderContent() {
                   nodeColor={(node) => {
                     const template = nodeTemplates.find(t => t.type === node.type);
                     return template?.color?.includes('emerald') ? '#10b981' :
-                           template?.color?.includes('blue') ? '#3b82f6' :
-                           template?.color?.includes('purple') ? '#8b5cf6' :
-                           template?.color?.includes('amber') ? '#f59e0b' :
-                           template?.color?.includes('rose') ? '#f43f5e' : '#6b7280';
+                      template?.color?.includes('blue') ? '#3b82f6' :
+                        template?.color?.includes('purple') ? '#8b5cf6' :
+                          template?.color?.includes('amber') ? '#f59e0b' :
+                            template?.color?.includes('rose') ? '#f43f5e' : '#6b7280';
                   }}
                 />
 
@@ -968,19 +997,28 @@ function WorkflowBuilderContent() {
                         </div>
 
                         <div className="space-y-2">
-                          <h3 className="text-xl font-bold text-gray-900">Start Building Your Workflow</h3>
+                          <h3 className="text-xl font-bold text-gray-900">Start Building</h3>
                           <p className="text-gray-600">
-                            Create powerful automations by dragging nodes from the sidebar or using the quick actions below
+                            {sidebarVisible ? "Drag nodes from the sidebar to create your workflow" : "Show the sidebar to access nodes and start building"}
                           </p>
                         </div>
 
                         <div className="space-y-3">
+                          {!sidebarVisible && (
+                            <Button
+                              onClick={() => setSidebarVisible(true)}
+                              className="w-full bg-gradient-to-r from-primary/90 to-secondary/90 hover:from-primary hover:to-secondary text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                            >
+                              <Layers className="h-4 w-4 mr-2" />
+                              Show Node Library
+                            </Button>
+                          )}
                           <Button
                             onClick={() => addNode("trigger", { x: 400, y: 200 })}
                             className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                           >
                             <MessageSquare className="h-4 w-4 mr-2" />
-                            Add Trigger Node
+                            Add Trigger
                           </Button>
                           <Button
                             onClick={() => addNode("action", { x: 400, y: 350 })}
@@ -988,15 +1026,8 @@ function WorkflowBuilderContent() {
                             className="w-full border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
                           >
                             <Send className="h-4 w-4 mr-2" />
-                            Add Action Node
+                            Add Action
                           </Button>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-200">
-                          <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
-                            <Zap className="h-3 w-3" />
-                            Pro tip: Use Ctrl+S to save, Ctrl+Z to undo
-                          </p>
                         </div>
                       </CardContent>
                     </Card>
@@ -1004,24 +1035,21 @@ function WorkflowBuilderContent() {
                 )}
 
                 {/* Status Panel */}
-                <Panel position="top-left">
+                <Panel position="top-right" className={cn(!sidebarVisible && "top-16")}>
                   <Card className="bg-white/80 scale-90 backdrop-blur-lg border-gray-200/60 shadow-lg">
                     <CardContent className="px-3 py-1">
                       <div className="flex items-center gap-4 text-xs">
                         <div className="flex items-center gap-1">
                           <Activity className="h-3 w-3 text-blue-500" />
                           <span className="font-medium">{nodes.length}</span>
-                          <span className="text-gray-600">nodes</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Zap className="h-3 w-3 text-purple-500" />
                           <span className="font-medium">{edges.length}</span>
-                          <span className="text-gray-600">connections</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Gauge className="h-3 w-3 text-green-500" />
                           <span className="font-medium">{Math.round(zoom * 100)}%</span>
-                          <span className="text-gray-600">zoom</span>
                         </div>
                       </div>
                     </CardContent>
@@ -1030,12 +1058,12 @@ function WorkflowBuilderContent() {
 
                 {/* Execution Status */}
                 {isExecuting && (
-                  <Panel position="top-right">
+                  <Panel position="top-right" className={cn(!sidebarVisible ? "top-28" : "top-16")}>
                     <Card className="bg-blue-50 border-blue-200">
                       <CardContent className="p-3">
                         <div className="flex items-center gap-2 text-sm">
                           <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-                          <span className="font-medium text-blue-700">Executing workflow...</span>
+                          <span className="font-medium text-blue-700">Executing...</span>
                         </div>
                       </CardContent>
                     </Card>
@@ -1044,7 +1072,6 @@ function WorkflowBuilderContent() {
               </ReactFlow>
             </div>
           </div>
-
           {/* Node Properties Panel */}
           <Sheet open={isNodePanelOpen} onOpenChange={setIsNodePanelOpen}>
             <SheetContent className="w-96 p-6 ">
@@ -1121,15 +1148,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                            ...node,
-                                            data: {
-                                              ...node.data,
-                                              config: {
-                                                ...node.data.config,
-                                                keywords: e.target.value
-                                              }
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            config: {
+                                              ...node.data.config,
+                                              keywords: e.target.value
                                             }
                                           }
+                                        }
                                         : node
                                     )
                                   );
@@ -1160,15 +1187,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                            ...node,
-                                            data: {
-                                              ...node.data,
-                                              config: {
-                                                ...node.data.config,
-                                                message: e.target.value
-                                              }
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            config: {
+                                              ...node.data.config,
+                                              message: e.target.value
                                             }
                                           }
+                                        }
                                         : node
                                     )
                                   );
@@ -1201,15 +1228,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                            ...node,
-                                            data: {
-                                              ...node.data,
-                                              config: {
-                                                ...node.data.config,
-                                                duration: parseInt(e.target.value) || 0
-                                              }
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            config: {
+                                              ...node.data.config,
+                                              duration: parseInt(e.target.value) || 0
                                             }
                                           }
+                                        }
                                         : node
                                     )
                                   );
@@ -1240,15 +1267,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                            ...node,
-                                            data: {
-                                              ...node.data,
-                                              config: {
-                                                ...node.data.config,
-                                                conditionType: e.target.value
-                                              }
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            config: {
+                                              ...node.data.config,
+                                              conditionType: e.target.value
                                             }
                                           }
+                                        }
                                         : node
                                     )
                                   );
@@ -1274,15 +1301,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                            ...node,
-                                            data: {
-                                              ...node.data,
-                                              config: {
-                                                ...node.data.config,
-                                                conditionValue: e.target.value
-                                              }
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            config: {
+                                              ...node.data.config,
+                                              conditionValue: e.target.value
                                             }
                                           }
+                                        }
                                         : node
                                     )
                                   );
@@ -1314,15 +1341,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                            ...node,
-                                            data: {
-                                              ...node.data,
-                                              config: {
-                                                ...node.data.config,
-                                                webhookUrl: e.target.value
-                                              }
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            config: {
+                                              ...node.data.config,
+                                              webhookUrl: e.target.value
                                             }
                                           }
+                                        }
                                         : node
                                     )
                                   );
@@ -1343,15 +1370,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                            ...node,
-                                            data: {
-                                              ...node.data,
-                                              config: {
-                                                ...node.data.config,
-                                                webhookMethod: e.target.value
-                                              }
+                                          ...node,
+                                          data: {
+                                            ...node.data,
+                                            config: {
+                                              ...node.data.config,
+                                              webhookMethod: e.target.value
                                             }
                                           }
+                                        }
                                         : node
                                     )
                                   );

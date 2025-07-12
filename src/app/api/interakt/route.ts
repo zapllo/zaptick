@@ -256,6 +256,9 @@ async function processMessage(
 
 
 // Update the checkAndTriggerWorkflows function
+// ... existing code ...
+
+// Update the checkAndTriggerWorkflows function
 async function checkAndTriggerWorkflows(
   messageContent: string,
   contact: any,
@@ -263,19 +266,18 @@ async function checkAndTriggerWorkflows(
   userId: string
 ) {
   try {
-    console.log(`Checking workflows for message: "${messageContent}" from contact: ${contact.phone}`);
+    console.log(`🔍 Checking workflows for message: "${messageContent}" from contact: ${contact.phone}`);
     
-    // Get all active workflows for this WABA
+    // Get all active workflows for this user (not just WABA)
     const workflows = await Workflow.find({
       userId,
-      wabaId: wabaAcc.wabaId,
       isActive: true
     });
 
-    console.log(`Found ${workflows.length} active workflows for WABA: ${wabaAcc.wabaId}`);
+    console.log(`📋 Found ${workflows.length} active workflows for user: ${userId}`);
 
     if (!workflows.length) {
-      console.log('No active workflows found');
+      console.log('❌ No active workflows found');
       return;
     }
 
@@ -283,46 +285,64 @@ async function checkAndTriggerWorkflows(
 
     // Check each workflow for trigger conditions
     for (const workflow of workflows) {
-      console.log(`Checking workflow: ${workflow.name} (ID: ${workflow._id})`);
+      console.log(`\n🔎 Checking workflow: "${workflow.name}" (ID: ${workflow._id})`);
+      console.log(`   - Workflow WABA ID: ${workflow.wabaId}`);
+      console.log(`   - Contact WABA ID: ${wabaAcc.wabaId}`);
+      
+      // Check if workflow is for this WABA
+      if (workflow.wabaId !== wabaAcc.wabaId) {
+        console.log(`   ❌ WABA ID mismatch, skipping workflow`);
+        continue;
+      }
       
       const triggerNode = workflow.nodes.find((node: any) => node.type === 'trigger');
       if (!triggerNode) {
-        console.log(`No trigger node found in workflow: ${workflow.name}`);
+        console.log(`   ❌ No trigger node found in workflow: ${workflow.name}`);
         continue;
       }
 
-      console.log(`Trigger node found:`, triggerNode);
+      console.log(`   ✅ Trigger node found:`, {
+        id: triggerNode.id,
+        keywords: triggerNode.data.config?.keywords,
+        workflowTriggers: workflow.triggers
+      });
 
       // Check if message matches trigger conditions
       let shouldTrigger = false;
+      const messageText = messageContent.toLowerCase().trim();
 
-      // Check workflow.triggers array (if it exists)
+      // Method 1: Check workflow.triggers array (if it exists)
       if (workflow.triggers && workflow.triggers.length > 0) {
+        console.log(`   📝 Checking workflow triggers: ${workflow.triggers}`);
         shouldTrigger = workflow.triggers.some((trigger: string) => {
-          const match = messageContent.toLowerCase().includes(trigger.toLowerCase());
-          console.log(`Checking trigger "${trigger}" against "${messageContent}": ${match}`);
+          const triggerText = trigger.toLowerCase().trim();
+          const match = messageText.includes(triggerText);
+          console.log(`      "${triggerText}" in "${messageText}": ${match}`);
           return match;
         });
       }
 
-      // Also check trigger node configuration
+      // Method 2: Check trigger node configuration keywords
       if (!shouldTrigger && triggerNode.data.config?.keywords) {
-        const keywords = triggerNode.data.config.keywords.split(',').map((k: string) => k.trim());
+        console.log(`   📝 Checking trigger node keywords: "${triggerNode.data.config.keywords}"`);
+        const keywords = triggerNode.data.config.keywords
+          .split(',')
+          .map((k: string) => k.trim().toLowerCase())
+          .filter((k: string) => k.length > 0);
+        
+        console.log(`   🔑 Parsed keywords:`, keywords);
+        
         shouldTrigger = keywords.some((keyword: string) => {
-          const match = messageContent.toLowerCase().includes(keyword.toLowerCase());
-          console.log(`Checking keyword "${keyword}" against "${messageContent}": ${match}`);
+          const match = messageText.includes(keyword);
+          console.log(`      "${keyword}" in "${messageText}": ${match}`);
           return match;
         });
-      }
-
-      // If no specific triggers configured, check if message contains "wow" for testing
-      if (!shouldTrigger && !workflow.triggers?.length && !triggerNode.data.config?.keywords) {
-        shouldTrigger = messageContent.toLowerCase().includes('wow');
-        console.log(`Default trigger check for "wow": ${shouldTrigger}`);
       }
 
       if (shouldTrigger) {
-        console.log(`🚀 Triggering workflow: ${workflow.name} for contact: ${contact.phone}`);
+        console.log(`\n🚀 TRIGGERING WORKFLOW: "${workflow.name}" for contact: ${contact.phone}`);
+        console.log(`   📞 Contact ID: ${contact._id}`);
+        console.log(`   🔗 Workflow ID: ${workflow._id}`);
 
         try {
           const executionId = await workflowEngine.triggerWorkflow(
@@ -332,23 +352,37 @@ async function checkAndTriggerWorkflows(
               messageContent,
               contactPhone: contact.phone,
               contactName: contact.name,
+              wabaId: wabaAcc.wabaId,
               timestamp: new Date()
             }
           );
 
           console.log(`✅ Workflow triggered successfully with execution ID: ${executionId}`);
+          
+          // Update workflow statistics
+          await Workflow.findByIdAndUpdate(workflow._id, {
+            $inc: { executionCount: 1 },
+            lastTriggered: new Date()
+          });
+
         } catch (triggerError) {
           console.error(`❌ Error triggering workflow ${workflow.name}:`, triggerError);
+          
+          // Update failure count
+          await Workflow.findByIdAndUpdate(workflow._id, {
+            $inc: { executionCount: 1, failureCount: 1 },
+            lastTriggered: new Date()
+          });
         }
 
         // Only trigger first matching workflow
         break;
       } else {
-        console.log(`No trigger match for workflow: ${workflow.name}`);
+        console.log(`   ❌ No trigger match for workflow: ${workflow.name}`);
       }
     }
   } catch (error) {
-    console.error('Error checking workflows:', error);
+    console.error('❌ Error checking workflows:', error);
   }
 }
 

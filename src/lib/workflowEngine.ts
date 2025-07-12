@@ -34,16 +34,29 @@ class WorkflowEngine {
     triggerData: any
   ): Promise<string> {
     try {
+      console.log(`\n🎬 STARTING WORKFLOW EXECUTION`);
+      console.log(`   🔗 Workflow ID: ${workflowId}`);
+      console.log(`   👤 Contact ID: ${contactId}`);
+      console.log(`   📝 Trigger Data:`, triggerData);
+
       const workflow = await Workflow.findById(workflowId);
-      if (!workflow || !workflow.isActive) {
-        throw new Error('Workflow not found or inactive');
+      if (!workflow) {
+        throw new Error(`Workflow not found: ${workflowId}`);
       }
+
+      if (!workflow.isActive) {
+        throw new Error(`Workflow is not active: ${workflow.name}`);
+      }
+
+      console.log(`   ✅ Workflow found: "${workflow.name}" (Active: ${workflow.isActive})`);
 
       // Find trigger node
       const triggerNode = workflow.nodes.find((node: any) => node.type === 'trigger');
       if (!triggerNode) {
-        throw new Error('No trigger node found in workflow');
+        throw new Error(`No trigger node found in workflow: ${workflow.name}`);
       }
+
+      console.log(`   🎯 Trigger node found: ${triggerNode.id}`);
 
       const executionId = uuidv4();
       const execution: WorkflowExecution = {
@@ -57,22 +70,25 @@ class WorkflowEngine {
       };
 
       this.executions.set(executionId, execution);
+      console.log(`   📋 Execution created: ${executionId}`);
 
       // Start execution
       await this.executeNextNode(executionId);
 
       return executionId;
     } catch (error) {
-      console.error('Error triggering workflow:', error);
+      console.error('❌ Error triggering workflow:', error);
       throw error;
     }
   }
-
   private async executeNextNode(executionId: string): Promise<void> {
     const execution = this.executions.get(executionId);
-    if (!execution) return;
-
+    if (!execution) {
+      console.error(`❌ Execution not found: ${executionId}`);
+      return;
+    }
     try {
+      console.log(`\n🔄 EXECUTING NODE: ${execution.currentNodeId}`);
       const workflow = await Workflow.findById(execution.workflowId);
       if (!workflow) {
         execution.status = 'failed';
@@ -81,6 +97,7 @@ class WorkflowEngine {
 
       const currentNode = workflow.nodes.find((node: any) => node.id === execution.currentNodeId);
       if (!currentNode) {
+        console.log(`✅ No more nodes to execute, marking as completed`);
         execution.status = 'completed';
         execution.completedAt = new Date();
         return;
