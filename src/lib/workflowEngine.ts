@@ -158,35 +158,48 @@ class WorkflowEngine {
     workflow: any
   ): Promise<string | null> {
     try {
+      console.log(`🔄 Executing action node: ${node.id} for workflow: ${workflow.name}`);
+
       // Get contact and user information
       const contact = await Contact.findById(execution.contactId);
       if (!contact) {
-        console.error('Contact not found for workflow execution');
+        console.error('❌ Contact not found for workflow execution:', execution.contactId);
         return null;
       }
 
+      console.log(`📞 Contact found: ${contact.name} (${contact.phone})`);
+
       const user = await User.findById(workflow.userId);
       if (!user) {
-        console.error('User not found for workflow execution');
+        console.error('❌ User not found for workflow execution:', workflow.userId);
         return null;
       }
+
+      console.log(`👤 User found: ${user.name}`);
 
       // Find the WABA account
       const wabaAccount = user.wabaAccounts?.find((account: any) => account.wabaId === contact.wabaId);
       if (!wabaAccount) {
-        console.error('WABA account not found for workflow execution');
+        console.error('❌ WABA account not found for workflow execution. Contact wabaId:', contact.wabaId);
+        console.error('Available WABA accounts:', user.wabaAccounts?.map((acc: any) => acc.wabaId));
         return null;
       }
+
+      console.log(`🏢 WABA account found: ${wabaAccount.wabaId}`);
 
       // Get message content from node configuration
       const messageContent = node.data.config?.message || 'Automated message from workflow';
       const messageType = node.data.config?.messageType || 'text';
+
+      console.log(`📝 Message to send: "${messageContent}" (type: ${messageType})`);
 
       // Validate phone number format
       let phoneNumber = contact.phone;
       if (!phoneNumber.startsWith('+')) {
         phoneNumber = '+' + phoneNumber;
       }
+
+      console.log(`📱 Sending to phone: ${phoneNumber}`);
 
       // Prepare WhatsApp message payload
       let whatsappPayload;
@@ -223,13 +236,15 @@ class WorkflowEngine {
         };
       }
 
-      console.log('Workflow sending message:', JSON.stringify(whatsappPayload, null, 2));
+      console.log('🚀 Workflow sending message payload:', JSON.stringify(whatsappPayload, null, 2));
 
       // Validate required environment variables
       if (!INT_TOKEN) {
-        console.error('INTERAKT_API_TOKEN is not set');
+        console.error('❌ INTERAKT_API_TOKEN is not set');
         return null;
       }
+
+      console.log('🔐 API Token found, making request...');
 
       // Send message via Interakt API
       const interaktResponse = await fetch(
@@ -246,11 +261,13 @@ class WorkflowEngine {
         }
       );
 
+      console.log('📡 Interakt API response status:', interaktResponse.status);
+
       const responseText = await interaktResponse.text();
-      console.log('Workflow message response:', responseText);
+      console.log('📡 Interakt API response:', responseText);
 
       if (!interaktResponse.ok) {
-        console.error('Failed to send workflow message:', responseText);
+        console.error('❌ Failed to send workflow message:', responseText);
         return null;
       }
 
@@ -258,9 +275,11 @@ class WorkflowEngine {
       try {
         interaktData = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('Failed to parse workflow message response:', parseError);
+        console.error('❌ Failed to parse workflow message response:', parseError);
         return null;
       }
+
+      console.log('✅ Message sent successfully, recording in conversation...');
 
       // Record the message in conversation
       await this.recordMessageInConversation(
@@ -272,17 +291,22 @@ class WorkflowEngine {
         node.data.config?.templateName
       );
 
-      console.log('Workflow message sent successfully');
+      console.log('✅ Workflow message recorded in conversation');
 
       // Find next node
       const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
-      return nextEdge?.target || null;
+      const nextNodeId = nextEdge?.target || null;
+
+      console.log(`🔄 Next node: ${nextNodeId}`);
+
+      return nextNodeId;
 
     } catch (error) {
-      console.error('Error executing action node:', error);
+      console.error('❌ Error executing action node:', error);
       return null;
     }
   }
+
 
   private async executeConditionNode(
     execution: WorkflowExecution,
