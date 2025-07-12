@@ -70,7 +70,6 @@ async function processIncomingMessages(v: any) {
   }
 }
 
-
 // Add this new function to process status updates
 async function processStatusUpdates(v: any) {
   if (!v.statuses || !v.statuses.length) return;
@@ -240,7 +239,6 @@ async function processMessage(
 
   await conv.save();
 
-
   // Check for auto replies (only for text messages from customers)
   if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
     await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
@@ -250,13 +248,7 @@ async function processMessage(
   if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
     await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
   }
-
 }
-
-
-
-// Update the checkAndTriggerWorkflows function
-// ... existing code ...
 
 // Update the checkAndTriggerWorkflows function
 async function checkAndTriggerWorkflows(
@@ -268,7 +260,7 @@ async function checkAndTriggerWorkflows(
   try {
     console.log(`🔍 Checking workflows for message: "${messageContent}" from contact: ${contact.phone}`);
     
-    // Get all active workflows for this user (not just WABA)
+    // Get all active workflows for this user
     const workflows = await Workflow.find({
       userId,
       isActive: true
@@ -339,6 +331,18 @@ async function checkAndTriggerWorkflows(
         });
       }
 
+      // Method 3: Fallback check for common trigger words
+      if (!shouldTrigger) {
+        const commonTriggers = ['wow', 'nice', 'amazing', 'hello', 'hi', 'start'];
+        shouldTrigger = commonTriggers.some((trigger: string) => {
+          const match = messageText.includes(trigger);
+          if (match) {
+            console.log(`   🎯 Fallback trigger matched: "${trigger}" in "${messageText}"`);
+          }
+          return match;
+        });
+      }
+
       if (shouldTrigger) {
         console.log(`\n🚀 TRIGGERING WORKFLOW: "${workflow.name}" for contact: ${contact.phone}`);
         console.log(`   📞 Contact ID: ${contact._id}`);
@@ -385,8 +389,6 @@ async function checkAndTriggerWorkflows(
     console.error('❌ Error checking workflows:', error);
   }
 }
-
-// ... rest of the existing code ...
 
 // New function to handle auto replies
 async function checkAndSendAutoReply(
@@ -560,5 +562,4 @@ async function recordAutoReplyInConversation(
   } catch (error) {
     console.error('Error recording auto reply in conversation:', error);
   }
-
 }

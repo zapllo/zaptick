@@ -123,41 +123,31 @@ const nodeTemplates = [
     type: "trigger",
     label: "Message Trigger",
     icon: MessageSquare,
-
-    color: "bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-700",
-
+    color: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
   },
   {
     type: "condition",
     label: "Condition",
     icon: GitBranch,
-
-    color: "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 text-blue-700",
-
+    color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
   },
   {
     type: "action",
     label: "Send Message",
     icon: Send,
-
-    color: "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 text-purple-700",
-
+    color: "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100",
   },
   {
     type: "delay",
     label: "Delay",
     icon: Timer,
-
-    color: "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 text-amber-700",
-
+    color: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
   },
   {
     type: "webhook",
     label: "Webhook",
     icon: Webhook,
-
-    color: "bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200 text-rose-700",
-
+    color: "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100",
   },
 ];
 
@@ -186,9 +176,10 @@ function WorkflowBuilderContent() {
   const [isNodePanelOpen, setIsNodePanelOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [isExecuting, setIsExecuting] = useState(false);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
+
   // History management
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -290,17 +281,6 @@ function WorkflowBuilderContent() {
     }
   }, [workflow, nodes, edges, getViewport, toast]);
 
-  // // Auto-save
-  // useEffect(() => {
-  //   if (nodes.length > 0 || edges.length > 0) {
-  //     const autoSaveTimer = setTimeout(() => {
-  //       saveWorkflow();
-  //     }, 5000);
-
-  //     return () => clearTimeout(autoSaveTimer);
-  //   }
-  // }, [nodes, edges, saveWorkflow]);
-
   // History management
   const addToHistory = useCallback(() => {
     const newHistoryItem = { nodes: [...nodes], edges: [...edges] };
@@ -354,19 +334,36 @@ function WorkflowBuilderContent() {
     setIsNodePanelOpen(false);
   }, []);
 
-  // Handle connection
+  // Add keyboard shortcut for sidebar toggle
+  useHotkeys("ctrl+b, cmd+b", (e) => {
+    e.preventDefault();
+    setSidebarVisible(!sidebarVisible);
+  }, [sidebarVisible]);
+
+  // Handle connection with improved condition node support
   const onConnect = useCallback(
     (params: Connection) => {
       console.log('Connecting nodes:', params);
-      const newEdge = addEdge({
+      
+      // Check if source node is a condition node
+      const sourceNode = nodes.find(n => n.id === params.source);
+      let newEdge = {
         ...params,
         animated: true,
         style: { stroke: '#6366f1', strokeWidth: 2 },
-      }, edges);
-      setEdges(newEdge);
+      };
+
+      // If connecting from a condition node, we need to specify which output (yes/no)
+      if (sourceNode?.type === 'condition' && !params.sourceHandle) {
+        // For now, default to 'yes' - in a real implementation, you'd want to show a UI to select
+        newEdge.sourceHandle = 'yes';
+      }
+
+      const updatedEdges = addEdge(newEdge, edges);
+      setEdges(updatedEdges);
       addToHistory();
     },
-    [edges, setEdges, addToHistory]
+    [edges, nodes, setEdges, addToHistory]
   );
 
   // Handle node drag
@@ -553,7 +550,7 @@ function WorkflowBuilderContent() {
 
   return (
     <Layout>
-      <div className="h-screen flex flex-col ">
+      <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
         {/* Header */}
         <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -601,8 +598,7 @@ function WorkflowBuilderContent() {
                   className={cn(
                     "px-3 py-1 font-medium",
                     workflow?.isActive
-                      ? "bg-green-100 text-green-800 border-green-200"
-                      : "bg-gray-100 text-gray-600 border-gray-200"
+                      ? "bg-green-100 text-green-800 border-green-200": "bg-gray-100 text-gray-600 border-gray-200"
                   )}
                 >
                   <Circle className={cn("h-2 w-2 mr-1", workflow?.isActive ? "fill-green-600" : "fill-gray-400")} />
@@ -823,7 +819,7 @@ function WorkflowBuilderContent() {
                     <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
                       Quick Actions
                     </div>
-
+                    
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         variant="outline"
@@ -851,7 +847,7 @@ function WorkflowBuilderContent() {
                     <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
                       Canvas
                     </div>
-
+                    
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-700">Grid</span>
@@ -966,10 +962,10 @@ function WorkflowBuilderContent() {
                   nodeColor={(node) => {
                     const template = nodeTemplates.find(t => t.type === node.type);
                     return template?.color?.includes('emerald') ? '#10b981' :
-                      template?.color?.includes('blue') ? '#3b82f6' :
-                        template?.color?.includes('purple') ? '#8b5cf6' :
-                          template?.color?.includes('amber') ? '#f59e0b' :
-                            template?.color?.includes('rose') ? '#f43f5e' : '#6b7280';
+                           template?.color?.includes('blue') ? '#3b82f6' :
+                           template?.color?.includes('purple') ? '#8b5cf6' :
+                           template?.color?.includes('amber') ? '#f59e0b' :
+                           template?.color?.includes('rose') ? '#f43f5e' : '#6b7280';
                   }}
                 />
 
@@ -986,7 +982,7 @@ function WorkflowBuilderContent() {
 
                 {/* Empty state */}
                 {nodes.length === 0 && (
-                  <Panel position="center">
+<Panel position="top-center">
                     <Card className="text-center p-8 bg-white/90 backdrop-blur-lg border-gray-200/60 shadow-2xl max-w-md mx-auto">
                       <CardContent className="space-y-6">
                         <div className="relative">
@@ -1072,9 +1068,10 @@ function WorkflowBuilderContent() {
               </ReactFlow>
             </div>
           </div>
+
           {/* Node Properties Panel */}
           <Sheet open={isNodePanelOpen} onOpenChange={setIsNodePanelOpen}>
-            <SheetContent className="w-96 p-6 ">
+            <SheetContent className="w-96 p-6">
               <SheetHeader className="pb-6">
                 <SheetTitle className="text-xl font-bold text-gray-900">Node Properties</SheetTitle>
                 <SheetDescription className="text-gray-600">
@@ -1086,7 +1083,7 @@ function WorkflowBuilderContent() {
                 <div className="h-full pb-6 overflow-y-auto">
                   <div className="space-y-6">
                     {/* Node Info */}
-                    <Card className="">
+                    <Card>
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="p-2 bg-white rounded-lg shadow-sm">
@@ -1148,15 +1145,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                          ...node,
-                                          data: {
-                                            ...node.data,
-                                            config: {
-                                              ...node.data.config,
-                                              keywords: e.target.value
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                keywords: e.target.value
+                                              }
                                             }
                                           }
-                                        }
                                         : node
                                     )
                                   );
@@ -1187,15 +1184,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                          ...node,
-                                          data: {
-                                            ...node.data,
-                                            config: {
-                                              ...node.data.config,
-                                              message: e.target.value
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                message: e.target.value
+                                              }
                                             }
                                           }
-                                        }
                                         : node
                                     )
                                   );
@@ -1228,15 +1225,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                          ...node,
-                                          data: {
-                                            ...node.data,
-                                            config: {
-                                              ...node.data.config,
-                                              duration: parseInt(e.target.value) || 0
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                duration: parseInt(e.target.value) || 0
+                                              }
                                             }
                                           }
-                                        }
                                         : node
                                     )
                                   );
@@ -1267,15 +1264,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                          ...node,
-                                          data: {
-                                            ...node.data,
-                                            config: {
-                                              ...node.data.config,
-                                              conditionType: e.target.value
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                conditionType: e.target.value
+                                              }
                                             }
                                           }
-                                        }
                                         : node
                                     )
                                   );
@@ -1301,15 +1298,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                          ...node,
-                                          data: {
-                                            ...node.data,
-                                            config: {
-                                              ...node.data.config,
-                                              conditionValue: e.target.value
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                conditionValue: e.target.value
+                                              }
                                             }
                                           }
-                                        }
                                         : node
                                     )
                                   );
@@ -1341,15 +1338,15 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                          ...node,
-                                          data: {
-                                            ...node.data,
-                                            config: {
-                                              ...node.data.config,
-                                              webhookUrl: e.target.value
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                webhookUrl: e.target.value
+                                              }
                                             }
                                           }
-                                        }
                                         : node
                                     )
                                   );
@@ -1370,22 +1367,22 @@ function WorkflowBuilderContent() {
                                     nds.map((node) =>
                                       node.id === selectedNode.id
                                         ? {
-                                          ...node,
-                                          data: {
-                                            ...node.data,
-                                            config: {
-                                              ...node.data.config,
-                                              webhookMethod: e.target.value
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                webhookMethod: e.target.value
+                                              }
                                             }
                                           }
-                                        }
                                         : node
                                     )
                                   );
                                 }}
                               >
                                 <option value="GET">GET</option>
-                                <option value="POST">POST</option>
+                              <option value="POST">POST</option>
                                 <option value="PUT">PUT</option>
                                 <option value="DELETE">DELETE</option>
                               </select>

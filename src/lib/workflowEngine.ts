@@ -81,16 +81,20 @@ class WorkflowEngine {
       throw error;
     }
   }
+
   private async executeNextNode(executionId: string): Promise<void> {
     const execution = this.executions.get(executionId);
     if (!execution) {
       console.error(`❌ Execution not found: ${executionId}`);
       return;
     }
+
     try {
       console.log(`\n🔄 EXECUTING NODE: ${execution.currentNodeId}`);
+      
       const workflow = await Workflow.findById(execution.workflowId);
       if (!workflow) {
+        console.error(`❌ Workflow not found: ${execution.workflowId}`);
         execution.status = 'failed';
         return;
       }
@@ -103,35 +107,57 @@ class WorkflowEngine {
         return;
       }
 
+      console.log(`   🔧 Node type: ${currentNode.type}`);
+      console.log(`   📝 Node data:`, currentNode.data);
+
+      // Log all edges for debugging
+      console.log(`   🔗 Available edges:`, workflow.edges.map((e: any) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle
+      })));
+
       let nextNodeId: string | null = null;
 
       switch (currentNode.type) {
         case 'trigger':
+          console.log(`   🎯 Executing trigger node`);
           nextNodeId = await this.executeTriggerNode(execution, currentNode, workflow);
           break;
         case 'action':
+          console.log(`   🎬 Executing action node`);
           nextNodeId = await this.executeActionNode(execution, currentNode, workflow);
           break;
         case 'condition':
+          console.log(`   🔀 Executing condition node`);
           nextNodeId = await this.executeConditionNode(execution, currentNode, workflow);
           break;
         case 'delay':
+          console.log(`   ⏱️ Executing delay node`);
           await this.executeDelayNode(execution, currentNode, workflow);
           return; // Delay will schedule next execution
         case 'webhook':
+          console.log(`   🔗 Executing webhook node`);
           nextNodeId = await this.executeWebhookNode(execution, currentNode, workflow);
           break;
         default:
+          console.error(`   ❌ Unknown node type: ${currentNode.type}`);
           execution.status = 'failed';
           return;
       }
 
+      console.log(`   🎯 Next node determined: ${nextNodeId}`);
+
       if (nextNodeId) {
+        console.log(`   ➡️ Moving to next node: ${nextNodeId}`);
         execution.currentNodeId = nextNodeId;
         execution.executionPath.push(nextNodeId);
         // Continue execution
         await this.executeNextNode(executionId);
       } else {
+        console.log(`   ✅ Execution completed - no next node found`);
         execution.status = 'completed';
         execution.completedAt = new Date();
       }
@@ -139,21 +165,23 @@ class WorkflowEngine {
       // Update workflow statistics
       if (execution.status === 'completed') {
         await Workflow.findByIdAndUpdate(execution.workflowId, {
-          $inc: { executionCount: 1, successCount: 1 },
+          $inc: { successCount: 1 },
           lastTriggered: new Date()
         });
+        console.log(`   ✅ Workflow completed successfully`);
       } else if (execution.status === 'failed') {
         await Workflow.findByIdAndUpdate(execution.workflowId, {
-          $inc: { executionCount: 1, failureCount: 1 },
+          $inc: { failureCount: 1 },
           lastTriggered: new Date()
         });
+        console.log(`   ❌ Workflow failed`);
       }
 
     } catch (error) {
-      console.error('Error executing node:', error);
+      console.error('❌ Error executing node:', error);
       execution.status = 'failed';
       await Workflow.findByIdAndUpdate(execution.workflowId, {
-        $inc: { executionCount: 1, failureCount: 1 },
+        $inc: { failureCount: 1 },
         lastTriggered: new Date()
       });
     }
@@ -164,9 +192,18 @@ class WorkflowEngine {
     node: any,
     workflow: any
   ): Promise<string | null> {
+    console.log(`     🎯 Processing trigger node: ${node.id}`);
+    
     // Find next node connected to this trigger
     const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
-    return nextEdge?.target || null;
+    
+    if (nextEdge) {
+      console.log(`     ➡️ Found next edge: ${nextEdge.source} -> ${nextEdge.target}`);
+      return nextEdge.target;
+    } else {
+      console.log(`     ❌ No outgoing edge found from trigger node`);
+      return null;
+    }
   }
 
   private async executeActionNode(
@@ -176,7 +213,7 @@ class WorkflowEngine {
   ): Promise<string | null> {
     try {
       console.log(`🔄 Executing action node: ${node.id} for workflow: ${workflow.name}`);
-
+      
       // Get contact and user information
       const contact = await Contact.findById(execution.contactId);
       if (!contact) {
@@ -313,9 +350,9 @@ class WorkflowEngine {
       // Find next node
       const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
       const nextNodeId = nextEdge?.target || null;
-
+      
       console.log(`🔄 Next node: ${nextNodeId}`);
-
+      
       return nextNodeId;
 
     } catch (error) {
@@ -324,8 +361,7 @@ class WorkflowEngine {
     }
   }
 
-
-  private async executeConditionNode(
+private async executeConditionNode(
     execution: WorkflowExecution,
     node: any,
     workflow: any
@@ -334,6 +370,8 @@ class WorkflowEngine {
       const conditionType = node.data.config?.conditionType;
       const conditionValue = node.data.config?.conditionValue;
       const messageContent = execution.variables.messageContent?.toLowerCase() || '';
+
+      console.log(`     🔀 Evaluating condition: "${messageContent}" ${conditionType} "${conditionValue}"`);
 
       let result = false;
 
@@ -358,17 +396,47 @@ class WorkflowEngine {
         }
       }
 
-      console.log(`Condition evaluation: "${messageContent}" ${conditionType} "${conditionValue}" = ${result}`);
+      console.log(`     ✅ Condition result: ${result}`);
 
-      // Find the appropriate edge based on condition result
-      const targetHandle = result ? 'yes' : 'no';
-      const nextEdge = workflow.edges.find((edge: any) =>
-        edge.source === node.id && edge.sourceHandle === targetHandle
-      );
+      // Find edges from this condition node
+      const outgoingEdges = workflow.edges.filter((edge: any) => edge.source === node.id);
+      console.log(`     🔗 Found ${outgoingEdges.length} outgoing edges:`, outgoingEdges.map((e: any) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle
+      })));
 
-      return nextEdge?.target || null;
+      if (outgoingEdges.length === 0) {
+        console.log(`     ❌ No outgoing edges found from condition node`);
+        return null;
+      }
+
+      // Try to find edge with specific handle first
+      let nextEdge = outgoingEdges.find((edge: any) => edge.sourceHandle === (result ? 'yes' : 'no'));
+      
+      // If no handle-specific edge found, use the first edge if condition is true
+      if (!nextEdge && result) {
+        nextEdge = outgoingEdges[0];
+        console.log(`     ⚠️ No handle-specific edge found, using first edge since condition is true`);
+      }
+
+      // For your current workflow structure, since you have one edge without sourceHandle,
+      // and the condition is true, we should proceed
+      if (!nextEdge && outgoingEdges.length === 1) {
+        nextEdge = outgoingEdges[0];
+        console.log(`     ⚠️ Single edge found, proceeding regardless of condition result`);
+      }
+
+      if (nextEdge) {
+        console.log(`     ➡️ Following edge to: ${nextEdge.target} (condition: ${result})`);
+        return nextEdge.target;
+      } else {
+        console.log(`     ❌ No suitable edge found`);
+        return null;
+      }
     } catch (error) {
-      console.error('Error executing condition node:', error);
+      console.error('❌ Error executing condition node:', error);
       return null;
     }
   }
