@@ -331,17 +331,6 @@ async function checkAndTriggerWorkflows(
         });
       }
 
-      // Method 3: Fallback check for common trigger words
-      if (!shouldTrigger) {
-        const commonTriggers = ['wow', 'nice', 'amazing', 'hello', 'hi', 'start'];
-        shouldTrigger = commonTriggers.some((trigger: string) => {
-          const match = messageText.includes(trigger);
-          if (match) {
-            console.log(`   🎯 Fallback trigger matched: "${trigger}" in "${messageText}"`);
-          }
-          return match;
-        });
-      }
 
       if (shouldTrigger) {
         console.log(`\n🚀 TRIGGERING WORKFLOW: "${workflow.name}" for contact: ${contact.phone}`);
