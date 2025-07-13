@@ -214,6 +214,9 @@ class WorkflowEngine {
     try {
       console.log(`🔄 Executing action node: ${node.id} for workflow: ${workflow.name}`);
       
+      const actionType = node.data.config?.actionType || 'send_message';
+      console.log(`   🎬 Action type: ${actionType}`);
+
       // Get contact and user information
       const contact = await Contact.findById(execution.contactId);
       if (!contact) {
@@ -241,119 +244,24 @@ class WorkflowEngine {
 
       console.log(`🏢 WABA account found: ${wabaAccount.wabaId}`);
 
-      // Get message content from node configuration
-      const messageContent = node.data.config?.message || 'Automated message from workflow';
-      const messageType = node.data.config?.messageType || 'text';
-
-      console.log(`📝 Message to send: "${messageContent}" (type: ${messageType})`);
-
-      // Validate phone number format
-      let phoneNumber = contact.phone;
-      if (!phoneNumber.startsWith('+')) {
-        phoneNumber = '+' + phoneNumber;
+      // Execute based on action type
+      switch (actionType) {
+        case 'send_message':
+          return await this.executeSendMessage(execution, node, contact, wabaAccount, user, workflow);
+        case 'send_button':
+          return await this.executeSendButton(execution, node, contact, wabaAccount, user, workflow);
+        case 'send_media':
+          return await this.executeSendMedia(execution, node, contact, wabaAccount, user, workflow);
+        case 'send_video':
+          return await this.executeSendVideo(execution, node, contact, wabaAccount, user, workflow);
+        case 'send_list':
+          return await this.executeSendList(execution, node, contact, wabaAccount, user, workflow);
+        case 'assign_conversation':
+          return await this.executeAssignConversation(execution, node, contact, user, workflow);
+        default:
+          console.error(`❌ Unknown action type: ${actionType}`);
+          return null;
       }
-
-      console.log(`📱 Sending to phone: ${phoneNumber}`);
-
-      // Prepare WhatsApp message payload
-      let whatsappPayload;
-
-      if (messageType === 'template') {
-        whatsappPayload = {
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: phoneNumber,
-          type: "template",
-          template: {
-            name: node.data.config?.templateName,
-            language: {
-              code: node.data.config?.templateLanguage || 'en'
-            }
-          }
-        };
-
-        // Add components if provided
-        if (node.data.config?.templateComponents?.length) {
-          (whatsappPayload.template as any).components = node.data.config.templateComponents;
-        }
-      } else {
-        // Default text message payload
-        whatsappPayload = {
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: phoneNumber,
-          type: "text",
-          text: {
-            preview_url: false,
-            body: messageContent
-          }
-        };
-      }
-
-      console.log('🚀 Workflow sending message payload:', JSON.stringify(whatsappPayload, null, 2));
-
-      // Validate required environment variables
-      if (!INT_TOKEN) {
-        console.error('❌ INTERAKT_API_TOKEN is not set');
-        return null;
-      }
-
-      console.log('🔐 API Token found, making request...');
-
-      // Send message via Interakt API
-      const interaktResponse = await fetch(
-        `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            'x-access-token': INT_TOKEN,
-            'x-waba-id': contact.wabaId,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(whatsappPayload)
-        }
-      );
-
-      console.log('📡 Interakt API response status:', interaktResponse.status);
-
-      const responseText = await interaktResponse.text();
-      console.log('📡 Interakt API response:', responseText);
-
-      if (!interaktResponse.ok) {
-        console.error('❌ Failed to send workflow message:', responseText);
-        return null;
-      }
-
-      let interaktData;
-      try {
-        interaktData = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('❌ Failed to parse workflow message response:', parseError);
-        return null;
-      }
-
-      console.log('✅ Message sent successfully, recording in conversation...');
-
-      // Record the message in conversation
-      await this.recordMessageInConversation(
-        contact,
-        messageContent,
-        messageType,
-        interaktData.messages?.[0]?.id,
-        user.name || 'Workflow',
-        node.data.config?.templateName
-      );
-
-      console.log('✅ Workflow message recorded in conversation');
-
-      // Find next node
-      const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
-      const nextNodeId = nextEdge?.target || null;
-      
-      console.log(`🔄 Next node: ${nextNodeId}`);
-      
-      return nextNodeId;
 
     } catch (error) {
       console.error('❌ Error executing action node:', error);
@@ -361,7 +269,380 @@ class WorkflowEngine {
     }
   }
 
-private async executeConditionNode(
+  private async executeSendMessage(
+    execution: WorkflowExecution,
+    node: any,
+    contact: any,
+    wabaAccount: any,
+    user: any,
+    workflow: any
+  ): Promise<string | null> {
+    const messageContent = node.data.config?.message || 'Automated message from workflow';
+    const messageType = node.data.config?.messageType || 'text';
+
+    console.log(`📝 Message to send: "${messageContent}" (type: ${messageType})`);
+
+    // Validate phone number format
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    console.log(`📱 Sending to phone: ${phoneNumber}`);
+
+    // Prepare WhatsApp message payload
+    let whatsappPayload;
+
+    if (messageType === 'template') {
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "template",
+        template: {
+          name: node.data.config?.templateName,
+          language: {
+            code: node.data.config?.templateLanguage || 'en'
+          }
+        }
+      };
+
+      // Add components if provided
+      if (node.data.config?.templateComponents?.length) {
+        (whatsappPayload.template as any).components = node.data.config.templateComponents;
+      }
+    } else {
+      // Default text message payload
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: messageContent
+        }
+      };
+    }
+
+    return await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, messageContent, messageType, user, node, workflow);
+  }
+
+  private async executeSendButton(
+    execution: WorkflowExecution,
+    node: any,
+    contact: any,
+    wabaAccount: any,
+    user: any,
+    workflow: any
+  ): Promise<string | null> {
+    const text = node.data.config?.text || 'Please choose an option:';
+    const buttons = node.data.config?.buttons || [];
+
+    console.log(`🔘 Button message: "${text}" with ${buttons.length} buttons`);
+
+    // Validate phone number format
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    // Format buttons for WhatsApp API
+    const formattedButtons = buttons.map((button: { id: string; title: string }) => ({
+      type: 'reply',
+      reply: {
+        id: button.id,
+        title: button.title
+      }
+    }));
+
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phoneNumber,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: {
+          text
+        },
+        action: {
+          buttons: formattedButtons
+        }
+      }
+    };
+
+    return await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, text, 'interactive', user, node, workflow);
+  }
+
+  private async executeSendMedia(
+    execution: WorkflowExecution,
+    node: any,
+    contact: any,
+    wabaAccount: any,
+    user: any,
+    workflow: any
+  ): Promise<string | null> {
+    const mediaUrl = node.data.config?.mediaUrl;
+    const caption = node.data.config?.caption || '';
+
+    if (!mediaUrl) {
+      console.error('❌ Media URL not provided');
+      return null;
+    }
+
+    console.log(`📷 Media message: "${mediaUrl}" with caption: "${caption}"`);
+
+    // Validate phone number format
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    // Check if mediaUrl is a handle (starts with alphanumeric) or URL
+    const isMediaHandle = /^[a-zA-Z0-9]+$/.test(mediaUrl);
+
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phoneNumber,
+      type: "image",
+      image: isMediaHandle ? {
+        id: mediaUrl,
+        caption: caption
+      } : {
+        link: mediaUrl,
+        caption: caption
+      }
+    };
+
+    return await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, caption || 'Media message', 'image', user, node, workflow);
+  }
+
+  private async executeSendVideo(
+    execution: WorkflowExecution,
+    node: any,
+    contact: any,
+    wabaAccount: any,
+    user: any,
+    workflow: any
+  ): Promise<string | null> {
+    const videoUrl = node.data.config?.videoUrl;
+    const caption = node.data.config?.caption || '';
+
+    if (!videoUrl) {
+      console.error('❌ Video URL not provided');
+      return null;
+    }
+
+    console.log(`🎥 Video message: "${videoUrl}" with caption: "${caption}"`);
+
+    // Validate phone number format
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    // Check if videoUrl is a handle (starts with alphanumeric) or URL
+    const isMediaHandle = /^[a-zA-Z0-9]+$/.test(videoUrl);
+
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phoneNumber,
+      type: "video",
+      video: isMediaHandle ? {
+        id: videoUrl,
+        caption: caption
+      } : {
+        link: videoUrl,
+        caption: caption
+      }
+    };
+
+    return await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, caption || 'Video message', 'video', user, node, workflow);
+  }
+
+  private async executeSendList(
+    execution: WorkflowExecution,
+    node: any,
+    contact: any,
+    wabaAccount: any,
+    user: any,
+    workflow: any
+  ): Promise<string | null> {
+    const text = node.data.config?.text || 'Please choose an option:';
+    const buttonText = node.data.config?.buttonText || 'Select';
+    const sections = node.data.config?.sections || [];
+
+    console.log(`📋 List message: "${text}" with ${sections.length} sections`);
+
+    // Validate phone number format
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phoneNumber,
+      type: "interactive",
+      interactive: {
+        type: "list",
+        body: {
+          text
+        },
+        action: {
+          button: buttonText,
+          sections
+        }
+      }
+    };
+
+    return await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, text, 'interactive', user, node, workflow);
+  }
+
+  private async executeAssignConversation(
+    execution: WorkflowExecution,
+    node: any,
+    contact: any,
+    user: any,
+    workflow: any
+  ): Promise<string | null> {
+    const assignedToId = node.data.config?.assignedTo;
+
+    if (!assignedToId) {
+      console.error('❌ Assigned user ID not provided');
+      return null;
+    }
+
+    console.log(`👤 Assigning conversation to user: ${assignedToId}`);
+
+    try {
+      // Find the user to assign to
+      const assignedUser = await User.findById(assignedToId);
+      if (!assignedUser) {
+        console.error('❌ Assigned user not found');
+        return null;
+      }
+
+      // Find the conversation
+      const conversation = await Conversation.findOne({ contactId: contact._id });
+      if (!conversation) {
+        console.error('❌ Conversation not found');
+        return null;
+      }
+
+      // Update the conversation
+      conversation.assignedTo = assignedToId;
+      await conversation.save();
+
+      // Add a system message about the assignment
+      const systemMessage = {
+        id: uuidv4(),
+        senderId: 'system',
+        content: `Conversation assigned to ${assignedUser.name}`,
+        messageType: 'system',
+        timestamp: new Date(),
+        status: 'sent'
+      };
+
+      await Conversation.findByIdAndUpdate(
+        conversation._id,
+        { $push: { messages: systemMessage } }
+      );
+
+      console.log(`✅ Conversation assigned to ${assignedUser.name}`);
+
+      // Find next node
+      const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
+      return nextEdge?.target || null;
+
+    } catch (error) {
+      console.error('❌ Error assigning conversation:', error);
+      return null;
+    }
+  }
+
+  private async sendWhatsAppMessage(
+    execution: WorkflowExecution,
+    whatsappPayload: any,
+    contact: any,
+    wabaAccount: any,
+    messageContent: string,
+    messageType: string,
+    user: any,
+    node: any,
+    workflow: any
+  ): Promise<string | null> {
+    console.log('🚀 Workflow sending message payload:', JSON.stringify(whatsappPayload, null, 2));
+
+    // Validate required environment variables
+    if (!INT_TOKEN) {
+      console.error('❌ INTERAKT_API_TOKEN is not set');
+      return null;
+    }
+
+    console.log('🔐 API Token found, making request...');
+
+    // Send message via Interakt API
+    const interaktResponse = await fetch(
+      `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'x-access-token': INT_TOKEN,
+          'x-waba-id': contact.wabaId,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(whatsappPayload)
+      }
+    );
+
+    console.log('📡 Interakt API response status:', interaktResponse.status);
+
+    const responseText = await interaktResponse.text();
+    console.log('📡 Interakt API response:', responseText);
+
+    if (!interaktResponse.ok) {
+      console.error('❌ Failed to send workflow message:', responseText);
+      return null;
+    }
+
+    let interaktData;
+    try {
+      interaktData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Failed to parse workflow message response:', parseError);
+      return null;
+    }
+
+    console.log('✅ Message sent successfully, recording in conversation...');
+
+    // Record the message in conversation
+    await this.recordMessageInConversation(
+      contact,
+      messageContent,
+      messageType,
+      interaktData.messages?.[0]?.id,
+      user.name || 'Workflow',
+      node.data.config?.templateName
+    );
+
+    console.log('✅ Workflow message recorded in conversation');
+
+    // Find next node
+    const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
+    const nextNodeId = nextEdge?.target || null;
+    
+    console.log(`🔄 Next node: ${nextNodeId}`);
+    
+    return nextNodeId;
+  }
+
+  private async executeConditionNode(
     execution: WorkflowExecution,
     node: any,
     workflow: any
@@ -456,7 +737,14 @@ private async executeConditionNode(
       if (nextEdge?.target) {
         execution.currentNodeId = nextEdge.target;
         execution.executionPath.push(nextEdge.target);
-        await this.executeNextNode(execution.workflowId);
+        
+        // Find the execution ID for this execution
+        const executionId = Array.from(this.executions.entries())
+          .find(([_, exec]) => exec === execution)?.[0];
+        
+        if (executionId) {
+          await this.executeNextNode(executionId);
+        }
       } else {
         execution.status = 'completed';
         execution.completedAt = new Date();

@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } }  
 ) {
   try {
     const token = req.cookies.get('token')?.value;

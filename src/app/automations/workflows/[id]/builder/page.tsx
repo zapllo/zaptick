@@ -53,6 +53,14 @@ import {
   Gauge,
   Workflow,
   FileText,
+  Image,
+  Video,
+  List,
+  MousePointer,
+  Upload,
+  Link,
+  Type,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -151,6 +159,45 @@ const nodeTemplates = [
   },
 ];
 
+const actionTemplates = [
+  {
+    type: "send_message",
+    label: "Text Message",
+    icon: Type,
+    color: "bg-green-50 border-green-200 text-green-700 hover:bg-green-100",
+  },
+  {
+    type: "send_button",
+    label: "Button Message",
+    icon: MousePointer,
+    color: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
+  },
+  {
+    type: "send_media",
+    label: "Media Message",
+    icon: Image,
+    color: "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100",
+  },
+  {
+    type: "send_video",
+    label: "Video Message",
+    icon: Video,
+    color: "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
+  },
+  {
+    type: "send_list",
+    label: "List Message",
+    icon: List,
+    color: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100",
+  },
+  {
+    type: "assign_conversation",
+    label: "Assign Conversation",
+    icon: Users,
+    color: "bg-cyan-50 border-cyan-200 text-cyan-700 hover:bg-cyan-100",
+  },
+];
+
 function WorkflowBuilderContent() {
   const router = useRouter();
   const params = useParams();
@@ -179,6 +226,7 @@ function WorkflowBuilderContent() {
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   // History management
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([]);
@@ -401,7 +449,7 @@ function WorkflowBuilderContent() {
 
   // Add new node function
   const addNode = useCallback(
-    (type: string, position?: { x: number; y: number }) => {
+    (type: string, position?: { x: number; y: number }, actionType?: string) => {
       const nodeTemplate = nodeTemplates.find(t => t.type === type);
       if (!nodeTemplate) return;
 
@@ -423,7 +471,9 @@ function WorkflowBuilderContent() {
         data: {
           label: nodeTemplate.label,
           type: type,
-          config: {},
+          config: {
+            ...(actionType && { actionType }),
+          },
         },
       };
 
@@ -438,9 +488,53 @@ function WorkflowBuilderContent() {
     [setNodes, addToHistory, toast, snapToGrid]
   );
 
+  // Add action node with specific action type
+  const addActionNode = useCallback(
+    (actionType: string, position?: { x: number; y: number }) => {
+      const actionTemplate = actionTemplates.find(t => t.type === actionType);
+      if (!actionTemplate) return;
+
+      let defaultPosition = position || {
+        x: 300 + Math.random() * 200,
+        y: 200 + Math.random() * 200
+      };
+
+      if (snapToGrid) {
+        const gridSize = 20;
+        defaultPosition.x = Math.round(defaultPosition.x / gridSize) * gridSize;
+        defaultPosition.y = Math.round(defaultPosition.y / gridSize) * gridSize;
+      }
+
+      const newNode: Node = {
+        id: `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'action',
+        position: defaultPosition,
+        data: {
+          label: actionTemplate.label,
+          type: 'action',
+          config: {
+            actionType: actionType,
+          },
+        },
+      };
+
+      setNodes((currentNodes) => [...currentNodes, newNode]);
+      addToHistory();
+
+      toast({
+        title: "Node Added",
+        description: `${actionTemplate.label} added to workflow`,
+      });
+    },
+    [setNodes, addToHistory, toast, snapToGrid]
+  );
+
   // Drag and drop handlers
-  const onDragStart = useCallback((event: React.DragEvent, nodeType: string) => {
+  const onDragStart = useCallback((event: React.DragEvent, nodeType: string, actionType?: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
+    if (actionType) {
+      event.dataTransfer.setData('application/actiontype', actionType);
+    }
     event.dataTransfer.effectAllowed = 'move';
   }, []);
 
@@ -453,6 +547,7 @@ function WorkflowBuilderContent() {
     (event: React.DragEvent) => {
       event.preventDefault();
       const type = event.dataTransfer.getData('application/reactflow');
+      const actionType = event.dataTransfer.getData('application/actiontype');
       if (!type) return;
 
       const position = screenToFlowPosition({
@@ -460,9 +555,13 @@ function WorkflowBuilderContent() {
         y: event.clientY,
       });
 
-      addNode(type, position);
+      if (type === 'action' && actionType) {
+        addActionNode(actionType, position);
+      } else {
+        addNode(type, position);
+      }
     },
-    [screenToFlowPosition, addNode]
+    [screenToFlowPosition, addNode, addActionNode]
   );
 
   // Handle node selection
@@ -528,6 +627,43 @@ function WorkflowBuilderContent() {
       });
     }
   }, [workflow, toast]);
+
+  // Upload media file
+  const uploadMediaFile = useCallback(async (file: File, type: string) => {
+    setIsUploadingMedia(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', type);
+
+      const response = await fetch('/api/media-handle', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.h) {
+        toast({
+          title: "Media Uploaded",
+          description: "Media file uploaded successfully",
+        });
+        return data.h; // Return the media handle
+      } else {
+        throw new Error(data.error || 'Failed to upload media');
+      }
+    } catch (error) {
+      console.error('Error uploading media:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload media file",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  }, [toast]);
 
   const selectedNode = nodes.find(node => node.id === selectedNodeId);
 
@@ -771,7 +907,7 @@ function WorkflowBuilderContent() {
               "bg-white/80 backdrop-blur-lg border-r border-gray-200/60 flex flex-col transition-all duration-300 shadow-lg",
               sidebarCollapsed ? "w-16" : "w-64"
             )}>
-              {/* Sidebar Header */}
+       {/* Sidebar Header */}
               <div className="p-4 border-b border-gray-200/60 flex items-center justify-between">
                 {!sidebarCollapsed && (
                   <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -794,23 +930,52 @@ function WorkflowBuilderContent() {
                 <>
                   {/* Node Templates */}
                   <div className="flex-1 p-3 overflow-y-auto">
-                    <div className="space-y-2">
-                      {nodeTemplates.map((template) => (
-                        <div
-                          key={template.type}
-                          className={cn(
-                            "flex items-center gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-sm group",
-                            template.color
-                          )}
-                          draggable
-                          onDragStart={(event) => onDragStart(event, template.type)}
-                        >
-                          <div className="p-1.5 bg-white/60 rounded-md group-hover:bg-white/80 transition-colors">
-                            <template.icon className="h-4 w-4" />
-                          </div>
-                          <span className="text-sm font-medium truncate">{template.label}</span>
+                    <div className="space-y-4">
+                      {/* Basic Nodes */}
+                      <div className="space-y-2">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Basic Nodes
                         </div>
-                      ))}
+                        {nodeTemplates.map((template) => (
+                          <div
+                            key={template.type}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-sm group",
+                              template.color
+                            )}
+                            draggable
+                            onDragStart={(event) => onDragStart(event, template.type)}
+                          >
+                            <div className="p-1.5 bg-white/60 rounded-md group-hover:bg-white/80 transition-colors">
+                              <template.icon className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm font-medium truncate">{template.label}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Action Nodes */}
+                      <div className="space-y-2">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Message Actions
+                        </div>
+                        {actionTemplates.map((template) => (
+                          <div
+                            key={template.type}
+                            className={cn(
+                              "flex items-center gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-sm group",
+                              template.color
+                            )}
+                            draggable
+                            onDragStart={(event) => onDragStart(event, 'action', template.type)}
+                          >
+                            <div className="p-1.5 bg-white/60 rounded-md group-hover:bg-white/80 transition-colors">
+                              <template.icon className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm font-medium truncate">{template.label}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -833,11 +998,29 @@ function WorkflowBuilderContent() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => addNode("action")}
+                        onClick={() => addActionNode("send_message")}
                         className="h-8 text-xs"
                       >
                         <Plus className="h-3 w-3 mr-1" />
-                        Action
+                        Text
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addActionNode("send_button")}
+                        className="h-8 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Button
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addActionNode("send_media")}
+                        className="h-8 text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Media
                       </Button>
                     </div>
                   </div>
@@ -891,6 +1074,7 @@ function WorkflowBuilderContent() {
               {/* Collapsed Sidebar */}
               {sidebarCollapsed && (
                 <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+                  {/* Basic Nodes */}
                   {nodeTemplates.map((template) => (
                     <div
                       key={template.type}
@@ -900,6 +1084,25 @@ function WorkflowBuilderContent() {
                       )}
                       draggable
                       onDragStart={(event) => onDragStart(event, template.type)}
+                      title={template.label}
+                    >
+                      <template.icon className="h-4 w-4 mx-auto" />
+                    </div>
+                  ))}
+                  
+                  {/* Separator */}
+                  <div className="w-full h-px bg-gray-200 my-2" />
+                  
+                  {/* Action Nodes */}
+                  {actionTemplates.map((template) => (
+                    <div
+                      key={template.type}
+                      className={cn(
+                        "p-2 rounded-lg border cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-sm group",
+                        template.color
+                      )}
+                      draggable
+                      onDragStart={(event) => onDragStart(event, 'action', template.type)}
                       title={template.label}
                     >
                       <template.icon className="h-4 w-4 mx-auto" />
@@ -982,7 +1185,7 @@ function WorkflowBuilderContent() {
 
                 {/* Empty state */}
                 {nodes.length === 0 && (
-<Panel position="top-center">
+                  <Panel position="top-center">
                     <Card className="text-center p-8 bg-white/90 backdrop-blur-lg border-gray-200/60 shadow-2xl max-w-md mx-auto">
                       <CardContent className="space-y-6">
                         <div className="relative">
@@ -1017,7 +1220,7 @@ function WorkflowBuilderContent() {
                             Add Trigger
                           </Button>
                           <Button
-                            onClick={() => addNode("action", { x: 400, y: 350 })}
+                            onClick={() => addActionNode("send_message", { x: 400, y: 350 })}
                             variant="outline"
                             className="w-full border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
                           >
@@ -1087,17 +1290,34 @@ function WorkflowBuilderContent() {
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="p-2 bg-white rounded-lg shadow-sm">
-                            {nodeTemplates.find(t => t.type === selectedNode.type)?.icon && (
-                              React.createElement(nodeTemplates.find(t => t.type === selectedNode.type)!.icon, {
-                                className: "h-5 w-5 text-gray-700"
-                              })
+                            {selectedNode.type === 'action' ? (
+                              actionTemplates.find(t => t.type === selectedNode.data.config?.actionType)?.icon ? (
+                                React.createElement(actionTemplates.find(t => t.type === selectedNode.data.config?.actionType)!.icon, {
+                                  className: "h-5 w-5 text-gray-700"
+                                })
+                              ) : (
+                                <Send className="h-5 w-5 text-gray-700" />
+                              )
+                            ) : (
+                              nodeTemplates.find(t => t.type === selectedNode.type)?.icon && (
+                                React.createElement(nodeTemplates.find(t => t.type === selectedNode.type)!.icon, {
+                                  className: "h-5 w-5 text-gray-700"
+                                })
+                              )
                             )}
                           </div>
                           <div>
                             <h4 className="font-semibold text-gray-900">{selectedNode.data.label}</h4>
-                            <Badge variant="outline" className="mt-1 capitalize">
-                              {selectedNode.type}
-                            </Badge>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="capitalize">
+                                {selectedNode.type}
+                              </Badge>
+                              {selectedNode.data.config?.actionType && (
+                                <Badge variant="secondary" className="capitalize">
+                                  {selectedNode.data.config.actionType.replace('_', ' ')}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -1170,16 +1390,19 @@ function WorkflowBuilderContent() {
                           <CardHeader>
                             <CardTitle className="text-sm">Action Configuration</CardTitle>
                           </CardHeader>
-                          <CardContent className="space-y-3">
+                          <CardContent className="space-y-4">
+                            {/* Action Type Selection */}
                             <div>
-                              <Label htmlFor="action-message" className="text-sm font-medium">
-                                Message Content
+                              <Label htmlFor="action-type" className="text-sm font-medium">
+                                Action Type
                               </Label>
-                              <Textarea
-                                id="action-message"
-                                placeholder="Enter your automated message..."
-                                value={selectedNode.data.config?.message || ''}
+                              <select
+                                id="action-type"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                                value={selectedNode.data.config?.actionType || 'send_message'}
                                 onChange={(e) => {
+                                  const actionType = e.target.value;
+                                  const actionTemplate = actionTemplates.find(t => t.type === actionType);
                                   setNodes((nds) =>
                                     nds.map((node) =>
                                       node.id === selectedNode.id
@@ -1187,9 +1410,10 @@ function WorkflowBuilderContent() {
                                             ...node,
                                             data: {
                                               ...node.data,
+                                              label: actionTemplate?.label || node.data.label,
                                               config: {
                                                 ...node.data.config,
-                                                message: e.target.value
+                                                actionType
                                               }
                                             }
                                           }
@@ -1197,10 +1421,816 @@ function WorkflowBuilderContent() {
                                     )
                                   );
                                 }}
-                                className="mt-1"
-                                rows={4}
-                              />
+                              >
+                                {actionTemplates.map((template) => (
+                                  <option key={template.type} value={template.type}>
+                                    {template.label}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
+
+                            {/* Send Message Configuration */}
+                            {selectedNode.data.config?.actionType === 'send_message' && (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="message-type" className="text-sm font-medium">
+                                    Message Type
+                                  </Label>
+                                  <select
+                                    id="message-type"
+                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                                    value={selectedNode.data.config?.messageType || 'text'}
+                                    onChange={(e) => {
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  config: {
+                                                    ...node.data.config,
+                                                    messageType: e.target.value
+                                                  }
+                                                }
+                                              }
+                                            : node
+                                        )
+                                      );
+                                    }}
+                                  >
+                                    <option value="text">Text Message</option>
+                                    <option value="template">Template Message</option>
+                                  </select>
+                                </div>
+
+                                {selectedNode.data.config?.messageType === 'template' ? (
+                                  <div className="space-y-3">
+                                    <div>
+                                      <Label htmlFor="template-name" className="text-sm font-medium">
+                                        Template Name
+                                      </Label>
+                                      <Input
+                                        id="template-name"
+                                        placeholder="Enter template name"
+                                        value={selectedNode.data.config?.templateName || ''}
+                                        onChange={(e) => {
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      config: {
+                                                        ...node.data.config,
+                                                        templateName: e.target.value
+                                                      }
+                                                    }
+                                                  }
+                                                : node
+                                            )
+                                          );
+                                        }}
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="template-language" className="text-sm font-medium">
+                                        Template Language
+                                      </Label>
+                                      <Input
+                                        id="template-language"
+                                        placeholder="en"
+                                        value={selectedNode.data.config?.templateLanguage || 'en'}
+                                        onChange={(e) => {
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id
+                                                ? {
+                                                    ...node,
+                                                    data: {
+                                                      ...node.data,
+                                                      config: {
+                                                        ...node.data.config,
+                                                        templateLanguage: e.target.value
+                                                      }
+                                                    }
+                                                  }
+                                                : node
+                                            )
+                                          );
+                                        }}
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <Label htmlFor="action-message" className="text-sm font-medium">
+                                      Message Content
+                                    </Label>
+                                    <Textarea
+                                      id="action-message"
+                                      placeholder="Enter your automated message..."
+                                      value={selectedNode.data.config?.message || ''}
+                                      onChange={(e) => {
+                                        setNodes((nds) =>
+                                          nds.map((node) =>
+                                            node.id === selectedNode.id
+                                              ? {
+                                                  ...node,
+                                                  data: {
+                                                    ...node.data,
+                                                    config: {
+                                                      ...node.data.config,
+                                                      message: e.target.value
+                                                    }
+                                                  }
+                                                }
+                                              : node
+                                          )
+                                        );
+                                      }}
+                                      className="mt-1"
+                                      rows={4}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Send Button Configuration */}
+                            {selectedNode.data.config?.actionType === 'send_button' && (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="button-text" className="text-sm font-medium">
+                                    Button Message Text
+                                  </Label>
+                                  <Textarea
+                                    id="button-text"
+                                    placeholder="Please choose an option:"
+                                    value={selectedNode.data.config?.text || ''}
+                                    onChange={(e) => {
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  config: {
+                                                    ...node.data.config,
+                                                    text: e.target.value
+                                                  }
+                                                }
+                                              }
+                                            : node
+                                        )
+                                      );
+                                    }}
+                                    className="mt-1"
+                                    rows={3}
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium">Buttons</Label>
+                                  <div className="mt-2 space-y-2">
+                                    {(selectedNode.data.config?.buttons || []).map((button: any, index: number) => (
+                                      <div key={index} className="flex gap-2">
+                                        <Input
+                                          placeholder="Button ID"
+                                          value={button.id || ''}
+                                          onChange={(e) => {
+                                            const newButtons = [...(selectedNode.data.config?.buttons || [])];
+                                            newButtons[index] = { ...button, id: e.target.value };
+                                            setNodes((nds) =>
+                                              nds.map((node) =>
+                                                node.id === selectedNode.id
+                                                  ? {
+                                                      ...node,
+                                                      data: {
+                                                        ...node.data,
+                                                        config: {
+                                                          ...node.data.config,
+                                                          buttons: newButtons
+                                                        }
+                                                      }
+                                                    }
+                                                  : node
+                                              )
+                                            );
+                                          }}
+                                          className="flex-1"
+                                        />
+                                        <Input
+                                          placeholder="Button Title"
+                                          value={button.title || ''}
+                                          onChange={(e) => {
+                                            const newButtons = [...(selectedNode.data.config?.buttons || [])];
+                                            newButtons[index] = { ...button, title: e.target.value };
+                                            setNodes((nds) =>
+                                              nds.map((node) =>
+                                                node.id === selectedNode.id
+                                                  ? {
+                                                      ...node,
+                                                      data: {
+                                                        ...node.data,
+                                                        config: {
+                                                          ...node.data.config,
+                                                          buttons: newButtons
+                                                        }
+                                                      }
+                                                    }
+                                                  : node
+                                              )
+                                            );
+                                          }}
+                                          className="flex-1"
+                                        />
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const newButtons = [...(selectedNode.data.config?.buttons || [])];
+                                            newButtons.splice(index, 1);
+                                            setNodes((nds) =>
+                                              nds.map((node) =>
+                                                node.id === selectedNode.id
+                                                  ? {
+                                                      ...node,
+                                                      data: {
+                                                        ...node.data,
+                                                     config: {
+                                                          ...node.data.config,
+                                                          buttons: newButtons
+                                                        }
+                                                      }
+                                                    }
+                                                  : node
+                                              )
+                                            );
+                                          }}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const newButtons = [...(selectedNode.data.config?.buttons || []), { id: '', title: '' }];
+                                        setNodes((nds) =>
+                                          nds.map((node) =>
+                                            node.id === selectedNode.id
+                                              ? {
+                                                  ...node,
+                                                  data: {
+                                                    ...node.data,
+                                                    config: {
+                                                      ...node.data.config,
+                                                      buttons: newButtons
+                                                    }
+                                                  }
+                                                }
+                                              : node
+                                          )
+                                        );
+                                      }}
+                                      className="w-full"
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add Button
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Send Media Configuration */}
+                            {selectedNode.data.config?.actionType === 'send_media' && (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="media-url" className="text-sm font-medium">
+                                    Media URL or Handle
+                                  </Label>
+                                  <div className="flex gap-2 mt-1">
+                                    <Input
+                                      id="media-url"
+                                      placeholder="https://example.com/image.jpg or media handle"
+                                      value={selectedNode.data.config?.mediaUrl || ''}
+                                      onChange={(e) => {
+                                        setNodes((nds) =>
+                                          nds.map((node) =>
+                                            node.id === selectedNode.id
+                                              ? {
+                                                  ...node,
+                                                  data: {
+                                                    ...node.data,
+                                                    config: {
+                                                      ...node.data.config,
+                                                      mediaUrl: e.target.value
+                                                    }
+                                                  }
+                                                }
+                                              : node
+                                          )
+                                        );
+                                      }}
+                                      className="flex-1"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'image/*';
+                                        input.onchange = async (e) => {
+                                          const file = (e.target as HTMLInputElement).files?.[0];
+                                          if (file) {
+                                            const mediaHandle = await uploadMediaFile(file, 'image');
+                                            if (mediaHandle) {
+                                              setNodes((nds) =>
+                                                nds.map((node) =>
+                                                  node.id === selectedNode.id
+                                                    ? {
+                                                        ...node,
+                                                        data: {
+                                                          ...node.data,
+                                                          config: {
+                                                            ...node.data.config,
+                                                            mediaUrl: mediaHandle
+                                                          }
+                                                        }
+                                                      }
+                                                    : node
+                                                )
+                                              );
+                                            }
+                                          }
+                                        };
+                                        input.click();
+                                      }}
+                                      disabled={isUploadingMedia}
+                                    >
+                                      {isUploadingMedia ? (
+                                        <div className="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+                                      ) : (
+                                        <Upload className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label htmlFor="media-caption" className="text-sm font-medium">
+                                    Caption (Optional)
+                                  </Label>
+                                  <Textarea
+                                    id="media-caption"
+                                    placeholder="Enter caption for the media..."
+                                    value={selectedNode.data.config?.caption || ''}
+                                    onChange={(e) => {
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  config: {
+                                                    ...node.data.config,
+                                                    caption: e.target.value
+                                                  }
+                                                }
+                                              }
+                                            : node
+                                        )
+                                      );
+                                    }}
+                                    className="mt-1"
+                                    rows={3}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Send Video Configuration */}
+                            {selectedNode.data.config?.actionType === 'send_video' && (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="video-url" className="text-sm font-medium">
+                                    Video URL or Handle
+                                  </Label>
+                                  <div className="flex gap-2 mt-1">
+                                    <Input
+                                      id="video-url"
+                                      placeholder="https://example.com/video.mp4 or video handle"
+                                      value={selectedNode.data.config?.videoUrl || ''}
+                                      onChange={(e) => {
+                                        setNodes((nds) =>
+                                          nds.map((node) =>
+                                            node.id === selectedNode.id
+                                              ? {
+                                                  ...node,
+                                                  data: {
+                                                    ...node.data,
+                                                    config: {
+                                                      ...node.data.config,
+                                                      videoUrl: e.target.value
+                                                    }
+                                                  }
+                                                }
+                                              : node
+                                          )
+                                        );
+                                      }}
+                                      className="flex-1"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'video/*';
+                                        input.onchange = async (e) => {
+                                          const file = (e.target as HTMLInputElement).files?.[0];
+                                          if (file) {
+                                            const mediaHandle = await uploadMediaFile(file, 'video');
+                                            if (mediaHandle) {
+                                              setNodes((nds) =>
+                                                nds.map((node) =>
+                                                  node.id === selectedNode.id
+                                                    ? {
+                                                        ...node,
+                                                        data: {
+                                                          ...node.data,
+                                                          config: {
+                                                            ...node.data.config,
+                                                            videoUrl: mediaHandle
+                                                          }
+                                                        }
+                                                      }
+                                                    : node
+                                                )
+                                              );
+                                            }
+                                          }
+                                        };
+                                        input.click();
+                                      }}
+                                      disabled={isUploadingMedia}
+                                    >
+                                      {isUploadingMedia ? (
+                                        <div className="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+                                      ) : (
+                                        <Upload className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label htmlFor="video-caption" className="text-sm font-medium">
+                                    Caption (Optional)
+                                  </Label>
+                                  <Textarea
+                                    id="video-caption"
+                                    placeholder="Enter caption for the video..."
+                                    value={selectedNode.data.config?.caption || ''}
+                                    onChange={(e) => {
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  config: {
+                                                    ...node.data.config,
+                                                    caption: e.target.value
+                                                  }
+                                                }
+                                              }
+                                            : node
+                                        )
+                                      );
+                                    }}
+                                    className="mt-1"
+                                    rows={3}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Send List Configuration */}
+                            {selectedNode.data.config?.actionType === 'send_list' && (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="list-text" className="text-sm font-medium">
+                                    List Message Text
+                                  </Label>
+                                  <Textarea
+                                    id="list-text"
+                                    placeholder="Please choose an option:"
+                                    value={selectedNode.data.config?.text || ''}
+                                    onChange={(e) => {
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  config: {
+                                                    ...node.data.config,
+                                                    text: e.target.value
+                                                  }
+                                                }
+                                              }
+                                            : node
+                                        )
+                                      );
+                                    }}
+                                    className="mt-1"
+                                    rows={3}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="list-button-text" className="text-sm font-medium">
+                                    Button Text
+                                  </Label>
+                                  <Input
+                                    id="list-button-text"
+                                    placeholder="Select"
+                                    value={selectedNode.data.config?.buttonText || ''}
+                                    onChange={(e) => {
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  config: {
+                                                    ...node.data.config,
+                                                    buttonText: e.target.value
+                                                  }
+                                                }
+                                              }
+                                            : node
+                                        )
+                                      );
+                                    }}
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-sm font-medium">List Sections</Label>
+                                  <div className="mt-2 space-y-3">
+                                    {(selectedNode.data.config?.sections || []).map((section: any, sectionIndex: number) => (
+                                      <div key={sectionIndex} className="p-3 border rounded-lg space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-sm font-medium">Section {sectionIndex + 1}</span>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              const newSections = [...(selectedNode.data.config?.sections || [])];
+                                              newSections.splice(sectionIndex, 1);
+                                              setNodes((nds) =>
+                                                nds.map((node) =>
+                                                  node.id === selectedNode.id
+                                                    ? {
+                                                        ...node,
+                                                        data: {
+                                                          ...node.data,
+                                                          config: {
+                                                            ...node.data.config,
+                                                            sections: newSections
+                                                          }
+                                                        }
+                                                      }
+                                                    : node
+                                                )
+                                              );
+                                            }}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                        <Input
+                                          placeholder="Section Title"
+                                          value={section.title || ''}
+                                          onChange={(e) => {
+                                            const newSections = [...(selectedNode.data.config?.sections || [])];
+                                            newSections[sectionIndex] = { ...section, title: e.target.value };
+                                            setNodes((nds) =>
+                                              nds.map((node) =>
+                                                node.id === selectedNode.id
+                                                  ? {
+                                                      ...node,
+                                                      data: {
+                                                        ...node.data,
+                                                        config: {
+                                                          ...node.data.config,
+                                                          sections: newSections
+                                                        }
+                                                      }
+                                                    }
+                                                  : node
+                                              )
+                                            );
+                                          }}
+                                        />
+                                        <div className="space-y-2">
+                                          <Label className="text-xs">Section Rows</Label>
+                                          {(section.rows || []).map((row: any, rowIndex: number) => (
+                                            <div key={rowIndex} className="flex gap-2">
+                                              <Input
+                                                placeholder="Row ID"
+                                                value={row.id || ''}
+                                                onChange={(e) => {
+                                                  const newSections = [...(selectedNode.data.config?.sections || [])];
+                                                  const newRows = [...(section.rows || [])];
+                                                  newRows[rowIndex] = { ...row, id: e.target.value };
+                                                  newSections[sectionIndex] = { ...section, rows: newRows };
+                                                  setNodes((nds) =>
+                                                    nds.map((node) =>
+                                                      node.id === selectedNode.id
+                                                        ? {
+                                                            ...node,
+                                                            data: {
+                                                              ...node.data,
+                                                              config: {
+                                                                ...node.data.config,
+                                                                sections: newSections
+                                                              }
+                                                            }
+                                                          }
+                                                        : node
+                                                    )
+                                                  );
+                                                }}
+                                                className="flex-1"
+                                              />
+                                              <Input
+                                                placeholder="Row Title"
+                                                value={row.title || ''}
+                                                onChange={(e) => {
+                                                  const newSections = [...(selectedNode.data.config?.sections || [])];
+                                                  const newRows = [...(section.rows || [])];
+                                                  newRows[rowIndex] = { ...row, title: e.target.value };
+                                                  newSections[sectionIndex] = { ...section, rows: newRows };
+                                                  setNodes((nds) =>
+                                                    nds.map((node) =>
+                                                      node.id === selectedNode.id
+                                                        ? {
+                                                            ...node,
+                                                            data: {
+                                                              ...node.data,
+                                                              config: {
+                                                                ...node.data.config,
+                                                                sections: newSections
+                                                              }
+                                                            }
+                                                          }
+                                                        : node
+                                                    )
+                                                  );
+                                                }}
+                                                className="flex-1"
+                                              />
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                  const newSections = [...(selectedNode.data.config?.sections || [])];
+                                                  const newRows = [...(section.rows || [])];
+                                                  newRows.splice(rowIndex, 1);
+                                                  newSections[sectionIndex] = { ...section, rows: newRows };
+                                                  setNodes((nds) =>
+                                                    nds.map((node) =>
+                                                      node.id === selectedNode.id
+                                                        ? {
+                                                            ...node,
+                                                            data: {
+                                                              ...node.data,
+                                                              config: {
+                                                                ...node.data.config,
+                                                                sections: newSections
+                                                              }
+                                                            }
+                                                          }
+                                                        : node
+                                                    )
+                                                  );
+                                                }}
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          ))}
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              const newSections = [...(selectedNode.data.config?.sections || [])];
+                                              const newRows = [...(section.rows || []), { id: '', title: '', description: '' }];
+                                              newSections[sectionIndex] = { ...section, rows: newRows };
+                                              setNodes((nds) =>
+                                                nds.map((node) =>
+                                                  node.id === selectedNode.id
+                                                    ? {
+                                                        ...node,
+                                                        data: {
+                                                          ...node.data,
+                                                          config: {
+                                                            ...node.data.config,
+                                                            sections: newSections
+                                                          }
+                                                        }
+                                                      }
+                                                    : node
+                                                )
+                                              );
+                                            }}
+                                            className="w-full"
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Add Row
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const newSections = [...(selectedNode.data.config?.sections || []), { title: '', rows: [] }];
+                                        setNodes((nds) =>
+                                          nds.map((node) =>
+                                            node.id === selectedNode.id
+                                              ? {
+                                                  ...node,
+                                                  data: {
+                                                    ...node.data,
+                                                    config: {
+                                                      ...node.data.config,
+                                                      sections: newSections
+                                                    }
+                                                  }
+                                                }
+                                              : node
+                                          )
+                                        );
+                                      }}
+                                      className="w-full"
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add Section
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Assign Conversation Configuration */}
+                            {selectedNode.data.config?.actionType === 'assign_conversation' && (
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor="assigned-to" className="text-sm font-medium">
+                                    Assign To User ID
+                                  </Label>
+                                  <Input
+                                    id="assigned-to"
+                                    placeholder="Enter user ID to assign conversation to"
+                                    value={selectedNode.data.config?.assignedTo || ''}
+                                    onChange={(e) => {
+                                      setNodes((nds) =>
+                                        nds.map((node) =>
+                                          node.id === selectedNode.id
+                                            ? {
+                                                ...node,
+                                                data: {
+                                                  ...node.data,
+                                                  config: {
+                                                    ...node.data.config,
+                                                    assignedTo: e.target.value
+                                                  }
+                                                }
+                                              }
+                                            : node
+                                        )
+                                      );
+                                    }}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1382,7 +2412,7 @@ function WorkflowBuilderContent() {
                                 }}
                               >
                                 <option value="GET">GET</option>
-                              <option value="POST">POST</option>
+                                <option value="POST">POST</option>
                                 <option value="PUT">PUT</option>
                                 <option value="DELETE">DELETE</option>
                               </select>
