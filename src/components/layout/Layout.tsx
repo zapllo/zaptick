@@ -402,54 +402,7 @@ export default function Layout({ children }: LayoutProps) {
                 </Button>
               </PermissionCheck>
 
-              {/* Messages */}
-              <PermissionCheck resource="conversations" action="read" fallback={null}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl hover:bg-muted/50 transition-colors">
-                      <MessageSquare className="h-5 w-5" />
-                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-r from-primary to-primary/80 text-[11px] text-primary-foreground flex items-center justify-center font-semibold">2</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-80 p-0 border-0 shadow-lg">
-                    <div className="p-4 border-b bg-muted/30">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-base">Messages</h3>
-                        <Button variant="ghost" size="sm" className="text-xs h-7 px-2 hover:bg-background">
-                          Mark all read
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {[1, 2].map((i) => (
-                        <div key={i} className="p-4 hover:bg-muted/30 cursor-pointer transition-colors border-b last:border-b-0">
-                          <div className="flex items-start gap-3">
-                            <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                              <AvatarImage src={`/avatars/user${i}.jpg`} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">U{i}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-semibold">New message</p>
-                                <span className="text-xs text-muted-foreground">2m ago</span>
-                              </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                You have a new message from User {i}.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-3 border-t bg-muted/30">
-                      <Button variant="ghost" size="sm" className="w-full h-8 text-sm font-medium hover:bg-background">
-                        View all messages
-                      </Button>
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </PermissionCheck>
-
+             
               {/* Notifications */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -468,24 +421,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="p-4 hover:bg-muted/30 cursor-pointer transition-colors border-b last:border-b-0">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-background shadow-sm">
-                            <Bell className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-semibold">System Update</p>
-                              <span className="text-xs text-muted-foreground">{i}h ago</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              A new system update is available. Please review.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                 <h1 className="flex justify-center p-4">Notifications Coming Soon</h1>
                   </div>
                   <div className="p-3 border-t bg-muted/30">
                     <Button variant="ghost" size="sm" className="w-full h-8 text-sm font-medium hover:bg-background">
