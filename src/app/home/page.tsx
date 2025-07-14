@@ -66,7 +66,7 @@ export default function HomePage() {
   /* ------------------------------------------------------------------ */
   /*  Fetch user data on component mount                                */
   /* ------------------------------------------------------------------ */
-  useEffect(() => {
+ useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await fetch('/api/auth/me');
@@ -74,11 +74,22 @@ export default function HomePage() {
           throw new Error('Failed to fetch user data');
         }
         const data = await response.json();
+        
+        console.log('Fetched user data:', data.user); // Debug log
+        console.log('WABA Accounts:', data.user.wabaAccounts); // Debug log
+        
         setUser(data.user);
 
-        // If user has at least one WABA account, fetch health status for the first one
+        // If user has at least one WABA account, set it as selected and fetch health status
         if (data.user.wabaAccounts && data.user.wabaAccounts.length > 0) {
-          fetchHealthStatus(data.user.wabaAccounts[0].wabaId);
+          const firstWaba = data.user.wabaAccounts[0];
+          console.log('First WABA:', firstWaba); // Debug log
+          console.log('WABA ID to fetch:', firstWaba.wabaId); // Debug log
+          
+          // setSelectedWabaId(firstWaba.wabaId);
+          fetchHealthStatus(firstWaba.wabaId);
+        } else {
+          console.log('No WABA accounts found'); // Debug log
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -99,19 +110,50 @@ export default function HomePage() {
   /*  Fetch health status                                               */
   /* ------------------------------------------------------------------ */
   const fetchHealthStatus = async (wabaId: string) => {
+    console.log('fetchHealthStatus called with wabaId:', wabaId); // Debug log
+    
+    if (!wabaId) {
+      console.error('No WABA ID provided to fetchHealthStatus');
+      toast({
+        title: "Error",
+        description: "No WABA ID available to check health status",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoadingHealth(true);
     try {
-      const response = await fetch(`/api/waba/health?wabaId=${wabaId}`);
+      const url = `/api/waba/health?wabaId=${encodeURIComponent(wabaId)}`;
+      console.log('Fetching health from URL:', url); // Debug log
+      
+      const response = await fetch(url);
+      
+      console.log('Health API response status:', response.status); // Debug log
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch health status');
+        const errorData = await response.json();
+        console.error('Health API error:', errorData); // Debug log
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch health status`);
       }
+      
       const data = await response.json();
+      console.log('Health API response data:', data); // Debug log
+      
       setHealthStatus(data.healthStatus);
+      
+      if (data.healthStatus.error) {
+        toast({
+          title: "Warning",
+          description: data.healthStatus.error,
+          variant: "default"
+        });
+      }
     } catch (error) {
       console.error('Error fetching health status:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch WhatsApp health status.",
+        description: error instanceof Error ? error.message : "Failed to fetch WhatsApp health status.",
         variant: "destructive"
       });
     } finally {

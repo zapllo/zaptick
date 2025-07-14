@@ -6,6 +6,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   companyId: mongoose.Types.ObjectId;
+  roleId?: mongoose.Types.ObjectId;
   wabaAccounts: {
     wabaId: string;
     phoneNumberId: string;
@@ -16,7 +17,12 @@ export interface IUser extends Document {
     isvNameToken: string;
     templateCount?: number;
   }[];
-  role: string;
+  role: 'owner' | 'admin' | 'agent'; // Add 'owner' role
+  isActive: boolean;
+  isOwner: boolean; // Add owner flag
+  lastLoginAt?: Date;
+  invitedBy?: mongoose.Types.ObjectId;
+  invitedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -48,10 +54,32 @@ const UserSchema = new Schema<IUser>(
       ref: 'Company',
       required: [true, 'Company ID is required'],
     },
+    roleId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Role',
+    },
     role: {
       type: String,
-      enum: ['admin', 'user'],
-      default: 'admin'
+      enum: ['owner', 'admin', 'agent'],
+      default: 'agent'
+    },
+    isOwner: {
+      type: Boolean,
+      default: false
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    lastLoginAt: {
+      type: Date
+    },
+    invitedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    invitedAt: {
+      type: Date
     },
     wabaAccounts: [
       {

@@ -7,7 +7,7 @@ export interface IAutoReply extends Document {
   isActive: boolean;
   triggers: string[]; // Array of trigger phrases/keywords
   replyMessage: string;
-  replyType: 'text' | 'template';
+  replyType: 'text' | 'template' | 'workflow';
   templateName?: string;
   templateLanguage?: string;
   templateComponents?: any[];
@@ -35,6 +35,9 @@ const AutoReplySchema = new Schema({
     required: true,
     trim: true
   },
+  workflowId: {
+    type: String,
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -50,7 +53,7 @@ const AutoReplySchema = new Schema({
   },
   replyType: {
     type: String,
-    enum: ['text', 'template'],
+    enum: ['text', 'template', 'workflow'],
     default: 'text'
   },
   templateName: String,

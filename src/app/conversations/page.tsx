@@ -2577,7 +2577,7 @@ function ConversationsPageContent() {
 
               {/* Messages Area - keeping the existing styling for the chat area */}
               <ScrollArea style={{ backgroundImage: "url('/bg.png')" }} className="flex-1 object-contain h-[300px] p-4 ">
-                <div className="space-y-4 max-w-3xl mx-auto">
+                <div className="space-y-4 max-w-7xl mx-auto">
                   {selectedContact && messages.length === 0 && (
                     <div className="text-center py-10">
                       <div className="bg-primary/10 p-4 rounded-full w-fit mx-auto mb-4">

@@ -177,21 +177,66 @@ async function processMessage(
       break;
     }
 
-    /* inside processMessage() switch */
+    // Handle interactive messages (button clicks, list selections)
+    case 'interactive': {
+      newMsg.messageType = 'interactive';
+      
+      if (m.interactive?.type === 'button_reply') {
+        const buttonReply = m.interactive.button_reply;
+        newMsg.content = buttonReply.title || 'Button clicked';
+        newMsg.buttonData = {
+          id: buttonReply.id,
+          title: buttonReply.title
+        };
+        
+        console.log(`🔘 Button clicked: ID="${buttonReply.id}", Title="${buttonReply.title}"`);
+        
+        // Check for workflow continuation based on button click
+        await checkAndContinueWorkflow(
+          contact,
+          buttonReply.id,
+          buttonReply.title,
+          wabaAcc,
+          userId,
+          m.context?.id // The message ID this is replying to
+        );
+        
+      } else if (m.interactive?.type === 'list_reply') {
+        const listReply = m.interactive.list_reply;
+        newMsg.content = listReply.title || 'List item selected';
+        newMsg.listData = {
+          id: listReply.id,
+          title: listReply.title,
+          description: listReply.description
+        };
+        
+        console.log(`📝 List item selected: ID="${listReply.id}", Title="${listReply.title}"`);
+        
+        // Check for workflow continuation based on list selection
+        await checkAndContinueWorkflow(
+          contact,
+          listReply.id,
+          listReply.title,
+          wabaAcc,
+          userId,
+          m.context?.id
+        );
+      }
+      break;
+    }
+
+    /* existing media cases... */
     case 'image':
     case 'video':
     case 'audio':
     case 'document': {
       const mediaId = m[m.type].id;
-
-      /* ① download via Interakt (now passes both IDs) */
       const asset = await fetchWaAsset(
-        wabaAcc.phoneNumberId,   // path part
-        wabaAcc.wabaId,          // header part
+        wabaAcc.phoneNumberId,
+        wabaAcc.wabaId,
         mediaId,
       );
 
-      /* ② push to S3 (no ACL) */
       const s3Url = await uploadToS3(
         asset.buf,
         asset.mime,
@@ -250,6 +295,53 @@ async function processMessage(
   }
 }
 
+// New function to handle workflow continuation based on button/list interactions
+async function checkAndContinueWorkflow(
+  contact: any,
+  buttonId: string,
+  buttonTitle: string,
+  wabaAcc: any,
+  userId: string,
+  contextMessageId?: string
+) {
+  try {
+    console.log(`🔄 Checking for workflow continuation: buttonId="${buttonId}", title="${buttonTitle}"`);
+    
+    const workflowEngine = WorkflowEngine.getInstance();
+    
+    // Find any running workflow execution for this contact
+    const runningExecution = workflowEngine.getAllExecutions()
+      .find(exec => 
+        exec.contactId === contact._id.toString() && 
+        exec.status === 'running'
+      );
+    
+    if (!runningExecution) {
+      console.log('❌ No running workflow execution found for this contact');
+      return;
+    }
+    
+    console.log(`✅ Found running workflow execution: ${runningExecution.workflowId}`);
+    
+    // Continue the workflow with the button response
+    await workflowEngine.continueWorkflow(
+      runningExecution.workflowId,
+      contact._id.toString(),
+      {
+        buttonId,
+        buttonTitle,
+        contextMessageId,
+        messageType: 'button_click',
+        timestamp: new Date()
+      }
+    );
+    
+    console.log(`✅ Workflow continued with button click: ${buttonId}`);
+    
+  } catch (error) {
+    console.error('❌ Error continuing workflow:', error);
+  }
+}
 // Update the checkAndTriggerWorkflows function
 async function checkAndTriggerWorkflows(
   messageContent: string,
@@ -448,8 +540,49 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
     }
 
     let whatsappPayload;
+    let messageContent;
 
-    if (autoReply.replyType === 'template') {
+    if (autoReply.replyType === 'workflow') {
+      // For workflow type, trigger the workflow instead of sending a message
+      console.log(`🔄 Triggering workflow for auto reply: ${autoReply.name}`);
+      
+      try {
+        const workflowEngine = WorkflowEngine.getInstance();
+        const executionId = await workflowEngine.triggerWorkflow(
+          autoReply.workflowId.toString(),
+          contact._id.toString(),
+          {
+            messageContent: 'Auto reply triggered',
+            contactPhone: contact.phone,
+            contactName: contact.name,
+            wabaId: wabaAcc.wabaId,
+            timestamp: new Date(),
+            triggeredBy: 'auto_reply',
+            autoReplyId: autoReply._id
+          }
+        );
+
+        console.log(`✅ Workflow triggered successfully with execution ID: ${executionId}`);
+    
+
+        return; // Exit early since workflow handles the messaging
+      } catch (workflowError) {
+        console.error('❌ Error triggering workflow:', workflowError);
+        // Fall back to sending a text message about the error
+        messageContent = `Sorry, there was an issue processing your request. Please try again later.`;
+        whatsappPayload = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: phoneNumber,
+          type: "text",
+          text: {
+            preview_url: false,
+            body: messageContent
+          }
+        };
+      }
+    } else if (autoReply.replyType === 'template') {
+      messageContent = `Template: ${autoReply.templateName}`;
       whatsappPayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -467,6 +600,8 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
         (whatsappPayload.template as any).components = autoReply.templateComponents;
       }
     } else {
+      // Text message
+      messageContent = autoReply.replyMessage;
       whatsappPayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -479,35 +614,34 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
       };
     }
 
-    console.log('Sending auto reply:', JSON.stringify(whatsappPayload, null, 2));
+    // Only send WhatsApp message if not workflow type or if workflow failed
+    if (whatsappPayload) {
+      console.log('Sending auto reply:', JSON.stringify(whatsappPayload, null, 2));
 
-    const response = await fetch(
-      `https://amped-express.interakt.ai/api/v17.0/${wabaAcc.phoneNumberId}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'x-access-token': INT_TOKEN!,
-          'x-waba-id': wabaAcc.wabaId,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(whatsappPayload)
-      }
-    );
-
-    const responseText = await response.text();
-    console.log('Auto reply response:', responseText);
-
-    if (response.ok) {
-      // Record the auto reply in the conversation
-      const responseData = JSON.parse(responseText);
-      await recordAutoReplyInConversation(
-        contact,
-        autoReply,
-        responseData.messages?.[0]?.id
+      const response = await fetch(
+        `https://amped-express.interakt.ai/api/v17.0/${wabaAcc.phoneNumberId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'x-access-token': INT_TOKEN!,
+            'x-waba-id': wabaAcc.wabaId,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(whatsappPayload)
+        }
       );
-    } else {
-      console.error('Failed to send auto reply:', responseText);
+
+      const responseText = await response.text();
+      console.log('Auto reply response:', responseText);
+
+      if (response.ok) {
+        // Record the auto reply in the conversation
+        const responseData = JSON.parse(responseText);
+      
+      } else {
+        console.error('Failed to send auto reply:', responseText);
+      }
     }
 
   } catch (error) {

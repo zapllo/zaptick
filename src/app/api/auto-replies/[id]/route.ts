@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
 import AutoReply from '@/models/AutoReply';
+import Workflow from '@/models/Workflow';
 
 export async function PUT(
   req: NextRequest,
@@ -31,6 +32,21 @@ export async function PUT(
 
     const updateData = await req.json();
 
+    // Validate workflow if replyType is workflow
+    if (updateData.replyType === 'workflow' && updateData.workflowId) {
+      const workflow = await Workflow.findOne({
+        _id: updateData.workflowId,
+        userId: decoded.id,
+        wabaId: autoReply.wabaId
+      });
+
+      if (!workflow) {
+        return NextResponse.json({
+          error: 'Workflow not found or access denied'
+        }, { status: 404 });
+      }
+    }
+
     // Update fields
     Object.keys(updateData).forEach(key => {
       if (key === 'triggers' && Array.isArray(updateData[key])) {
@@ -39,6 +55,18 @@ export async function PUT(
         autoReply[key] = updateData[key];
       }
     });
+
+    // Clear workflow-specific fields if not workflow type
+    if (updateData.replyType && updateData.replyType !== 'workflow') {
+      autoReply.workflowId = undefined;
+    }
+
+    // Clear template-specific fields if not template type
+    if (updateData.replyType && updateData.replyType !== 'template') {
+      autoReply.templateName = undefined;
+      autoReply.templateLanguage = undefined;
+      autoReply.templateComponents = undefined;
+    }
 
     await autoReply.save();
 

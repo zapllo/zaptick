@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Company from '@/models/Company';
 import { createToken } from '@/lib/jwt';
+import { seedDefaultRoles } from '@/lib/seedDefaultRoles';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
     // Create new company
     const company = await Company.create({
       name: companyName,
+      walletBalance: 0
     });
 
     // Create new user with company reference
@@ -29,8 +31,11 @@ export async function POST(req: NextRequest) {
       email,
       password,
       companyId: company._id,
-      role: 'admin', // First user is admin
+      role: 'owner', // Set as owner
+      isOwner: true, // Mark as owner
     });
+    // Seed default roles for the company
+    await seedDefaultRoles(company._id);
 
     // Generate token
     const token = createToken(user);

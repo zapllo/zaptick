@@ -15,6 +15,7 @@ export interface WorkflowExecution {
   executionPath: string[];
   createdAt: Date;
   completedAt?: Date;
+  lastActivity?: Date;
 }
 
 class WorkflowEngine {
@@ -91,7 +92,7 @@ class WorkflowEngine {
 
     try {
       console.log(`\n🔄 EXECUTING NODE: ${execution.currentNodeId}`);
-      
+
       const workflow = await Workflow.findById(execution.workflowId);
       if (!workflow) {
         console.error(`❌ Workflow not found: ${execution.workflowId}`);
@@ -193,10 +194,10 @@ class WorkflowEngine {
     workflow: any
   ): Promise<string | null> {
     console.log(`     🎯 Processing trigger node: ${node.id}`);
-    
+
     // Find next node connected to this trigger
     const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
-    
+
     if (nextEdge) {
       console.log(`     ➡️ Found next edge: ${nextEdge.source} -> ${nextEdge.target}`);
       return nextEdge.target;
@@ -213,7 +214,7 @@ class WorkflowEngine {
   ): Promise<string | null> {
     try {
       console.log(`🔄 Executing action node: ${node.id} for workflow: ${workflow.name}`);
-      
+
       const actionType = node.data.config?.actionType || 'send_message';
       console.log(`   🎬 Action type: ${actionType}`);
 
@@ -347,14 +348,29 @@ class WorkflowEngine {
       phoneNumber = '+' + phoneNumber;
     }
 
-    // Format buttons for WhatsApp API
-    const formattedButtons = buttons.map((button: { id: string; title: string }) => ({
-      type: 'reply',
-      reply: {
-        id: button.id,
-        title: button.title
+    // Format buttons for WhatsApp API with proper IDs
+    const formattedButtons = buttons.map((button: any, index: number) => {
+      let buttonId = button.id || `btn_${index + 1}`;
+
+      // Ensure button ID is provided for all button types
+      if (!buttonId || buttonId.trim() === '') {
+        buttonId = `button_${Date.now()}_${index}`;
       }
-    }));
+
+      return {
+        type: 'reply',
+        reply: {
+          id: buttonId,
+          title: button.text || `Button ${index + 1}`
+        }
+      };
+    });
+
+    // Validate we have at least one button with proper data
+    if (formattedButtons.length === 0) {
+      console.error('❌ No valid buttons found for button message');
+      return null;
+    }
 
     const whatsappPayload = {
       messaging_product: "whatsapp",
@@ -636,9 +652,9 @@ class WorkflowEngine {
     // Find next node
     const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
     const nextNodeId = nextEdge?.target || null;
-    
+
     console.log(`🔄 Next node: ${nextNodeId}`);
-    
+
     return nextNodeId;
   }
 
@@ -695,7 +711,7 @@ class WorkflowEngine {
 
       // Try to find edge with specific handle first
       let nextEdge = outgoingEdges.find((edge: any) => edge.sourceHandle === (result ? 'yes' : 'no'));
-      
+
       // If no handle-specific edge found, use the first edge if condition is true
       if (!nextEdge && result) {
         nextEdge = outgoingEdges[0];
@@ -737,11 +753,11 @@ class WorkflowEngine {
       if (nextEdge?.target) {
         execution.currentNodeId = nextEdge.target;
         execution.executionPath.push(nextEdge.target);
-        
+
         // Find the execution ID for this execution
         const executionId = Array.from(this.executions.entries())
           .find(([_, exec]) => exec === execution)?.[0];
-        
+
         if (executionId) {
           await this.executeNextNode(executionId);
         }
@@ -793,14 +809,15 @@ class WorkflowEngine {
       return null;
     }
   }
-
   private async recordMessageInConversation(
     contact: any,
     messageContent: string,
     messageType: string,
     whatsappMessageId?: string,
     senderName?: string,
-    templateName?: string
+    templateName?: string,
+    buttonData?: any,
+    listData?: any
   ): Promise<void> {
     try {
       // Create or update conversation
@@ -815,7 +832,9 @@ class WorkflowEngine {
         status: 'sent' as const,
         whatsappMessageId: whatsappMessageId,
         senderName: senderName || 'Workflow',
-        templateName: messageType === 'template' ? templateName : undefined
+        templateName: messageType === 'template' ? templateName : undefined,
+        buttons: buttonData || undefined,
+        listData: listData || undefined
       };
 
       if (conversation) {
@@ -854,6 +873,119 @@ class WorkflowEngine {
       console.error('Error recording workflow message in conversation:', error);
     }
   }
+
+  // Add new method to continue workflow based on user input
+  async continueWorkflow(
+    workflowId: string,
+    contactId: string,
+    userInput: {
+      buttonId?: string;
+      buttonTitle?: string;
+      messageType: 'button_click' | 'list_selection' | 'text_response';
+      contextMessageId?: string;
+      timestamp: Date;
+    }
+  ): Promise<void> {
+// Find matching execution from the Map
+const execution = Array.from(this.executions.values()).find(
+      exec => exec.workflowId === workflowId && 
+               exec.contactId === contactId && 
+               exec.status === 'running'
+    );
+
+    if (!execution) {
+      console.log('❌ No running execution found to continue');
+      return;
+    }
+
+    console.log(`🔄 Continuing workflow execution: ${execution.workflowId}`);
+    console.log(`   Current node: ${execution.currentNodeId}`);
+    console.log(`   User input:`, userInput);
+
+    try {
+      const workflow = await Workflow.findById(workflowId);
+      if (!workflow) {
+        throw new Error('Workflow not found');
+      }
+
+      const contact = await Contact.findById(contactId);
+      if (!contact) {
+        throw new Error('Contact not found');
+      }
+
+      const user = await User.findById(workflow.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const wabaAccount = user.wabaAccounts?.find((acc: any) => acc.wabaId === workflow.wabaId);
+      if (!wabaAccount) {
+        throw new Error('WABA account not found');
+      }
+
+      // Find the current node
+      const currentNode = workflow.nodes.find((node: any) => node.id === execution.currentNodeId);
+      if (!currentNode) {
+        throw new Error('Current node not found');
+      }
+
+      // Determine the next node based on the user input
+      let nextNodeId: string | null = null;
+
+      if (currentNode.type === 'action' && 
+          (currentNode.data.config?.actionType === 'send_button' || 
+           currentNode.data.config?.actionType === 'send_list')) {
+        
+        // Find the edge that corresponds to the button clicked
+        nextNodeId = this.findNextNodeForButtonClick(
+          workflow,
+          currentNode.id,
+          userInput.buttonId || ''
+        );
+      }
+
+      if (nextNodeId) {
+        console.log(`➡️ Moving to next node: ${nextNodeId}`);
+        execution.currentNodeId = nextNodeId;
+// Update execution path with the new node
+execution.executionPath.push(nextNodeId);
+        
+        // Continue execution from the new node
+// Find execution ID
+const executionId = Array.from(this.executions.entries())
+  .find(([_, exec]) => exec === execution)?.[0];
+if (executionId) {
+  await this.executeNextNode(executionId);
+}
+      } else {
+        console.log('🏁 No next node found, completing execution');
+        execution.status = 'completed';
+        execution.completedAt = new Date();
+      }
+
+    } catch (error) {
+      console.error('❌ Error continuing workflow:', error);
+      execution.status = 'failed';
+      // Store error in variables instead
+      execution.variables.error = error instanceof Error ? error.message : 'Unknown error';
+    }
+  }
+
+  // Helper method to find next node based on button click
+  private findNextNodeForButtonClick(
+    workflow: any,
+    currentNodeId: string,
+    buttonId: string
+  ): string | null {
+    // Look for edges that start from the current node and have the button ID as a label or condition
+    const matchingEdge = workflow.edges.find((edge: any) => 
+      edge.source === currentNodeId && 
+      (edge.sourceHandle === buttonId || edge.label === buttonId)
+    );
+
+    return matchingEdge?.target || null;
+  }
+
 
   getExecution(executionId: string): WorkflowExecution | undefined {
     return this.executions.get(executionId);

@@ -8,7 +8,30 @@ export interface ICompany extends Document {
   size?: string;
   walletBalance: number;  // Add wallet balance to company
   createdAt: Date;
+  logo?: string;
   updatedAt: Date;
+  // WhatsApp Business Profile data
+  whatsappProfile: {
+    about?: string;
+    profilePictureUrl?: string;
+    profilePictureHandle?: string;
+    email?: string;
+    website?: string;
+    address?: string;
+    businessCategory?: string;
+    businessDescription?: string;
+    lastUpdated?: Date;
+  };
+  // WhatsApp Business Account settings per WABA
+  wabaSettings: Array<{
+    wabaId: string;
+    businessName?: string;
+    businessCategory?: string;
+    businessDescription?: string;
+    profilePictureUrl?: string;
+    profilePictureHandle?: string;
+    lastSyncAt?: Date;
+  }>;
 }
 
 const CompanySchema = new Schema<ICompany>(
@@ -22,6 +45,11 @@ const CompanySchema = new Schema<ICompany>(
       type: String,
       trim: true,
     },
+    logo: {
+      type: String,
+      trim: true,
+    },
+
     website: {
       type: String,
       trim: true,
@@ -37,8 +65,32 @@ const CompanySchema = new Schema<ICompany>(
     walletBalance: {
       type: Number,
       default: 0
-    }
+    },
+    whatsappProfile: {
+      about: String,
+      profilePictureUrl: String,
+      profilePictureHandle: String,
+      email: String,
+      website: String,
+      address: String,
+      businessCategory: String,
+      businessDescription: String,
+      lastUpdated: Date
+    },
+    wabaSettings: [{
+      wabaId: {
+        type: String,
+        required: true
+      },
+      businessName: String,
+      businessCategory: String,
+      businessDescription: String,
+      profilePictureUrl: String,
+      profilePictureHandle: String,
+      lastSyncAt: Date
+    }]
   },
+
   { timestamps: true }
 );
 

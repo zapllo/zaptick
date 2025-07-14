@@ -24,7 +24,13 @@ import {
   Menu,
   Megaphone,
   Bot,
-  HomeIcon
+  HomeIcon,
+  ChevronLeft,
+  Wallet,
+  Shield,
+  Crown,
+  Users,
+  Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -51,9 +57,17 @@ interface SidebarProps {
     id: string;
     name: string;
     email: string;
+    role: 'admin' | 'agent';
     wabaAccounts?: any[];
     image?: string;
   };
+  userPermissions?: {
+    role: 'admin' | 'agent';
+    permissions: {
+      resource: string;
+      actions: string[];
+    }[];
+  } | null;
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
 }
@@ -69,9 +83,10 @@ interface SidebarItem {
   badge?: string;
   isPro?: boolean;
   wabaRequired?: boolean;
+  description?: string;
 }
 
-export default function Sidebar({ user, isCollapsed, onCollapsedChange }: SidebarProps) {
+export default function Sidebar({ user, userPermissions, isCollapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(isCollapsed || false);
@@ -82,7 +97,6 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
 
   // Initialize open state based on current path
   useEffect(() => {
-    // Open the menu that contains the current path
     if (pathname) {
       const menuToOpen = sidebarItems.find(item =>
         item.submenu?.some(subItem => subItem.href === pathname) ||
@@ -140,15 +154,17 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
   };
 
   const sidebarItems: SidebarItem[] = [
-      {
+    {
       title: "Home",
       href: "/home",
       icon: <HomeIcon size={20} strokeWidth={1.5} />,
+      description: "Your personal dashboard"
     },
     {
       title: "Dashboard",
       href: "/dashboard",
       icon: <LayoutDashboard size={20} strokeWidth={1.5} />,
+      description: "Analytics and overview"
     },
     {
       title: "Conversations",
@@ -156,24 +172,28 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
       icon: <MessageCircle size={20} strokeWidth={1.5} />,
       // badge: "5",
       wabaRequired: true,
+      description: "Chat with your customers"
     },
     {
       title: "Contacts",
       href: "/contacts",
       icon: <UsersRound size={20} strokeWidth={1.5} />,
       wabaRequired: true,
+      description: "Manage your contacts"
     },
     {
       title: "Campaigns",
       href: "/campaigns",
       icon: <Megaphone size={20} strokeWidth={1.5} />,
       wabaRequired: true,
+      description: "Broadcast campaigns"
     },
     {
       title: "Templates",
       href: "/templates",
       icon: <FileText size={20} strokeWidth={1.5} />,
       wabaRequired: true,
+      description: "Message templates"
     },
     {
       title: "Automations",
@@ -181,34 +201,26 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
       icon: <Zap size={20} strokeWidth={1.5} />,
       isPro: true,
       wabaRequired: true,
-    },
-    {
-      title: "Chatbots",
-      href: "/chatbots",
-      icon: <Bot size={20} strokeWidth={1.5} />,
-      isPro: true,
-      wabaRequired: true,
+      description: "Automated workflows"
     },
     {
       title: "Analytics",
       href: "/analytics",
       icon: <BarChart4 size={20} strokeWidth={1.5} />,
       wabaRequired: true,
+      description: "Performance insights"
     },
     {
       title: "API Keys",
       href: "/api-keys",
       icon: <KeySquare size={20} strokeWidth={1.5} />,
-    },
-    {
-      title: "Settings",
-      href: "/settings",
-      icon: <Settings size={20} strokeWidth={1.5} />,
+      description: "Developer access"
     },
     {
       title: "Help & Support",
       href: "/support",
       icon: <LifeBuoy size={20} strokeWidth={1.5} />,
+      description: "Get help and support"
     },
   ];
 
@@ -244,173 +256,174 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
   };
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-30 flex h-screen flex-col bg-background border-r border-border/30 transition-all duration-300 ease-in-out",
-        collapsed ? "w-[56px]" : "w-72",
-      )}
-    >
-      {/* Header - Redesigned for better balance */}
-      <div className={cn(
-        "flex items-center justify-center h-16 border-b relative border-border/30",
-        !collapsed && "justify-between px-5"
-      )}>
-        {collapsed ? (
-          <div className="flex flex-col items-center">
-            <div className="flex items-center justify-center w-10 h-10  rounded-xl ">
-              <img
-                src="/tick.png"
-                alt="ZapTick"
-                className="h-12 mt-2"
-              />
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center ">
+    <TooltipProvider>
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-30 flex h-screen flex-col bg-background/95 backdrop-blur-xl border-r transition-all duration-300 ease-in-out",
+          collapsed ? "w-[70px]" : "w-[280px]",
+        )}
+      >
+        {/* Header */}
+        <div className={cn(
+          "flex items-center h-[65px] border-b px-4 relative",
+          collapsed && "justify-center px-2"
+        )}>
+          {collapsed ? (
+            <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/20">
                 <img
-                  src="/zaptick.png"
+                  src="/tick.png"
                   alt="ZapTick"
-                  className="w-32"
+                  className="h-8 w-8  object-contain"
                 />
               </div>
             </div>
-            {onCollapsedChange && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute rounded-lg right-0  text-muted-foreground hover:text-foreground"
-                onClick={() => handleCollapsedChange(true)}
-              >
-                <Menu className="scale-125" size={25} />
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Expand button - Now positioned outside for cleaner look when collapsed */}
-      {collapsed && onCollapsedChange && (
-        <Button
-          variant="secondary"
-          size="icon"
-          className="absolute -right-3 top-16 h-6 w-6 rounded-full shadow-md border border-border"
-          onClick={() => handleCollapsedChange(false)}
-        >
-          <ChevronRight size={12} />
-        </Button>
-      )}
-
-      {/* {!collapsed && (
-        <div className="px-4 py-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search menu..."
-              className="h-9 w-full rounded-lg pl-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/30"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-      )} */}
-
-      {/* Menu items - Improved spacing in collapsed state */}
-      <ScrollArea className={cn(
-        "flex-1 px-3 py-2",
-        collapsed && "px-2"
-      )}>
-        <div className={cn(
-          "space-y-1",
-          collapsed && "flex flex-col items-center space-y-3 pt-2"
-        )}>
-          {!hasWaba && !collapsed && (
-            <div className="mb-3 rounded-lg bg-primary/10 p-3 text-sm">
-              <div className="flex items-center gap-2 font-medium text-primary mb-1">
-                <Sparkles size={16} />
-                <span>Get Started</span>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="">
+                  <img
+                    src="/zaptick.png"
+                    alt="ZapTick"
+                    className="object-contain -ml-2 w-fit p-6"
+                  />
+                </div>
+                <div>
+                  {/* <h1 className="font-bold text-xl bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent">
+                    ZapTick
+                  </h1> */}
+                  {/* <p className="text-xs text-muted-foreground">WhatsApp Business</p> */}
+                </div>
               </div>
-              <p className="text-muted-foreground text-xs mb-2">
-                Connect your WhatsApp Business account to unlock all features.
-              </p>
-              <Button
-                size="sm"
-                className="w-full h-8"
-                onClick={() => router.push('/settings/waba')}
-              >
-                Set up WhatsApp
-              </Button>
-            </div>
-          )}
-
-          {filteredItems.map((item) => (
-            <div key={item.title} className={cn(
-              "relative",
-              collapsed && "w-full mb-1"
-            )}>
-              {item.isPro && !collapsed && (
-                <span className="absolute right-3 top-1.5 z-10">
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5 py-0 font-medium"
-                  >
-                    PRO
-                  </Badge>
-                </span>
-              )}
-
-              {item.submenu ? (
-                <Collapsible
-                  open={openMenus[item.title]}
-                  onOpenChange={() => !collapsed && toggleMenu(item.title)}
+              {onCollapsedChange && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  onClick={() => handleCollapsedChange(true)}
                 >
-                  <CollapsibleTrigger asChild>
-                    <button
-                      className={cn(
-                        "group flex w-full items-center transition-colors",
-                        collapsed ?
-                          "justify-center rounded-full h-10 w-10" :
-                          "rounded-lg px-3 py-2 text-sm font-medium",
-                        (pathname === item.href || pathname?.startsWith(item.href + "/"))
-                          ? collapsed
-                            ? "bg-primary/10 text-primary"
-                            : "bg-primary/10 text-primary"
-                          : collapsed
-                            ? "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                        item.wabaRequired && !hasWaba && "opacity-60",
-                        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      )}
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <TooltipProvider>
+                  <ChevronLeft size={16} />
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Expand button */}
+        {collapsed && onCollapsedChange && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute -right-4 top-[75px] h-8 w-8 rounded-full shadow-lg border-2 border-background bg-background hover:bg-muted/50 transition-colors z-50"
+            onClick={() => handleCollapsedChange(false)}
+          >
+            <ChevronRight size={14} />
+          </Button>
+        )}
+
+        {/* Search
+        {!collapsed && (
+          <div className="p-4 border-b">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search menu..."
+                className="h-10 pl-9 bg-muted/50 border-muted/50 focus:border-primary/50 transition-colors"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+        )} */}
+
+        {/* Menu items */}
+        <ScrollArea className="flex-1 px-3 py-4">
+          <div className={cn(
+            "space-y-2",
+            collapsed && "flex flex-col items-center space-y-3"
+          )}>
+            {!hasWaba && !collapsed && (
+              <div className="mb-6 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 border border-primary/20">
+                <div className="flex items-center gap-2 font-semibold text-primary mb-2">
+                  <Sparkles size={16} />
+                  <span>Get Started</span>
+                </div>
+                <p className="text-muted-foreground text-sm mb-3 leading-relaxed">
+                  Connect your WhatsApp Business account to unlock all features and start engaging with customers.
+                </p>
+                <Button
+                  size="sm"
+                  className="w-full h-9 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all duration-200"
+                  onClick={() => router.push('/settings/waba')}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Connect WhatsApp
+                </Button>
+              </div>
+            )}
+
+            {filteredItems.map((item) => (
+              <div key={item.title} className="relative">
+                {item.submenu ? (
+                  <Collapsible
+                    open={openMenus[item.title]}
+                    onOpenChange={() => !collapsed && toggleMenu(item.title)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <button
+                        className={cn(
+                          "group flex w-full items-center transition-all duration-200",
+                          collapsed 
+                            ? "justify-center h-12 w-12 rounded-xl mx-auto" 
+                            : "rounded-xl px-4 py-3 text-sm font-medium",
+                          (pathname === item.href || pathname?.startsWith(item.href + "/"))
+                            ? collapsed
+                              ? "bg-gradient-to-br from-primary to-primary/90 text-white shadow-lg shadow-primary/25"
+                              : "bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20"
+                            : collapsed
+                              ? "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                          item.wabaRequired && !hasWaba && "opacity-60",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                        )}
+                        onClick={() => handleItemClick(item)}
+                      >
                         <Tooltip delayDuration={200}>
                           <TooltipTrigger asChild>
                             <div className={cn(
                               "flex items-center",
-                              !collapsed && "w-full gap-2" // Fix the gap between icon and text
+                              !collapsed && "w-full gap-3"
                             )}>
-                              <span className={cn(
-                                "flex items-center justify-center",
-                                collapsed ? "h-5 w-5" : "h-5 w-5" // Make icon size consistent
-                              )}>
+                              <span className="flex items-center justify-center">
                                 {item.icon}
                               </span>
 
                               {!collapsed && (
                                 <>
-                                  <span className="flex-1">{item.title}</span>
+                                  <div className="flex-1 text-left">
+                                    <div className="flex items-center gap-2">
+                                      <span>{item.title}</span>
+                                      {item.isPro && (
+                                        <Badge
+                                          variant="outline"
+                                          className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-700 border-amber-500/30 text-[10px] px-2 py-0 font-semibold"
+                                        >
+                                          <Crown className="mr-1 h-3 w-3" />
+                                          PRO
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
                                   {item.badge && (
-                                    <Badge variant="secondary" className="mr-1 px-1.5 py-0">
+                                    <Badge className="bg-primary/10 text-primary border-primary/20 px-2 py-0">
                                       {item.badge}
                                     </Badge>
                                   )}
                                   <ChevronRight
                                     size={16}
                                     className={cn(
-                                      "text-muted-foreground transition-transform",
+                                      "text-muted-foreground transition-transform duration-200",
                                       openMenus[item.title] && "rotate-90"
                                     )}
                                   />
@@ -419,84 +432,100 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
                             </div>
                           </TooltipTrigger>
                           {collapsed && (
-                            <TooltipContent side="right" sideOffset={10} className="flex items-center gap-2">
-                              {item.title}
-                              {item.badge && (
-                                <Badge variant="secondary" className="px-1 py-0">
-                                  {item.badge}
-                                </Badge>
-                              )}
-                              {item.isPro && (
-                                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1 py-0">PRO</Badge>
-                              )}
+                            <TooltipContent side="right" sideOffset={15} className="max-w-xs">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 font-medium">
+                                  {item.title}
+                                  {item.isPro && (
+                                    <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-[10px] px-1 py-0">
+                                      <Crown className="mr-1 h-3 w-3" />
+                                      PRO
+                                    </Badge>
+                                  )}
+                                </div>
+                                {item.description && (
+                                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                                )}
+                                {item.wabaRequired && !hasWaba && (
+                                  <p className="text-xs text-orange-500">Requires WhatsApp connection</p>
+                                )}
+                              </div>
                             </TooltipContent>
                           )}
                         </Tooltip>
-                      </TooltipProvider>
-                    </button>
-                  </CollapsibleTrigger>
+                      </button>
+                    </CollapsibleTrigger>
 
-                  {!collapsed && (
-                    <CollapsibleContent className="mt-1 space-y-1 animate-in slide-in-from-left-1">
-                      {item.submenu.map((subItem) => (
-                        <Link
-                          key={subItem.href}
-                          href={subItem.href}
-                          className={cn(
-                            "flex items-center rounded-lg py-2 pl-9 pr-3 text-sm transition-colors", // Reduced padding to align with icon
-                            pathname === subItem.href
-                              ? "bg-muted text-foreground font-medium"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          {subItem.title}
-                        </Link>
-                      ))}
-                    </CollapsibleContent>
-                  )}
-                </Collapsible>
-              ) : (
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "group flex items-center transition-colors",
-                    collapsed ?
-                      "justify-center rounded-full h-10 w-10" :
-                      "rounded-lg px-3 py-2 text-sm font-medium",
-                    pathname === item.href
-                      ? collapsed
-                        ? "bg-primary text-white"
-                        : "bg-primary/10 text-primary"
-                      : collapsed
-                        ? "text-muted-foreground hover:bg-primary/10 hover:text-foreground"
-                        : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
-                    item.wabaRequired && !hasWaba && "opacity-60"
-                  )}
-                  onClick={(e) => {
-                    if (!handleItemClick(item)) {
-                      e.preventDefault();
-                    }
-                  }}
-                >
-                  <TooltipProvider>
+                    {!collapsed && (
+                      <CollapsibleContent className="mt-1 space-y-1">
+                        {item.submenu.map((subItem) => (
+                          <Link
+                            key={subItem.href}
+                            href={subItem.href}
+                            className={cn(
+                              "flex items-center rounded-lg py-2.5 pl-12 pr-4 text-sm transition-colors",
+                              pathname === subItem.href
+                                ? "bg-muted/50 text-foreground font-medium"
+                                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                            )}
+                          >
+                            {subItem.title}
+                          </Link>
+                        ))}
+                      </CollapsibleContent>
+                    )}
+                  </Collapsible>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "group flex items-center transition-all duration-200",
+                      collapsed 
+                        ? "justify-center h-12 w-12 rounded-xl mx-auto" 
+                        : "rounded-xl px-4 py-3 text-sm font-medium",
+                      pathname === item.href
+                        ? collapsed
+                          ? "bg-gradient-to-br from-primary to-primary/90 text-white shadow-lg shadow-primary/25"
+                          : "bg-gradient-to-r from-primary/10 to-primary/5 text-primary border border-primary/20"
+                        : collapsed
+                          ? "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                      item.wabaRequired && !hasWaba && "opacity-60"
+                    )}
+                    onClick={(e) => {
+                      if (!handleItemClick(item)) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
                     <Tooltip delayDuration={200}>
                       <TooltipTrigger asChild>
                         <div className={cn(
                           "flex items-center",
-                          !collapsed && "w-full gap-2" // Fix the gap between icon and text
+                          !collapsed && "w-full gap-3"
                         )}>
-                          <span className={cn(
-                            "flex items-center justify-center",
-                            collapsed ? "h-5 w-5" : "h-5 w-5" // Make icon size consistent
-                          )}>
+                          <span className="flex items-center justify-center">
                             {item.icon}
                           </span>
 
                           {!collapsed && (
                             <>
-                              <span className="flex-1">{item.title}</span>
+                              <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2">
+                                  <span>{item.title}</span>
+                                  {item.isPro && (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-700 border-amber-500/30 text-[10px] px-2 py-0 font-semibold"
+                                    >
+                                      <Crown className="mr-1 h-3 w-3" />
+                                      PRO
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
                               {item.badge && (
-                                <Badge variant="secondary" className="px-1.5 py-0">
+                                <Badge className="bg-primary/10 text-primary border-primary/20 px-2 py-0">
                                   {item.badge}
                                 </Badge>
                               )}
@@ -505,98 +534,143 @@ export default function Sidebar({ user, isCollapsed, onCollapsedChange }: Sideba
                         </div>
                       </TooltipTrigger>
                       {collapsed && (
-                        <TooltipContent side="right" sideOffset={10} className="flex items-center gap-2">
-                          {item.title}
-                          {item.badge && (
-                            <Badge variant="secondary" className="px-1 py-0">
-                              {item.badge}
-                            </Badge>
-                          )}
-                          {item.isPro && (
-                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1 py-0">PRO</Badge>
-                          )}
-                          {item.wabaRequired && !hasWaba && (
-                            <span className="text-xs text-muted-foreground">Requires WhatsApp</span>
-                          )}
+                        <TooltipContent side="right" sideOffset={15} className="max-w-xs">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 font-medium">
+                              {item.title}
+                              {item.isPro && (
+                                <Badge variant="outline" className="bg-amber-500/20 text-white -700 border-amber-500/30 text-[10px] px-1 py-0">
+                                  <Crown className="mr-1 h-3 w-3" />
+                                  PRO
+                                </Badge>
+                              )}
+                            </div>
+                            {item.description && (
+                              <p className="text-xs text-gray-200 -foreground">{item.description}</p>
+                            )}
+                            {item.wabaRequired && !hasWaba && (
+                              <p className="text-xs text-orange-500">Requires WhatsApp connection</p>
+                            )}
+                          </div>
                         </TooltipContent>
                       )}
                     </Tooltip>
-                  </TooltipProvider>
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
 
-
-      {/* User area - Simplified for collapsed state */}
-      {/* <div className={cn(
-        "mt-auto py-3",
-        collapsed ? "px-0" : "px-3"
-      )}>
-        <Separator className="mb-3" />
-
-        {user && (
-          <div className="space-y-2">
-            <div className={cn(
-              "flex items-center transition-colors rounded-lg",
-              collapsed ? "justify-center px-0" : "gap-3 p-2 text-sm"
-            )}>
-              <Avatar className={cn(
-                "border border-border",
-                collapsed ? "h-9 w-9" : "h-8 w-8"
+        {/* User section */}
+        <div className={cn(
+          "border-t p-4",
+          collapsed && "px-2"
+        )}>
+          {user && (
+            <div className="space-y-3">
+              <div className={cn(
+                "flex items-center transition-colors rounded-xl",
+                collapsed ? "justify-center" : "gap-3 p-3 bg-muted/30"
               )}>
-                <AvatarImage src={user.image} alt={user.name} />
-                <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                  {user.name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
+                <div className="relative">
+                  <Avatar className={cn(
+                    "border-2 border-background shadow-sm",
+                    collapsed ? "h-10 w-10" : "h-9 w-9"
+                  )}>
+                    <AvatarImage src={user.image} alt={user.name} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">
+                      {user.name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className={cn(
+                    "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
+                    user.role === 'admin' 
+                      ? "bg-gradient-to-r from-amber-500 to-orange-500" 
+                      : "bg-gradient-to-r from-green-500 to-emerald-500"
+                  )} />
+                </div>
+
+                {!collapsed && (
+                  <>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="truncate font-semibold leading-none text-sm">{user.name}</p>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-[10px] px-1.5 py-0 h-5",
+                            user.role === 'admin' 
+                              ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-700 border-amber-500/30"
+                              : "bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 border-green-500/30"
+                          )}
+                        >
+                          {user.role === 'admin' ? (
+                            <>
+                              <Crown className="mr-1 h-3 w-3" />
+                              Admin
+                            </>
+                          ) : (
+                            <>
+                              <Star className="mr-1 h-3 w-3" />
+                              Agent
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+
+                    <div className="flex gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-background/80"
+                            onClick={() => router.push('/settings/account')}
+                          >
+                            <Settings size={14} className="text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Settings</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {!collapsed && (
-                <>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="truncate font-medium leading-none mb-1">{user.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                  </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 h-9 text-muted-foreground hover:text-red-600 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                  onClick={handleSignOut}
+                >
+                  <LogOut size={14} />
+                  <span>Sign out</span>
+                </Button>
+              )}
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 rounded-full"
-                    onClick={() => router.push('/settings/account')}
-                  >
-                    <Settings size={14} className="text-muted-foreground" />
-                  </Button>
-                </>
+              {collapsed && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-10 h-10 rounded-xl text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors mx-auto"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut size={16} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Sign out</TooltipContent>
+                </Tooltip>
               )}
             </div>
-
-            {!collapsed && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2 h-8 text-muted-foreground"
-                onClick={handleSignOut}
-              >
-                <LogOut size={14} />
-                <span>Sign out</span>
-              </Button>
-            )}
-
-            {collapsed && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mt-2 w-10 h-10 rounded-full text-muted-foreground hover:text-destructive hover:bg-muted/70"
-                onClick={handleSignOut}
-              >
-                <LogOut size={15} />
-              </Button>
-            )}
-          </div>
-        )}
-      </div> */}
-    </aside>
+          )}
+        </div>
+      </aside>
+    </TooltipProvider>
   );
 }

@@ -16,7 +16,31 @@ import {
   List,
   ChevronDown,
   ArrowUpDown,
+  Plus,
+  Filter,
+  Download,
+  Upload,
+  Eye,
+  MoreVertical,
+  Sparkles,
+  TrendingUp,
+  Activity,
+  Users,
+  Target,
+  Calendar,
+  MessageSquare,
+  Layers,
+  Settings,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  XCircle,
+  RotateCcw,
+  Archive,
+  Star,
+  Crown
 } from "lucide-react";
+
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +49,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -41,7 +68,47 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { 
+  Card, 
+  CardContent, 
+  CardFooter, 
+  CardHeader,
+  CardTitle,
+  CardDescription 
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import PermissionCheck from "@/components/auth/PermissionCheck";
 
 // Interfaces
 interface Template {
@@ -82,6 +149,7 @@ export default function TemplatesPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("ANY");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [deletedTemplates, setDeletedTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,16 +162,17 @@ export default function TemplatesPage() {
     direction: 'ascending' | 'descending' | null;
   }>({ key: null, direction: null });
   const [showDeleted, setShowDeleted] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>("all");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
 
   // Fetch user's WABA accounts and templates on mount
   useEffect(() => {
     fetchUserData();
     fetchTemplates();
     fetchTeamMembers();
-    // Set a mock last synced time - in real app this would come from the API
     setLastSynced(new Date().toISOString());
   }, []);
 
@@ -199,36 +268,31 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleDeleteTemplate = async (templateId: string) => {
-    if (!confirm('Are you sure you want to delete this template?')) {
-      return;
-    }
-
+  const handleDeleteTemplate = async (template: Template) => {
     try {
-      const response = await fetch(`/api/templates/${templateId}`, {
+      const response = await fetch(`/api/templates/${template.id}`, {
         method: 'DELETE'
       });
 
       if (response.ok) {
         toast.success('Template deleted successfully');
         fetchTemplates();
-        setSelectedTemplates(prev => prev.filter(id => id !== templateId));
+        setSelectedTemplates(prev => prev.filter(id => id !== template.id));
       } else {
         toast.error('Failed to delete template');
       }
     } catch (error) {
       console.error('Failed to delete template:', error);
       toast.error('Failed to delete template');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setTemplateToDelete(null);
     }
   };
 
   const handleBulkDelete = async () => {
     if (selectedTemplates.length === 0) {
       toast.info('No templates selected');
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to delete ${selectedTemplates.length} template(s)?`)) {
       return;
     }
 
@@ -313,10 +377,12 @@ export default function TemplatesPage() {
 
     if (sortConfig.key && sortConfig.direction) {
       sortableTemplates.sort((a, b) => {
-        if (a[sortConfig.key as keyof Template] < b[sortConfig.key as keyof Template]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (a[sortConfig.key as keyof Template] > b[sortConfig.key as keyof Template]) {
+const aValue = a[sortConfig.key as keyof Template] ?? '';
+const bValue = b[sortConfig.key as keyof Template] ?? '';
+if (aValue < bValue) {
+  return sortConfig.direction === 'ascending' ? -1 : 1;
+}
+if (aValue > bValue) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
@@ -338,27 +404,74 @@ export default function TemplatesPage() {
         selectedAgent === "all" ||
         template.createdBy === selectedAgent;
 
-      return matchesSearch && matchesAgent;
-    });
-  }, [sortedTemplates, searchQuery, selectedAgent]);
+      const matchesCategory =
+        selectedCategory === "all" ||
+        template.category.toLowerCase() === selectedCategory.toLowerCase();
 
-  // Get status display with colored dot
+      return matchesSearch && matchesAgent && matchesCategory;
+    });
+  }, [sortedTemplates, searchQuery, selectedAgent, selectedCategory]);
+
+  // Get status display with styled badges
   const getStatusDisplay = (status: string) => {
-    const statusMap: Record<string, { color: string, label: string }> = {
-      'approved': { color: 'bg-green-500', label: 'Approved' },
-      'pending': { color: 'bg-yellow-500', label: 'Pending' },
-      'rejected': { color: 'bg-red-500', label: 'Rejected' },
-      'deleted': { color: 'bg-gray-500', label: 'Deleted' }
+    const statusConfig = {
+      'approved': { 
+        variant: "default" as const, 
+        className: "bg-green-100 text-green-700 border-green-200", 
+        icon: CheckCircle,
+        label: 'Approved' 
+      },
+      'pending': { 
+        variant: "secondary" as const, 
+        className: "bg-yellow-100 text-yellow-700 border-yellow-200", 
+        icon: Clock,
+        label: 'Pending' 
+      },
+      'rejected': { 
+        variant: "destructive" as const, 
+        className: "bg-red-100 text-red-700 border-red-200", 
+        icon: XCircle,
+        label: 'Rejected' 
+      },
+      'deleted': { 
+        variant: "outline" as const, 
+        className: "bg-gray-100 text-gray-600 border-gray-200", 
+        icon: Archive,
+        label: 'Deleted' 
+      }
     };
 
-    const statusInfo = statusMap[status.toLowerCase()] || { color: 'bg-gray-300', label: status };
+    const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
 
     return (
-      <div className="flex items-center gap-2">
-        <div className={`${statusInfo.color} h-2.5 w-2.5 rounded-full`}></div>
-        <span>{statusInfo.label}</span>
-      </div>
+      <Badge variant={config.variant} className={cn("gap-1", config.className)}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
     );
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'marketing':
+        return <TrendingUp className="h-4 w-4 text-blue-600" />;
+      case 'utility':
+        return <Settings className="h-4 w-4 text-green-600" />;
+      case 'authentication':
+        return <Target className="h-4 w-4 text-purple-600" />;
+      default:
+        return <FileText className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'media':
+        return <Layers className="h-4 w-4 text-orange-600" />;
+      default:
+        return <MessageSquare className="h-4 w-4 text-blue-600" />;
+    }
   };
 
   const handleSelectAll = () => {
@@ -383,489 +496,749 @@ export default function TemplatesPage() {
     }
 
     if (sortConfig.direction === 'ascending') {
-      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-green-600" />;
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-primary" />;
     }
 
     if (sortConfig.direction === 'descending') {
-      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-green-600 rotate-180" />;
+      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-primary rotate-180" />;
     }
 
     return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-gray-400" />;
   };
 
-  return (
-    <Layout>
-      <div className="h-full bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-medium text-gray-900">Templates</h1>
-              <span className="bg- rounded-full shadow px-4 bg-primary/20 text-green-700 font-medium">
-                {showDeleted ? deletedTemplates.length : templates.length} total
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={() => router.push('/templates/create')}
-                disabled={wabaAccounts.length === 0}
-                className="bg-primary -600 hover:bg-primary/80 cursor-pointer text-white px-4 py-2"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                New Template
-              </Button>
-            </div>
-          </div>
-        </div>
+  // Calculate stats
+  const totalTemplates = templates.length;
+  const approvedTemplates = templates.filter(t => t.status === 'approved').length;
+  const pendingTemplates = templates.filter(t => t.status === 'pending').length;
+  const totalUsage = templates.reduce((sum, t) => sum + t.useCount, 0);
 
-        {/* Filters */}
-        <div className="bg-white border-b px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1">
-              {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search template..."
-                  className="pl-10 bg-gray-50 border-gray-200"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+  return (
+    <ProtectedRoute resource="templates" action="read">
+      <Layout>
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
+            <div className="  mx-auto p-6 space-y-8">
+              {/* Header Section */}
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl">
+                      <FileText className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        Message Templates
+                      </h1>
+                      <p className="text-muted-foreground font-medium">
+                        Create and manage WhatsApp Business message templates
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      toast.success("Templates exported successfully");
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                  
+                  <PermissionCheck resource="templates" action="write" fallback={null}>
+                    <Button
+                      onClick={() => router.push('/templates/create')}
+                      disabled={wabaAccounts.length === 0}
+                      className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Plus className="h-4 w-4" />
+                      New Template
+                    </Button>
+                  </PermissionCheck>
+                </div>
               </div>
 
-              {/* Filter Dropdowns */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
-                    All WABAs
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>All WABAs</DropdownMenuItem>
-                  {wabaAccounts.map(account => (
-                    <DropdownMenuItem key={account.wabaId}>
-                      {account.businessName}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-blue-600">Total Templates</p>
+                        <p className="text-3xl font-bold text-blue-900">{totalTemplates}</p>
+                        <p className="text-xs text-blue-600/80">
+                          {totalTemplates > 0 ? '+12% from last month' : 'Get started'}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-blue-200/50 rounded-xl">
+                        <FileText className="h-6 w-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                 <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
-                    {showDeleted ? 'Deleted' : (selectedStatus === 'ANY' ? 'All Status' : selectedStatus)}
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => {
-                    setSelectedStatus('ANY');
-                    setShowDeleted(false);
-                  }}>All Status</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setSelectedStatus('APPROVED');
-                    setShowDeleted(false);
-                  }}>Approved</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setSelectedStatus('PENDING');
-                    setShowDeleted(false);
-                  }}>Pending</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setSelectedStatus('REJECTED');
-                    setShowDeleted(false);
-                  }}>Rejected</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                    setShowDeleted(true);
-                  }}>Deleted</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-green-600">Approved</p>
+                        <p className="text-3xl font-bold text-green-900">{approvedTemplates}</p>
+                        <p className="text-xs text-green-600/80">
+                          {((approvedTemplates / totalTemplates) * 100 || 0).toFixed(0)}% approval rate
+                        </p>
+                      </div>
+                      <div className="p-3 bg-green-200/50 rounded-xl">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
-                    All categories
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>All categories</DropdownMenuItem>
-                  <DropdownMenuItem>MARKETING</DropdownMenuItem>
-                  <DropdownMenuItem>UTILITY</DropdownMenuItem>
-                  <DropdownMenuItem>AUTHENTICATION</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-amber-600">Pending Review</p>
+                        <p className="text-3xl font-bold text-amber-900">{pendingTemplates}</p>
+                        <p className="text-xs text-amber-600/80">
+                          {pendingTemplates > 0 ? 'Awaiting approval' : 'All reviewed'}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-amber-200/50 rounded-xl">
+                        <Clock className="h-6 w-6 text-amber-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                 <Button className="bg-primary/20 -50 text-green-700 border-green-200 hover:bg-green-100">
-                    {selectedAgent === "all" ? "All agents" :
-                      teamMembers.find(m => m.id === selectedAgent)?.name || "All agents"}
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSelectedAgent("all")}>
-                    All agents
-                  </DropdownMenuItem>
-                  {teamMembers.map(member => (
-                    <DropdownMenuItem
-                      key={member.id}
-                      onClick={() => setSelectedAgent(member.id)}
-                    >
-                      {member.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100/50 hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-purple-600">Total Usage</p>
+                        <p className="text-3xl font-bold text-purple-900">{totalUsage.toLocaleString()}</p>
+                        <p className="text-xs text-purple-600/80">
+                          {totalUsage > 0 ? '+25% this week' : 'No usage yet'}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-purple-200/50 rounded-xl">
+                        <Activity className="h-6 w-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            {/* Right side icons */}
-            <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleSyncTemplates}
-                      disabled={wabaAccounts.length === 0 || syncing}
-                      className="text-gray-500"
-                    >
-                      {syncing ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-5 w-5" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Sync Templates</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* Filters & Controls */}
+              <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
+                      <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                          placeholder="Search templates..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-10 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                          <SelectTrigger className="w-36 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ANY">All Status</SelectItem>
+                            <SelectItem value="APPROVED">Approved</SelectItem>
+                            <SelectItem value="PENDING">Pending</SelectItem>
+                            <SelectItem value="REJECTED">Rejected</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                          <SelectTrigger className="w-40 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                            <SelectItem value="utility">Utility</SelectItem>
+                            <SelectItem value="authentication">Authentication</SelectItem>
+                          </SelectContent>
+                        </Select>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`text-gray-500 ${viewMode === 'grid' ? 'bg-primary text-white -100' : ''}`}
-                      onClick={() => setViewMode('grid')}
-                    >
-                      <LayoutGrid className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Grid View</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                        <Select value={selectedAgent} onValueChange={setSelectedAgent}>
+                          <SelectTrigger className="w-36 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Agents</SelectItem>
+                            {teamMembers.map(member => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`text-gray-500 ${viewMode === 'list' ? 'bg-primary text-white' : ''}`}
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>List View</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDeleted(!showDeleted)}
+                          className={cn(
+                            "gap-2",
+                            showDeleted && "bg-red-50 text-red-700 border-red-200"
+                          )}
+                        >
+                          <Archive className="h-4 w-4" />
+                          {showDeleted ? 'Show Active' : 'Show Deleted'}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSyncTemplates}
+                            disabled={wabaAccounts.length === 0 || syncing}
+                            className="gap-2"
+                          >
+                            {syncing ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                            Sync
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Sync templates from WhatsApp</TooltipContent>
+                      </Tooltip>
+                      
+                      <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+                        <Button
+                          variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('grid')}
+                          className="h-8 px-3"
+                        >
+                          <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={viewMode === 'list' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('list')}
+                          className="h-8 px-3"
+                        >
+                          <List className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Content */}
-        <div className="px-6 py-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : (
-            <>
+              {/* Bulk Actions */}
               {selectedTemplates.length > 0 && (
-                <div className="p-2 mb-4 bg-white rounded-lg border flex items-center justify-between">
-                  <div className="text-sm text-gray-500 pl-4">
-                    {selectedTemplates.length} template(s) selected
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={handleBulkDelete}
-                      className="h-8"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" /> Bulk Delete
-                    </Button>
-                  </div>
-                </div>
+                <Card className="border-0 shadow-sm bg-amber-50 border-amber-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm font-medium text-amber-900">
+                          {selectedTemplates.length} template{selectedTemplates.length > 1 ? 's' : ''} selected
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedTemplates([])}
+                          className="h-8"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={handleBulkDelete}
+                          className="h-8 gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Selected
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
-              {viewMode === 'list' ? (
-                <div className="bg-white rounded-lg border">
-                  <Table>
-                    <TableHeader className="bg-accent font-bold">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={selectedTemplates.length === filteredTemplates.length && filteredTemplates.length > 0}
-                            onCheckedChange={handleSelectAll}
-                          />
-                        </TableHead>
-                        <TableHead
-                          className="text-gray-600 font-semibold cursor-pointer"
-                          onClick={() => requestSort('name')}
-                        >
-                          Template name
-                          {getSortIcon('name')}
-                        </TableHead>
-                        <TableHead className="text-gray-600 font-semibold">Content</TableHead>
-                        <TableHead
-                          className="text-gray-600 font-semibold cursor-pointer"
-                          onClick={() => requestSort('wabaId')}
-                        >
-                          WABA
-                          {getSortIcon('wabaId')}
-                        </TableHead>
-                        <TableHead
-                          className="text-gray-600 font-semibold cursor-pointer"
-                          onClick={() => requestSort('category')}
-                        >
-                          Category
-                          {getSortIcon('category')}
-                        </TableHead>
-                        <TableHead className="text-gray-600 font-semibold text-center">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTemplates.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                            No templates found. Try adjusting your search or create a new one.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredTemplates.map((template) => (
-                          <TableRow key={template.id} className="border-b hover:bg-gray-50">
-                            <TableCell>
-                              <Checkbox
-                                checked={selectedTemplates.includes(template.id)}
-                                onCheckedChange={() => handleSelectTemplate(template.id)}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-gray-900">{template.name}</div>
-                              <div className="text-xs text-gray-400">{getStatusDisplay(template.status)}</div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-gray-600 max-w-xs">
-                                <div className="truncate">{template.content}</div>
-                                <div className="text-gray-400 text-sm">...</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-gray-700">
-                                {wabaAccounts[0]?.businessName || 'DoubleTick'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-gray-700 uppercase">
-                                {template.category}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex justify-end gap-1">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                                        onClick={() => handleDuplicateTemplate(template)}
-                                      >
-                                        <Copy className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Duplicate Template</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                                        onClick={() => handleViewTemplate(template.id)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Edit Template</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                                        onClick={() =>
-                                          template.status === 'deleted'
-                                            ? handleRestoreTemplate(template.id)
-                                            : handleDeleteTemplate(template.id)
-                                        }
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {template.status === 'deleted' ? 'Restore Template' : 'Delete Template'}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-
-                                {/* <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                                      >
-                                        <Code className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>API Integration</TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider> */}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filteredTemplates.length === 0 ? (
-                    <div className="col-span-full text-center py-12 text-gray-500">
-                      No templates found. Try adjusting your search or create a new one.
+              {/* Content */}
+              {loading ? (
+                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                  <CardContent className="p-12">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="relative">
+                        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <FileText className="w-6 h-6 text-primary animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-2">
+                        <h3 className="text-lg font-semibold text-slate-900">Loading Templates</h3>
+                        <p className="text-sm text-muted-foreground">Fetching your message templates...</p>
+                      </div>
                     </div>
-                  ) : (
-                    filteredTemplates.map((template) => (
-                      <Card key={template.id} className="overflow-hidden h-fit">
-                        <div className="p-4 border-b flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              checked={selectedTemplates.includes(template.id)}
-                              onCheckedChange={() => handleSelectTemplate(template.id)}
-                            />
-                            <div>
-                              <div className="font-medium text-gray-900 truncate max-w-[180px]">
-                                {template.name}
+                  </CardContent>
+                </Card>
+              ) : filteredTemplates.length === 0 ? (
+                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                  <CardContent className="p-12">
+                    <div className="text-center space-y-6">
+                      <div className="relative">
+                        <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mx-auto">
+                          <FileText className="h-12 w-12 text-primary" />
+                        </div>
+                     <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center">
+                          <Sparkles className="h-4 w-4 text-white" />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <h3 className="text-2xl font-bold text-slate-900">
+                          {searchQuery || selectedStatus !== "ANY" || selectedCategory !== "all" || showDeleted
+                            ? "No templates found"
+                            : "Ready to create your first template?"
+                          }
+                        </h3>
+                        <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                          {searchQuery || selectedStatus !== "ANY" || selectedCategory !== "all" || showDeleted
+                            ? "Try adjusting your search or filter criteria to find what you're looking for."
+                            : "Create professional message templates for your WhatsApp Business communications and boost engagement."
+                          }
+                        </p>
+                      </div>
+
+                      {!searchQuery && selectedStatus === "ANY" && selectedCategory === "all" && !showDeleted && (
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                          <PermissionCheck resource="templates" action="write" fallback={null}>
+                            <Button 
+                              onClick={() => router.push('/templates/create')}
+                              disabled={wabaAccounts.length === 0}
+                              className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
+                              size="lg"
+                            >
+                              <Plus className="h-5 w-5" />
+                              Create Your First Template
+                            </Button>
+                          </PermissionCheck>
+                          
+                          <Button 
+                            variant="outline" 
+                            size="lg"
+                            className="gap-2"
+                            onClick={handleSyncTemplates}
+                            disabled={wabaAccounts.length === 0 || syncing}
+                          >
+                            {syncing ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-5 w-5" />
+                            )}
+                            Sync from WhatsApp
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-6">
+                  {viewMode === 'grid' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {filteredTemplates.map((template) => (
+                        <Card 
+                          key={template.id} 
+                          className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-all duration-200 group overflow-hidden"
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3 flex-1">
+                                <Checkbox
+                                  checked={selectedTemplates.includes(template.id)}
+                                  onCheckedChange={() => handleSelectTemplate(template.id)}
+                                />
+                                <div className="flex items-center gap-2">
+                                  {getTypeIcon(template.type)}
+                                  {getCategoryIcon(template.category)}
+                                </div>
                               </div>
-                              <div className="text-xs">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleViewTemplate(template.id)}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleViewTemplate(template.id)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit Template
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDuplicateTemplate(template)}>
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Duplicate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {template.status === 'deleted' ? (
+                                    <DropdownMenuItem onClick={() => handleRestoreTemplate(template.id)}>
+                                      <RotateCcw className="h-4 w-4 mr-2" />
+                                      Restore
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      className="text-red-600 focus:text-red-600"
+                                      onClick={() => {
+                                        setTemplateToDelete(template);
+                                        setIsDeleteDialogOpen(true);
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <CardTitle 
+                                className="text-lg font-semibold text-slate-900 group-hover:text-primary transition-colors cursor-pointer line-clamp-1"
+                                onClick={() => handleViewTemplate(template.id)}
+                              >
+                                {template.name}
+                              </CardTitle>
+                              <div className="flex items-center gap-2">
                                 {getStatusDisplay(template.status)}
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {template.category.toLowerCase()}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {template.language}
+                                </Badge>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-xs text-gray-500 uppercase">
-                            {template.category}
-                          </div>
+                          </CardHeader>
+                          
+                          <CardContent className="space-y-4 pb-4">
+                            <div className="space-y-2">
+                              <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                                {template.content}
+                              </p>
+                              {template.variables > 0 && (
+                                <div className="flex items-center gap-1 text-xs text-amber-600">
+                                  <Settings className="h-3 w-3" />
+                                  {template.variables} variable{template.variables > 1 ? 's' : ''}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-muted-foreground">Usage Count</p>
+                                <p className="font-medium">{template.useCount.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Last Used</p>
+                                <p className="font-medium">
+                                  {template.lastUsed ? new Date(template.lastUsed).toLocaleDateString() : 'Never'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {template.rejectionReason && (
+                              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <p className="text-sm font-medium text-red-800">Rejection Reason</p>
+                                    <p className="text-sm text-red-700 mt-1">{template.rejectionReason}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                          
+                          <CardFooter className="pt-0">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground w-full">
+                              <span>Created {new Date(template.createdAt).toLocaleDateString()}</span>
+                              {template.approvedAt && (
+                                <span>Approved {new Date(template.approvedAt).toLocaleDateString()}</span>
+                              )}
+                            </div>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-slate-50/80 hover:bg-slate-50">
+                                <TableHead className="w-12">
+                                  <Checkbox
+                                    checked={selectedTemplates.length === filteredTemplates.length && filteredTemplates.length > 0}
+                                    onCheckedChange={handleSelectAll}
+                                  />
+                                </TableHead>
+                                <TableHead
+                                  className="font-semibold text-slate-700 cursor-pointer"
+                                  onClick={() => requestSort('name')}
+                                >
+                                  Template Name
+                                  {getSortIcon('name')}
+                                </TableHead>
+                                <TableHead className="font-semibold text-slate-700">Content</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                                <TableHead
+                                  className="font-semibold text-slate-700 cursor-pointer"
+                                  onClick={() => requestSort('category')}
+                                >
+                                  Category
+                                  {getSortIcon('category')}
+                                </TableHead>
+                                <TableHead className="font-semibold text-slate-700">Usage</TableHead>
+                                <TableHead className="font-semibold text-slate-700">Last Used</TableHead>
+                                <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredTemplates.map((template) => (
+                                <TableRow key={template.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <TableCell>
+                                    <Checkbox
+                                      checked={selectedTemplates.includes(template.id)}
+                                      onCheckedChange={() => handleSelectTemplate(template.id)}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="space-y-1">
+                                      <div 
+                                        className="font-medium text-slate-900 hover:text-primary cursor-pointer transition-colors"
+                                        onClick={() => handleViewTemplate(template.id)}
+                                      >
+                                        {template.name}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {getTypeIcon(template.type)}
+                                        <span className="text-xs text-muted-foreground">{template.language}</span>
+                                        {template.variables > 0 && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {template.variables} vars
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="max-w-md">
+                                      <p className="text-sm text-slate-600 line-clamp-2">
+                                        {template.content}
+                                      </p>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    {getStatusDisplay(template.status)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      {getCategoryIcon(template.category)}
+                                      <span className="capitalize">{template.category.toLowerCase()}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm">
+                                      <div className="font-medium">{template.useCount.toLocaleString()}</div>
+                                      <div className="text-muted-foreground">times</div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm">
+                                      {template.lastUsed ? (
+                                        <>
+                                          <div className="font-medium">
+                                            {new Date(template.lastUsed).toLocaleDateString()}
+                                          </div>
+                                          <div className="text-muted-foreground">
+                                            {new Date(template.lastUsed).toLocaleTimeString([], { 
+                                              hour: '2-digit', 
+                                              minute: '2-digit' 
+                                            })}
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <span className="text-muted-foreground">Never</span>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end items-center gap-1">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleViewTemplate(template.id)}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Eye className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>View Template</TooltipContent>
+                                      </Tooltip>
+                                      
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDuplicateTemplate(template)}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Copy className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Duplicate Template</TooltipContent>
+                                      </Tooltip>
+                                      
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <MoreVertical className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-48">
+                                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem onClick={() => handleViewTemplate(template.id)}>
+                                            <Edit className="h-4 w-4 mr-2" />
+                                            Edit Template
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem>
+                                            <Code className="h-4 w-4 mr-2" />
+                                            API Integration
+                                          </DropdownMenuItem>
+                                          <DropdownMenuSeparator />
+                                          {template.status === 'deleted' ? (
+                                            <DropdownMenuItem onClick={() => handleRestoreTemplate(template.id)}>
+                                              <RotateCcw className="h-4 w-4 mr-2" />
+                                              Restore
+                                            </DropdownMenuItem>
+                                          ) : (
+                                            <DropdownMenuItem
+                                              className="text-red-600 focus:text-red-600"
+                                              onClick={() => {
+                                                setTemplateToDelete(template);
+                                                setIsDeleteDialogOpen(true);
+                                              }}
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
                         </div>
-                        <CardContent className="p-4">
-                          <div className="text-gray-600 h-20 overflow-hidden text-sm">
-                            {template.content}
-                          </div>
-                        </CardContent>
-                        <CardFooter className="p-2 bg-gray-50 border-t -mt-16 flex justify-end gap-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                                  onClick={() => handleDuplicateTemplate(template)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Duplicate Template</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                              onClick={() => handleViewTemplate(template.id)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Edit Template</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                                  onClick={() =>
-                                    template.status === 'deleted'
-                                      ? handleRestoreTemplate(template.id)
-                                      : handleDeleteTemplate(template.id)
-                                  }
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {template.status === 'deleted' ? 'Restore Template' : 'Delete Template'}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          {/* <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                                >
-                                  <Code className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>API Integration</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider> */}
-                        </CardFooter>
-                      </Card>
-                    ))
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
               )}
-            </>
-          )}
-        </div>
-      </div>
-    </Layout>
+
+              {/* Delete Confirmation Dialog */}
+              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent className="sm:max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5" />
+                      Delete Template?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. The template will be permanently deleted and cannot be used for sending messages.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  
+                  {templateToDelete && (
+                    <div className="py-4">
+                      <div className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 border">
+                        <div className="p-2 bg-gradient-to-br from-red-100 to-red-200 rounded-lg">
+                          <FileText className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-900">{templateToDelete.name}</div>
+                          <div className="text-sm text-slate-600">
+                            {templateToDelete.category} • Used {templateToDelete.useCount} times
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {templateToDelete.status === 'approved' && (
+                        <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-amber-800">Warning: This template is approved</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                              Deleting an approved template will remove it from your available templates for messaging.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => templateToDelete && handleDeleteTemplate(templateToDelete)}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete Template
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        </TooltipProvider>
+      </Layout>
+    </ProtectedRoute>
   );
 }

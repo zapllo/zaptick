@@ -25,6 +25,9 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    // Update last login time
+    user.lastLoginAt = new Date();
+    await user.save();
 
     // Generate token
     const token = createToken(user);
