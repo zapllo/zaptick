@@ -583,9 +583,9 @@ export default function IntegrationsPage() {
         <Card className="mt-8">
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <h3 className="font-semibold mb-1">Couldn't find the App you're looking for?</h3>
+              <h3 className="font-semibold mb-1">Couldn&apos;t find the App you&apos;re looking for?</h3>
               <p className="text-sm text-muted-foreground">
-                Let us know what integration you need and we'll consider adding it.
+                Let us know what integration you need and we&apos;l consider adding it.
               </p>
             </div>
             <Button variant="outline" className="text-primary border-primary hover:bg-primary hover:text-white">
@@ -603,7 +603,7 @@ export default function IntegrationsPage() {
               </div>
               <h3 className="font-semibold mb-2">No integrations found</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                We couldn't find any integrations matching your search criteria. Try adjusting your filters or search terms.
+                We couldn&apos;t find any integrations matching your search criteria. Try adjusting your filters or search terms.
               </p>
               <Button 
                 variant="outline" 

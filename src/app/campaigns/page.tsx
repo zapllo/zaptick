@@ -1145,7 +1145,7 @@ const CampaignsPage = () => {
                       <div>
                         <p className="font-medium text-blue-800">New copy will be created as a draft</p>
                         <p className="text-sm text-blue-700 mt-1">
-                          You'll be able to modify the campaign before launching it.
+                          You&apos;ll be able to modify the campaign before launching it.
                         </p>
                       </div>
                     </div>

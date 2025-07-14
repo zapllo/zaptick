@@ -1139,7 +1139,7 @@ export default function WorkflowsPage() {
                     <div className="p-2 bg-gradient-to-br from-blue-500/10 to-blue-600/20 rounded-lg">
                       <Workflow className="h-5 w-5 text-blue-600" />
                     </div>
-                    Create New Workflow
+                    Create New Workflow 
                   </DialogTitle>
                   <DialogDescription>
                     Create a new workflow to automate complex customer interactions and sequences.
@@ -1176,7 +1176,7 @@ export default function WorkflowsPage() {
                       <div>
                         <h4 className="font-medium text-blue-900">Getting Started</h4>
                         <p className="text-sm text-blue-700 mt-1">
-                          After creation, you'll be taken to the visual workflow builder where you can drag and drop nodes to create your automation sequence.
+                          After creation, you&apos;ll be taken to the visual workflow builder where you can drag and drop nodes to create your automation sequence.
                         </p>
                       </div>
                     </div>
