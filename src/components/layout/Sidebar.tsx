@@ -656,7 +656,7 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full gap-2 h-9 text-muted-foreground hover:text-red-600 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                  className="w-full gap-2 h-9 text-muted-foreground hover:text-red-600 hover:border-red-200 hover:bg-red-50 wark:hover:bg-red-950/50 transition-colors"
                   onClick={handleSignOut}
                 >
                   <LogOut size={14} />
@@ -670,7 +670,7 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-10 h-10 rounded-xl text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors mx-auto"
+                      className="w-10 h-10 rounded-xl text-muted-foreground hover:text-red-600 hover:bg-red-50 wark:hover:bg-red-950/50 transition-colors mx-auto"
                       onClick={handleSignOut}
                     >
                       <LogOut size={16} />

@@ -66,7 +66,7 @@ export default function TestimonialsSection() {
   return (
     <section id="testimonials" ref={ref} className="container mx-auto py-20 px-4 md:px-8">
       <div className="text-center mb-16">
-        <Badge className="mb-4 px-3 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
+        <Badge className="mb-4 px-3 py-1 bg-orange-100 text-orange-800 wark:bg-orange-900 wark:text-orange-300">
           Customer Success
         </Badge>
         <h2 className="text-3xl md:text-5xl font-bold mb-4">Loved by businesses worldwide</h2>
@@ -83,7 +83,7 @@ export default function TestimonialsSection() {
           >
             {testimonials.map((testimonial, index) => (
               <div key={index} className="min-w-full px-4">
-                <Card className="p-8 md:p-10 bg-white dark:bg-gray-800 shadow-lg border-none">
+                <Card className="p-8 md:p-10 bg-white wark:bg-gray-800 shadow-lg border-none">
                   <div className="flex flex-col md:flex-row gap-8">
                     <div className="md:w-1/3">
                       <div className="flex items-center gap-4 mb-4">
@@ -111,7 +111,7 @@ export default function TestimonialsSection() {
                       </div>
                       <div className="grid grid-cols-1 gap-4 mb-6">
                         {Object.entries(testimonial.metrics).map(([key, value], i) => (
-                          <div key={i} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                          <div key={i} className="bg-gray-50 wark:bg-gray-700 rounded-lg p-3">
                             <div className="flex justify-between items-center">
                               <p className="text-sm text-muted-foreground capitalize">
                                 {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -119,12 +119,12 @@ export default function TestimonialsSection() {
                               <p className={`text-sm font-bold ${
                                 value.startsWith('+') ? 'text-green-500' :
                                 value.startsWith('-') ? 'text-blue-500' :
-                                'text-gray-700 dark:text-gray-300'
+                                'text-gray-700 wark:text-gray-300'
                               }`}>
                                 {value}
                               </p>
                             </div>
-                            <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full mt-2">
+                            <div className="h-1.5 bg-gray-200 wark:bg-gray-600 rounded-full mt-2">
                               <motion.div
                                 className={`h-full rounded-full ${
                                   value.startsWith('+') ? 'bg-green-500' :
@@ -141,14 +141,14 @@ export default function TestimonialsSection() {
                       </div>
                     </div>
                     <div className="md:w-2/3 relative">
-                      <Quote className="absolute top-0 left-0 h-10 w-10 text-emerald-100 dark:text-emerald-900/50" />
+                      <Quote className="absolute top-0 left-0 h-10 w-10 text-emerald-100 wark:text-emerald-900/50" />
                       <div className="md:pl-12 pt-12 md:pt-0">
                         <p className="text-lg md:text-xl leading-relaxed mb-6">
                           &quot;{testimonial.content}&quot;
                         </p>
                         <div className="flex gap-4">
                           <Button variant="outline" size="sm">Read Case Study</Button>
-                          <Button size="sm" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/70">
+                          <Button size="sm" className="bg-emerald-50 text-emerald-700 wark:bg-emerald-900/50 wark:text-emerald-300 hover:bg-emerald-100 wark:hover:bg-emerald-900/70">
                             Watch Video
                           </Button>
                         </div>
@@ -166,7 +166,7 @@ export default function TestimonialsSection() {
             <button
               key={index}
               className={`w-2.5 h-2.5 rounded-full ${
-                index === activeIndex ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-700'
+                index === activeIndex ? 'bg-emerald-500' : 'bg-gray-300 wark:bg-gray-700'
               }`}
               onClick={() => setActiveIndex(index)}
               aria-label={`Go to testimonial ${index + 1}`}
@@ -175,7 +175,7 @@ export default function TestimonialsSection() {
         </div>
 
         <button
-          className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 md:-translate-x-0 bg-white dark:bg-gray-800 shadow-lg p-2 rounded-full z-10"
+          className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 md:-translate-x-0 bg-white wark:bg-gray-800 shadow-lg p-2 rounded-full z-10"
           onClick={prevTestimonial}
           aria-label="Previous testimonial"
         >
@@ -183,7 +183,7 @@ export default function TestimonialsSection() {
         </button>
 
         <button
-          className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 md:translate-x-0 bg-white dark:bg-gray-800 shadow-lg p-2 rounded-full z-10"
+          className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 md:translate-x-0 bg-white wark:bg-gray-800 shadow-lg p-2 rounded-full z-10"
           onClick={nextTestimonial}
           aria-label="Next testimonial"
         >

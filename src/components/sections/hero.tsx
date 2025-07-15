@@ -25,7 +25,7 @@ export default function Hero() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <Badge className="mb-4 px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">WhatsApp Business API</Badge>
+            <Badge className="mb-4 px-3 py-1 bg-emerald-100 text-emerald-800 wark:bg-emerald-900 wark:text-emerald-300">WhatsApp Business API</Badge>
           </motion.div>
           <motion.h1
             className="text-4xl md:text-6xl font-bold leading-tight"
@@ -106,7 +106,7 @@ export default function Hero() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
-          <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 p-6 rounded-3xl shadow-xl border border-emerald-200/20 dark:border-emerald-900/30">
+          <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 p-6 rounded-3xl shadow-xl border border-emerald-200/20 wark:border-emerald-900/30">
             <Image
               src="/whatsapp-dashboard.png"
               alt="ZapTick Dashboard"
@@ -117,7 +117,7 @@ export default function Hero() {
 
             {/* Live notification animation */}
             <motion.div
-              className="absolute -top-6 -right-6 bg-white dark:bg-gray-800 shadow-lg rounded-full p-3"
+              className="absolute -top-6 -right-6 bg-white wark:bg-gray-800 shadow-lg rounded-full p-3"
               animate={{ y: [0, -10, 0] }}
               transition={{ repeat: Infinity, duration: 2 }}
             >
@@ -126,7 +126,7 @@ export default function Hero() {
 
             {/* Interactive notification widget */}
             <motion.div
-              className="absolute bottom-4 left-4 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-4"
+              className="absolute bottom-4 left-4 bg-white wark:bg-gray-800 shadow-lg rounded-xl p-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.5 }}
@@ -147,7 +147,7 @@ export default function Hero() {
 
             {/* Chat conversation bubble */}
             <motion.div
-              className="absolute top-10 right-0 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-4 max-w-[240px]"
+              className="absolute top-10 right-0 bg-white wark:bg-gray-800 shadow-lg rounded-xl p-4 max-w-[240px]"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 1, duration: 0.5 }}
@@ -157,7 +157,7 @@ export default function Hero() {
                 <Image src="/avatar-customer.png" alt="Customer" width={32} height={32} className="rounded-full" />
                 <div>
                   <p className="text-xs font-semibold mb-1">John (Customer)</p>
-                  <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg text-xs">
+                  <div className="bg-gray-100 wark:bg-gray-700 p-2 rounded-lg text-xs">
                     Hi there! I&apos;m interested in your products. Can you help me?
                   </div>
                   <div className="flex justify-between items-center mt-1">
@@ -181,7 +181,7 @@ export default function Hero() {
         ].map((stat, index) => (
           <motion.div
             key={index}
-            className="bg-white/50 dark:bg-gray-900/50 rounded-xl p-4 text-center border border-emerald-100 dark:border-emerald-900/50"
+            className="bg-white/50 wark:bg-gray-900/50 rounded-xl p-4 text-center border border-emerald-100 wark:border-emerald-900/50"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}

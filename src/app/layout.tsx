@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import Script from "next/script";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -29,29 +28,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ colorScheme: 'light' }}>
       <head>
         <Script
           src="https://checkout.razorpay.com/v1/checkout.js"
-          strategy="afterInteractive" // Ensures the script loads before your app's JavaScript
+          strategy="afterInteractive"
           async
         />
+        <meta name="color-scheme" content="light" />
       </head>
       <body
         className={`${roboto.variable} ${robotoMono.variable} antialiased`}
+        style={{ colorScheme: 'light' }}
       >
         <div id="fb-root"></div>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          <Toaster />
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
+        <Toaster />
+        <AuthProvider>
+          {children}
+        </AuthProvider>
 
         {/* Facebook SDK Script */}
         <Script id="facebook-sdk" strategy="afterInteractive">

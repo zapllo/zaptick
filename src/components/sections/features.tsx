@@ -117,7 +117,7 @@ export default function FeaturesSection() {
   return (
     <section id="features" ref={ref} className="container mx-auto py-20 px-4 md:px-8">
       <div className="text-center mb-16">
-        <Badge className="mb-4 px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">Features</Badge>
+        <Badge className="mb-4 px-3 py-1 bg-emerald-100 text-emerald-800 wark:bg-emerald-900 wark:text-emerald-300">Features</Badge>
         <h2 className="text-3xl md:text-5xl font-bold mb-4">Everything you need to grow with WhatsApp</h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Our platform provides all the tools you need to engage customers, drive sales, and provide support through WhatsApp.
@@ -134,28 +134,28 @@ export default function FeaturesSection() {
           <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-muted/50 p-1">
             <TabsTrigger
               value="messaging"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
+              className="data-[state=active]:bg-white wark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
             >
               <MessageSquare className="h-4 w-4 mr-2" />
               Messaging
             </TabsTrigger>
             <TabsTrigger
               value="automation"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
+              className="data-[state=active]:bg-white wark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
             >
               <Zap className="h-4 w-4 mr-2" />
               Automation
             </TabsTrigger>
             <TabsTrigger
               value="commerce"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
+              className="data-[state=active]:bg-white wark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
             >
               <ShoppingBag className="h-4 w-4 mr-2" />
               Commerce
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
-              className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
+              className="data-[state=active]:bg-white wark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm"
             >
               <BarChart2 className="h-4 w-4 mr-2" />
               Analytics
@@ -184,19 +184,19 @@ export default function FeaturesSection() {
                   {/* Interactive elements specific to each tab */}
                   {tab === "messaging" && (
                     <motion.div
-                      className="absolute -right-6 top-1/4 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-3 max-w-[200px]"
+                      className="absolute -right-6 top-1/4 bg-white wark:bg-gray-800 shadow-lg rounded-lg p-3 max-w-[200px]"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={inView && activeTab === tab ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                       transition={{ delay: 0.3, duration: 0.5 }}
                     >
                       <div className="flex gap-2 items-start">
-                        <div className="mt-1 bg-emerald-100 dark:bg-emerald-900/50 rounded-full p-1">
-                          <MessageSquare className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                        <div className="mt-1 bg-emerald-100 wark:bg-emerald-900/50 rounded-full p-1">
+                          <MessageSquare className="h-3 w-3 text-emerald-600 wark:text-emerald-400" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold">Bulk Message Status</p>
                           <p className="text-[10px] text-muted-foreground">1,342 delivered • 98% open rate</p>
-                          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1">
+                          <div className="h-1.5 bg-gray-200 wark:bg-gray-700 rounded-full mt-1">
                             <motion.div
                               className="h-full bg-emerald-500 rounded-full"
                               initial={{ width: "0%" }}
@@ -211,14 +211,14 @@ export default function FeaturesSection() {
 
                   {tab === "automation" && (
                     <motion.div
-                      className="absolute -left-6 bottom-1/4 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-3"
+                      className="absolute -left-6 bottom-1/4 bg-white wark:bg-gray-800 shadow-lg rounded-lg p-3"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={inView && activeTab === tab ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                       transition={{ delay: 0.3, duration: 0.5 }}
                     >
                       <div className="flex items-center gap-2">
-                        <div className="bg-blue-100 dark:bg-blue-900/50 rounded-full p-1.5">
-                          <Zap className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                        <div className="bg-blue-100 wark:bg-blue-900/50 rounded-full p-1.5">
+                          <Zap className="h-3 w-3 text-blue-600 wark:text-blue-400" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold">Auto-response activated</p>
@@ -233,14 +233,14 @@ export default function FeaturesSection() {
 
                   {tab === "commerce" && (
                     <motion.div
-                      className="absolute -top-6 left-1/3 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-3"
+                      className="absolute -top-6 left-1/3 bg-white wark:bg-gray-800 shadow-lg rounded-lg p-3"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={inView && activeTab === tab ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                       transition={{ delay: 0.3, duration: 0.5 }}
                     >
                       <div className="flex items-center gap-2">
-                        <div className="bg-purple-100 dark:bg-purple-900/50 rounded-full p-1.5">
-                          <ShoppingBag className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                        <div className="bg-purple-100 wark:bg-purple-900/50 rounded-full p-1.5">
+                          <ShoppingBag className="h-3 w-3 text-purple-600 wark:text-purple-400" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold">New order placed!</p>
@@ -252,14 +252,14 @@ export default function FeaturesSection() {
 
                   {tab === "analytics" && (
                     <motion.div
-                      className="absolute -bottom-6 right-1/3 bg-white dark:bg-gray-800 shadow-lg rounded-lg p-3"
+                      className="absolute -bottom-6 right-1/3 bg-white wark:bg-gray-800 shadow-lg rounded-lg p-3"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={inView && activeTab === tab ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                       transition={{ delay: 0.3, duration: 0.5 }}
                     >
                       <div className="flex items-center gap-2">
-                        <div className="bg-orange-100 dark:bg-orange-900/50 rounded-full p-1.5">
-                          <BarChart2 className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                        <div className="bg-orange-100 wark:bg-orange-900/50 rounded-full p-1.5">
+                          <BarChart2 className="h-3 w-3 text-orange-600 wark:text-orange-400" />
                         </div>
                         <div>
                           <p className="text-xs font-semibold">Conversion up 24%</p>
@@ -332,7 +332,7 @@ export default function FeaturesSection() {
       </Tabs>
 
       {/* Interactive feature showcase */}
-      <div className="mt-24 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-3xl p-8 md:p-12">
+      <div className="mt-24 bg-gradient-to-r from-gray-50 to-gray-100 wark:from-gray-900 wark:to-gray-800 rounded-3xl p-8 md:p-12">
         <div className="text-center mb-12">
           <h3 className="text-2xl md:text-3xl font-bold mb-4">Interactive User Experience</h3>
           <p className="text-muted-foreground max-w-2xl mx-auto">See how ZapTick&apos;s features work together to create a seamless WhatsApp business experience.</p>
@@ -340,7 +340,7 @@ export default function FeaturesSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <motion.div
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 relative overflow-hidden"
+            className="bg-white wark:bg-gray-800 rounded-xl shadow-lg p-6 relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             transition={{ delay: 0.2, duration: 0.5 }}
@@ -352,15 +352,15 @@ export default function FeaturesSection() {
               Smart Response Suggestions
             </h4>
             <p className="text-muted-foreground mb-4">AI-powered response suggestions based on conversation context and customer history.</p>
-            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mt-4">
+            <div className="bg-gray-100 wark:bg-gray-700 rounded-lg p-3 mt-4">
               <div className="flex flex-col gap-2">
-                <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-sm p-2 rounded-lg">
+                <div className="bg-emerald-100 wark:bg-emerald-900/30 text-emerald-800 wark:text-emerald-300 text-sm p-2 rounded-lg">
                   &quot;Thanks for your interest! Would you like to see our latest collection?&quot;
                 </div>
-                <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-sm p-2 rounded-lg">
+                <div className="bg-blue-100 wark:bg-blue-900/30 text-blue-800 wark:text-blue-300 text-sm p-2 rounded-lg">
                   &quot;I&apos;d be happy to help you track your order. Could you provide your order number?&quot;
                 </div>
-                <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-sm p-2 rounded-lg">
+                <div className="bg-purple-100 wark:bg-purple-900/30 text-purple-800 wark:text-purple-300 text-sm p-2 rounded-lg">
                   &quot;We have a special discount for you! Would you like to learn more?&quot;
                 </div>
               </div>
@@ -369,7 +369,7 @@ export default function FeaturesSection() {
           </motion.div>
 
           <motion.div
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 relative overflow-hidden"
+            className="bg-white wark:bg-gray-800 rounded-xl shadow-lg p-6 relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             transition={{ delay: 0.3, duration: 0.5 }}
@@ -381,7 +381,7 @@ export default function FeaturesSection() {
               Visual Flow Builder
             </h4>
             <p className="text-muted-foreground mb-4">Create complex conversation flows with our drag-and-drop visual builder.</p>
-            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mt-4 h-[150px] relative">
+            <div className="bg-gray-100 wark:bg-gray-700 rounded-lg p-3 mt-4 h-[150px] relative">
               {/* Simplified flow builder representation */}
               <div className="absolute top-4 left-4 w-[80px] h-[30px] bg-blue-500 rounded-lg flex items-center justify-center text-xs text-white">
                 Start
@@ -389,7 +389,7 @@ export default function FeaturesSection() {
               <svg className="absolute top-[19px] left-[94px]" width="30" height="2">
                 <line x1="0" y1="0" x2="30" y2="0" stroke="#3b82f6" strokeWidth="2" />
               </svg>
-              <div className="absolute top-4 left-[134px] w-[80px] h-[30px] bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center text-xs">
+              <div className="absolute top-4 left-[134px] w-[80px] h-[30px] bg-gray-200 wark:bg-gray-600 rounded-lg flex items-center justify-center text-xs">
                 Message
               </div>
               <svg className="absolute top-[19px] left-[224px]" width="30" height="2">
@@ -414,7 +414,7 @@ export default function FeaturesSection() {
           </motion.div>
 
           <motion.div
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 relative overflow-hidden"
+            className="bg-white wark:bg-gray-800 rounded-xl shadow-lg p-6 relative overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             transition={{ delay: 0.4, duration: 0.5 }}
@@ -426,15 +426,15 @@ export default function FeaturesSection() {
               In-Chat Product Catalog
             </h4>
             <p className="text-muted-foreground mb-4">Let customers browse and purchase products without leaving WhatsApp.</p>
-            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mt-4">
+            <div className="bg-gray-100 wark:bg-gray-700 rounded-lg p-3 mt-4">
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-2">
-                  <div className="bg-gray-200 dark:bg-gray-600 h-12 w-full rounded-md mb-2"></div>
+                <div className="bg-white wark:bg-gray-800 rounded-lg p-2">
+                  <div className="bg-gray-200 wark:bg-gray-600 h-12 w-full rounded-md mb-2"></div>
                   <p className="text-xs font-medium">Premium Watch</p>
                   <p className="text-xs text-muted-foreground">$199.99</p>
                 </div>
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-2">
-                  <div className="bg-gray-200 dark:bg-gray-600 h-12 w-full rounded-md mb-2"></div>
+                <div className="bg-white wark:bg-gray-800 rounded-lg p-2">
+                  <div className="bg-gray-200 wark:bg-gray-600 h-12 w-full rounded-md mb-2"></div>
                   <p className="text-xs font-medium">Luxury Bag</p>
                   <p className="text-xs text-muted-foreground">$149.99</p>
                 </div>

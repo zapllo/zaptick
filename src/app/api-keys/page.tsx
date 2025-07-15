@@ -387,7 +387,7 @@ export default function ApiKeysPage() {
 
           {newKey ? (
             <div className="py-4 space-y-4">
-              <div className="p-4 border rounded-md bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm">
+              <div className="p-4 border rounded-md bg-green-50 wark:bg-green-900/20 text-green-600 wark:text-green-400 text-sm">
                 <div className="flex items-start">
                   <CheckCircle className="h-5 w-5 mr-2 mt-0.5" />
                   <div>

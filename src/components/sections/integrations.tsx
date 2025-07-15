@@ -52,7 +52,7 @@ export default function IntegrationsSection() {
   return (
     <section id="integrations" ref={ref} className="container mx-auto py-20 px-4 md:px-8">
       <div className="text-center mb-16">
-        <Badge className="mb-4 px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">Integrations</Badge>
+        <Badge className="mb-4 px-3 py-1 bg-purple-100 text-purple-800 wark:bg-purple-900 wark:text-purple-300">Integrations</Badge>
         <h2 className="text-3xl md:text-5xl font-bold mb-4">Connect with your favorite tools</h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           ZapTick seamlessly integrates with your existing tech stack to provide a unified workflow experience.
@@ -75,7 +75,7 @@ export default function IntegrationsSection() {
               {integrationCategories[category as keyof typeof integrationCategories].map((integration, index: number) => (
                 <motion.div
                   key={index}
-                  className="bg-white dark:bg-gray-800 rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                  className="bg-white wark:bg-gray-800 rounded-xl p-4 flex flex-col items-center justify-center shadow-sm border border-gray-200 wark:border-gray-700 hover:shadow-md transition-shadow"
                   initial={{ opacity: 0, y: 20 }}
                   animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                   transition={{ delay: index * 0.05, duration: 0.3 }}
@@ -90,7 +90,7 @@ export default function IntegrationsSection() {
             </div>
 
             <motion.div
-              className="mt-12 text-center bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6"
+              className="mt-12 text-center bg-purple-50 wark:bg-purple-900/20 rounded-xl p-6"
               initial={{ opacity: 0, y: 20 }}
               animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ delay: 0.4, duration: 0.3 }}
@@ -104,9 +104,9 @@ export default function IntegrationsSection() {
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="p-4 bg-white dark:bg-gray-800">
-                  <div className="rounded-full bg-purple-100 dark:bg-purple-900/50 w-8 h-8 flex items-center justify-center mb-3 mx-auto">
-                    <span className="text-purple-600 dark:text-purple-400 font-semibold">1</span>
+                <Card className="p-4 bg-white wark:bg-gray-800">
+                  <div className="rounded-full bg-purple-100 wark:bg-purple-900/50 w-8 h-8 flex items-center justify-center mb-3 mx-auto">
+                    <span className="text-purple-600 wark:text-purple-400 font-semibold">1</span>
                   </div>
                   <h4 className="text-sm font-semibold text-center mb-2">Connect</h4>
                   <p className="text-xs text-muted-foreground text-center">
@@ -114,9 +114,9 @@ export default function IntegrationsSection() {
                   </p>
                 </Card>
 
-                <Card className="p-4 bg-white dark:bg-gray-800">
-                  <div className="rounded-full bg-purple-100 dark:bg-purple-900/50 w-8 h-8 flex items-center justify-center mb-3 mx-auto">
-                    <span className="text-purple-600 dark:text-purple-400 font-semibold">2</span>
+                <Card className="p-4 bg-white wark:bg-gray-800">
+                  <div className="rounded-full bg-purple-100 wark:bg-purple-900/50 w-8 h-8 flex items-center justify-center mb-3 mx-auto">
+                    <span className="text-purple-600 wark:text-purple-400 font-semibold">2</span>
                   </div>
                   <h4 className="text-sm font-semibold text-center mb-2">Configure</h4>
                   <p className="text-xs text-muted-foreground text-center">
@@ -124,9 +124,9 @@ export default function IntegrationsSection() {
                   </p>
                 </Card>
 
-                <Card className="p-4 bg-white dark:bg-gray-800">
-                  <div className="rounded-full bg-purple-100 dark:bg-purple-900/50 w-8 h-8 flex items-center justify-center mb-3 mx-auto">
-                    <span className="text-purple-600 dark:text-purple-400 font-semibold">3</span>
+                <Card className="p-4 bg-white wark:bg-gray-800">
+                  <div className="rounded-full bg-purple-100 wark:bg-purple-900/50 w-8 h-8 flex items-center justify-center mb-3 mx-auto">
+                    <span className="text-purple-600 wark:text-purple-400 font-semibold">3</span>
                   </div>
                   <h4 className="text-sm font-semibold text-center mb-2">Activate</h4>
                   <p className="text-xs text-muted-foreground text-center">
@@ -141,7 +141,7 @@ export default function IntegrationsSection() {
 
       {/* Custom integration and API section */}
       <div className="mt-20">
-        <div className="flex flex-col md:flex-row gap-8 items-center bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-3xl p-8">
+        <div className="flex flex-col md:flex-row gap-8 items-center bg-gradient-to-r from-gray-50 to-gray-100 wark:from-gray-900 wark:to-gray-800 rounded-3xl p-8">
           <div className="md:w-1/2">
             <h3 className="text-2xl font-bold mb-4">Need a custom integration?</h3>
             <p className="text-muted-foreground mb-6">
@@ -156,14 +156,14 @@ export default function IntegrationsSection() {
               </Button>
             </div>
           </div>
-          <div className="md:w-1/2 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+          <div className="md:w-1/2 bg-white wark:bg-gray-800 rounded-xl p-6 shadow-lg">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-semibold">API Request Example</p>
-              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+              <Badge className="bg-green-100 text-green-800 wark:bg-green-900 wark:text-green-300">
                 POST /api/v1/messages
               </Badge>
             </div>
-            <pre className="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg text-xs overflow-x-auto">
+            <pre className="bg-gray-100 wark:bg-gray-900 p-4 rounded-lg text-xs overflow-x-auto">
               {`{
   "recipient": "+1234567890",
   "type": "text",
@@ -187,7 +187,7 @@ export default function IntegrationsSection() {
 
       {/* Partner program section */}
       <div className="mt-20 text-center">
-        <Badge className="mb-4 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+        <Badge className="mb-4 px-3 py-1 bg-blue-100 text-blue-800 wark:bg-blue-900 wark:text-blue-300">
           Partner Program
         </Badge>
         <h3 className="text-2xl font-bold mb-4">Become an integration partner</h3>

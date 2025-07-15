@@ -318,8 +318,8 @@ export default function BillingPage() {
                             variant="outline"
                             className={cn(
                               invoice.status === "paid"
-                                ? "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900"
-                                : "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900"
+                                ? "bg-green-100 text-green-800 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-900"
+                                : "bg-amber-100 text-amber-800 border-amber-200 wark:bg-amber-900/30 wark:text-amber-400 wark:border-amber-900"
                             )}
                           >
                             {invoice.status === "paid" ? (

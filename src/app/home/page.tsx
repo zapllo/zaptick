@@ -302,7 +302,7 @@ export default function HomePage() {
             className={
               'flex w-full flex-col rounded-md border px-4 py-3 text-left transition-colors ' +
               (idx === activeWhatsAppFeature
-                ? 'bg-emerald-50 border-emerald-200/70 dark:bg-emerald-800/10 dark:border-emerald-700/50'
+                ? 'bg-emerald-50 border-emerald-200/70 wark:bg-emerald-800/10 wark:border-emerald-700/50'
                 : 'hover:bg-muted')
             }
           >
@@ -394,20 +394,20 @@ export default function HomePage() {
           <div className="grid gap-4 md:grid-cols-2">
             {/* WhatsApp connected */}
             {user?.wabaAccounts && user.wabaAccounts.length > 0 ? (
-              <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-green-200 dark:from-muted/40 dark:to-green-900/10">
+              <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-green-200 wark:from-muted/40 wark:to-green-900/10">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
                       <Phone className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">WhatsApp Business</p>
+                      <p className="font-semibold text-gray-900 wark:text-white">WhatsApp Business</p>
                       <p className="text-sm text-green-600 font-medium">Connected & Active</p>
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 wark:bg-green-900/30 wark:text-green-400">
                       <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                       {healthStatus?.phoneNumbers?.[0]?.verified ? 'Business Verified' : 'Active'}
                     </span>
@@ -415,11 +415,11 @@ export default function HomePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
                     <Phone className="h-4 w-4" />
                     <span className="font-mono">{user.wabaAccounts[0].phoneNumber}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <span>Business account verified</span>
                   </div>
@@ -429,20 +429,20 @@ export default function HomePage() {
                 <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
               </div>
             ) : (
-              <div className="group relative overflow-hidden rounded-xl border-2 border-dashed border-gray-200 bg-white p-6 transition-all duration-300 hover:border-green-300 hover:bg-green-50/30 dark:border-gray-700 dark:bg-muted/40">
+              <div className="group relative overflow-hidden rounded-xl border-2 border-dashed border-gray-200 bg-white p-6 transition-all duration-300 hover:border-green-300 hover:bg-green-50/30 wark:border-gray-700 wark:bg-muted/40">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 wark:bg-gray-800">
                       <Phone className="h-6 w-6 text-gray-400" />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">WhatsApp Business</p>
+                      <p className="font-semibold text-gray-900 wark:text-white">WhatsApp Business</p>
                       <p className="text-sm text-gray-500">Not connected</p>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                <p className="text-sm text-gray-600 wark:text-gray-300 mb-4">
                   Connect your WhatsApp Business account to start sending messages and managing conversations.
                 </p>
 
@@ -453,30 +453,30 @@ export default function HomePage() {
             )}
 
             {/* Instagram connected */}
-            <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-pink-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-pink-200 dark:from-muted/40 dark:to-pink-900/10">
+            <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-pink-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-pink-200 wark:from-muted/40 wark:to-pink-900/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 shadow-lg">
                     <Instagram className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">Instagram Business</p>
+                    <p className="font-semibold text-gray-900 wark:text-white">Instagram Business</p>
                     <p className="text-sm text-pink-600 font-medium">Coming Soon</p>
                   </div>
                 </div>
 
-                <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 px-2 py-1 text-xs font-medium text-pink-700 dark:bg-pink-900/30 dark:text-pink-400">
+                <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 px-2 py-1 text-xs font-medium text-pink-700 wark:bg-pink-900/30 wark:text-pink-400">
                   <div className="h-1.5 w-1.5 rounded-full bg-pink-500" />
                   Preview
                 </span>
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
                   <Instagram className="h-4 w-4" />
                   <span className="font-mono">@comingsoon</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
                   <Info className="h-4 w-4 text-pink-500" />
                   <span>Instagram automation in development</span>
                 </div>
@@ -516,7 +516,7 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div className="rounded-xl border bg-white p-6 shadow-sm dark:bg-muted/40">
+            <div className="rounded-xl border bg-white p-6 shadow-sm wark:bg-muted/40">
               {loadingHealth && !healthStatus ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
@@ -527,18 +527,18 @@ export default function HomePage() {
               ) : healthStatus?.phoneNumbers && healthStatus.phoneNumbers.length > 0 ? (
                 <div className="grid gap-6 md:grid-cols-3">
                   {/* Status Card */}
-                  <div className="group rounded-xl border-2 border-green-100 bg-gradient-to-br from-green-50/50 to-white p-5 transition-all duration-300 hover:border-green-200 hover:shadow-md dark:from-green-900/10 dark:to-muted/40">
+                  <div className="group rounded-xl border-2 border-green-100 bg-gradient-to-br from-green-50/50 to-white p-5 transition-all duration-300 hover:border-green-200 hover:shadow-md wark:from-green-900/10 wark:to-muted/40">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">Phone Status</h4>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      <h4 className="font-semibold text-gray-900 wark:text-white">Phone Status</h4>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 wark:bg-green-900/30 wark:text-green-400">
                         <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                         {healthStatus.phoneNumbers[0].status || "Active"}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mb-3">
                       Your WhatsApp phone number is registered and {healthStatus.phoneNumbers[0].verified ? "verified" : "active"}.
                     </p>
-                    <div className="text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded font-mono">
+                    <div className="text-xs text-muted-foreground bg-gray-50 wark:bg-gray-800 px-2 py-1 rounded font-mono">
                       ID: {healthStatus.phoneNumbers[0].id.substring(0, 12)}...
                     </div>
                   </div>
@@ -546,13 +546,13 @@ export default function HomePage() {
                   {/* Quality Rating Card */}
                   <div className="group rounded-xl border-2 p-5 transition-all duration-300 hover:shadow-md">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">Quality Rating</h4>
+                      <h4 className="font-semibold text-gray-900 wark:text-white">Quality Rating</h4>
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${getQualityRatingColor(healthStatus.phoneNumbers[0].qualityRating)}`}>
                         {getQualityRatingIcon(healthStatus.phoneNumbers[0].qualityRating)}
                         {healthStatus.phoneNumbers[0].qualityRating || "Unknown"}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mb-3">
                       {healthStatus.phoneNumbers[0].qualityRating?.toLowerCase() === "green"
                         ? "Your quality rating is excellent."
                         : healthStatus.phoneNumbers[0].qualityRating?.toLowerCase() === "yellow"
@@ -572,17 +572,17 @@ export default function HomePage() {
                   </div>
 
                   {/* Quick Actions Card */}
-                  <div className="group rounded-xl border-2 border-blue-100 bg-gradient-to-br from-blue-50/50 to-white p-5 transition-all duration-300 hover:border-blue-200 hover:shadow-md dark:from-blue-900/10 dark:to-muted/40">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h4>
+                  <div className="group rounded-xl border-2 border-blue-100 bg-gradient-to-br from-blue-50/50 to-white p-5 transition-all duration-300 hover:border-blue-200 hover:shadow-md wark:from-blue-900/10 wark:to-muted/40">
+                    <h4 className="font-semibold text-gray-900 wark:text-white mb-4">Quick Actions</h4>
                     <div className="space-y-2">
-                      <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-blue-900/20">
+                      <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
                         <span className="flex items-center gap-2">
                           <ActivitySquare className="h-4 w-4 text-blue-500" />
                           View message metrics
                         </span>
                         <ArrowRight className="h-4 w-4 text-gray-400" />
                       </button>
-                      <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-blue-900/20">
+                      <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
                         <span className="flex items-center gap-2">
                           <MessageSquare className="h-4 w-4 text-blue-500" />
                           Optimize templates
@@ -590,7 +590,7 @@ export default function HomePage() {
                         <ArrowRight className="h-4 w-4 text-gray-400" />
                       </button>
                       <Link href='/settings/whatsapp-profile'>
-                        <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-blue-900/20">
+                        <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
                           <span className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-blue-500" />
                             Review business profile
@@ -603,11 +603,11 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="rounded-full bg-gray-100 p-4 mb-4 dark:bg-gray-800">
+                  <div className="rounded-full bg-gray-100 p-4 mb-4 wark:bg-gray-800">
                     <AlertCircle className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No Health Data Available</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 max-w-md">
+                  <h4 className="font-semibold text-gray-900 wark:text-white mb-2">No Health Data Available</h4>
+                  <p className="text-sm text-gray-600 wark:text-gray-300 mb-4 max-w-md">
                     We couldn&apos;t retrieve your WhatsApp health status at this time. This might be due to a temporary issue.
                   </p>
                   <button
@@ -632,10 +632,10 @@ export default function HomePage() {
                 <ShoppingCart className="h-8 w-8 text-white" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h3 className="text-xl font-bold text-gray-900 wark:text-white">
                   Unleash your potential with Pro plans
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-gray-600 wark:text-gray-300">
                   Get access to advanced features and unlimited messaging
                 </p>
                 <div className="flex items-center gap-4 text-sm">
@@ -644,7 +644,7 @@ export default function HomePage() {
                     Growth Plan
                   </span>
                   <span className="text-gray-500">₹6,897/quarter</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 wark:bg-green-900/30 wark:text-green-400">
                     <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
                     Save 20%
                   </span>
@@ -652,7 +652,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <button className="rounded-xl bg-white border border-gray-200 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
+              <button className="rounded-xl bg-white border border-gray-200 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:text-gray-300">
                 Compare Plans
               </button>
               <button className="rounded-xl bg-gradient-to-r from-primary to-primary/90 px-6 py-3 text-sm font-medium text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
@@ -670,13 +670,13 @@ export default function HomePage() {
         <div className="space-y-6">
           {/* Tab triggers */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
+            <div className="flex items-center gap-1 rounded-xl bg-gray-100 p-1 wark:bg-gray-800">
               <button
                 className={
                   'relative rounded-lg px-6 py-3 text-sm font-medium transition-all duration-200 ' +
                   (activeTab === 'whatsapp'
-                    ? 'bg-white text-primary shadow-sm dark:bg-gray-700 dark:text-white'
-                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200')
+                    ? 'bg-white text-primary shadow-sm wark:bg-gray-700 wark:text-white'
+                    : 'text-gray-600 hover:text-gray-900 wark:text-gray-400 wark:hover:text-gray-200')
                 }
                 onClick={() => setActiveTab('whatsapp')}
               >
@@ -690,8 +690,8 @@ export default function HomePage() {
                 className={
                   'relative rounded-lg px-6 py-3 text-sm font-medium transition-all duration-200 ' +
                   (activeTab === 'instagram'
-                    ? 'bg-white text-primary shadow-sm dark:bg-gray-700 dark:text-white'
-                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200')
+                    ? 'bg-white text-primary shadow-sm wark:bg-gray-700 wark:text-white'
+                    : 'text-gray-600 hover:text-gray-900 wark:text-gray-400 wark:hover:text-gray-200')
                 }
                 onClick={() => setActiveTab('instagram')}
               >
@@ -713,22 +713,22 @@ export default function HomePage() {
           {activeTab === 'whatsapp' && (
             <div className="grid gap-6 md:grid-cols-[280px_1fr_300px]">
               {/* Sidebar menu */}
-              <aside className="rounded-xl border bg-white p-6 shadow-sm dark:bg-muted/40">
+              <aside className="rounded-xl border bg-white p-6 shadow-sm wark:bg-muted/40">
                 <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">WhatsApp Features</h3>
+                  <h3 className="font-semibold text-gray-900 wark:text-white mb-2">WhatsApp Features</h3>
                   <p className="text-xs text-gray-500">Choose a feature to learn more</p>
                 </div>
                 <WhatsAppMenu />
               </aside>
 
               {/* Feature details */}
-              <section className="rounded-xl border bg-white shadow-sm dark:bg-muted/40">
+              <section className="rounded-xl border bg-white shadow-sm wark:bg-muted/40">
                 <WhatsAppDetails />
               </section>
 
               {/* Phone preview */}
               <section className="flex items-center justify-center">
-                <div className="rounded-2xl border-2 border-gray-200 bg-gradient-to-b from-gray-50 to-white p-4 shadow-xl dark:from-gray-800 dark:to-gray-900 dark:border-gray-700">
+                <div className="rounded-2xl border-2 border-gray-200 bg-gradient-to-b from-gray-50 to-white p-4 shadow-xl wark:from-gray-800 wark:to-gray-900 wark:border-gray-700">
                   <div className="rounded-xl overflow-hidden shadow-lg">
                     <video
                       src='/video.mp4'
@@ -747,7 +747,7 @@ export default function HomePage() {
           )}
 
           {activeTab === 'instagram' && (
-            <div className="rounded-xl border bg-gradient-to-br from-pink-50/50 to-white p-12 text-center shadow-sm dark:from-pink-900/10 dark:to-muted/40">
+            <div className="rounded-xl border bg-gradient-to-br from-pink-50/50 to-white p-12 text-center shadow-sm wark:from-pink-900/10 wark:to-muted/40">
               <div className="mx-auto max-w-md space-y-6">
                 <div className="flex items-center justify-center">
                   <div className="rounded-full bg-gradient-to-br from-pink-500 to-pink-600 p-4 shadow-lg">
@@ -755,16 +755,16 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-xl font-semibold text-gray-900 wark:text-white">
                     Instagram Automation Coming Soon
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
+                  <p className="text-gray-600 wark:text-gray-300">
                     We&apos;re working hard to bring you powerful Instagram automation features.
                     Stay tuned for updates!
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-4">
-                  <button className="rounded-lg border border-pink-200 bg-white px-4 py-2 text-sm font-medium text-pink-600 hover:bg-pink-50 transition-colors dark:bg-pink-900/20 dark:border-pink-800">
+                  <button className="rounded-lg border border-pink-200 bg-white px-4 py-2 text-sm font-medium text-pink-600 hover:bg-pink-50 transition-colors wark:bg-pink-900/20 wark:border-pink-800">
                     Notify Me
                   </button>
                   <button className="rounded-lg bg-gradient-to-r from-pink-500 to-pink-600 px-4 py-2 text-sm font-medium text-white hover:from-pink-600 hover:to-pink-700 transition-all duration-200">
@@ -791,7 +791,7 @@ export default function HomePage() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Link href="/contacts" className="group">
-              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer dark:bg-muted/40">
+              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer wark:bg-muted/40">
                 <div className="flex items-center justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 group-hover:from-primary/20 group-hover:to-primary/10 transition-all duration-200">
                     <Phone className="h-6 w-6 text-primary" />
@@ -811,7 +811,7 @@ export default function HomePage() {
             </Link>
 
             <Link href="/settings/agents" className="group">
-              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer dark:bg-muted/40">
+              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer wark:bg-muted/40">
                 <div className="flex items-center justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 group-hover:from-blue-500/20 group-hover:to-blue-500/10 transition-all duration-200">
                     <Users className="h-6 w-6 text-blue-500" />
@@ -831,7 +831,7 @@ export default function HomePage() {
             </Link>
 
             <Link href="/integrations" className="group">
-              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer dark:bg-muted/40">
+              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer wark:bg-muted/40">
                 <div className="flex items-center justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5 group-hover:from-purple-500/20 group-hover:to-purple-500/10 transition-all duration-200">
                     <Bot className="h-6 w-6 text-purple-500" />
@@ -851,7 +851,7 @@ export default function HomePage() {
             </Link>
 
             <Link href="/settings/developers" className="group">
-              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer dark:bg-muted/40">
+              <div className="group relative flex flex-col gap-4 rounded-xl border bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-1 cursor-pointer wark:bg-muted/40">
                 <div className="flex items-center justify-between">
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-500/5 group-hover:from-orange-500/20 group-hover:to-orange-500/10 transition-all duration-200">
                     <BookOpen className="h-6 w-6 text-orange-500" />

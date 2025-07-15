@@ -111,7 +111,7 @@ export default function InsightsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground flex items-center">
-              <span className="text-green-600 dark:text-green-400 font-medium mr-1">
+              <span className="text-green-600 wark:text-green-400 font-medium mr-1">
                 -12.5%
               </span>
               compared to previous period
@@ -132,7 +132,7 @@ export default function InsightsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Potential Savings</CardDescription>
-            <CardTitle className="text-2xl text-green-600 dark:text-green-400">
+            <CardTitle className="text-2xl text-green-600 wark:text-green-400">
               ₹850.00
             </CardTitle>
           </CardHeader>
@@ -240,7 +240,7 @@ export default function InsightsPage() {
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-start gap-4 p-4 border rounded-lg">
-              <div className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 p-2 rounded-full">
+              <div className="bg-blue-100 text-blue-800 wark:bg-blue-900/30 wark:text-blue-400 p-2 rounded-full">
                 <Info className="h-5 w-5" />
               </div>
               <div>
@@ -256,7 +256,7 @@ export default function InsightsPage() {
             </div>
 
             <div className="flex items-start gap-4 p-4 border rounded-lg">
-              <div className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 p-2 rounded-full">
+              <div className="bg-green-100 text-green-800 wark:bg-green-900/30 wark:text-green-400 p-2 rounded-full">
                 <Info className="h-5 w-5" />
               </div>
               <div>
@@ -275,7 +275,7 @@ export default function InsightsPage() {
             </div>
 
             <div className="flex items-start gap-4 p-4 border rounded-lg">
-              <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 p-2 rounded-full">
+              <div className="bg-yellow-100 text-yellow-800 wark:bg-yellow-900/30 wark:text-yellow-400 p-2 rounded-full">
                 <Info className="h-5 w-5" />
               </div>
               <div>

@@ -191,7 +191,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText }: { form: CreateTemplat
           style={{ width: '94%' }}>
           {/* Chat Background */}
           <div
-            className="flex-1 dark:bg-[#0b141a] p-4 overflow-y-auto"
+            className="flex-1 wark:bg-[#0b141a] p-4 overflow-y-auto"
           >
             {/* Previous message example */}
             {previewContent && (
@@ -201,7 +201,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText }: { form: CreateTemplat
                   {/* Bubble tail (triangle) */}
                   {deviceType != 'iphone' && (
                     <div
-                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] dark:border-r-[#202c33]"
+                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] wark:border-r-[#202c33]"
                       style={{ transform: 'translateY(6px)' }}
                     ></div>
                   )}
@@ -219,19 +219,19 @@ const WhatsAppPreview = ({ form, deviceType, footerText }: { form: CreateTemplat
                   )}
                   {deviceType !== 'iphone' && (
                     <div
-                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] dark:border-r-[#202c33]"
+                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] wark:border-r-[#202c33]"
                       style={{ transform: 'translateY(6px)' }}
                     ></div>
                   )}
                   {/* Message bubble content */}
-                  <div className="bg-[#ffffff] dark:bg-[#202c33] p-3 rounded-lg ml-1 shadow-sm">
+                  <div className="bg-[#ffffff] wark:bg-[#202c33] p-3 rounded-lg ml-1 shadow-sm">
                     {/* Media Header */}
                     {form.headerType === 'media' && form.mediaHandle && (
                       <div className="mb-2 font-bold ">
                         {form.headerText && (
                           <div className="text-xs font-medium mb-2">{form.headerText}</div>
                         )}
-                        <div className="bg-gray-200 dark:bg-gray-700 rounded p-4 flex items-center gap-3">
+                        <div className="bg-gray-200 wark:bg-gray-700 rounded p-4 flex items-center gap-3">
                           {getMediaTypeIcon(form.mediaType)}
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-medium truncate">
@@ -255,7 +255,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText }: { form: CreateTemplat
                     </div>
                     {/* Footer */}
                     {footerText && (
-                      <div className="text-[10px] text-gray-500  border-gray-200 dark:border-gray-600 pt-2">
+                      <div className="text-[10px] text-gray-500  border-gray-200 wark:border-gray-600 pt-2">
                         {footerText}
                       </div>
                     )}
@@ -265,13 +265,13 @@ const WhatsAppPreview = ({ form, deviceType, footerText }: { form: CreateTemplat
 
                     {/* Buttons with separators and icons */}
                     {form.buttonType !== 'NONE' && form.buttons.length > 0 && (
-                      <div className="mt-3 pt-2 border-t border-gray-300 dark:border-gray-600">
+                      <div className="mt-3 pt-2 border-t border-gray-300 wark:border-gray-600">
                         {/* Display first 2 buttons */}
                         {displayButtons.map((button, index) => (
                           <div key={index}>
                             {/* Add separator if not the first item */}
                             {index > 0 && (
-                              <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                              <div className="border-t border-gray-200 wark:border-gray-700 my-1"></div>
                             )}
 
                             <div className={`text-center  px-1 rounded-md flex items-center justify-center ${button.type === 'URL' ? 'text-[#0277BD]' :
@@ -298,7 +298,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText }: { form: CreateTemplat
                         {/* Third button or "See all options" */}
                         {form.buttons.length >= 3 && (
                           <div>
-                            <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                            <div className="border-t border-gray-200 wark:border-gray-700 my-1"></div>
                             <div className="text-center px-1 rounded-md flex items-center justify-center text-[#0277BD]">
                               <span className="mr-1">
                                 {showSeeAllOptions ? (
@@ -1074,14 +1074,14 @@ export default function EditTemplatePage() {
                     <div className="pt-2">
                       <Label>Media File</Label>
                       {form.mediaHandle ? (
-                        <div className="border-2 border-dashed border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950 rounded-lg p-4 mt-2">
+                        <div className="border-2 border-dashed border-green-200 bg-green-50 wark:border-green-800 wark:bg-green-950 rounded-lg p-4 mt-2">
                           <div className="flex items-center gap-3">
                             <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
                             <div className="flex-1">
-                              <p className="font-medium text-green-700 dark:text-green-300">
+                              <p className="font-medium text-green-700 wark:text-green-300">
                                 {form.mediaHandle === 'existing-media' ? 'Using existing media' : 'File uploaded successfully'}
                               </p>
-                              <p className="text-sm text-green-600 dark:text-green-400">
+                              <p className="text-sm text-green-600 wark:text-green-400">
                                 {form.mediaType} • Ready to use
                               </p>
                             </div>

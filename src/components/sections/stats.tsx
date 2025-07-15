@@ -17,39 +17,39 @@ export default function StatsSection() {
       suffix: "%",
       title: "Open Rate on WhatsApp",
       description: "Compared to 20% for email marketing",
-      color: "bg-emerald-50 dark:bg-emerald-950/30",
-      textColor: "text-emerald-600 dark:text-emerald-400",
+      color: "bg-emerald-50 wark:bg-emerald-950/30",
+      textColor: "text-emerald-600 wark:text-emerald-400",
     },
     {
       value: 40,
       suffix: "%",
       title: "Higher Conversion Rate",
       description: "Than traditional communication channels",
-      color: "bg-blue-50 dark:bg-blue-950/30",
-      textColor: "text-blue-600 dark:text-blue-400",
+      color: "bg-blue-50 wark:bg-blue-950/30",
+      textColor: "text-blue-600 wark:text-blue-400",
     },
     {
       value: 2,
       suffix: "B+",
       title: "WhatsApp Users Worldwide",
       description: "Reach your customers where they are",
-      color: "bg-purple-50 dark:bg-purple-950/30",
-      textColor: "text-purple-600 dark:text-purple-400",
+      color: "bg-purple-50 wark:bg-purple-950/30",
+      textColor: "text-purple-600 wark:text-purple-400",
     },
     {
       value: 65,
       suffix: "%",
       title: "Cost Reduction",
       description: "Compared to traditional support channels",
-      color: "bg-orange-50 dark:bg-orange-950/30",
-      textColor: "text-orange-600 dark:text-orange-400",
+      color: "bg-orange-50 wark:bg-orange-950/30",
+      textColor: "text-orange-600 wark:text-orange-400",
     },
   ];
 
   return (
     <section ref={ref} className="container mx-auto py-16 px-4 md:px-8">
       <div className="text-center mb-12">
-        <Badge className="mb-4 px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">Business Impact</Badge>
+        <Badge className="mb-4 px-3 py-1 bg-blue-100 text-blue-800 wark:bg-blue-900 wark:text-blue-300">Business Impact</Badge>
         <h2 className="text-3xl md:text-4xl font-bold mb-4">Transform your business metrics</h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           See the real impact WhatsApp Business API can have on your customer engagement and business performance.
@@ -95,7 +95,7 @@ export default function StatsSection() {
               ].map((item, index) => (
                 <motion.div
                   key={index}
-                  className="bg-white/50 dark:bg-gray-900/50 p-3 rounded-lg"
+                  className="bg-white/50 wark:bg-gray-900/50 p-3 rounded-lg"
                   initial={{ opacity: 0, x: -10 }}
                   animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
                   transition={{ delay: 0.5 + (index * 0.1), duration: 0.3 }}
@@ -107,9 +107,9 @@ export default function StatsSection() {
             </div>
           </div>
           <div className="relative">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+            <div className="bg-white wark:bg-gray-800 p-6 rounded-xl shadow-lg">
               <h4 className="text-lg font-semibold mb-4">Monthly Growth</h4>
-              <div className="h-[200px] w-full bg-gray-100 dark:bg-gray-700 rounded-lg relative overflow-hidden">
+              <div className="h-[200px] w-full bg-gray-100 wark:bg-gray-700 rounded-lg relative overflow-hidden">
                 {/* Simplified chart representation */}
                 {[30, 45, 25, 60, 35, 80].map((height, index) => (
                   <motion.div

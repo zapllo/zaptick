@@ -279,7 +279,7 @@ export default function IntegrationsPage() {
                     <Zap className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent dark:from-white dark:to-gray-300">
+                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent wark:from-white wark:to-gray-300">
                       Integrations Marketplace
                     </h1>
                     <p className="text-muted-foreground">
@@ -297,7 +297,7 @@ export default function IntegrationsPage() {
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {stats.map((stat, index) => (
-                <Card key={index} className="border-0 shadow-sm bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900/50 dark:to-gray-800/50">
+                <Card key={index} className="border-0 shadow-sm bg-gradient-to-br from-white to-gray-50/50 wark:from-gray-900/50 wark:to-gray-800/50">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -320,7 +320,7 @@ export default function IntegrationsPage() {
           <div className="space-y-4">
             <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full lg:w-auto">
-                <TabsList className="grid w-full grid-cols-4 lg:w-auto bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                <TabsList className="grid w-full grid-cols-4 lg:w-auto bg-gray-100 wark:bg-gray-800 p-1 rounded-xl">
                   <TabsTrigger value="all" className="rounded-lg px-6 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
                     All Apps
                   </TabsTrigger>
@@ -338,7 +338,7 @@ export default function IntegrationsPage() {
 
               <div className="flex gap-3 w-full lg:w-auto">
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-full lg:w-[240px] bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <SelectTrigger className="w-full lg:w-[240px] bg-white wark:bg-gray-800 border-gray-200 wark:border-gray-700">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -359,7 +359,7 @@ export default function IntegrationsPage() {
                 placeholder="Search integrations by name, category, or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                className="pl-12 h-12 bg-white wark:bg-gray-800 border-gray-200 wark:border-gray-700 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
               />
             </div>
           </div>
@@ -369,7 +369,7 @@ export default function IntegrationsPage() {
             {filteredIntegrations.map((integration) => (
               <Card 
                 key={integration.id} 
-                className="group cursor-pointer border-0 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white dark:bg-gray-900/50 overflow-hidden"
+                className="group cursor-pointer border-0 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white wark:bg-gray-900/50 overflow-hidden"
                 onClick={() => handleCardClick(integration)}
               >
                 <CardHeader className="pb-4">
@@ -438,7 +438,7 @@ export default function IntegrationsPage() {
                 
                 <CardContent className="pt-0">
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm font-medium text-gray-600 wark:text-gray-400 mb-2">
                       {integration.category}
                     </p>
                     <CardDescription className="text-sm leading-relaxed line-clamp-2">
@@ -448,12 +448,12 @@ export default function IntegrationsPage() {
                     {integration.features && (
                       <div className="flex flex-wrap gap-1 mt-3">
                         {integration.features.slice(0, 2).map((feature, index) => (
-                          <Badge key={index} variant="outline" className="text-xs py-1 px-2 bg-gray-50 dark:bg-gray-800">
+                          <Badge key={index} variant="outline" className="text-xs py-1 px-2 bg-gray-50 wark:bg-gray-800">
                             {feature}
                           </Badge>
                         ))}
                         {integration.features.length > 2 && (
-                          <Badge variant="outline" className="text-xs py-1 px-2 bg-gray-50 dark:bg-gray-800">
+                          <Badge variant="outline" className="text-xs py-1 px-2 bg-gray-50 wark:bg-gray-800">
                             +{integration.features.length - 2} more
                           </Badge>
                         )}
@@ -572,12 +572,12 @@ export default function IntegrationsPage() {
                     )}
 
                     {selectedIntegration.status === 'restricted' && (
-                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div className="p-4 bg-amber-50 wark:bg-amber-900/20 border border-amber-200 wark:border-amber-800 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
                           <Shield className="h-4 w-4 text-amber-600" />
-                          <h4 className="font-medium text-amber-800 dark:text-amber-200">Upgrade Required</h4>
+                          <h4 className="font-medium text-amber-800 wark:text-amber-200">Upgrade Required</h4>
                         </div>
-                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                        <p className="text-sm text-amber-700 wark:text-amber-300">
                           {selectedIntegration.restrictionReason}
                         </p>
                       </div>
@@ -650,7 +650,7 @@ export default function IntegrationsPage() {
           {filteredIntegrations.length === 0 && (
             <Card className="border-0 shadow-sm">
               <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 wark:from-gray-800 wark:to-gray-700 rounded-full flex items-center justify-center mb-6">
                   <Search className="h-10 w-10 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">No integrations found</h3>
@@ -752,7 +752,7 @@ export default function IntegrationsPage() {
                     type: 'improvement'
                   }
                 ].map((update, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 wark:hover:bg-gray-800/50 transition-colors">
                     <div className={`w-2 h-2 rounded-full mt-2 ${
                       update.type === 'new' ? 'bg-green-500' : 
                       update.type === 'update' ? 'bg-blue-500' : 'bg-amber-500'

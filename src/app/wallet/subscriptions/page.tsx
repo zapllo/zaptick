@@ -155,7 +155,7 @@ export default function SubscriptionsPage() {
                   Your active subscription details
                 </CardDescription>
               </div>
-              <Badge className="bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/40">
+              <Badge className="bg-green-100 text-green-800 hover:bg-green-100 wark:bg-green-900/30 wark:text-green-400 wark:hover:bg-green-900/40">
                 Active
               </Badge>
             </div>
@@ -221,12 +221,12 @@ export default function SubscriptionsPage() {
                       current billing period.
                     </DialogDescription>
                   </DialogHeader>
-                  <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800 mt-4">
-                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                    <AlertTitle className="text-amber-800 dark:text-amber-400">
+                  <Alert className="bg-amber-50 border-amber-200 wark:bg-amber-900/30 wark:border-amber-800 mt-4">
+                    <AlertCircle className="h-4 w-4 text-amber-600 wark:text-amber-400" />
+                    <AlertTitle className="text-amber-800 wark:text-amber-400">
                       Important Information
                     </AlertTitle>
-                    <AlertDescription className="text-amber-700 dark:text-amber-300">
+                    <AlertDescription className="text-amber-700 wark:text-amber-300">
                       Your plan will remain active until November 15, 2023. No
                       refunds will be issued for the current billing cycle.
                     </AlertDescription>
@@ -277,7 +277,7 @@ export default function SubscriptionsPage() {
               <ul className="space-y-2 mb-6">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-start">
-                    <Check className="h-4 w-4 mr-2 mt-1 text-green-600 dark:text-green-400" />
+                    <Check className="h-4 w-4 mr-2 mt-1 text-green-600 wark:text-green-400" />
                     <span className="text-sm">{feature}</span>
                   </li>
                 ))}
@@ -378,7 +378,7 @@ export default function SubscriptionsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <Badge
                       variant="outline"
-                      className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900"
+                      className="bg-green-100 text-green-800 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-900"
                     >
                       <Check className="h-3 w-3 mr-1" />
                       Paid
@@ -398,7 +398,7 @@ export default function SubscriptionsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <Badge
                       variant="outline"
-                      className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900"
+                      className="bg-green-100 text-green-800 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-900"
                     >
                       <Check className="h-3 w-3 mr-1" />
                       Paid
@@ -418,7 +418,7 @@ export default function SubscriptionsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <Badge
                       variant="outline"
-                      className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900"
+                      className="bg-green-100 text-green-800 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-900"
                     >
                       <Check className="h-3 w-3 mr-1" />
                       Paid

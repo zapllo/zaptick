@@ -25,7 +25,7 @@ export default function CtaSection() {
   };
 
   return (
-    <section ref={ref} className="py-20 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+    <section ref={ref} className="py-20 bg-gradient-to-b from-white to-gray-50 wark:from-gray-900 wark:to-gray-950">
       <div className="container mx-auto px-4 md:px-8">
         <div className="bg-gradient-to-r from-emerald-500 to-blue-500 rounded-3xl overflow-hidden">
           <div className="flex flex-col md:flex-row">
@@ -138,32 +138,32 @@ export default function CtaSection() {
           <h3 className="text-xl font-bold mb-6">Trusted by businesses worldwide</h3>
           <div className="flex flex-wrap justify-center gap-8 items-center">
             <div className="flex items-center gap-2">
-              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-full">
-                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="bg-emerald-100 wark:bg-emerald-900/30 p-2 rounded-full">
+                <CheckCircle className="h-5 w-5 text-emerald-600 wark:text-emerald-400" />
               </div>
               <div className="text-sm">
                 <p className="font-medium">GDPR Compliant</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-full">
-                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="bg-emerald-100 wark:bg-emerald-900/30 p-2 rounded-full">
+                <CheckCircle className="h-5 w-5 text-emerald-600 wark:text-emerald-400" />
               </div>
               <div className="text-sm">
                 <p className="font-medium">SOC 2 Certified</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-full">
-                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="bg-emerald-100 wark:bg-emerald-900/30 p-2 rounded-full">
+                <CheckCircle className="h-5 w-5 text-emerald-600 wark:text-emerald-400" />
               </div>
               <div className="text-sm">
                 <p className="font-medium">99.9% Uptime SLA</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-full">
-                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="bg-emerald-100 wark:bg-emerald-900/30 p-2 rounded-full">
+                <CheckCircle className="h-5 w-5 text-emerald-600 wark:text-emerald-400" />
               </div>
               <div className="text-sm">
                 <p className="font-medium">24/7 Support</p>

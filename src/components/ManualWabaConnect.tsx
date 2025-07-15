@@ -83,9 +83,9 @@ export default function ManualWabaConnect() {
 
 
   return (
-    <Card className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-blue-50/30  transition-all duration-300 hover:shadow-lg dark:from-muted/40 dark:to-blue-900/10">
+    <Card className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-blue-50/30  transition-all duration-300 hover:shadow-lg wark:from-muted/40 wark:to-blue-900/10">
       {/* Header */}
-      <CardHeader className="text- pb-4 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-900/10">
+      <CardHeader className="text- pb-4 bg-gradient-to-r from-blue-50/50 to-transparent wark:from-blue-900/10">
         <div className="flex items-center justify-start gap-3 mb-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
             <Link className="h-6 w-6 text-white" />
@@ -95,10 +95,10 @@ export default function ManualWabaConnect() {
             Manual setup
           </div>
         </div>
-        <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+        <CardTitle className="text-xl font-semibold text-gray-900 wark:text-white">
           Connect Existing WABA
         </CardTitle>
-        <CardDescription className="text-gray-600 dark:text-gray-300 text-sm">
+        <CardDescription className="text-gray-600 wark:text-gray-300 text-sm">
           Already have a WhatsApp Business Account? Connect it directly using your existing credentials
         </CardDescription>
       </CardHeader>
@@ -108,7 +108,7 @@ export default function ManualWabaConnect() {
         {/* Form Fields */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="wabaId" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Label htmlFor="wabaId" className="text-sm font-medium text-gray-700 wark:text-gray-300">
               WABA ID <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
@@ -126,7 +126,7 @@ export default function ManualWabaConnect() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phoneNumberId" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Label htmlFor="phoneNumberId" className="text-sm font-medium text-gray-700 wark:text-gray-300">
               Phone Number ID <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
@@ -144,7 +144,7 @@ export default function ManualWabaConnect() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 wark:text-gray-300">
               Business Name <span className="text-gray-400">(Optional)</span>
             </Label>
             <div className="relative">
@@ -163,16 +163,16 @@ export default function ManualWabaConnect() {
         </div>
 
         {/* Help Section */}
-        <div className="rounded-xl bg-blue-50/50 border border-blue-200 p-4 dark:bg-blue-900/10 dark:border-blue-800/50">
+        <div className="rounded-xl bg-blue-50/50 border border-blue-200 p-4 wark:bg-blue-900/10 wark:border-blue-800/50">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
-              <span className="text-blue-600 dark:text-blue-400 text-sm">💡</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 wark:bg-blue-900/30 flex-shrink-0">
+              <span className="text-blue-600 wark:text-blue-400 text-sm">💡</span>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <p className="text-sm font-medium text-blue-900 wark:text-blue-100">
                 Where to find these IDs:
               </p>
-              <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+              <div className="text-xs text-blue-700 wark:text-blue-300 space-y-1">
                 <p>1. Open <strong>Facebook Business Manager</strong></p>
                 <p>2. Go to <strong>WhatsApp Accounts</strong></p>
                 <p>3. Select your account</p>
@@ -181,7 +181,7 @@ export default function ManualWabaConnect() {
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-2 h-8 text-xs border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400"
+                className="mt-2 h-8 text-xs border-blue-300 text-blue-600 hover:bg-blue-50 wark:border-blue-700 wark:text-blue-400"
                 asChild
               >
                 <a href="https://business.facebook.com/wa/manage/" target="_blank" rel="noopener noreferrer">
@@ -204,7 +204,7 @@ export default function ManualWabaConnect() {
       </CardContent>
 
       {/* Footer */}
-      <CardFooter className="pt-4 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-900/50">
+      <CardFooter className="pt-4 bg-gradient-to-r from-gray-50/50 to-transparent wark:from-gray-900/50">
         <div className="w-full space-y-3">
           <Button
             disabled={!wabaId || !phoneNumberId || !user?.id || isConnecting}

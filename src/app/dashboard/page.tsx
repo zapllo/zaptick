@@ -124,7 +124,7 @@ const StatCard = ({ title, value, description, icon: Icon, trend, loading }: Sta
               "font-normal mr-2",
               trend.isPositive
                 ? " text-primary bg-primary/10"
-                : "bg-red-500/10 text-red-500 dark:bg-red-500/20"
+                : "bg-red-500/10 text-red-500 wark:bg-red-500/20"
             )}
           >
             {trend.isPositive ? (
@@ -170,8 +170,8 @@ const PendingConnectionCard = ({ onRefresh }: { onRefresh: () => void }) => (
       </CardDescription>
     </CardHeader>
     <CardContent className="flex flex-col items-center gap-4">
-      <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-        <Clock className="h-8 w-8 text-amber-600 dark:text-amber-400 animate-pulse" />
+      <div className="w-16 h-16 rounded-full bg-amber-100 wark:bg-amber-900/50 flex items-center justify-center">
+        <Clock className="h-8 w-8 text-amber-600 wark:text-amber-400 animate-pulse" />
       </div>
       <div className="text-center">
         <h3 className="font-medium mb-2">
@@ -217,7 +217,7 @@ const FailedConnectionCard = ({ onRetry, onClearState }: {
 }) => (
   <Card className="flex flex-col justify-center items-center bg-destructive/5 border border-dashed h-full">
     <CardHeader className="text-center">
-      <CardDescription className="text-destructive dark:text-destructive">
+      <CardDescription className="text-destructive wark:text-destructive">
         Connection Issue
       </CardDescription>
     </CardHeader>
@@ -476,7 +476,7 @@ export default function DashboardPage() {
               <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 animate-pulse" />
             </div>
             <div className="text-center">
-              <p className="font-medium text-gray-900 dark:text-white">Loading accounts...</p>
+              <p className="font-medium text-gray-900 wark:text-white">Loading accounts...</p>
               <p className="text-sm text-gray-500">Fetching your WhatsApp Business accounts</p>
             </div>
           </div>
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                   "group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1",
                   selectedWabaId === account.wabaId 
                     ? "border-primary shadow-lg bg-gradient-to-br from-primary/5 to-primary/10" 
-                    : "border-gray-200 bg-gradient-to-br from-white to-gray-50/50 hover:border-primary/30 dark:border-gray-700 dark:from-muted/40 dark:to-gray-800/50"
+                    : "border-gray-200 bg-gradient-to-br from-white to-gray-50/50 hover:border-primary/30 wark:border-gray-700 wark:from-muted/40 wark:to-gray-800/50"
                 )}
                 onClick={() => setSelectedWabaId(account.wabaId)}
               >
@@ -509,12 +509,12 @@ export default function DashboardPage() {
                 
                 {/* Status badges */}
                 <div className="absolute top-4 right-4 flex gap-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-800">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-1" />
                     Active
                   </Badge>
                   {account.provider === 'interakt' && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 wark:bg-blue-900/30 wark:text-blue-400 wark:border-blue-800">
                       Interakt
                     </Badge>
                   )}
@@ -529,10 +529,10 @@ export default function DashboardPage() {
                           <Users2Icon className="h-6 w-6 text-white" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                          <h3 className="font-semibold text-lg text-gray-900 wark:text-white">
                             {account.businessName}
                           </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-sm text-gray-500 wark:text-gray-400">
                             Connected on {format(new Date(account.connectedAt), "MMM d, yyyy")}
                           </p>
                         </div>
@@ -541,25 +541,25 @@ export default function DashboardPage() {
 
                     {/* Account details */}
                     <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-                          <Phone className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 wark:bg-gray-800/50">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 wark:bg-green-900/30">
+                          <Phone className="h-4 w-4 text-green-600 wark:text-green-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Phone Number</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300 font-mono">
+                          <p className="text-sm font-medium text-gray-900 wark:text-white">Phone Number</p>
+                          <p className="text-sm text-gray-600 wark:text-gray-300 font-mono">
                             {account.phoneNumber || "No phone number"}
                           </p>
                         </div>
                       </div>
                       
-                      {/* <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                          <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      {/* <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 wark:bg-gray-800/50">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 wark:bg-blue-900/30">
+                          <MessageSquare className="h-4 w-4 text-blue-600 wark:text-blue-400" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">Templates</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                          <p className="text-sm font-medium text-gray-900 wark:text-white">Templates</p>
+                          <p className="text-sm text-gray-600 wark:text-gray-300">
                             {account.templateCount || 0} message templates
                           </p>
                         </div>
@@ -568,13 +568,13 @@ export default function DashboardPage() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 cursor-help">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                                <User className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 wark:bg-gray-800/50 cursor-help">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 wark:bg-purple-900/30">
+                                <User className="h-4 w-4 text-purple-600 wark:text-purple-400" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">WABA ID</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-300 font-mono truncate">
+                                <p className="text-sm font-medium text-gray-900 wark:text-white">WABA ID</p>
+                                <p className="text-sm text-gray-600 wark:text-gray-300 font-mono truncate">
                                   {account.wabaId}
                                 </p>
                               </div>
@@ -593,7 +593,7 @@ export default function DashboardPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className="flex-1 hover:bg-gray-50 wark:hover:bg-gray-800"
                     asChild
                   >
                     <Link href="/templates">
@@ -607,7 +607,7 @@ export default function DashboardPage() {
                       "flex-1 transition-all duration-200",
                       selectedWabaId === account.wabaId 
                         ? "bg-primary hover:bg-primary/90 shadow-md" 
-                        : "bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900"
+                        : "bg-gray-900 hover:bg-gray-800 wark:bg-gray-100 wark:hover:bg-gray-200 wark:text-gray-900"
                     )}
                     onClick={() => setSelectedWabaId(account.wabaId)}
                   >
@@ -690,15 +690,15 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent dark:from-white dark:to-gray-300">
+              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent wark:from-white wark:to-gray-300">
                 Dashboard
               </h1>
-              <div className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+              <div className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 wark:bg-green-900/30 wark:text-green-400">
                 <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                 Live
               </div>
             </div>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-gray-600 wark:text-gray-300">
               {user ? `Welcome back, ${user.name?.split(' ')[0]}!` : 'Welcome!'} Here&apos;s your WhatsApp Business overview.
             </p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -766,10 +766,10 @@ export default function DashboardPage() {
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-semibold text-gray-900 wark:text-white">
                     Welcome to Zaptick!
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
+                  <p className="text-gray-600 wark:text-gray-300">
                     Get started by connecting your WhatsApp Business Account to unlock all features and start engaging with your customers.
                   </p>
                   <div className="flex items-center gap-4 text-sm">
@@ -813,7 +813,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold">Quick Actions</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Jump into the most common tasks</p>
+                <p className="text-sm text-gray-600 wark:text-gray-300">Jump into the most common tasks</p>
               </div>
               {/* <Button variant="outline" size="sm" className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -822,7 +822,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-purple-200 bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10">
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-purple-200 bg-gradient-to-br from-white to-purple-50/30 wark:from-muted/40 wark:to-purple-900/10">
                 <a href="/campaigns/create">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -832,12 +832,12 @@ export default function DashboardPage() {
                       <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all duration-200" />
                     </div>
                     <h3 className="font-semibold group-hover:text-purple-600 transition-colors">New Campaign</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Send messages to multiple contacts</p>
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mt-1">Send messages to multiple contacts</p>
                   </CardContent>
                 </a>
               </Card>
 
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-white to-blue-50/30 wark:from-muted/40 wark:to-blue-900/10">
                 <Link href="/templates">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -847,12 +847,12 @@ export default function DashboardPage() {
                       <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-200" />
                     </div>
                     <h3 className="font-semibold group-hover:text-blue-600 transition-colors">Create Template</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Design reusable message templates</p>
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mt-1">Design reusable message templates</p>
                   </CardContent>
                 </Link>
               </Card>
 
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-green-200 bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-green-200 bg-gradient-to-br from-white to-green-50/30 wark:from-muted/40 wark:to-green-900/10">
                 <a href="/contacts">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -862,12 +862,12 @@ export default function DashboardPage() {
                       <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-500 group-hover:translate-x-1 transition-all duration-200" />
                     </div>
                     <h3 className="font-semibold group-hover:text-green-600 transition-colors">Add Contact</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Add new contact to your database</p>
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mt-1">Add new contact to your database</p>
                   </CardContent>
                 </a>
               </Card>
 
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-amber-200 bg-gradient-to-br from-white to-amber-50/30 dark:from-muted/40 dark:to-amber-900/10">
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-amber-200 bg-gradient-to-br from-white to-amber-50/30 wark:from-muted/40 wark:to-amber-900/10">
                 <a href="/contacts/import">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -877,7 +877,7 @@ export default function DashboardPage() {
                       <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all duration-200" />
                     </div>
                     <h3 className="font-semibold group-hover:text-amber-600 transition-colors">Create Workflows</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Create and manage multi-step automation sequences</p>
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mt-1">Create and manage multi-step automation sequences</p>
                   </CardContent>
                 </a>
               </Card>
@@ -887,7 +887,7 @@ export default function DashboardPage() {
 
         {/* WABA Status Card */}
         <Card id="waba-section" className="overflow-hidden">
-          <CardHeader className="pb-4 bg-gradient-to-r from-green-50/50 to-transparent dark:from-green-900/10">
+          <CardHeader className="pb-4 bg-gradient-to-r from-green-50/50 to-transparent wark:from-green-900/10">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
@@ -936,8 +936,8 @@ export default function DashboardPage() {
             {renderWABASection()}
           </CardContent>
           {wabaAccounts.length > 0 && (
-            <CardFooter className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-t pt-6 bg-gray-50/50 dark:bg-gray-900/50">
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <CardFooter className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-t pt-6 bg-gray-50/50 wark:bg-gray-900/50">
+              <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
                 <Info className="h-4 w-4" />
                 <span>Need help managing your accounts?</span>
               </div>
@@ -1130,12 +1130,12 @@ export default function DashboardPage() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="space-y-2">
                   <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                  <p className="text-sm text-gray-600 wark:text-gray-300">
                     Track your WhatsApp Business performance and engagement metrics
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <TabsList className="grid w-full max-w-md grid-cols-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                  <TabsList className="grid w-full max-w-md grid-cols-4 bg-gray-100 wark:bg-gray-800 p-1 rounded-xl">
                     <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
                       Overview
                     </TabsTrigger>
@@ -1150,7 +1150,7 @@ export default function DashboardPage() {
                     </TabsTrigger>
                   </TabsList>
                   <div className="hidden md:flex gap-2">
-                    <Button variant="outline" size="sm" className="gap-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <Button variant="outline" size="sm" className="gap-2 hover:bg-gray-50 wark:hover:bg-gray-800">
                       <FileText className="h-4 w-4" />
                       Export Report
                     </Button>
@@ -1164,12 +1164,12 @@ export default function DashboardPage() {
 
               <TabsContent value="overview" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-green-900/10">
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 hover:shadow-lg transition-all duration-300 wark:from-muted/40 wark:to-green-900/10">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
-                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 wark:bg-green-900/30">
+                          <CheckCircle className="h-4 w-4 text-green-600 wark:text-green-400" />
                         </div>
                       </div>
                     </CardHeader>
@@ -1187,12 +1187,12 @@ export default function DashboardPage() {
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
                   </Card>
 
-                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-blue-900/10">
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 hover:shadow-lg transition-all duration-300 wark:from-muted/40 wark:to-blue-900/10">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium">Read Rate</CardTitle>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                          <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 wark:bg-blue-900/30">
+                          <MessageSquare className="h-4 w-4 text-blue-600 wark:text-blue-400" />
                         </div>
                       </div>
                     </CardHeader>
@@ -1210,12 +1210,12 @@ export default function DashboardPage() {
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-blue-500/10 transition-all duration-300 group-hover:scale-110" />
                   </Card>
 
-                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-purple-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-purple-900/10">
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-purple-50/30 hover:shadow-lg transition-all duration-300 wark:from-muted/40 wark:to-purple-900/10">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium">Response Rate</CardTitle>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                          <ArrowRight className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 wark:bg-purple-900/30">
+                          <ArrowRight className="h-4 w-4 text-purple-600 wark:text-purple-400" />
                         </div>
                       </div>
                     </CardHeader>
@@ -1233,12 +1233,12 @@ export default function DashboardPage() {
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-purple-500/10 transition-all duration-300 group-hover:scale-110" />
                   </Card>
 
-                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-amber-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-amber-900/10">
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-amber-50/30 hover:shadow-lg transition-all duration-300 wark:from-muted/40 wark:to-amber-900/10">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm font-medium">Avg. Response Time</CardTitle>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                          <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 wark:bg-amber-900/30">
+                          <Clock className="h-4 w-4 text-amber-600 wark:text-amber-400" />
                         </div>
                       </div>
                     </CardHeader>
@@ -1258,7 +1258,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Template Performance Card */}
-                <Card className="rounded-xl border bg-gradient-to-br from-white to-gray-50/30 dark:from-muted/40 dark:to-gray-800/30">
+                <Card className="rounded-xl border bg-gradient-to-br from-white to-gray-50/30 wark:from-muted/40 wark:to-gray-800/30">
                   <CardHeader>
                     <CardTitle>Template Performance</CardTitle>
                     <CardDescription>
@@ -1333,7 +1333,7 @@ export default function DashboardPage() {
 
               <TabsContent value="messages" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 wark:from-muted/40 wark:to-blue-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Message Types</CardTitle>
                     </CardHeader>
@@ -1380,7 +1380,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 wark:from-muted/40 wark:to-green-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Messaging Activity</CardTitle>
                     </CardHeader>
@@ -1448,7 +1448,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 wark:from-muted/40 wark:to-purple-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Response Time</CardTitle>
                     </CardHeader>
@@ -1522,7 +1522,7 @@ export default function DashboardPage() {
 
               <TabsContent value="contacts" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 wark:from-muted/40 wark:to-blue-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
                     </CardHeader>
@@ -1549,7 +1549,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 wark:from-muted/40 wark:to-green-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Active Contacts</CardTitle>
                     </CardHeader>
@@ -1578,7 +1578,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 wark:from-muted/40 wark:to-purple-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">New Contacts</CardTitle>
                     </CardHeader>
@@ -1609,7 +1609,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-red-50/30 dark:from-muted/40 dark:to-red-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-red-50/30 wark:from-muted/40 wark:to-red-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Unsubscribed</CardTitle>
                     </CardHeader>
@@ -1633,7 +1633,7 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 </div>
-                <Card className="rounded-xl border bg-gradient-to-br from-white to-gray-50/30 dark:from-muted/40 dark:to-gray-800/30">
+                <Card className="rounded-xl border bg-gradient-to-br from-white to-gray-50/30 wark:from-muted/40 wark:to-gray-800/30">
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <div>
@@ -1728,7 +1728,7 @@ export default function DashboardPage() {
 
               <TabsContent value="templates" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 wark:from-muted/40 wark:to-green-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Template Status</CardTitle>
                     </CardHeader>
@@ -1778,7 +1778,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 wark:from-muted/40 wark:to-blue-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Template Categories</CardTitle>
                     </CardHeader>
@@ -1841,7 +1841,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10 flex flex-col">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 wark:from-muted/40 wark:to-purple-900/10 flex flex-col">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Template Performance</CardTitle>
                     </CardHeader>
@@ -1914,8 +1914,8 @@ export default function DashboardPage() {
             </Tabs>
 
             {/* Help and Tips Card */}
-            <Card className="rounded-2xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10 overflow-hidden">
-              <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-900/10">
+            <Card className="rounded-2xl border bg-gradient-to-br from-white to-blue-50/30 wark:from-muted/40 wark:to-blue-900/10 overflow-hidden">
+              <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/50 to-transparent wark:from-blue-900/10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
@@ -1923,12 +1923,12 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <CardTitle className="text-xl font-semibold">Tips & Best Practices</CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                      <p className="text-sm text-gray-600 wark:text-gray-300">
                         Expert recommendations to optimize your WhatsApp Business
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                  <Button variant="ghost" size="sm" className="gap-2 hover:bg-blue-50 wark:hover:bg-blue-900/20">
                     View all 
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -1936,19 +1936,19 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="pb-6">
                 <div className="grid gap-6 md:grid-cols-3">
-                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 dark:from-muted/40 dark:to-green-900/10">
+                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 wark:from-muted/40 wark:to-green-900/10">
                     <div className="flex items-start gap-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
                         <ShieldCheck className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        <h3 className="font-semibold text-gray-900 wark:text-white mb-2">
                           Comply with WhatsApp Policies
                         </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <p className="text-sm text-gray-600 wark:text-gray-300 leading-relaxed">
                           Ensure your messages adhere to WhatsApp Business Policies for better delivery rates
                         </p>
-                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20">
+                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-green-600 hover:bg-green-50 wark:text-green-400 wark:hover:bg-green-900/20">
                           Learn more →
                         </Button>
                       </div>
@@ -1956,19 +1956,19 @@ export default function DashboardPage() {
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
                   </div>
 
-                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 dark:from-muted/40 dark:to-blue-900/10">
+                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 wark:from-muted/40 wark:to-blue-900/10">
                     <div className="flex items-start gap-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
                         <MessageSquare className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        <h3 className="font-semibold text-gray-900 wark:text-white mb-2">
                           Template Best Practices
                         </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <p className="text-sm text-gray-600 wark:text-gray-300 leading-relaxed">
                           Tips for creating templates that get approved quickly and perform well
                         </p>
-                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20">
+                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-blue-600 hover:bg-blue-50 wark:text-blue-400 wark:hover:bg-blue-900/20">
                           Learn more →
                         </Button>
                       </div>
@@ -1976,19 +1976,19 @@ export default function DashboardPage() {
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-blue-500/10 transition-all duration-300 group-hover:scale-110" />
                   </div>
 
-                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-purple-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 dark:from-muted/40 dark:to-purple-900/10">
+                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-purple-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 wark:from-muted/40 wark:to-purple-900/10">
                     <div className="flex items-start gap-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
                         <Sparkles className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        <h3 className="font-semibold text-gray-900 wark:text-white mb-2">
                           Increase Engagement
                         </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <p className="text-sm text-gray-600 wark:text-gray-300 leading-relaxed">
                           Strategies to boost customer interaction and response rates
                         </p>
-                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20">
+                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 wark:text-purple-400 wark:hover:bg-purple-900/20">
                           Learn more →
                         </Button>
                       </div>

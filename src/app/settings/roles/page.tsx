@@ -384,10 +384,10 @@ export default function RolesPage() {
                           <span className="text-lg">{resource.icon}</span>
                         </div>
                         <div>
-                          <Label className="font-semibold text-gray-900 dark:text-white">
+                          <Label className="font-semibold text-gray-900 wark:text-white">
                             {resource.label}
                           </Label>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                          <p className="text-sm text-gray-500 wark:text-gray-400">
                             {resource.description}
                           </p>
                         </div>
@@ -438,7 +438,7 @@ export default function RolesPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 wark:from-gray-900 wark:via-gray-800 wark:to-gray-900">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
@@ -448,7 +448,7 @@ export default function RolesPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => window.location.href = '/settings/agents'}
-                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                  className="text-gray-600 hover:text-gray-900 wark:text-gray-400 wark:hover:text-gray-100"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Team
@@ -458,10 +458,10 @@ export default function RolesPage() {
                     <Shield className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent dark:from-white dark:to-gray-300">
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent wark:from-white wark:to-gray-300">
                       Roles & Permissions
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-gray-600 wark:text-gray-400">
                       Define roles and manage access permissions for your team
                     </p>
                   </div>
@@ -479,18 +479,18 @@ export default function RolesPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-gray-800">
+            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white wark:from-purple-900/20 wark:to-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Total Roles</p>
-                    <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{stats.total}</p>
+                    <p className="text-sm font-medium text-purple-600 wark:text-purple-400">Total Roles</p>
+                    <p className="text-3xl font-bold text-purple-900 wark:text-purple-100">{stats.total}</p>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10">
                     <Shield className="h-6 w-6 text-purple-500" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                   <Activity className="h-4 w-4" />
                   <span>Active roles</span>
                 </div>
@@ -498,18 +498,18 @@ export default function RolesPage() {
               <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-500/5" />
             </Card>
 
-            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800">
+            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white wark:from-blue-900/20 wark:to-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Default Roles</p>
-                    <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.default}</p>
+                    <p className="text-sm font-medium text-blue-600 wark:text-blue-400">Default Roles</p>
+                    <p className="text-3xl font-bold text-blue-900 wark:text-blue-100">{stats.default}</p>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10">
                     <Star className="h-6 w-6 text-blue-500" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                   <CheckCircle2 className="h-4 w-4" />
                   <span>Auto-assigned</span>
                 </div>
@@ -517,18 +517,18 @@ export default function RolesPage() {
               <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-blue-500/5" />
             </Card>
 
-            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-gray-800">
+            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-white wark:from-green-900/20 wark:to-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-600 dark:text-green-400">Custom Roles</p>
-                    <p className="text-3xl font-bold text-green-900 dark:text-green-100">{stats.custom}</p>
+                    <p className="text-sm font-medium text-green-600 wark:text-green-400">Custom Roles</p>
+                    <p className="text-3xl font-bold text-green-900 wark:text-green-100">{stats.custom}</p>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
                     <Settings className="h-6 w-6 text-green-500" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                   <Zap className="h-4 w-4" />
                   <span>Customized</span>
                 </div>
@@ -536,18 +536,18 @@ export default function RolesPage() {
               <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-green-500/5" />
             </Card>
 
-            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-50 to-white dark:from-orange-900/20 dark:to-gray-800">
+            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-50 to-white wark:from-orange-900/20 wark:to-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Permissions</p>
-                    <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">{stats.totalPermissions}</p>
+                    <p className="text-sm font-medium text-orange-600 wark:text-orange-400">Permissions</p>
+                    <p className="text-3xl font-bold text-orange-900 wark:text-orange-100">{stats.totalPermissions}</p>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
                     <Lock className="h-6 w-6 text-orange-500" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                   <Globe className="h-4 w-4" />
                   <span>Total granted</span>
                 </div>
@@ -587,10 +587,10 @@ export default function RolesPage() {
                     <Shield className="h-16 w-16 text-primary" />
                   </div>
                   <div className="space-y-3">
-                    <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-2xl font-semibold text-gray-900 wark:text-white">
                       No Roles Created Yet
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                    <p className="text-gray-600 wark:text-gray-400 max-w-md">
                       Create roles to organize your team permissions and control access to different features of your platform.
                     </p>
                   </div>
@@ -631,31 +631,31 @@ export default function RolesPage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="hover:bg-transparent border-gray-200 dark:border-gray-700">
-                        <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Role</TableHead>
-                        <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Permissions</TableHead>
-                        <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Default</TableHead>
-                        <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Created</TableHead>
-                        <TableHead className="text-right font-semibold text-gray-900 dark:text-gray-100">Actions</TableHead>
+                      <TableRow className="hover:bg-transparent border-gray-200 wark:border-gray-700">
+                        <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Role</TableHead>
+                        <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Permissions</TableHead>
+                        <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Default</TableHead>
+                        <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Created</TableHead>
+                        <TableHead className="text-right font-semibold text-gray-900 wark:text-gray-100">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredRoles.map((role) => (
-                        <TableRow key={role._id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                        <TableRow key={role._id} className="group hover:bg-gray-50/50 wark:hover:bg-gray-800/50 transition-colors">
                           <TableCell className="py-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
                                 <Shield className="h-5 w-5 text-primary" />
                               </div>
                               <div>
-                                <div className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <div className="font-semibold text-gray-900 wark:text-white flex items-center gap-2">
                                   {role.name}
                                   {role.isDefault && (
                                     <Crown className="h-4 w-4 text-yellow-500" />
                                   )}
                                 </div>
                                 {role.description && (
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  <div className="text-sm text-gray-500 wark:text-gray-400">
                                     {role.description}
                                   </div>
                                 )}
@@ -680,14 +680,14 @@ export default function RolesPage() {
                             {role.isDefault ? (
                               <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                                <span className="text-sm font-medium text-green-600 dark:text-green-400">Yes</span>
+                                <span className="text-sm font-medium text-green-600 wark:text-green-400">Yes</span>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-500 dark:text-gray-400">No</span>
+                              <span className="text-sm text-gray-500 wark:text-gray-400">No</span>
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <div className="text-sm text-gray-600 wark:text-gray-400">
                               {format(new Date(role.createdAt), "MMM dd, yyyy")}
                             </div>
                           </TableCell>
@@ -698,7 +698,7 @@ export default function RolesPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    className="h-8 w-8 hover:bg-gray-100 wark:hover:bg-gray-700"
                                   >
                                     <MoreVertical className="h-4 w-4" />
                                     <span className="sr-only">Actions</span>
@@ -779,7 +779,7 @@ export default function RolesPage() {
                   setPermissions={(permissions) => setNewRole({ ...newRole, permissions })}
                 />
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-gray-50 wark:bg-gray-800 rounded-lg">
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="default"
@@ -857,7 +857,7 @@ export default function RolesPage() {
                   setPermissions={(permissions) => setEditRole({ ...editRole, permissions })}
                 />
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-gray-50 wark:bg-gray-800 rounded-lg">
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="edit-default"
@@ -904,12 +904,12 @@ export default function RolesPage() {
               </DialogHeader>
               {selectedRole && (
                 <div className="space-y-6 py-4">
-                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl border">
+                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-white wark:from-gray-800 wark:to-gray-900 rounded-xl border">
                     <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
                       <Shield className="h-8 w-8 text-primary" />
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <h3 className="text-xl font-semibold text-gray-900 wark:text-white flex items-center gap-2">
                         {selectedRole.name}
                         {selectedRole.isDefault && (
                           <Badge variant="outline" className="text-yellow-600 border-yellow-600">
@@ -919,7 +919,7 @@ export default function RolesPage() {
                         )}
                       </h3>
                       {selectedRole.description && (
-                        <p className="text-gray-600 dark:text-gray-400">
+                        <p className="text-gray-600 wark:text-gray-400">
                           {selectedRole.description}
                         </p>
                       )}
@@ -932,7 +932,7 @@ export default function RolesPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white">Permissions Overview</h4>
+                    <h4 className="font-semibold text-gray-900 wark:text-white">Permissions Overview</h4>
                     <div className="grid gap-4">
                       {selectedRole.permissions.map((permission, index) => (
                         <Card key={index} className="border-0 shadow-sm">
@@ -943,10 +943,10 @@ export default function RolesPage() {
                                   <span className="text-lg">{getResourceIcon(permission.resource)}</span>
                                 </div>
                                 <div>
-                                  <span className="font-medium capitalize text-gray-900 dark:text-white">
+                                  <span className="font-medium capitalize text-gray-900 wark:text-white">
                                     {permission.resource}
                                   </span>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  <p className="text-sm text-gray-500 wark:text-gray-400">
                                     {AVAILABLE_RESOURCES.find(r => r.key === permission.resource)?.description}
                                   </p>
                                 </div>
@@ -1000,18 +1000,18 @@ export default function RolesPage() {
               </DialogHeader>
               <div className="py-4">
                 {selectedRole && (
-                  <div className="flex items-center gap-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-800">
-                      <Shield className="h-6 w-6 text-red-600 dark:text-red-400" />
+                  <div className="flex items-center gap-4 p-4 rounded-lg bg-red-50 wark:bg-red-900/20 border border-red-200 wark:border-red-800">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 wark:bg-red-800">
+                      <Shield className="h-6 w-6 text-red-600 wark:text-red-400" />
                     </div>
                     <div>
-                      <div className="font-medium text-red-900 dark:text-red-100 flex items-center gap-2">
+                      <div className="font-medium text-red-900 wark:text-red-100 flex items-center gap-2">
                         {selectedRole.name}
                         {selectedRole.isDefault && (
                           <Crown className="h-4 w-4 text-yellow-500" />
                         )}
                       </div>
-                      <div className="text-sm text-red-700 dark:text-red-300">
+                      <div className="text-sm text-red-700 wark:text-red-300">
                         {selectedRole.permissions.length} permission{selectedRole.permissions.length !== 1 ? 's' : ''}
                       </div>
                     </div>

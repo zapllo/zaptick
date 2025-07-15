@@ -371,7 +371,7 @@ export default function Layout({ children }: LayoutProps) {
                       )}
                     </div>
                     {walletData.recentChange > 0 && (
-                      <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                      <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 wark:bg-emerald-900/30 wark:text-emerald-400 border-emerald-200 wark:border-emerald-800">
                         <ArrowUpRight className="h-3 w-3 mr-1" />
                         +₹{walletData.recentChange.toFixed(2)}
                       </Badge>
@@ -596,7 +596,7 @@ export default function Layout({ children }: LayoutProps) {
                   </div>
                   <div className="p-2 border-t">
                     <DropdownMenuItem
-                      className="rounded-lg cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
+                      className="rounded-lg cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 wark:hover:bg-red-950/50"
                       onClick={handleSignOut}
                     >
                       <LogOut className="mr-3 h-4 w-4" />

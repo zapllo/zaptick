@@ -389,7 +389,7 @@ export default function AgentsPage() {
 
     return (
         <Layout>
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 wark:from-gray-900 wark:via-gray-800 wark:to-gray-900">
                 <div className="container mx-auto px-4 py-8">
                     {/* Header */}
                     <div className="mb-8">
@@ -400,10 +400,10 @@ export default function AgentsPage() {
                                         <Users className="h-6 w-6 text-white" />
                                     </div>
                                     <div>
-                                        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent dark:from-white dark:to-gray-300">
+                                        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent wark:from-white wark:to-gray-300">
                                             Team Management
                                         </h1>
-                                        <p className="text-gray-600 dark:text-gray-400">
+                                        <p className="text-gray-600 wark:text-gray-400">
                                             Manage your team members and their permissions
                                         </p>
                                     </div>
@@ -431,18 +431,18 @@ export default function AgentsPage() {
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800">
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white wark:from-blue-900/20 wark:to-gray-800">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Members</p>
-                                        <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
+                                        <p className="text-sm font-medium text-blue-600 wark:text-blue-400">Total Members</p>
+                                        <p className="text-3xl font-bold text-blue-900 wark:text-blue-100">{stats.total}</p>
                                     </div>
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10">
                                         <Users className="h-6 w-6 text-blue-500" />
                                     </div>
                                 </div>
-                                <div className="mt-4 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                <div className="mt-4 flex items-center gap-2 text-sm text-green-600 wark:text-green-400">
                                     <TrendingUp className="h-4 w-4" />
                                     <span>Active team</span>
                                 </div>
@@ -450,18 +450,18 @@ export default function AgentsPage() {
                             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-blue-500/5" />
                         </Card>
 
-                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-gray-800">
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-white wark:from-green-900/20 wark:to-gray-800">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium text-green-600 dark:text-green-400">Active Users</p>
-                                        <p className="text-3xl font-bold text-green-900 dark:text-green-100">{stats.active}</p>
+                                        <p className="text-sm font-medium text-green-600 wark:text-green-400">Active Users</p>
+                                        <p className="text-3xl font-bold text-green-900 wark:text-green-100">{stats.active}</p>
                                     </div>
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
                                         <Activity className="h-6 w-6 text-green-500" />
                                     </div>
                                 </div>
-                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                                     <Globe className="h-4 w-4" />
                                     <span>Online now</span>
                                 </div>
@@ -469,18 +469,18 @@ export default function AgentsPage() {
                             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-green-500/5" />
                         </Card>
 
-                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-gray-800">
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white wark:from-purple-900/20 wark:to-gray-800">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Admins</p>
-                                        <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{stats.admins}</p>
+                                        <p className="text-sm font-medium text-purple-600 wark:text-purple-400">Admins</p>
+                                        <p className="text-3xl font-bold text-purple-900 wark:text-purple-100">{stats.admins}</p>
                                     </div>
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10">
                                         <Shield className="h-6 w-6 text-purple-500" />
                                     </div>
                                 </div>
-                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                                     <Zap className="h-4 w-4" />
                                     <span>Full access</span>
                                 </div>
@@ -488,18 +488,18 @@ export default function AgentsPage() {
                             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-500/5" />
                         </Card>
 
-                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-50 to-white dark:from-orange-900/20 dark:to-gray-800">
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-50 to-white wark:from-orange-900/20 wark:to-gray-800">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Agents</p>
-                                        <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">{stats.agents}</p>
+                                        <p className="text-sm font-medium text-orange-600 wark:text-orange-400">Agents</p>
+                                        <p className="text-3xl font-bold text-orange-900 wark:text-orange-100">{stats.agents}</p>
                                     </div>
                                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
                                         <UserCheck className="h-6 w-6 text-orange-500" />
                                     </div>
                                 </div>
-                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                                     <Clock className="h-4 w-4" />
                                     <span>Support team</span>
                                 </div>
@@ -539,10 +539,10 @@ export default function AgentsPage() {
                                         <Users className="h-16 w-16 text-primary" />
                                     </div>
                                     <div className="space-y-3">
-                                        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                                        <h3 className="text-2xl font-semibold text-gray-900 wark:text-white">
                                             Welcome to Team Management
                                         </h3>
-                                        <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                                        <p className="text-gray-600 wark:text-gray-400 max-w-md">
                                             Start building your team by inviting members to help manage your WhatsApp communications and grow your business.
                                         </p>
                                     </div>
@@ -594,28 +594,28 @@ export default function AgentsPage() {
                                 <div className="overflow-x-auto">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow className="hover:bg-transparent border-gray-200 dark:border-gray-700">
-                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Member</TableHead>
-                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Role</TableHead>
-                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Status</TableHead>
-                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Last Activity</TableHead>
-                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Joined</TableHead>
-                                                <TableHead className="text-right font-semibold text-gray-900 dark:text-gray-100">Actions</TableHead>
+                                            <TableRow className="hover:bg-transparent border-gray-200 wark:border-gray-700">
+                                                <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Member</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Role</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Status</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Last Activity</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 wark:text-gray-100">Joined</TableHead>
+                                                <TableHead className="text-right font-semibold text-gray-900 wark:text-gray-100">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {filteredUsers.map((user) => (
-                                                <TableRow key={user._id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                                                <TableRow key={user._id} className="group hover:bg-gray-50/50 wark:hover:bg-gray-800/50 transition-colors">
                                                     <TableCell className="py-4">
                                                         <div className="flex items-center gap-4">
-                                                            <Avatar className="h-12 w-12 ring-2 ring-gray-100 dark:ring-gray-700">
+                                                            <Avatar className="h-12 w-12 ring-2 ring-gray-100 wark:ring-gray-700">
                                                                 <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/5 text-primary font-semibold text-lg">
                                                                     {user.name.charAt(0).toUpperCase()}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                             <div>
-                                                                <div className="font-semibold text-gray-900 dark:text-white">{user.name}</div>
-                                                                <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                                <div className="font-semibold text-gray-900 wark:text-white">{user.name}</div>
+                                                                <div className="text-sm text-gray-500 wark:text-gray-400 flex items-center gap-1">
                                                                     <Mail className="h-3 w-3" />
                                                                     {user.email}
                                                                 </div>
@@ -631,7 +631,7 @@ export default function AgentsPage() {
                                                                 </Badge>
                                                             </div>
                                                             {user.roleId && (
-                                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                <span className="text-xs text-gray-500 wark:text-gray-400">
                                                                     {user.roleId.name}
                                                                 </span>
                                                             )}
@@ -641,17 +641,17 @@ export default function AgentsPage() {
                                                         {user.isActive ? (
                                                             <div className="flex items-center gap-2">
                                                                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                                                                <span className="text-sm font-medium text-green-600 dark:text-green-400">Active</span>
+                                                                <span className="text-sm font-medium text-green-600 wark:text-green-400">Active</span>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-2">
                                                                 <div className="h-2 w-2 rounded-full bg-red-500" />
-                                                                <span className="text-sm font-medium text-red-600 dark:text-red-400">Inactive</span>
+                                                                <span className="text-sm font-medium text-red-600 wark:text-red-400">Inactive</span>
                                                             </div>
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                                                             <Clock className="h-4 w-4" />
                                                             {user.lastLoginAt ? (
                                                                 format(new Date(user.lastLoginAt), "MMM dd, yyyy")
@@ -661,7 +661,7 @@ export default function AgentsPage() {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
                                                             <Calendar className="h-4 w-4" />
                                                             {format(new Date(user.createdAt), "MMM dd, yyyy")}
                                                         </div>
@@ -673,7 +673,7 @@ export default function AgentsPage() {
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                                        className="h-8 w-8 hover:bg-gray-100 wark:hover:bg-gray-700"
                                                                     >
                                                                         <MoreVertical className="h-4 w-4" />
                                                                         <span className="sr-only">Actions</span>
@@ -754,7 +754,7 @@ export default function AgentsPage() {
                                         onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                                         className="border-gray-200 focus:border-primary focus:ring-primary"
                                     />
-                                    <p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                                    <p className="text-xs text-gray-500 bg-gray-50 wark:bg-gray-800 px-2 py-1 rounded">
                                         User will be asked to change this on first login
                                     </p>
                                 </div>
@@ -915,7 +915,7 @@ export default function AgentsPage() {
                                     </Select>
                                 </div>
 
-                                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div className="flex items-center justify-between p-3 bg-gray-50 wark:bg-gray-800 rounded-lg">
                                     <div className="flex items-center space-x-2">
                                         <Switch
                                             id="edit-active"
@@ -966,15 +966,15 @@ export default function AgentsPage() {
                             </DialogHeader>
                             {selectedUser && (
                                 <div className="space-y-6 py-4">
-                                    <div className="flex items-center gap-6 p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl border">
+                                    <div className="flex items-center gap-6 p-4 bg-gradient-to-r from-gray-50 to-white wark:from-gray-800 wark:to-gray-900 rounded-xl border">
                                         <Avatar className="h-20 w-20 ring-4 ring-primary/20">
                                             <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/5 text-primary text-2xl font-semibold">
                                                 {selectedUser.name.charAt(0).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="space-y-2">
-                                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedUser.name}</h3>
-                                            <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                            <h3 className="text-xl font-semibold text-gray-900 wark:text-white">{selectedUser.name}</h3>
+                                            <p className="text-gray-600 wark:text-gray-400 flex items-center gap-2">
                                                 <Mail className="h-4 w-4" />
                                                 {selectedUser.email}
                                             </p>
@@ -1004,11 +1004,11 @@ export default function AgentsPage() {
                                         <Card className="border-0 shadow-sm">
                                             <CardContent className="p-4">
                                                 <div className="space-y-3">
-                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 wark:text-gray-300">
                                                         <Clock className="h-4 w-4" />
                                                         Last Login
                                                     </div>
-                                                    <p className="text-gray-900 dark:text-white">
+                                                    <p className="text-gray-900 wark:text-white">
                                                         {selectedUser.lastLoginAt
                                                             ? format(new Date(selectedUser.lastLoginAt), "MMM dd, yyyy 'at' HH:mm")
                                                             : "Never logged in"
@@ -1021,11 +1021,11 @@ export default function AgentsPage() {
                                         <Card className="border-0 shadow-sm">
                                             <CardContent className="p-4">
                                                 <div className="space-y-3">
-                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 wark:text-gray-300">
                                                         <Calendar className="h-4 w-4" />
                                                         Joined Date
                                                     </div>
-                                                    <p className="text-gray-900 dark:text-white">
+                                                    <p className="text-gray-900 wark:text-white">
                                                         {format(new Date(selectedUser.createdAt), "MMM dd, yyyy")}
                                                     </p>
                                                 </div>
@@ -1036,11 +1036,11 @@ export default function AgentsPage() {
                                             <Card className="border-0 shadow-sm md:col-span-2">
                                                 <CardContent className="p-4">
                                                     <div className="space-y-3">
-                                                        <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        <div className="flex items-center gap-2 text-sm font-medium text-gray-700 wark:text-gray-300">
                                                             <UserPlus className="h-4 w-4" />
                                                             Invited By
                                                         </div>
-                                                        <p className="text-gray-900 dark:text-white">{selectedUser.invitedBy.name}</p>
+                                                        <p className="text-gray-900 wark:text-white">{selectedUser.invitedBy.name}</p>
                                                     </div>
                                                 </CardContent>
                                             </Card>
@@ -1058,7 +1058,7 @@ export default function AgentsPage() {
                                                     {selectedUser.roleId.name}
                                                 </CardDescription>
                                                 {selectedUser.roleId.description && (
-                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    <p className="text-sm text-gray-600 wark:text-gray-400">
                                                         {selectedUser.roleId.description}
                                                     </p>
                                                 )}
@@ -1066,10 +1066,10 @@ export default function AgentsPage() {
                                             <CardContent>
                                                 <div className="space-y-3">
                                                     {selectedUser.roleId.permissions.map((permission, index) => (
-                                                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border">
+                                                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 wark:bg-gray-800 border">
                                                             <div className="flex items-center gap-3">
                                                                 <span className="text-lg">{getResourceIcon(permission.resource)}</span>
-                                                                <span className="font-medium capitalize text-gray-900 dark:text-white">
+                                                                <span className="font-medium capitalize text-gray-900 wark:text-white">
                                                                     {permission.resource}
                                                                 </span>
                                                             </div>
@@ -1122,15 +1122,15 @@ export default function AgentsPage() {
                             </DialogHeader>
                             <div className="py-4">
                                 {selectedUser && (
-                                    <div className="flex items-center gap-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                                    <div className="flex items-center gap-4 p-4 rounded-lg bg-red-50 wark:bg-red-900/20 border border-red-200 wark:border-red-800">
                                         <Avatar className="h-12 w-12 ring-2 ring-red-200">
-                                            <AvatarFallback className="bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300 font-medium">
+                                            <AvatarFallback className="bg-red-100 wark:bg-red-800 text-red-700 wark:text-red-300 font-medium">
                                                 {selectedUser.name.charAt(0).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>
-                                            <div className="font-medium text-red-900 dark:text-red-100">{selectedUser.name}</div>
-                                            <div className="text-sm text-red-700 dark:text-red-300">{selectedUser.email}</div>
+                                            <div className="font-medium text-red-900 wark:text-red-100">{selectedUser.name}</div>
+                                            <div className="text-sm text-red-700 wark:text-red-300">{selectedUser.email}</div>
                                         </div>
                                     </div>
                                 )}

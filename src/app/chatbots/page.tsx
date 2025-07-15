@@ -1174,7 +1174,7 @@ export default function ChatbotsPage() {
                               <p className="text-sm">Hello! I&apos;m the {chatbot.name}. How can I help you today?</p>
                             </div>
 
-                            <div className="bg-[#dcf8c6] dark:bg-[#005c4b] p-3 rounded-lg max-w-[80%] ml-auto">
+                            <div className="bg-[#dcf8c6] wark:bg-[#005c4b] p-3 rounded-lg max-w-[80%] ml-auto">
                               <p className="text-sm">I need help with my recent order</p>
                             </div>
 

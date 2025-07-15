@@ -450,7 +450,7 @@ export default function BroadcastsPage() {
                       </div>
 
                       {broadcast.status === "failed" && (
-                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded">
+                        <div className="mt-2 p-2 bg-red-50 wark:bg-red-900/20 text-red-600 wark:text-red-400 text-xs rounded">
                           <AlertCircle className="h-3 w-3 inline-block mr-1" />
                           {broadcast.errorMessage}
                         </div>
@@ -747,7 +747,7 @@ export default function BroadcastsPage() {
               <div className="space-y-2 mt-4">
                 <label className="text-sm font-medium">Preview</label>
                 <div className="border rounded-md p-4 bg-muted/30">
-                  <div className="bg-[#dcf8c6] dark:bg-[#005c4b] p-3 rounded-lg max-w-[85%] ml-auto mb-3">
+                  <div className="bg-[#dcf8c6] wark:bg-[#005c4b] p-3 rounded-lg max-w-[85%] ml-auto mb-3">
                     <p className="text-sm">Hello , check out our latest products and offers in our June newsletter!</p>
                     <div className="mt-2 bg-background/20 rounded p-2 flex items-center gap-2">
                       <FileText className="h-5 w-5" />
@@ -1006,7 +1006,7 @@ export default function BroadcastsPage() {
                     </div>
                     <div className="p-4">
                       <div className="border rounded-md p-4 bg-muted/30">
-                        <div className="bg-[#dcf8c6] dark:bg-[#005c4b] p-3 rounded-lg max-w-[85%] ml-auto">
+                        <div className="bg-[#dcf8c6] wark:bg-[#005c4b] p-3 rounded-lg max-w-[85%] ml-auto">
                           <p className="text-sm">{broadcast.template.content.replace("{{1}}", "John")}</p>
                           {broadcast.template.type === "media" && (
                             <div className="mt-2 bg-background/20 rounded p-2 flex items-center gap-2">

@@ -29,11 +29,11 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-gray-200 bg-secondary text-black -900 dark:bg-secondary dark:bg-secondary dark:text-black -100",
-        success: "border-green-500/20 bg-green-50 text-black -900 dark:border-green-500/30 dark:bg-secondary -900/80 dark:text-black -100",
-        destructive: "border-red-500/20 bg-red-50 text-red-900 dark:border-red-500/30 dark:bg-red-900 dark:text-red-100",
-        info: "border-blue-500/20 bg-blue-50 text-blue-900 dark:border-blue-500/30 dark:bg-blue-900/80 dark:text-blue-100",
-        warning: "border-yellow-500/20 bg-yellow-50 text-yellow-900 dark:border-yellow-500/30 dark:bg-yellow-900/80 dark:text-yellow-100",
+        default: "border-gray-200 bg-secondary text-black -900 wark:bg-secondary wark:bg-secondary wark:text-black -100",
+        success: "border-green-500/20 bg-green-50 text-black -900 wark:border-green-500/30 wark:bg-secondary -900/80 wark:text-black -100",
+        destructive: "border-red-500/20 bg-red-50 text-red-900 wark:border-red-500/30 wark:bg-red-900 wark:text-red-100",
+        info: "border-blue-500/20 bg-blue-50 text-blue-900 wark:border-blue-500/30 wark:bg-blue-900/80 wark:text-blue-100",
+        warning: "border-yellow-500/20 bg-yellow-50 text-yellow-900 wark:border-yellow-500/30 wark:bg-yellow-900/80 wark:text-yellow-100",
       },
     },
     defaultVariants: {
@@ -65,7 +65,7 @@ const ToastAction = React.forwardRef<
     ref={ref}
     className={cn(
       "inline-flex h-8 shrink-0 items-center justify-center rounded-md border px-3 text-sm font-medium ring-offset-background transition-colors focus:outline-none focus:ring-1 focus:ring-ring disabled:pointer-events-none disabled:opacity-50",
-      "border-gray-200 bg-white hover:bg-gray-100 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100",
+      "border-gray-200 bg-white hover:bg-gray-100 text-gray-900 wark:border-gray-700 wark:bg-gray-800 wark:hover:bg-gray-700 wark:text-gray-100",
       "group-[.destructive]:border-red-300 group-[.destructive]:hover:border-red-300 group-[.destructive]:hover:bg-red-100 group-[.destructive]:hover:text-red-600 group-[.destructive]:focus:ring-red-500",
       "group-[.success]:border-green-300 group-[.success]:hover:border-green-300 group-[.success]:hover:bg-green-100 group-[.success]:hover:text-green-600 group-[.success]:focus:ring-green-500",
       "group-[.info]:border-blue-300 group-[.info]:hover:border-blue-300 group-[.info]:hover:bg-blue-100 group-[.info]:hover:text-blue-600 group-[.info]:focus:ring-blue-500",
@@ -84,7 +84,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-gray-500 opacity-70 transition-opacity hover:text-gray-900 focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 dark:text-gray-400 dark:hover:text-gray-100",
+      "absolute right-2 top-2 rounded-md p-1 text-gray-500 opacity-70 transition-opacity hover:text-gray-900 focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 wark:text-gray-400 wark:hover:text-gray-100",
       "group-[.destructive]:text-red-400 group-[.destructive]:hover:text-red-600",
       "group-[.success]:text-green-400 group-[.success]:hover:text-green-600",
       "group-[.info]:text-blue-400 group-[.info]:hover:text-blue-600",
@@ -103,13 +103,13 @@ ToastClose.displayName = ToastPrimitives.Close.displayName
 const ToastIcon = ({ variant }: { variant?: "default" | "destructive" | "success" | "info" | "warning" }) => {
   switch (variant) {
     case "success":
-      return <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />;
+      return <CheckCircle className="h-5 w-5 text-green-600 wark:text-green-400" />;
     case "destructive":
-      return <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
+      return <AlertCircle className="h-5 w-5 text-red-600 wark:text-red-400" />;
     case "info":
-      return <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />;
+      return <Info className="h-5 w-5 text-blue-600 wark:text-blue-400" />;
     case "warning":
-      return <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />;
+      return <AlertCircle className="h-5 w-5 text-yellow-600 wark:text-yellow-400" />;
     default:
       return null;
   }

@@ -224,7 +224,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                   )}
                   {deviceType !== 'iphone' && (
                     <div
-                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] dark:border-r-[#202c33]"
+                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] wark:border-r-[#202c33]"
                       style={{ transform: 'translateY(6px)' }}
                     ></div>
                   )}
@@ -335,7 +335,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                   )}
                   {deviceType !== 'iphone' && (
                     <div
-                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] dark:border-r-[#202c33]"
+                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] wark:border-r-[#202c33]"
                       style={{ transform: 'translateY(6px)' }}
                     ></div>
                   )}
@@ -347,7 +347,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                         {form.headerText && (
                           <div className="text-xs font-medium mb-2">{form.headerText}</div>
                         )}
-                        <div className="bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                        <div className="bg-gray-200 wark:bg-gray-700 rounded overflow-hidden">
                           {form.headerType === 'image' && (
                             <img
                               src={form.mediaUrl}
@@ -417,7 +417,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
 
                     {/* Footer */}
                     {footerText && (
-                      <div className="text-[10px] text-gray-500  border-gray-200 dark:border-gray-600 pt-2 ">
+                      <div className="text-[10px] text-gray-500  border-gray-200 wark:border-gray-600 pt-2 ">
                         {footerText}
                       </div>
                     )}
