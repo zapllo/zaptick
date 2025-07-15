@@ -608,7 +608,7 @@ export default function HomePage() {
                   </div>
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-2">No Health Data Available</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 max-w-md">
-                    We couldn't retrieve your WhatsApp health status at this time. This might be due to a temporary issue.
+                    We couldn&apos;t retrieve your WhatsApp health status at this time. This might be due to a temporary issue.
                   </p>
                   <button
                     onClick={() => fetchHealthStatus(user.wabaAccounts[0].wabaId)}
@@ -759,7 +759,7 @@ export default function HomePage() {
                     Instagram Automation Coming Soon
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300">
-                    We're working hard to bring you powerful Instagram automation features.
+                    We&apos;re working hard to bring you powerful Instagram automation features.
                     Stay tuned for updates!
                   </p>
                 </div>

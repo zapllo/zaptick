@@ -2365,7 +2365,7 @@ export default function ContactsPage() {
                             </div>
                           </div>
                           <p className="text-xs text-slate-500">
-                            Contacts must opt-in to receive marketing messages via WhatsApp according to WhatsApp's policies
+                            Contacts must opt-in to receive marketing messages via WhatsApp according to WhatsApp&apos;s policies
                           </p>
                         </div>
                       </div>
@@ -2682,7 +2682,7 @@ export default function ContactsPage() {
                             </div>
                           </div>
                           <p className="text-xs text-slate-500">
-                            Contacts must opt-in to receive marketing messages via WhatsApp according to WhatsApp's policies
+                            Contacts must opt-in to receive marketing messages via WhatsApp according to WhatsApp&apos;s policies
                           </p>
                         </div>
                       </div>
@@ -3336,7 +3336,7 @@ export default function ContactsPage() {
                             <div className="flex items-center gap-2">
                               <Edit className="h-4 w-4 text-amber-600" />
                               <span className="text-sm text-amber-800">
-                                Tag will be changed from "{oldTag}" to "{updatedTag}"
+                                Tag will be changed from &quot;{oldTag}&quot; to &quot;{updatedTag}&quot;
                               </span>
                             </div>
                           </div>

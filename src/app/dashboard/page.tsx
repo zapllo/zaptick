@@ -699,7 +699,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-gray-600 dark:text-gray-300">
-              {user ? `Welcome back, ${user.name?.split(' ')[0]}!` : 'Welcome!'} Here's your WhatsApp Business overview.
+              {user ? `Welcome back, ${user.name?.split(' ')[0]}!` : 'Welcome!'} Here&apos;s your WhatsApp Business overview.
             </p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-1">

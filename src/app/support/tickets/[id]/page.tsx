@@ -229,7 +229,7 @@ export default function TicketDetailPage() {
         <div className="flex h-[80vh] items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Ticket not found</h2>
-            <p className="text-muted-foreground mb-4">The ticket you're looking for doesn't exist.</p>
+            <p className="text-muted-foreground mb-4">The ticket you&apos;re looking for doesn&apos;t exist.</p>
             <Link href="/support">
               <Button>
                 <ArrowLeft className="h-4 w-4 mr-2" />

@@ -665,7 +665,7 @@ function CreateTicketModal({ onClose, onSuccess }: { onClose: () => void; onSucc
         <DialogHeader className="space-y-3">
           <DialogTitle className="text-xl font-semibold">Create Support Ticket</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Describe your issue and we'll help you resolve it as quickly as possible
+            Describe your issue and we&apos;ll help you resolve it as quickly as possible
           </DialogDescription>
         </DialogHeader>
 
