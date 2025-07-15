@@ -8,7 +8,18 @@ import { seedDefaultRoles } from '@/lib/seedDefaultRoles';
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const { name, email, password, companyName } = await req.json();
+    const { 
+      name, 
+      email, 
+      password, 
+      companyName, 
+      companyWebsite, 
+      companyLocation, 
+      companyIndustry, 
+      companyCategory,
+      companyPhone,
+      companyCountryCode
+    } = await req.json();
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -19,9 +30,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create new company
+    // Create new company with additional fields
     const company = await Company.create({
       name: companyName,
+      website: companyWebsite,
+      location: companyLocation,
+      industry: companyIndustry,
+      category: companyCategory,
+      phone: companyPhone,
+      countryCode: companyCountryCode,
       walletBalance: 0
     });
 
@@ -34,6 +51,7 @@ export async function POST(req: NextRequest) {
       role: 'owner', // Set as owner
       isOwner: true, // Mark as owner
     });
+
     // Seed default roles for the company
     await seedDefaultRoles(company._id);
 

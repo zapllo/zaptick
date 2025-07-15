@@ -51,7 +51,8 @@ import {
   ArrowUpRight,
   Gauge
 } from "lucide-react";
-
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import Layout from "@/components/layout/Layout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -219,12 +220,15 @@ export default function ContactsPage() {
   const [isAudienceFilterVisible, setIsAudienceFilterVisible] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
+
   const [newContact, setNewContact] = useState({
     name: "",
     phone: "",
+    countryCode: "+91",
     email: "",
     tags: "",
     notes: "",
+    whatsappOptIn: true, // Add this field
     customFields: {} as Record<string, any>
   });
 
@@ -232,11 +236,14 @@ export default function ContactsPage() {
     id: "",
     name: "",
     phone: "",
+    countryCode: "",
     email: "",
     tags: "",
     notes: "",
+    whatsappOptIn: true, // Add this field
     customFields: {} as Record<string, any>
   });
+
 
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
     id: false,
@@ -259,6 +266,7 @@ export default function ContactsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [isAudienceFilterActive, setIsAudienceFilterActive] = useState(false);
 
   useEffect(() => {
     fetchWabaAccounts();
@@ -266,11 +274,10 @@ export default function ContactsPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedWabaId) {
+    if (selectedWabaId && !isAudienceFilterActive) {
       fetchContacts();
     }
-  }, [selectedWabaId, searchQuery, statusFilter, tagFilter, customFieldFilters]);
-
+  }, [selectedWabaId, searchQuery, statusFilter, tagFilter, customFieldFilters, isAudienceFilterActive]);
   // Extract all unique tags from contacts
   useEffect(() => {
     const tags = new Set<string>();
@@ -331,74 +338,74 @@ export default function ContactsPage() {
     }
   };
 
-  const fetchContacts = async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (selectedWabaId) params.append('wabaId', selectedWabaId);
-      if (searchQuery) params.append('search', searchQuery);
+  // const fetchContacts = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const params = new URLSearchParams();
+  //     if (selectedWabaId) params.append('wabaId', selectedWabaId);
+  //     if (searchQuery) params.append('search', searchQuery);
 
-      // Add custom field filters to params
-      Object.entries(customFieldFilters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(`customField.${key}`, String(value));
-        }
-      });
+  //     // Add custom field filters to params
+  //     Object.entries(customFieldFilters).forEach(([key, value]) => {
+  //       if (value !== undefined && value !== null && value !== '') {
+  //         params.append(`customField.${key}`, String(value));
+  //       }
+  //     });
 
-      const response = await fetch(`/api/contacts?${params}`);
-      const data = await response.json();
+  //     const response = await fetch(`/api/contacts?${params}`);
+  //     const data = await response.json();
 
-      if (data.success) {
-        let filteredContacts = data.contacts;
+  //     if (data.success) {
+  //       let filteredContacts = data.contacts;
 
-        // Apply status filter
-        if (statusFilter !== "all") {
-          filteredContacts = data.contacts.filter((contact: Contact) => {
-            switch (statusFilter) {
-              case "subscribed":
-                return contact.whatsappOptIn;
-              case "unsubscribed":
-                return !contact.whatsappOptIn;
-              case "recent":
-                return contact.lastMessageAt &&
-                  new Date(contact.lastMessageAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-              case "inactive":
-                return !contact.lastMessageAt ||
-                  new Date(contact.lastMessageAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-              default:
-                return true;
-            }
-          });
-        }
+  //       // Apply status filter
+  //       if (statusFilter !== "all") {
+  //         filteredContacts = data.contacts.filter((contact: Contact) => {
+  //           switch (statusFilter) {
+  //             case "subscribed":
+  //               return contact.whatsappOptIn;
+  //             case "unsubscribed":
+  //               return !contact.whatsappOptIn;
+  //             case "recent":
+  //               return contact.lastMessageAt &&
+  //                 new Date(contact.lastMessageAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  //             case "inactive":
+  //               return !contact.lastMessageAt ||
+  //                 new Date(contact.lastMessageAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  //             default:
+  //               return true;
+  //           }
+  //         });
+  //       }
 
-        // Apply tag filter
-        if (tagFilter.length > 0) {
-          filteredContacts = filteredContacts.filter((contact: Contact) => {
-            return tagFilter.some(tag => contact.tags.includes(tag));
-          });
-        }
+  //       // Apply tag filter
+  //       if (tagFilter.length > 0) {
+  //         filteredContacts = filteredContacts.filter((contact: Contact) => {
+  //           return tagFilter.some(tag => contact.tags.includes(tag));
+  //         });
+  //       }
 
-        setContacts(filteredContacts);
-      } else {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to fetch contacts",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch contacts",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //       setContacts(filteredContacts);
+  //     } else {
+  //       toast({
+  //         title: "Error",
+  //         description: data.error || "Failed to fetch contacts",
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching contacts:', error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to fetch contacts",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  // All other handlers remain the same as in the original code...
+
   const handleAddContact = async () => {
     if (!newContact.name || !newContact.phone || !selectedWabaId) {
       toast({
@@ -462,7 +469,9 @@ export default function ContactsPage() {
         setNewContact({
           name: "",
           phone: "",
+          countryCode: "+91",
           email: "",
+          whatsappOptIn: true, // Reset to default
           tags: "",
           notes: "",
           customFields: {}
@@ -485,7 +494,6 @@ export default function ContactsPage() {
     }
   };
 
-  // ... (include all the other handler functions from the original code)
   const handleEditContact = async () => {
     if (!editContact.name || !editContact.phone) {
       toast({
@@ -521,7 +529,9 @@ export default function ContactsPage() {
         body: JSON.stringify({
           name: editContact.name,
           phone: editContact.phone,
+          countryCode: editContact.countryCode,
           email: editContact.email,
+          whatsappOptIn: editContact.whatsappOptIn, // Add this
           tags: editContact.tags.split(',').map(tag => tag.trim()).filter(Boolean),
           notes: editContact.notes,
           customFields: editContact.customFields || {}
@@ -829,7 +839,9 @@ export default function ContactsPage() {
       id: contact.id,
       name: contact.name,
       phone: contact.phone,
+      countryCode: contact.countryCode || "",
       email: contact.email || "",
+      whatsappOptIn: contact.whatsappOptIn, // Add this
       tags: contact.tags.join(", "),
       notes: contact.notes || "",
       customFields: contact.customFields || {}
@@ -869,12 +881,15 @@ export default function ContactsPage() {
     );
   };
 
+  // Update the clearAllFilters function to deactivate audience filters
   const clearAllFilters = () => {
     setStatusFilter("all");
     setTagFilter([]);
     setSearchQuery("");
     setCustomFieldFilters({});
+    setIsAudienceFilterActive(false); // This will trigger the useEffect to fetch all contacts
   };
+
 
   const renderCustomFieldValue = (contact: Contact, field: CustomField) => {
     if (!contact.customFields || contact.customFields[field.key] === undefined) {
@@ -1025,37 +1040,145 @@ export default function ContactsPage() {
     { label: "Message Received", key: "messageReceived", type: "date" as const }
   ];
 
+
   const handleApplyAudienceFilters = (filters: {
     tags: string[];
-    conditions: any[];
-    operator: "AND" | "OR";
+    conditionGroups: any[];
+    groupOperator: "AND" | "OR";
     whatsappOptedIn: boolean;
   }) => {
+    console.log('Applying audience filters:', filters);
+
+    // Set audience filter as active to prevent regular fetchContacts
+    setIsAudienceFilterActive(true);
+
+    // Clear existing filters
     setSearchQuery("");
+    setStatusFilter("all");
+    setTagFilter([]);
     setCustomFieldFilters({});
 
-    setTagFilter(filters.tags);
+    // Apply the audience filters by calling fetchContacts with the filters
+    fetchContactsWithAudienceFilters(filters);
+  };
 
-    if (filters.whatsappOptedIn) {
-      setStatusFilter("subscribed");
-    } else {
-      setStatusFilter("all");
-    }
 
-    const newCustomFieldFilters: Record<string, any> = {};
+  // Update fetchContactsWithAudienceFilters
+  const fetchContactsWithAudienceFilters = async (audienceFilters: any) => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedWabaId) params.append('wabaId', selectedWabaId);
 
-    filters.conditions.forEach(condition => {
-      if (condition.field.startsWith('customField.')) {
-        const fieldKey = condition.field.replace('customField.', '');
-        newCustomFieldFilters[fieldKey] = condition.value;
-      } else if (condition.field === 'name' || condition.field === 'email' || condition.field === 'phone') {
-        if (condition.operator === 'contains' || condition.operator === 'equals') {
-          setSearchQuery(condition.value);
-        }
+      // Add audience filters as a JSON string
+      if (audienceFilters) {
+        params.append('audienceFilters', JSON.stringify(audienceFilters));
       }
-    });
 
-    setCustomFieldFilters(newCustomFieldFilters);
+      console.log('Fetching contacts with params:', params.toString());
+
+      const response = await fetch(`/api/contacts?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        console.log(`Received ${data.contacts.length} contacts from API`);
+        setContacts(data.contacts);
+
+        // Update local state to reflect the applied filters
+        setTagFilter(audienceFilters.tags || []);
+        if (audienceFilters.whatsappOptedIn) {
+          setStatusFilter("subscribed");
+        }
+
+        // Keep audience filter active
+        setIsAudienceFilterActive(true);
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to fetch contacts",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching contacts with audience filters:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch contacts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+  // Update the existing fetchContacts function to handle audience filters
+  const fetchContacts = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedWabaId) params.append('wabaId', selectedWabaId);
+      if (searchQuery) params.append('search', searchQuery);
+
+      // Add custom field filters to params (legacy support)
+      Object.entries(customFieldFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(`customField.${key}`, String(value));
+        }
+      });
+
+      const response = await fetch(`/api/contacts?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        let filteredContacts = data.contacts;
+
+        // Apply status filter (client-side for legacy support)
+        if (statusFilter !== "all") {
+          filteredContacts = data.contacts.filter((contact: Contact) => {
+            switch (statusFilter) {
+              case "subscribed":
+                return contact.whatsappOptIn;
+              case "unsubscribed":
+                return !contact.whatsappOptIn;
+              case "recent":
+                return contact.lastMessageAt &&
+                  new Date(contact.lastMessageAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+              case "inactive":
+                return !contact.lastMessageAt ||
+                  new Date(contact.lastMessageAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+              default:
+                return true;
+            }
+          });
+        }
+
+        // Apply tag filter (client-side for legacy support)
+        if (tagFilter.length > 0) {
+          filteredContacts = filteredContacts.filter((contact: Contact) => {
+            return tagFilter.some(tag => contact.tags.includes(tag));
+          });
+        }
+
+        setContacts(filteredContacts);
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to fetch contacts",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch contacts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Calculate stats
@@ -1071,7 +1194,7 @@ export default function ContactsPage() {
       <Layout>
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
-            <div className="max-w-7xl mx-auto p-6 space-y-8">
+            <div className="l mx-auto p-6 space-y-8">
               {/* Header Section */}
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                 <div className="space-y-1">
@@ -1165,76 +1288,139 @@ export default function ContactsPage() {
                 </CardContent>
               </Card>
 
+
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-blue-600">Total Contacts</p>
-                        <p className="text-3xl font-bold text-blue-900">{totalContacts}</p>
-                        <p className="text-xs text-blue-600/80">
-                          {totalContacts > 0 ? 'Active database' : 'Start adding contacts'}
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          <p className="text-sm font-medium text-slate-600">Total Contacts</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-blue-900 transition-colors duration-300">
+                            {totalContacts.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {totalContacts > 0 ? 'Active database' : 'Start adding contacts'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="p-3 bg-blue-200/50 rounded-xl">
-                        <Users className="h-6 w-6 text-blue-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 group-hover:scale-110 transition-all duration-300">
+                          <Users className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-green-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-green-600">Subscribed</p>
-                        <p className="text-3xl font-bold text-green-900">{subscribedContacts}</p>
-                        <p className="text-xs text-green-600/80">
-                          {subscriptionRate}% subscription rate
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                          <p className="text-sm font-medium text-slate-600">Subscribed</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-green-900 transition-colors duration-300">
+                            {subscribedContacts.toLocaleString()}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className="h-1 w-12 bg-green-500/20 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-green-500 transition-all duration-700 ease-out"
+                                style={{ width: `${subscriptionRate}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-slate-500">{subscriptionRate}% rate</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-3 bg-green-200/50 rounded-xl">
-                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 group-hover:scale-110 transition-all duration-300">
+                          <CheckCircle className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-purple-600">Recent Activity</p>
-                        <p className="text-3xl font-bold text-purple-900">{recentActivity}</p>
-                        <p className="text-xs text-purple-600/80">
-                          Last 7 days
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                          <p className="text-sm font-medium text-slate-600">Recent Activity</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-purple-900 transition-colors duration-300">
+                            {recentActivity.toLocaleString()}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-purple-500" />
+                              <p className="text-xs text-slate-500">Last 7 days</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-3 bg-purple-200/50 rounded-xl">
-                        <Activity className="h-6 w-6 text-purple-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 group-hover:scale-110 transition-all duration-300">
+                          <Activity className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-amber-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-amber-600">Tags Available</p>
-                        <p className="text-3xl font-bold text-amber-900">{allTags.length}</p>
-                        <p className="text-xs text-amber-600/80">
-                          Organization labels
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          <p className="text-sm font-medium text-slate-600">Tags Available</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-amber-900 transition-colors duration-300">
+                            {allTags.length.toLocaleString()}
+                          </p>
+                          <div className="flex items-center gap-1">
+                            {allTags.slice(0, 3).map((tag, index) => (
+                              <div
+                                key={index}
+                                className="h-1 w-3 bg-amber-500/30 rounded-full"
+                              />
+                            ))}
+                            <p className="text-xs text-slate-500 ml-1">Organization labels</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-3 bg-amber-200/50 rounded-xl">
-                        <Tag className="h-6 w-6 text-amber-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:scale-110 transition-all duration-300">
+                          <Tag className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
+
+
 
               {/* Applied Filters */}
               {(searchQuery || statusFilter !== "all" || tagFilter.length > 0 || Object.values(customFieldFilters).some(v => v)) && (
@@ -1551,8 +1737,8 @@ export default function ContactsPage() {
                         onApplyFilters={handleApplyAudienceFilters}
                         initialFilters={{
                           tags: tagFilter,
-                          conditions: [],
-                          operator: "AND",
+                          conditionGroups: [],
+                          groupOperator: "AND",
                           whatsappOptedIn: statusFilter === "subscribed"
                         }}
                       />
@@ -2048,202 +2234,314 @@ export default function ContactsPage() {
 
               {/* Add Contact Dialog */}
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] p-6 max-h-[90vh] overflow-y-auto">
-                  <DialogHeader className="pb-4 border-b">
-                    <DialogTitle className="text-xl flex items-center gap-2">
-                      <UserPlus className="h-5 w-5 text-primary" />
-                      Add New Contact
-                    </DialogTitle>
-                    <DialogDescription>
-                      Create a new WhatsApp contact for your business account.
-                    </DialogDescription>
+                <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                        <UserPlus className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold text-slate-900">
+                          Add New Contact
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600">
+                          Create a new WhatsApp contact for your business account
+                        </DialogDescription>
+                      </div>
+                    </div>
                   </DialogHeader>
 
-                  <div className="py-4 grid gap-6">
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Basic Information</h3>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="name" className="text-sm font-medium">Name <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="name"
-                            placeholder="Contact Name"
-                            value={newContact.name}
-                            onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
-                            className="mt-1"
-                          />
+                  <div className="flex-1 overflow-y-auto px-6 py-6">
+                    <div className="space-y-8">
+                      {/* Basic Information */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Basic Information
+                          </h3>
                         </div>
 
-                        <div>
-                          <Label htmlFor="phone" className="text-sm font-medium">Phone Number <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="phone"
-                            placeholder="+1234567890"
-                            value={newContact.phone}
-                            onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
-                            className="mt-1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">Include country code (e.g., +1 for US)</p>
-                        </div>
-                      </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="name" className="text-sm font-medium text-slate-700">
+                              Full Name <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              id="name"
+                              placeholder="Enter contact name"
+                              value={newContact.name}
+                              onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                            />
+                          </div>
 
-                      <div>
-                        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="contact@example.com"
-                          value={newContact.email}
-                          onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+                              Email Address
+                            </Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              placeholder="contact@example.com"
+                              value={newContact.email}
+                              onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                            />
+                          </div>
 
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Additional Information</h3>
-
-                      <div>
-                        <Label htmlFor="tags" className="text-sm font-medium">Tags</Label>
-                        <Input
-                          id="tags"
-                          placeholder="customer, premium, support (comma separated)"
-                          value={newContact.tags}
-                          onChange={(e) => setNewContact({ ...newContact, tags: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
-                        <Textarea
-                          id="notes"
-                          placeholder="Additional notes about this contact..."
-                          value={newContact.notes}
-                          onChange={(e) => setNewContact({ ...newContact, notes: e.target.value })}
-                          rows={3}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    {customFields.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Custom Fields</h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {customFields.map(field => (
-                            <div key={field.id}>
-                              <Label htmlFor={`custom-${field.key}`} className="text-sm font-medium">
-                                {field.name} {field.required && <span className="text-red-500">*</span>}
-                              </Label>
-
-                              {field.type === 'Text' && (
-                                <Input
-                                  id={`custom-${field.key}`}
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  value={newContact.customFields?.[field.key] || ''}
-                                  onChange={(e) => {
-                                    const updatedCustomFields = {
-                                      ...newContact.customFields,
-                                      [field.key]: e.target.value
-                                    };
-                                    setNewContact({
-                                      ...newContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                  required={field.required}
-                                  className="mt-1"
-                                />
-                              )}
-
-                              {field.type === 'Number' && (
-                                <Input
-                                  id={`custom-${field.key}`}
-                                  type="number"
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  value={newContact.customFields?.[field.key] || ''}
-                                  onChange={(e) => {
-                                    const updatedCustomFields = {
-                                      ...newContact.customFields,
-                                      [field.key]: e.target.value ? Number(e.target.value) : ''
-                                    };
-                                    setNewContact({
-                                      ...newContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                  required={field.required}
-                                  className="mt-1"
-                                />
-                              )}
-
-                              {field.type === 'Date' && (
-                                <Input
-                                  id={`custom-${field.key}`}
-                                  type="date"
-                                  value={newContact.customFields?.[field.key] || ''}
-                                  onChange={(e) => {
-                                    const updatedCustomFields = {
-                                      ...newContact.customFields,
-                                      [field.key]: e.target.value
-                                    };
-                                    setNewContact({
-                                      ...newContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                  required={field.required}
-                                  className="mt-1"
-                                />
-                              )}
-
-                              {field.type === 'Dropdown' && field.options && (
-                                <Select
-                                  value={newContact.customFields?.[field.key] || ''}
-                                  onValueChange={(value) => {
-                                    const updatedCustomFields = {
-                                      ...newContact.customFields,
-                                      [field.key]: value
-                                    };
-                                    setNewContact({
-                                      ...newContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                >
-                                  <SelectTrigger id={`custom-${field.key}`} className="mt-1">
-                                    <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {field.options.map(option => (
-                                      <SelectItem key={option} value={option}>
-                                        {option}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-
-                              {field.defaultValue && !newContact.customFields?.[field.key] && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Default: {field.defaultValue}
-                                </p>
-                              )}
+                          <div className="space-y-2">
+                            <Label htmlFor="phone" className="text-sm font-medium text-slate-700">
+                              Phone Number <span className="text-red-500">*</span>
+                            </Label>
+                            <div className="phone-input-container">
+                              <PhoneInput
+                                country={'in'}
+                                value={newContact.phone}
+                                onChange={(phone, country: any) => {
+                                  setNewContact({
+                                    ...newContact,
+                                    phone: phone,
+                                    countryCode: country.dialCode
+                                  });
+                                }}
+                                inputProps={{
+                                  name: 'phone',
+                                  required: true,
+                                  autoFocus: false
+                                }}
+                                containerClass="w-full"
+                                inputClass="w-full h-10 pl-12 pr-4 border border-slate-200 rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-white"
+                                buttonClass="border-slate-200 hover:bg-slate-50"
+                                dropdownClass="bg-white border-slate-200 shadow-lg"
+                                searchClass="bg-white border-slate-200"
+                                enableSearch={true}
+                                disableSearchIcon={false}
+                                searchPlaceholder="Search countries..."
+                              />
                             </div>
-                          ))}
+                            <p className="text-xs text-slate-500">
+                              Select your country and enter the phone number
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      {/* WhatsApp Settings */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            WhatsApp Settings
+                          </h3>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                                <MessageSquare className="h-5 w-5 text-white" />
+                              </div>
+                              <div>
+                                <Label htmlFor="whatsapp-optin" className="text-sm font-medium text-green-800">
+                                  WhatsApp Marketing Messages
+                                </Label>
+                                <p className="text-xs text-green-600">
+                                  Allow sending marketing and promotional messages
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                id="whatsapp-optin"
+                                type="checkbox"
+                                checked={newContact.whatsappOptIn}
+                                onChange={(e) => setNewContact({ ...newContact, whatsappOptIn: e.target.checked })}
+                                className="w-5 h-5 text-green-600 border-green-300 rounded focus:ring-green-500"
+                              />
+                              <Label htmlFor="whatsapp-optin" className="text-sm font-medium text-green-800">
+                                {newContact.whatsappOptIn ? 'Opted In' : 'Opted Out'}
+                              </Label>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            Contacts must opt-in to receive marketing messages via WhatsApp according to WhatsApp's policies
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Additional Information */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Additional Information
+                          </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="tags" className="text-sm font-medium text-slate-700">
+                              Tags
+                            </Label>
+                            <Input
+                              id="tags"
+                              placeholder="customer, premium, support (comma separated)"
+                              value={newContact.tags}
+                              onChange={(e) => setNewContact({ ...newContact, tags: e.target.value })}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                            />
+                            <p className="text-xs text-slate-500">
+                              Add tags to organize and segment your contacts
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="notes" className="text-sm font-medium text-slate-700">
+                              Notes
+                            </Label>
+                            <Textarea
+                              id="notes"
+                              placeholder="Add any additional notes about this contact..."
+                              value={newContact.notes}
+                              onChange={(e) => setNewContact({ ...newContact, notes: e.target.value })}
+                              rows={3}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Custom Fields */}
+                      {customFields.length > 0 && (
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                              Custom Fields
+                            </h3>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {customFields.map(field => (
+                              <div key={field.id} className="space-y-2">
+                                <Label htmlFor={`custom-${field.key}`} className="text-sm font-medium text-slate-700">
+                                  {field.name} {field.required && <span className="text-red-500">*</span>}
+                                </Label>
+
+                                {field.type === 'Text' && (
+                                  <Input
+                                    id={`custom-${field.key}`}
+                                    placeholder={`Enter ${field.name.toLowerCase()}`}
+                                    value={newContact.customFields?.[field.key] || ''}
+                                    onChange={(e) => {
+                                      const updatedCustomFields = {
+                                        ...newContact.customFields,
+                                        [field.key]: e.target.value
+                                      };
+                                      setNewContact({
+                                        ...newContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                    required={field.required}
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                  />
+                                )}
+
+                                {field.type === 'Number' && (
+                                  <Input
+                                    id={`custom-${field.key}`}
+                                    type="number"
+                                    placeholder={`Enter ${field.name.toLowerCase()}`}
+                                    value={newContact.customFields?.[field.key] || ''}
+                                    onChange={(e) => {
+                                      const updatedCustomFields = {
+                                        ...newContact.customFields,
+                                        [field.key]: e.target.value ? Number(e.target.value) : ''
+                                      };
+                                      setNewContact({
+                                        ...newContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                    required={field.required}
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                  />
+                                )}
+
+                                {field.type === 'Date' && (
+                                  <Input
+                                    id={`custom-${field.key}`}
+                                    type="date"
+                                    value={newContact.customFields?.[field.key] || ''}
+                                    onChange={(e) => {
+                                      const updatedCustomFields = {
+                                        ...newContact.customFields,
+                                        [field.key]: e.target.value
+                                      };
+                                      setNewContact({
+                                        ...newContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                    required={field.required}
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                  />
+                                )}
+
+                                {field.type === 'Dropdown' && field.options && (
+                                  <Select
+                                    value={newContact.customFields?.[field.key] || ''}
+                                    onValueChange={(value) => {
+                                      const updatedCustomFields = {
+                                        ...newContact.customFields,
+                                        [field.key]: value
+                                      };
+                                      setNewContact({
+                                        ...newContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger id={`custom-${field.key}`} className="bg-white border-slate-200">
+                                      <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {field.options.map(option => (
+                                        <SelectItem key={option} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+
+                                {field.defaultValue && !newContact.customFields?.[field.key] && (
+                                  <p className="text-xs text-slate-500">
+                                    Default: {field.defaultValue}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <DialogFooter className="pt-4 border-t">
-                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAddDialogOpen(false)}
+                      className="hover:bg-slate-50"
+                    >
                       Cancel
                     </Button>
-                    <Button onClick={handleAddContact}>
+                    <Button
+                      onClick={handleAddContact}
+                      className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
                       <UserPlus className="h-4 w-4 mr-2" />
                       Add Contact
                     </Button>
@@ -2251,9 +2549,822 @@ export default function ContactsPage() {
                 </DialogContent>
               </Dialog>
 
-              {/* Include all other dialogs from the original code with the same structure... */}
-              {/* Edit Contact Dialog, View Contact Dialog, Add Tag Dialog, etc. */}
-              {/* For brevity, I'll include the key ones - the rest follow the same pattern */}
+              {/* Edit Contact Dialog */}
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                        <Edit className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold text-slate-900">
+                          Edit Contact
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600">
+                          Update contact information and details
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="flex-1 overflow-y-auto px-6 py-6">
+                    <div className="space-y-8">
+                      {/* Basic Information */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Basic Information
+                          </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-name" className="text-sm font-medium text-slate-700">
+                              Full Name <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              id="edit-name"
+                              placeholder="Enter contact name"
+                              value={editContact.name}
+                              onChange={(e) => setEditContact({ ...editContact, name: e.target.value })}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-email" className="text-sm font-medium text-slate-700">
+                              Email Address
+                            </Label>
+                            <Input
+                              id="edit-email"
+                              type="email"
+                              placeholder="contact@example.com"
+                              value={editContact.email}
+                              onChange={(e) => setEditContact({ ...editContact, email: e.target.value })}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-phone" className="text-sm font-medium text-slate-700">
+                              Phone Number <span className="text-red-500">*</span>
+                            </Label>
+                            <div className="phone-input-container">
+                              <PhoneInput
+                                country={'in'}
+                                value={editContact.phone}
+                                onChange={(phone, country: any) => {
+                                  setEditContact({
+                                    ...editContact,
+                                    phone: phone,
+                                    countryCode: country.dialCode
+                                  });
+                                }}
+                                inputProps={{
+                                  name: 'phone',
+                                  required: true,
+                                  autoFocus: false
+                                }}
+                                containerClass="w-full"
+                                inputClass="w-full h-10 pl-12 pr-4 border border-slate-200 rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/20 bg-white"
+                                buttonClass="border-slate-200 hover:bg-slate-50"
+                                dropdownClass="bg-white border-slate-200 shadow-lg"
+                                searchClass="bg-white border-slate-200"
+                                enableSearch={true}
+                                disableSearchIcon={false}
+                                searchPlaceholder="Search countries..."
+                              />
+                            </div>
+                            <p className="text-xs text-slate-500">
+                              Select your country and enter the phone number
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* WhatsApp Settings */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            WhatsApp Settings
+                          </h3>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                                <MessageSquare className="h-5 w-5 text-white" />
+                              </div>
+                              <div>
+                                <Label htmlFor="edit-whatsapp-optin" className="text-sm font-medium text-green-800">
+                                  WhatsApp Marketing Messages
+                                </Label>
+                                <p className="text-xs text-green-600">
+                                  Allow sending marketing and promotional messages
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                id="edit-whatsapp-optin"
+                                type="checkbox"
+                                checked={editContact.whatsappOptIn}
+                                onChange={(e) => setEditContact({ ...editContact, whatsappOptIn: e.target.checked })}
+                                className="w-5 h-5 text-green-600 border-green-300 rounded focus:ring-green-500"
+                              />
+                              <Label htmlFor="edit-whatsapp-optin" className="text-sm font-medium text-green-800">
+                                {editContact.whatsappOptIn ? 'Opted In' : 'Opted Out'}
+                              </Label>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            Contacts must opt-in to receive marketing messages via WhatsApp according to WhatsApp's policies
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Additional Information */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Additional Information
+                          </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-tags" className="text-sm font-medium text-slate-700">
+                              Tags
+                            </Label>
+                            <Input
+                              id="edit-tags"
+                              placeholder="customer, premium, support (comma separated)"
+                              value={editContact.tags}
+                              onChange={(e) => setEditContact({ ...editContact, tags: e.target.value })}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                            />
+                            <p className="text-xs text-slate-500">
+                              Add tags to organize and segment your contacts
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-notes" className="text-sm font-medium text-slate-700">
+                              Notes
+                            </Label>
+                            <Textarea
+                              id="edit-notes"
+                              placeholder="Add any additional notes about this contact..."
+                              value={editContact.notes}
+                              onChange={(e) => setEditContact({ ...editContact, notes: e.target.value })}
+                              rows={3}
+                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Custom Fields */}
+                      {customFields.length > 0 && (
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                              Custom Fields
+                            </h3>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {customFields.map(field => (
+                              <div key={field.id} className="space-y-2">
+                                <Label htmlFor={`edit-custom-${field.key}`} className="text-sm font-medium text-slate-700">
+                                  {field.name} {field.required && <span className="text-red-500">*</span>}
+                                </Label>
+
+                                {field.type === 'Text' && (
+                                  <Input
+                                    id={`edit-custom-${field.key}`}
+                                    placeholder={`Enter ${field.name.toLowerCase()}`}
+                                    value={editContact.customFields?.[field.key] || ''}
+                                    onChange={(e) => {
+                                      const updatedCustomFields = {
+                                        ...editContact.customFields,
+                                        [field.key]: e.target.value
+                                      };
+                                      setEditContact({
+                                        ...editContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                    required={field.required}
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                  />
+                                )}
+
+                                {field.type === 'Number' && (
+                                  <Input
+                                    id={`edit-custom-${field.key}`}
+                                    type="number"
+                                    placeholder={`Enter ${field.name.toLowerCase()}`}
+                                    value={editContact.customFields?.[field.key] || ''}
+                                    onChange={(e) => {
+                                      const updatedCustomFields = {
+                                        ...editContact.customFields,
+                                        [field.key]: e.target.value ? Number(e.target.value) : ''
+                                      };
+                                      setEditContact({
+                                        ...editContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                    required={field.required}
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                  />
+                                )}
+
+                                {field.type === 'Date' && (
+                                  <Input
+                                    id={`edit-custom-${field.key}`}
+                                    type="date"
+                                    value={editContact.customFields?.[field.key] || ''}
+                                    onChange={(e) => {
+                                      const updatedCustomFields = {
+                                        ...editContact.customFields,
+                                        [field.key]: e.target.value
+                                      };
+                                      setEditContact({
+                                        ...editContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                    required={field.required}
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                  />
+                                )}
+
+                                {field.type === 'Dropdown' && field.options && (
+                                  <Select
+                                    value={editContact.customFields?.[field.key] || ''}
+                                    onValueChange={(value) => {
+                                      const updatedCustomFields = {
+                                        ...editContact.customFields,
+                                        [field.key]: value
+                                      };
+                                      setEditContact({
+                                        ...editContact,
+                                        customFields: updatedCustomFields
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger id={`edit-custom-${field.key}`} className="bg-white border-slate-200">
+                                      <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {field.options.map(option => (
+                                        <SelectItem key={option} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsEditDialogOpen(false)}
+                      className="hover:bg-slate-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleEditContact}
+                      className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+
+              {/* View Contact Dialog */}
+              <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+                <DialogContent className="sm:max-w-[600px] max-h-[95vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                        <Eye className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold text-slate-900">
+                          Contact Details
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600">
+                          View and manage contact information
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="flex-1 overflow-y-auto">
+                    {selectedContact && (
+                      <Tabs defaultValue="info" className="w-full h-full flex flex-col">
+                        <div className="px-6 pt-4 border-b border-slate-100 flex-shrink-0">
+                          <TabsList className="grid w-full grid-cols-3 bg-slate-50">
+                            <TabsTrigger value="info" className="flex items-center gap-2 data-[state=active]:bg-white">
+                              <User className="h-4 w-4" />
+                              Info
+                            </TabsTrigger>
+                            <TabsTrigger value="activity" className="flex items-center gap-2 data-[state=active]:bg-white">
+                              <BarChart2 className="h-4 w-4" />
+                              Activity
+                            </TabsTrigger>
+                            <TabsTrigger value="settings" className="flex items-center gap-2 data-[state=active]:bg-white">
+                              <UserCog className="h-4 w-4" />
+                              Settings
+                            </TabsTrigger>
+                          </TabsList>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-6 py-6">
+                          <TabsContent value="info" className="mt-0 space-y-6">
+                            {/* Contact Header */}
+                            <div className="flex items-center gap-6 p-6 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                              <Avatar className="h-20 w-20 border-4 border-white shadow-lg">
+                                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
+                                  {selectedContact.name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <h3 className="text-2xl font-bold text-slate-900">{selectedContact.name}</h3>
+                                <div className="flex items-center gap-4 mt-2">
+                                  <div className="flex items-center gap-2 text-slate-600">
+                                    <Phone className="h-4 w-4" />
+                                    <span className="font-medium">{selectedContact.phone}</span>
+                                    {selectedContact.countryCode && (
+                                      <span className="text-xs bg-slate-100 px-2 py-1 rounded">
+                                        {selectedContact.countryCode}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {selectedContact.email && (
+                                    <div className="flex items-center gap-2 text-slate-600">
+                                      <Mail className="h-4 w-4" />
+                                      <span>{selectedContact.email}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="mt-3">
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      selectedContact.whatsappOptIn
+                                        ? "bg-green-100 text-green-700 border-green-200"
+                                        : "bg-red-100 text-red-700 border-red-200"
+                                    }
+                                  >
+                                    <MessageSquare className="h-3 w-3 mr-1" />
+                                    {selectedContact.whatsappOptIn ? "Subscribed" : "Unsubscribed"}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Information Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              {/* Tags Section */}
+                              <Card className="border-slate-200 hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                                      <Tag className="h-4 w-4" />
+                                      Tags
+                                    </h4>
+                                  </div>
+                                  <div className="space-y-3">
+                                    <div className="flex flex-wrap gap-2">
+                                      {selectedContact.tags.length > 0 ? (
+                                        selectedContact.tags.map((tag, index) => (
+                                          <Badge
+                                            key={index}
+                                            variant="secondary"
+                                            className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 transition-colors"
+                                          >
+                                            {tag}
+                                            <button
+                                              onClick={() => handleRemoveTag(selectedContact.id, tag)}
+                                              className="ml-1 hover:text-red-600 transition-colors"
+                                            >
+                                              <X className="h-3 w-3" />
+                                            </button>
+                                          </Badge>
+                                        ))
+                                      ) : (
+                                        <p className="text-slate-500 text-sm italic">No tags assigned</p>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={() => handleAddTagClick(selectedContact)}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Add Tag
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+
+                              {/* Status Information */}
+                              <Card className="border-slate-200 hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                                      <Info className="h-4 w-4" />
+                                      Status Information
+                                    </h4>
+                                  </div>
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                      <span className="text-sm font-medium text-slate-700">WhatsApp Status</span>
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          selectedContact.whatsappOptIn
+                                            ? "bg-green-100 text-green-700 border-green-200"
+                                            : "bg-red-100 text-red-700 border-red-200"
+                                        }
+                                      >
+                                        {selectedContact.whatsappOptIn ? "Subscribed" : "Unsubscribed"}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                      <span className="text-sm font-medium text-slate-700">Created</span>
+                                      <span className="text-sm text-slate-900">
+                                        {format(new Date(selectedContact.createdAt), "MMM dd, yyyy")}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                      <span className="text-sm font-medium text-slate-700">Last Contact</span>
+                                      <span className="text-sm text-slate-900">
+                                        {selectedContact.lastMessageAt
+                                          ? format(new Date(selectedContact.lastMessageAt), "MMM dd, yyyy")
+                                          : "Never"
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+
+                            {/* Custom Fields Section */}
+                            {selectedContact.customFields && Object.keys(selectedContact.customFields).length > 0 && (
+                              <Card className="border-slate-200 hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                                    <h4 className="font-semibold text-slate-900">Custom Fields</h4>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {Object.entries(selectedContact.customFields).map(([key, value]) => {
+                                      if (!value) return null;
+                                      const field = customFields.find(f => f.key === key);
+                                      if (!field) return null;
+
+                                      return (
+                                        <div key={key} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            {getCustomFieldIcon(field.type)}
+                                            <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">
+                                              {field.name}
+                                            </span>
+                                          </div>
+                                          <span className="font-medium text-slate-900">
+                                            {field.type === 'Date' && typeof value === 'string'
+                                              ? format(new Date(value), "MMM dd, yyyy")
+                                              : String(value)
+                                            }
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Notes Section */}
+                            {selectedContact.notes && (
+                              <Card className="border-slate-200 hover:shadow-md transition-shadow">
+                                <CardContent className="p-6">
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-2 w-2 rounded-full bg-amber-500" />
+                                    <h4 className="font-semibold text-slate-900">Notes</h4>
+                                  </div>
+                                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                    <p className="text-slate-700 leading-relaxed">{selectedContact.notes}</p>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </TabsContent>
+
+                          <TabsContent value="activity" className="mt-0">
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                              <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
+                                <MessageSquare className="h-10 w-10 text-slate-400" />
+                              </div>
+                              <h3 className="text-xl font-semibold text-slate-900 mb-2">Conversation History</h3>
+                              <p className="text-slate-600 mb-6 max-w-md">
+                                View past messages and interaction history with this contact
+                              </p>
+                              <Button
+                                onClick={() => handleSendMessage(selectedContact.id)}
+                                className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                View Conversations
+                              </Button>
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="settings" className="mt-0">
+                            <div className="space-y-6">
+                              <div className="flex items-center justify-between p-6 bg-slate-50 rounded-lg border border-slate-200">
+                                <div className="flex items-center gap-4">
+                                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <Edit className="h-6 w-6 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-slate-900">Edit Contact</h4>
+                                    <p className="text-sm text-slate-600">
+                                      Update contact information and details
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setIsViewDialogOpen(false);
+                                    setTimeout(() => handleEditContactClick(selectedContact), 100);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </Button>
+                              </div>
+
+                              <div className="flex items-center justify-between p-6 bg-slate-50 rounded-lg border border-slate-200">
+                                <div className="flex items-center gap-4">
+                                  <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+                                    <Tag className="h-6 w-6 text-purple-600" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-slate-900">Tag Management</h4>
+                                    <p className="text-sm text-slate-600">
+                                      Add or remove tags from this contact
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setIsViewDialogOpen(false);
+                                    setTimeout(() => handleAddTagClick(selectedContact), 100);
+                                  }}
+                                >
+                                  <Tag className="h-4 w-4 mr-2" />
+                                  Manage Tags
+                                </Button>
+                              </div>
+
+                              <div className="flex items-center justify-between p-6 bg-red-50 rounded-lg border border-red-200">
+                                <div className="flex items-center gap-4">
+                                  <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                                    <Trash2 className="h-6 w-6 text-red-600" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-red-900">Delete Contact</h4>
+                                    <p className="text-sm text-red-700">
+                                      Permanently remove this contact from your database
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="destructive"
+                                  onClick={() => {
+                                    setIsViewDialogOpen(false);
+                                    setTimeout(() => handleDeleteContactClick(selectedContact), 100);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        </div>
+                      </Tabs>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add Tag Dialog */}
+              <Dialog open={isAddTagDialogOpen} onOpenChange={setIsAddTagDialogOpen}>
+                <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center">
+                        <Tag className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold text-slate-900">
+                          {selectedContacts.length > 1
+                            ? `Add Tag to ${selectedContacts.length} Contacts`
+                            : "Add Tag to Contact"}
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600">
+                          Tags help you organize and segment your contacts effectively
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="flex-1 overflow-y-auto px-6 py-6">
+                    <div className="space-y-6">
+                      {/* Tag Input */}
+                      <div className="space-y-3">
+                        <Label htmlFor="new-tag" className="text-sm font-medium text-slate-700">
+                          Tag Name
+                        </Label>
+                        <Input
+                          id="new-tag"
+                          placeholder="Enter tag name (e.g. customer, premium, vip)"
+                          value={newTag}
+                          onChange={(e) => setNewTag(e.target.value)}
+                          className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          Tags are case-sensitive and help categorize your contacts
+                        </p>
+                      </div>
+
+                      {/* Existing Tags */}
+                      {allTags.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-slate-700">
+                            Choose from existing tags
+                          </Label>
+                          <div className="max-h-32 overflow-y-auto p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="flex flex-wrap gap-2">
+                              {allTags.map((tag) => (
+                                <Badge
+                                  key={tag}
+                                  variant="outline"
+                                  className="cursor-pointer hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                                  onClick={() => setNewTag(tag)}
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            Click on any existing tag to select it
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAddTagDialogOpen(false)}
+                      className="hover:bg-slate-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={selectedContacts.length > 1 ? handleBulkAddTag : handleAddTag}
+                      disabled={!newTag.trim()}
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Tag className="h-4 w-4 mr-2" />
+                      Add Tag
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit Tag Dialog */}
+              <Dialog open={isEditTagDialogOpen} onOpenChange={setIsEditTagDialogOpen}>
+                <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-600/20 flex items-center justify-center">
+                        <Edit className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold text-slate-900">
+                          Edit Tag
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600">
+                          Update the tag name for this contact
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="flex-1 overflow-y-auto px-6 py-6">
+                    <div className="space-y-6">
+                      {/* Current Tag */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Current Tag
+                        </Label>
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                          <Badge variant="outline" className="text-base px-3 py-1">
+                            {oldTag}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* New Tag Input */}
+                      <div className="space-y-3">
+                        <Label htmlFor="updated-tag" className="text-sm font-medium text-slate-700">
+                          New Tag Name
+                        </Label>
+                        <Input
+                          id="updated-tag"
+                          placeholder="Enter new tag name"
+                          value={updatedTag}
+                          onChange={(e) => setUpdatedTag(e.target.value)}
+                          className="bg-white border-slate-200 focus:border-amber-500/50 focus:ring-amber-500/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          This will update the tag for this contact only
+                        </p>
+                      </div>
+
+                      {/* Preview */}
+                      {updatedTag.trim() && updatedTag !== oldTag && (
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-slate-700">
+                            Preview
+                          </Label>
+                          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Edit className="h-4 w-4 text-amber-600" />
+                              <span className="text-sm text-amber-800">
+                                Tag will be changed from "{oldTag}" to "{updatedTag}"
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsEditTagDialogOpen(false)}
+                      className="hover:bg-slate-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleEditTag}
+                      disabled={!updatedTag.trim() || updatedTag === oldTag}
+                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Update Tag
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
 
               {/* Delete Confirmation Dialog */}
               <AlertDialog open={isDeleteConfirmDialogOpen} onOpenChange={setIsDeleteConfirmDialogOpen}>
@@ -2307,534 +3418,6 @@ export default function ContactsPage() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-
-              {/* Add the remaining dialogs following the same modern styling pattern... */}
-              {/* Edit Contact Dialog */}
-              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] p-6 max-h-[90vh] overflow-y-auto">
-                  <DialogHeader className="pb-4 border-b">
-                    <DialogTitle className="text-xl">Edit Contact</DialogTitle>
-                    <DialogDescription>
-                      Update contact information.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="py-4 grid gap-6">
-                    {/* Basic Information */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground">BASIC INFORMATION</h3>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="edit-name" className="text-sm font-medium">Name <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="edit-name"
-                            placeholder="Contact Name"
-                            value={editContact.name}
-                            onChange={(e) => setEditContact({ ...editContact, name: e.target.value })}
-                            className="mt-1"
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="edit-phone" className="text-sm font-medium">Phone Number <span className="text-red-500">*</span></Label>
-                          <Input
-                            id="edit-phone"
-                            placeholder="+1234567890"
-                            value={editContact.phone}
-                            onChange={(e) => setEditContact({ ...editContact, phone: e.target.value })}
-                            className="mt-1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">Include country code (e.g., +1 for US)</p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="edit-email" className="text-sm font-medium">Email</Label>
-                        <Input
-                          id="edit-email"
-                          type="email"
-                          placeholder="contact@example.com"
-                          value={editContact.email}
-                          onChange={(e) => setEditContact({ ...editContact, email: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Additional Information */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground">ADDITIONAL INFORMATION</h3>
-
-                      <div>
-                        <Label htmlFor="edit-tags" className="text-sm font-medium">Tags</Label>
-                        <Input
-                          id="edit-tags"
-                          placeholder="customer, premium, support (comma separated)"
-                          value={editContact.tags}
-                          onChange={(e) => setEditContact({ ...editContact, tags: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="edit-notes" className="text-sm font-medium">Notes</Label>
-                        <Textarea
-                          id="edit-notes"
-                          placeholder="Additional notes about this contact..."
-                          value={editContact.notes}
-                          onChange={(e) => setEditContact({ ...editContact, notes: e.target.value })}
-                          rows={3}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Custom Fields */}
-                    {customFields.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-muted-foreground">CUSTOM FIELDS</h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {customFields.map(field => (
-                            <div key={field.id}>
-                              <Label htmlFor={`edit-custom-${field.key}`} className="text-sm font-medium">
-                                {field.name} {field.required && <span className="text-red-500">*</span>}
-                              </Label>
-
-                              {field.type === 'Text' && (
-                                <Input
-                                  id={`edit-custom-${field.key}`}
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  value={editContact.customFields?.[field.key] || ''}
-                                  onChange={(e) => {
-                                    const updatedCustomFields = {
-                                      ...editContact.customFields,
-                                      [field.key]: e.target.value
-                                    };
-                                    setEditContact({
-                                      ...editContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                  required={field.required}
-                                  className="mt-1"
-                                />
-                              )}
-
-                              {field.type === 'Number' && (
-                                <Input
-                                  id={`edit-custom-${field.key}`}
-                                  type="number"
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  value={editContact.customFields?.[field.key] || ''}
-                                  onChange={(e) => {
-                                    const updatedCustomFields = {
-                                      ...editContact.customFields,
-                                      [field.key]: e.target.value ? Number(e.target.value) : ''
-                                    };
-                                    setEditContact({
-                                      ...editContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                  required={field.required}
-                                  className="mt-1"
-                                />
-                              )}
-
-                              {field.type === 'Date' && (
-                                <Input
-                                  id={`edit-custom-${field.key}`}
-                                  type="date"
-                                  value={editContact.customFields?.[field.key] || ''}
-                                  onChange={(e) => {
-                                    const updatedCustomFields = {
-                                      ...editContact.customFields,
-                                      [field.key]: e.target.value
-                                    };
-                                    setEditContact({
-                                      ...editContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                  required={field.required}
-                                  className="mt-1"
-                                />
-                              )}
-
-                              {field.type === 'Dropdown' && field.options && (
-                                <Select
-                                  value={editContact.customFields?.[field.key] || ''}
-                                  onValueChange={(value) => {
-                                    const updatedCustomFields = {
-                                      ...editContact.customFields,
-                                      [field.key]: value
-                                    };
-                                    setEditContact({
-                                      ...editContact,
-                                      customFields: updatedCustomFields
-                                    });
-                                  }}
-                                >
-                                  <SelectTrigger id={`edit-custom-${field.key}`} className="mt-1">
-                                    <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {field.options.map(option => (
-                                      <SelectItem key={option} value={option}>
-                                        {option}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <DialogFooter className="pt-4 border-t">
-                    <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleEditContact}>
-                      Save Changes
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {/* View Contact Dialog */}
-              <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Contact Details</DialogTitle>
-                  </DialogHeader>
-                  {selectedContact && (
-                    <Tabs defaultValue="info" className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="info">
-                          <User className="h-4 w-4 mr-2" />
-                          Info
-                        </TabsTrigger>
-                        <TabsTrigger value="activity">
-                          <BarChart2 className="h-4 w-4 mr-2" />
-                          Activity
-                        </TabsTrigger>
-                        <TabsTrigger value="settings">
-                          <UserCog className="h-4 w-4 mr-2" />
-                          Settings
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="info" className="pt-4">
-                        <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                          <Avatar className="h-16 w-16">
-                            <AvatarFallback className="bg-primary/10 text-primary text-lg font-medium">
-                              {selectedContact.name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="text-xl font-semibold">{selectedContact.name}</h3>
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Phone className="h-3.5 w-3.5" />
-                              <span>{selectedContact.phone}</span>
-                            </div>
-                            {selectedContact.email && (
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Mail className="h-3.5 w-3.5" />
-                                <span>{selectedContact.email}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-                          <Card>
-                            <CardContent className="p-4">
-                              <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                                <Tag className="h-4 w-4" /> Tags
-                              </h4>
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {selectedContact.tags.length > 0 ? (
-                                  selectedContact.tags.map((tag, index) => (
-                                    <Badge
-                                      key={index}
-                                      variant="secondary"
-                                      className="flex items-center gap-1"
-                                    >
-                                      {tag}
-                                      <button
-                                        onClick={() => handleRemoveTag(selectedContact.id, tag)}
-                                        className="ml-1 hover:text-destructive"
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </button>
-                                    </Badge>
-                                  ))
-                                ) : (
-                                  <p className="text-muted-foreground text-sm">No tags</p>
-                                )}
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-3"
-                                onClick={() => handleAddTagClick(selectedContact)}
-                              >
-                                <Plus className="h-3 w-3 mr-1" /> Add Tag
-                              </Button>
-                            </CardContent>
-                          </Card>
-
-                          <Card>
-                            <CardContent className="p-4">
-                              <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                                <Info className="h-4 w-4" /> Status Information
-                              </h4>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">WhatsApp Status:</span>
-                                  <Badge
-                                    variant="outline"
-                                    className={
-                                      selectedContact.whatsappOptIn
-                                        ? ""
-                                        : "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900"
-                                    }
-                                  >
-                                    {selectedContact.whatsappOptIn ? "Subscribed" : "Unsubscribed"}
-                                  </Badge>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Created:</span>
-                                  <span>{format(new Date(selectedContact.createdAt), "MMM dd, yyyy")}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Last Contact:</span>
-                                  <span>
-                                    {selectedContact.lastMessageAt
-                                      ? format(new Date(selectedContact.lastMessageAt), "MMM dd, yyyy")
-                                      : "Never"
-                                    }
-                                  </span>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        {/* Custom Fields Section */}
-                        {selectedContact.customFields &&
-                          Object.keys(selectedContact.customFields).length > 0 && (
-                            <div className="mt-6">
-                              <h4 className="font-medium text-sm mb-3">Custom Fields</h4>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {Object.entries(selectedContact.customFields).map(([key, value]) => {
-                                  if (!value) return null;
-                                  const field = customFields.find(f => f.key === key);
-                                  if (!field) return null;
-
-                                  return (
-                                    <div key={key} className="flex flex-col p-2 border rounded-md">
-                                      <span className="text-xs text-muted-foreground">
-                                        {field.name}
-                                      </span>
-                                      <span className="font-medium">
-                                        {field.type === 'Date' && typeof value === 'string'
-                                          ? format(new Date(value), "MMM dd, yyyy")
-                                          : String(value)
-                                        }
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                        {selectedContact.notes && (
-                          <div className="mt-4">
-                            <h4 className="font-medium text-sm mb-2">Notes</h4>
-                            <div className="bg-muted/40 p-3 rounded-md text-sm">
-                              {selectedContact.notes}
-                            </div>
-                          </div>
-                        )}
-                      </TabsContent>
-
-                      <TabsContent value="activity" className="pt-4">
-                        <div className="text-center py-8">
-                          <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                          <h3 className="text-lg font-medium mb-1">Conversation History</h3>
-                          <p className="text-muted-foreground text-sm mb-4">
-                            View past messages and interaction history
-                          </p>
-                          <Button
-                            onClick={() => handleSendMessage(selectedContact.id)}
-                          >
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            View Conversations
-                          </Button>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="settings" className="pt-4">
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h4 className="font-medium">Edit Contact</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Update contact information and details
-                              </p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setIsViewDialogOpen(false);
-                                setTimeout(() => handleEditContactClick(selectedContact), 100);
-                              }}
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </Button>
-                          </div>
-
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h4 className="font-medium">Tag Management</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Add or remove tags from this contact
-                              </p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setIsViewDialogOpen(false);
-                                setTimeout(() => handleAddTagClick(selectedContact), 100);
-                              }}
-                            >
-                              <Tag className="h-4 w-4 mr-2" />
-                              Manage Tags
-                            </Button>
-                          </div>
-
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h4 className="font-medium text-red-600">Delete Contact</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Permanently remove this contact
-                              </p>
-                            </div>
-                            <Button
-                              variant="destructive"
-                              onClick={() => {
-                                setIsViewDialogOpen(false);
-                                setTimeout(() => handleDeleteContactClick(selectedContact), 100);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  )}
-                </DialogContent>
-              </Dialog>
-
-              {/* Add Tag Dialog */}
-              <Dialog open={isAddTagDialogOpen} onOpenChange={setIsAddTagDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {selectedContacts.length > 1
-                        ? `Add Tag to ${selectedContacts.length} Contacts`
-                        : "Add Tag to Contact"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Tags help you organize and segment your contacts.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="new-tag">Tag Name</Label>
-                      <Input
-                        id="new-tag"
-                        placeholder="Enter tag name (e.g. customer, premium)"
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                      />
-                    </div>
-
-                    {allTags.length > 0 && (
-                      <div className="space-y-2">
-                        <Label>Choose from existing tags</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {allTags.map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="outline"
-                              className="cursor-pointer hover:bg-primary/10"
-                              onClick={() => setNewTag(tag)}
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddTagDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={selectedContacts.length > 1 ? handleBulkAddTag : handleAddTag}
-                      disabled={!newTag.trim()}
-                    >
-                      Add Tag
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              {/* Edit Tag Dialog */}
-              <Dialog open={isEditTagDialogOpen} onOpenChange={setIsEditTagDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Edit Tag</DialogTitle>
-                    <DialogDescription>
-                      Update tag name for this contact.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="updated-tag">New Tag Name</Label>
-                      <Input
-                        id="updated-tag"
-                        placeholder="Enter updated tag name"
-                        value={updatedTag}
-                        onChange={(e) => setUpdatedTag(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsEditTagDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleEditTag}
-                      disabled={!updatedTag.trim() || updatedTag === oldTag}
-                    >
-                      Update Tag
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
 
               {/* Delete Confirmation Dialog */}
               <Dialog open={isDeleteConfirmDialogOpen} onOpenChange={setIsDeleteConfirmDialogOpen}>

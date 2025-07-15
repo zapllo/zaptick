@@ -526,74 +526,115 @@ export default function WorkflowsPage() {
               </CardContent>
             </Card>
 
-            {/* Stats Cards */}
+          {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-blue-600">Total Workflows</p>
-                      <p className="text-3xl font-bold text-blue-900">{totalWorkflows}</p>
-                      <p className="text-xs text-blue-600/80">
-                        {totalWorkflows > 0 ? '+8% from last month' : 'Get started'}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-blue-200/50 rounded-xl">
-                      <Workflow className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-green-600">Active Workflows</p>
-                      <p className="text-3xl font-bold text-green-900">{activeWorkflows}</p>
-                      <p className="text-xs text-green-600/80">
-                        {((activeWorkflows / totalWorkflows) * 100 || 0).toFixed(0)}% of total
-                      </p>
-                    </div>
-                    <div className="p-3 bg-green-200/50 rounded-xl">
-                      <CheckCircle className="h-6 w-6 text-green-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-purple-600">Total Executions</p>
-                      <p className="text-3xl font-bold text-purple-900">{totalExecutions}</p>
-                      <p className="text-xs text-purple-600/80">
-                        {totalExecutions > 0 ? '+15% this week' : 'No executions yet'}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-purple-200/50 rounded-xl">
-                      <BarChart3 className="h-6 w-6 text-purple-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-amber-600">Avg Success Rate</p>
-                      <p className="text-3xl font-bold text-amber-900">{avgSuccessRate}%</p>
-                      <div className="w-full bg-amber-200/50 rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-amber-600 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${avgSuccessRate}%` }}
-                        />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <p className="text-sm font-medium text-slate-600">Total Workflows</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-blue-900 transition-colors duration-300">
+                          {totalWorkflows.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {totalWorkflows > 0 ? 'Active sequences' : 'Get started'}
+                        </p>
                       </div>
                     </div>
-                    <div className="p-3 bg-amber-200/50 rounded-xl">
-                      <TrendingUp className="h-6 w-6 text-amber-600" />
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 group-hover:scale-110 transition-all duration-300">
+                        <Workflow className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-green-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <p className="text-sm font-medium text-slate-600">Active Workflows</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-green-900 transition-colors duration-300">
+                          {activeWorkflows.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {((activeWorkflows / totalWorkflows) * 100 || 0).toFixed(0)}% of total
+                        </p>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 group-hover:scale-110 transition-all duration-300">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                        <p className="text-sm font-medium text-slate-600">Total Executions</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-purple-900 transition-colors duration-300">
+                          {totalExecutions.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {totalExecutions > 0 ? 'Workflow runs' : 'No executions yet'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 group-hover:scale-110 transition-all duration-300">
+                        <BarChart3 className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-amber-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        <p className="text-sm font-medium text-slate-600">Avg Success Rate</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-amber-900 transition-colors duration-300">
+                          {avgSuccessRate}%
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {avgSuccessRate > 0 ? 'Performance rate' : 'No data yet'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:scale-110 transition-all duration-300">
+                        <TrendingUp className="h-6 w-6 text-amber-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
                   </div>
                 </CardContent>

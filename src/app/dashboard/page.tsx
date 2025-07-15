@@ -52,6 +52,10 @@ import {
   ChevronRight,
   ArrowDownRight,
   LucideIcon,
+  GitBranch,
+  Workflow,
+  Building,
+  Users2Icon,
 } from "lucide-react";
 import { format, subDays, differenceInDays, isToday, isYesterday, formatDistance } from "date-fns";
 import Layout from "@/components/layout/Layout";
@@ -83,6 +87,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
+import { FaBuilding, FaWhatsapp } from "react-icons/fa";
 
 // Stat Card Component
 interface StatCardProps {
@@ -457,13 +462,23 @@ export default function DashboardPage() {
     }
   };
 
+
+
   const renderWABASection = () => {
     if (loading && !pendingConnection) {
       return (
-        <div className="py-8 flex justify-center items-center">
+        <div className="py-12 flex justify-center items-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">Loading your WhatsApp accounts...</span>
+            <div className="relative">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+              <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 animate-pulse" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-gray-900 dark:text-white">Loading accounts...</p>
+              <p className="text-sm text-gray-500">Fetching your WhatsApp Business accounts</p>
+            </div>
           </div>
         </div>
       );
@@ -471,88 +486,98 @@ export default function DashboardPage() {
 
     if (wabaAccounts.length > 0) {
       return (
-        <div>
-          <div className="grid gap-4 md:grid-cols-2 ">
+        <div className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
             {wabaAccounts.map((account, index) => (
               <Card
                 key={account.wabaId || index}
                 className={cn(
-                  "overflow-hidden h-72 bg-background hover:shadow-md transition-shadow",
-                  selectedWabaId === account.wabaId && "border-primary/50 shadow-sm"
+                  "group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1",
+                  selectedWabaId === account.wabaId 
+                    ? "border-primary shadow-lg bg-gradient-to-br from-primary/5 to-primary/10" 
+                    : "border-gray-200 bg-gradient-to-br from-white to-gray-50/50 hover:border-primary/30 dark:border-gray-700 dark:from-muted/40 dark:to-gray-800/50"
                 )}
                 onClick={() => setSelectedWabaId(account.wabaId)}
               >
-                <div className={cn(
-                  "",
-                  selectedWabaId === account.wabaId ? "bg-primary" : "bg-muted"
-                )} />
-                <div className="flex justify-between ml-4 items-center">
-                  <div className="flex items-center -mt-12 gap-2">
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-green-500/20">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Active
+                {/* Header stripe */}
+                {/* <div className={cn(
+                  "h-2 w-full transition-all duration-300",
+                  selectedWabaId === account.wabaId 
+                    ? "bg-gradient-to-r from-primary to-primary/80" 
+                    : "bg-gradient-to-r from-gray-200 to-gray-300 group-hover:from-primary/50 group-hover:to-primary/70"
+                )} /> */}
+                
+                {/* Status badges */}
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-1" />
+                    Active
+                  </Badge>
+                  {account.provider === 'interakt' && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+                      Interakt
                     </Badge>
-                    {account.provider === 'interakt' && (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                        Interakt
-                      </Badge>
-                    )}
-                  </div>
-                  {/* <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 -mt-12 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Account Options</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Edit Account
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Info className="h-4 w-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh Connection
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Share2 className="h-4 w-4 mr-2" />
-                        Share Account
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        Disconnect
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu> */}
+                  )}
                 </div>
 
-                <CardContent className="-mt-6">
-                  <div className=''>
-                    <h3 className="font-semibold ">{account.businessName}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Connected on {format(new Date(account.connectedAt), "MMM d, yyyy")}
-                    </p>
-                    <div className="mt-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{account.phoneNumber || "No phone number"}</span>
+                <CardContent className="p-6 pt-4 mt-">
+                  <div className="space-y-4">
+                    {/* Business info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                          <Users2Icon className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                            {account.businessName}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Connected on {format(new Date(account.connectedAt), "MMM d, yyyy")}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{account.templateCount || 0} templates</span>
+                    </div>
+
+                    {/* Account details */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                          <Phone className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Phone Number</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 font-mono">
+                            {account.phoneNumber || "No phone number"}
+                          </p>
+                        </div>
                       </div>
+                      
+                      {/* <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                          <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Templates</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {account.templateCount || 0} message templates
+                          </p>
+                        </div>
+                      </div>
+                       */}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2 cursor-help">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm truncate w-48">WABA: {account.wabaId}</span>
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/50 cursor-help">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                                <User className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">WABA ID</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-300 font-mono truncate">
+                                  {account.wabaId}
+                                </p>
+                              </div>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -563,60 +588,93 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="pt-4 flex gap-2">
+                
+                <CardFooter className="p-6 pt-0 flex gap-3">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 hover:bg-gray-50 dark:hover:bg-gray-800"
                     asChild
                   >
-                    <Link href="/templates">View Templates</Link>
+                    <Link href="/templates">
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Templates
+                    </Link>
                   </Button>
                   <Button
                     size="sm"
-                    className="flex-1"
+                    className={cn(
+                      "flex-1 transition-all duration-200",
+                      selectedWabaId === account.wabaId 
+                        ? "bg-primary hover:bg-primary/90 shadow-md" 
+                        : "bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900"
+                    )}
                     onClick={() => setSelectedWabaId(account.wabaId)}
                   >
-                    {selectedWabaId === account.wabaId ? 'Selected' : 'Select'}
+                    {selectedWabaId === account.wabaId ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Selected
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Select
+                      </>
+                    )}
                   </Button>
                 </CardFooter>
+
+                {/* Selection indicator */}
+                {/* {selectedWabaId === account.wabaId && (
+                  <div className="absolute top-4 left-4">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary shadow-lg">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                )} */}
+
+                {/* Hover overlay */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               </Card>
             ))}
 
             {/* Show connection options only if no pending connection */}
             {!pendingConnection && (
-              <>
-                <ConnectWabaButton />
-              </>
+              <ConnectWabaButton />
             )}
           </div>
+          
+          {/* Manual connect section */}
           <ManualWabaConnect />
-
         </div>
       );
     }
 
     // No accounts, show appropriate state
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {pendingConnection ? (
-          connectionTimeout ? (
-            <FailedConnectionCard
-              onRetry={handleContactSupport}
-              onClearState={handleClearPendingState}
-            />
+      <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {pendingConnection ? (
+            connectionTimeout ? (
+              <FailedConnectionCard
+                onRetry={handleContactSupport}
+                onClearState={handleClearPendingState}
+              />
+            ) : (
+              <PendingConnectionCard onRefresh={handleRefreshAccounts} />
+            )
           ) : (
-            <PendingConnectionCard onRefresh={handleRefreshAccounts} />
-          )
-        ) : (
-          <>
-            <ConnectWabaButton />
-            <ManualWabaConnect />
-          </>
-        )}
+            <>
+              <ConnectWabaButton />
+              <ManualWabaConnect />
+            </>
+          )}
+        </div>
       </div>
     );
   };
+
 
   // Format a message for display
   const formatMessagePreview = (message: string) => {
@@ -627,140 +685,279 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="container mx-auto space-y-6 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              {user ? `Welcome back, ${user.name}!` : 'Welcome!'} Here&apos;s an overview of your WhatsApp Business account.
+
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent dark:from-white dark:to-gray-300">
+                Dashboard
+              </h1>
+              <div className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                Live
+              </div>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300">
+              {user ? `Welcome back, ${user.name?.split(' ')[0]}!` : 'Welcome!'} Here's your WhatsApp Business overview.
             </p>
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded-full bg-blue-500" />
+                <span>{wabaAccounts.length} account{wabaAccounts.length !== 1 ? 's' : ''} connected</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded-full bg-purple-500" />
+                <span>Analytics enabled</span>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <CalendarDays className="h-4 w-4" />
-                  {timeRange === "today" ? "Today" :
-                    timeRange === "week" ? "This Week" :
-                      timeRange === "month" ? "This Month" : "This Quarter"}
+                <Button variant="outline" size="sm" className="gap-2 min-w-[140px] justify-between">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4" />
+                    <span>
+                      {timeRange === "today" ? "Today" :
+                        timeRange === "week" ? "This Week" :
+                          timeRange === "month" ? "This Month" : "This Quarter"}
+                    </span>
+                  </div>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setTimeRange("today")}>Today</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTimeRange("week")}>This Week</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTimeRange("month")}>This Month</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTimeRange("quarter")}>This Quarter</DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-[140px]">
+                <DropdownMenuItem onClick={() => setTimeRange("today")}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>Today</span>
+                    {timeRange === "today" && <CheckCircle className="h-4 w-4 text-primary" />}
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTimeRange("week")}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>This Week</span>
+                    {timeRange === "week" && <CheckCircle className="h-4 w-4 text-primary" />}
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTimeRange("month")}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>This Month</span>
+                    {timeRange === "month" && <CheckCircle className="h-4 w-4 text-primary" />}
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTimeRange("quarter")}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>This Quarter</span>
+                    {timeRange === "quarter" && <CheckCircle className="h-4 w-4 text-primary" />}
+                  </div>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
           </div>
         </div>
+
         {/* Welcome Alert for first time users */}
         {wabaAccounts.length === 0 && !pendingConnection && (
-          <Alert className="bg-primary/5 border-primary/20">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <AlertTitle>Welcome to Zaptick!</AlertTitle>
-            <AlertDescription className="flex items-center justify-between">
-              <span>Get started by connecting your WhatsApp Business Account to unlock all features.</span>
-              <Button size="sm" variant="outline" className="ml-2 gap-1" asChild>
-                <a href="#waba-section">
-                  Get Started
-                  <ChevronRight className="h-4 w-4" />
-                </a>
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 shadow-sm">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Welcome to Zaptick!
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Get started by connecting your WhatsApp Business Account to unlock all features and start engaging with your customers.
+                  </p>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Free setup</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-blue-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>5 minute process</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-purple-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Instant messaging</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button size="lg" className="gap-2" asChild>
+                  <a href="#waba-section">
+                    Get Started
+                    <ChevronRight className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                  Learn more
+                </Button>
+              </div>
+            </div>
+
+            {/* Decorative elements */}
+            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/10" />
+            <div className="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-primary/5" />
+          </div>
         )}
 
         {/* Quick Actions */}
         {wabaAccounts.length > 0 && selectedWabaId && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="cursor-pointer hover:shadow-md rounded-lg transition-shadow">
-              <a href="/campaigns/create">
-                <CardContent className="p-4 flex flex-col">
-                  <div className="self-start p-2 rounded-md mb-3 bg-purple-500/10 text-purple-500">
-                    <Share2 className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-medium">New Campaign</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Send message to multiple contacts</p>
-                </CardContent>
-              </a>
-            </Card>
-            <Card className="cursor-pointer hover:shadow-md rounded-lg transition-shadow">
-              <Link href="/templates">
-                <CardContent className="p-4 flex flex-col">
-                  <div className="self-start p-2 rounded-md mb-3 bg-blue-500/10 text-blue-500">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-medium">Create Template</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Design reusable message templates</p>
-                </CardContent>
-              </Link>
-            </Card>
-            <Card className="cursor-pointer hover:shadow-md rounded-lg transition-shadow">
-              <a href="/contacts">
-                <CardContent className="p-4 flex flex-col">
-                  <div className="self-start p-2 rounded-md mb-3 bg-green-500/10 text-green-500">
-                    <User className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-medium">Add Contact</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Add new contact to your database</p>
-                </CardContent>
-              </a>
-            </Card>
-            <Card className="cursor-pointer hover:shadow-md rounded-lg transition-shadow">
-              <a href="/contacts/import">
-                <CardContent className="p-4 flex flex-col">
-                  <div className="self-start p-2 rounded-md mb-3 bg-amber-500/10 text-amber-500">
-                    <Copy className="h-5 w-5" />
-                  </div>
-                  <h3 className="font-medium">Import Data</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Import contacts or messages</p>
-                </CardContent>
-              </a>
-            </Card>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Quick Actions</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Jump into the most common tasks</p>
+              </div>
+              {/* <Button variant="outline" size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                More Actions
+              </Button> */}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-purple-200 bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10">
+                <a href="/campaigns/create">
+                  <CardContent className="p-6 flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg group-hover:scale-110 transition-transform duration-200">
+                        <Share2 className="h-6 w-6 text-white" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all duration-200" />
+                    </div>
+                    <h3 className="font-semibold group-hover:text-purple-600 transition-colors">New Campaign</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Send messages to multiple contacts</p>
+                  </CardContent>
+                </a>
+              </Card>
+
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
+                <Link href="/templates">
+                  <CardContent className="p-6 flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:scale-110 transition-transform duration-200">
+                        <FileText className="h-6 w-6 text-white" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-200" />
+                    </div>
+                    <h3 className="font-semibold group-hover:text-blue-600 transition-colors">Create Template</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Design reusable message templates</p>
+                  </CardContent>
+                </Link>
+              </Card>
+
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-green-200 bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
+                <a href="/contacts">
+                  <CardContent className="p-6 flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg group-hover:scale-110 transition-transform duration-200">
+                        <User className="h-6 w-6 text-white" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-green-500 group-hover:translate-x-1 transition-all duration-200" />
+                    </div>
+                    <h3 className="font-semibold group-hover:text-green-600 transition-colors">Add Contact</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Add new contact to your database</p>
+                  </CardContent>
+                </a>
+              </Card>
+
+              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-amber-200 bg-gradient-to-br from-white to-amber-50/30 dark:from-muted/40 dark:to-amber-900/10">
+                <a href="/contacts/import">
+                  <CardContent className="p-6 flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg group-hover:scale-110 transition-transform duration-200">
+                        <Workflow className="h-6 w-6 text-white" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all duration-200" />
+                    </div>
+                    <h3 className="font-semibold group-hover:text-amber-600 transition-colors">Create Workflows</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Create and manage multi-step automation sequences</p>
+                  </CardContent>
+                </a>
+              </Card>
+            </div>
           </div>
         )}
 
         {/* WABA Status Card */}
-        <Card id="waba-section">
-          <CardHeader className="pb-3">
-            <div className="flex items-center  justify-between">
-              <div className="space-y-1">
-                <CardTitle>WhatsApp Business Accounts</CardTitle>
-                <CardDescription>
-                  Connect a new WhatsApp Business Account or manage existing ones.
-                </CardDescription>
+        <Card id="waba-section" className="overflow-hidden">
+          <CardHeader className="pb-4 bg-gradient-to-r from-green-50/50 to-transparent dark:from-green-900/10">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                    <Phone className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">WhatsApp Business Accounts</CardTitle>
+                    <CardDescription className="text-sm">
+                      Connect and manage your WhatsApp Business accounts to start messaging customers.
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Secure connection</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-blue-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Real-time sync</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-purple-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>24/7 monitoring</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {lastRefresh && wabaAccounts.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Last updated: {format(lastRefresh, "HH:mm:ss")}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Last updated</p>
+                    <p className="text-sm font-medium">{format(lastRefresh, "HH:mm:ss")}</p>
+                  </div>
                 )}
                 {wabaAccounts.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={handleRefreshAccounts}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                  <Button variant="outline" size="sm" onClick={handleRefreshAccounts} className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
                     Refresh
                   </Button>
                 )}
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {renderWABASection()}
           </CardContent>
           {wabaAccounts.length > 0 && (
-            <CardFooter className="flex justify-center border-t pt-4">
-              <Button variant="outline" size="sm" className="gap-2" asChild>
-                <a href="https://business.facebook.com/wa/manage/" target="_blank" rel="noopener noreferrer">
-                  Manage in Meta Business Suite
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
+            <CardFooter className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-t pt-6 bg-gray-50/50 dark:bg-gray-900/50">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <Info className="h-4 w-4" />
+                <span>Need help managing your accounts?</span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <HelpCircle className="h-4 w-4" />
+                  Get Help
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2" asChild>
+                  <a href="https://business.facebook.com/wa/manage/" target="_blank" rel="noopener noreferrer">
+                    Meta Business Suite
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
             </CardFooter>
           )}
         </Card>
+
+
 
         {/* Show dashboard content based on state */}
         {wabaAccounts.length === 0 && !pendingConnection ? (
@@ -927,32 +1124,54 @@ export default function DashboardPage() {
 
             </div>
 
+
             {/* Analytics Tabs Section */}
-            <Tabs defaultValue="overview" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <TabsList className="grid w-full max-w-md grid-cols-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="messages">Messages</TabsTrigger>
-                  <TabsTrigger value="contacts">Contacts</TabsTrigger>
-                  <TabsTrigger value="templates">Templates</TabsTrigger>
-                </TabsList>
-                <div className="hidden md:flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    Export Report
-                  </Button>
-                  <Button size="sm" className="gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    View Full Analytics
-                  </Button>
+            <Tabs defaultValue="overview" className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Track your WhatsApp Business performance and engagement metrics
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <TabsList className="grid w-full max-w-md grid-cols-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                    <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="messages" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      Messages
+                    </TabsTrigger>
+                    <TabsTrigger value="contacts" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      Contacts
+                    </TabsTrigger>
+                    <TabsTrigger value="templates" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                      Templates
+                    </TabsTrigger>
+                  </TabsList>
+                  <div className="hidden md:flex gap-2">
+                    <Button variant="outline" size="sm" className="gap-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <FileText className="h-4 w-4" />
+                      Export Report
+                    </Button>
+                    <Button size="sm" className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary">
+                      <BarChart3 className="h-4 w-4" />
+                      Full Analytics
+                    </Button>
+                  </div>
                 </div>
               </div>
 
               <TabsContent value="overview" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <Card>
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-green-900/10">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{analytics?.messageMetrics?.deliveryRate || 0}%</div>
@@ -965,10 +1184,17 @@ export default function DashboardPage() {
                         <Progress value={analytics?.messageMetrics?.deliveryRate || 0} className="h-2" />
                       </div>
                     </CardContent>
+                    <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
                   </Card>
-                  <Card>
+
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-blue-900/10">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Read Rate</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium">Read Rate</CardTitle>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                          <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{analytics?.messageMetrics?.readRate || 0}%</div>
@@ -981,10 +1207,17 @@ export default function DashboardPage() {
                         <Progress value={analytics?.messageMetrics?.readRate || 0} className="h-2" />
                       </div>
                     </CardContent>
+                    <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-blue-500/10 transition-all duration-300 group-hover:scale-110" />
                   </Card>
-                  <Card>
+
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-purple-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-purple-900/10">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Response Rate</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium">Response Rate</CardTitle>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                          <ArrowRight className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        </div>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{analytics?.messageMetrics?.responseRate || 0}%</div>
@@ -997,10 +1230,17 @@ export default function DashboardPage() {
                         <Progress value={analytics?.messageMetrics?.responseRate || 0} className="h-2" />
                       </div>
                     </CardContent>
+                    <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-purple-500/10 transition-all duration-300 group-hover:scale-110" />
                   </Card>
-                  <Card>
+
+                  <Card className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-amber-50/30 hover:shadow-lg transition-all duration-300 dark:from-muted/40 dark:to-amber-900/10">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Avg. Response Time</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium">Avg. Response Time</CardTitle>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                          <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        </div>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{analytics?.messageMetrics?.responseTime || 0}h</div>
@@ -1013,11 +1253,12 @@ export default function DashboardPage() {
                         <Progress value={analytics?.messageMetrics?.responseTime ? Math.min(100, Math.round((4 / analytics.messageMetrics.responseTime) * 100)) : 0} className="h-2" />
                       </div>
                     </CardContent>
+                    <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-amber-500/10 transition-all duration-300 group-hover:scale-110" />
                   </Card>
                 </div>
 
                 {/* Template Performance Card */}
-                <Card>
+                <Card className="rounded-xl border bg-gradient-to-br from-white to-gray-50/30 dark:from-muted/40 dark:to-gray-800/30">
                   <CardHeader>
                     <CardTitle>Template Performance</CardTitle>
                     <CardDescription>
@@ -1092,7 +1333,7 @@ export default function DashboardPage() {
 
               <TabsContent value="messages" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Message Types</CardTitle>
                     </CardHeader>
@@ -1139,7 +1380,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Messaging Activity</CardTitle>
                     </CardHeader>
@@ -1207,7 +1448,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Response Time</CardTitle>
                     </CardHeader>
@@ -1281,7 +1522,7 @@ export default function DashboardPage() {
 
               <TabsContent value="contacts" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
                     </CardHeader>
@@ -1308,7 +1549,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Active Contacts</CardTitle>
                     </CardHeader>
@@ -1337,7 +1578,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">New Contacts</CardTitle>
                     </CardHeader>
@@ -1368,7 +1609,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-red-50/30 dark:from-muted/40 dark:to-red-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Unsubscribed</CardTitle>
                     </CardHeader>
@@ -1392,7 +1633,7 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 </div>
-                <Card>
+                <Card className="rounded-xl border bg-gradient-to-br from-white to-gray-50/30 dark:from-muted/40 dark:to-gray-800/30">
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <div>
@@ -1487,7 +1728,7 @@ export default function DashboardPage() {
 
               <TabsContent value="templates" className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-green-50/30 dark:from-muted/40 dark:to-green-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Template Status</CardTitle>
                     </CardHeader>
@@ -1537,7 +1778,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Template Categories</CardTitle>
                     </CardHeader>
@@ -1600,7 +1841,7 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <Card className="flex flex-col">
+                  <Card className="rounded-xl border bg-gradient-to-br from-white to-purple-50/30 dark:from-muted/40 dark:to-purple-900/10 flex flex-col">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">Template Performance</CardTitle>
                     </CardHeader>
@@ -1673,55 +1914,86 @@ export default function DashboardPage() {
             </Tabs>
 
             {/* Help and Tips Card */}
-            <Card>
-              <CardHeader>
+            <Card className="rounded-2xl border bg-gradient-to-br from-white to-blue-50/30 dark:from-muted/40 dark:to-blue-900/10 overflow-hidden">
+              <CardHeader className="pb-4 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-900/10">
                 <div className="flex items-center justify-between">
-                  <CardTitle>Tips & Best Practices</CardTitle>
-                  <Button variant="ghost" size="sm" className="gap-1">
-                    View all <ChevronRight className="h-4 w-4" />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                      <Sparkles className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-semibold">Tips & Best Practices</CardTitle>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Expert recommendations to optimize your WhatsApp Business
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" className="gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                    View all 
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pb-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border bg-card p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                        <ShieldCheck className="h-5 w-5 text-primary" />
+              <CardContent className="pb-6">
+                <div className="grid gap-6 md:grid-cols-3">
+                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 dark:from-muted/40 dark:to-green-900/10">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <ShieldCheck className="h-6 w-6 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-sm">Comply with WhatsApp Policies</h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Ensure your messages adhere to WhatsApp Business Policies
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                          Comply with WhatsApp Policies
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                          Ensure your messages adhere to WhatsApp Business Policies for better delivery rates
                         </p>
+                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20">
+                          Learn more →
+                        </Button>
                       </div>
                     </div>
+                    <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
                   </div>
-                  <div className="rounded-lg border bg-card p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-green-500/10 flex items-center justify-center">
-                        <MessageSquare className="h-5 w-5 text-green-500" />
+
+                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 dark:from-muted/40 dark:to-blue-900/10">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <MessageSquare className="h-6 w-6 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-sm">Template Best Practices</h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Tips for creating templates that get approved quickly
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                          Template Best Practices
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                          Tips for creating templates that get approved quickly and perform well
                         </p>
+                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20">
+                          Learn more →
+                        </Button>
                       </div>
                     </div>
+                    <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-blue-500/10 transition-all duration-300 group-hover:scale-110" />
                   </div>
-                  <div className="rounded-lg border bg-card p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center">
-                        <Sparkles className="h-5 w-5 text-blue-500" />
+
+                  <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-purple-50/30 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 dark:from-muted/40 dark:to-purple-900/10">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <Sparkles className="h-6 w-6 text-white" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-sm">Increase Engagement</h3>
-                        <p className="text-xs text-muted-foreground mt-1">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                          Increase Engagement
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                           Strategies to boost customer interaction and response rates
                         </p>
+                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20">
+                          Learn more →
+                        </Button>
                       </div>
                     </div>
+                    <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-purple-500/10 transition-all duration-300 group-hover:scale-110" />
                   </div>
                 </div>
               </CardContent>

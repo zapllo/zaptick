@@ -5,19 +5,8 @@ import Sidebar from "./Sidebar";
 import { Button } from "@/components/ui/button";
 import PermissionCheck from "@/components/auth/PermissionCheck";
 import {
-  Bell,
-  Search,
-  MessageSquare,
-  User,
-  LogOut,
-  Settings,
-  CreditCard,
-  HelpCircle,
-  X,
-  MenuIcon,
-  ChevronDown,
-  Loader2,
-  UsersRound,
+  Bell, Search, MessageSquare, User, LogOut, Settings, CreditCard, HelpCircle, X,
+  MenuIcon, ChevronDown, Loader2, UsersRound,
   Shield,
   Tags,
   UserCog,
@@ -27,7 +16,8 @@ import {
   ArrowUpRight,
   Sparkles,
   Plus,
-  LayoutDashboard
+  LayoutDashboard,
+  Users
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -67,7 +57,7 @@ interface UserData {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'agent';
+  role: 'admin' | 'agent' | 'owner';
   wabaAccounts?: any[];
   image?: string;
 }
@@ -390,7 +380,7 @@ export default function Layout({ children }: LayoutProps) {
                 </Button>
               </PermissionCheck>
 
-              {/* Quick Actions */}
+              {/* Quick Actions
               <PermissionCheck resource="conversations" action="write" fallback={null}>
                 <Button
                   size="sm"
@@ -400,9 +390,9 @@ export default function Layout({ children }: LayoutProps) {
                   <Plus className="h-4 w-4" />
                   <span className="hidden lg:inline">New Chat</span>
                 </Button>
-              </PermissionCheck>
+              </PermissionCheck> */}
 
-             
+
               {/* Notifications */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -421,7 +411,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                 <h1 className="flex justify-center p-4">Notifications Coming Soon</h1>
+                    <h1 className="flex justify-center p-4">Notifications Coming Soon</h1>
                   </div>
                   <div className="p-3 border-t bg-muted/30">
                     <Button variant="ghost" size="sm" className="w-full h-8 text-sm font-medium hover:bg-background">
@@ -469,6 +459,15 @@ export default function Layout({ children }: LayoutProps) {
                               <Code2 className="h-5 w-5 text-blue-600" />
                             </div>
                             <span className="text-xs font-medium text-center">Developer</span>
+                          </button>
+                          <button
+                            className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                            onClick={() => router.push('/settings/agents')}
+                          >
+                            <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 p-3 rounded-xl group-hover:from-indigo-500/30 group-hover:to-indigo-600/20 transition-colors">
+                              <Users className="h-5 w-5 text-indigo-600" />
+                            </div>
+                            <span className="text-xs font-medium text-center">Team</span>
                           </button>
                         </PermissionCheck>
 
@@ -583,7 +582,7 @@ export default function Layout({ children }: LayoutProps) {
                       <span>Profile</span>
                     </DropdownMenuItem>
                     <PermissionCheck resource="settings" action="read" fallback={null}>
-                      <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/settings')}>
+                      <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/settings/whatsapp-profile')}>
                         <Settings className="mr-3 h-4 w-4" />
                         <span>Settings</span>
                       </DropdownMenuItem>
@@ -595,7 +594,7 @@ export default function Layout({ children }: LayoutProps) {
                       </DropdownMenuItem>
                     </PermissionCheck>
                   </div>
-                <div className="p-2 border-t">
+                  <div className="p-2 border-t">
                     <DropdownMenuItem
                       className="rounded-lg cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
                       onClick={handleSignOut}

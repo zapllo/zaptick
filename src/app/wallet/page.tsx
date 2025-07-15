@@ -66,6 +66,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Script from "next/script";
+import { useToast } from "@/hooks/use-toast";
 
 // Define transaction type
 interface Transaction {
@@ -116,7 +117,7 @@ const WalletPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentInitiated, setPaymentInitiated] = useState(false);
-
+  const { toast } = useToast();
   // Predefined amounts for quick selection
   const suggestedAmounts = [500, 1000, 2000, 5000, 10000];
 
@@ -172,6 +173,14 @@ const WalletPage = () => {
     );
   });
 
+
+  // Calculate GST and total amount
+  const calculateGST = (amount: number) => {
+    const gst = Math.round(amount * 0.18 * 100) / 100; // 18% GST
+    const total = amount + gst;
+    return { gst, total };
+  };
+
   // Function to handle adding funds
   const handleAddFunds = async () => {
     if (amount < 100) {
@@ -182,6 +191,8 @@ const WalletPage = () => {
       });
       return;
     }
+
+    const { gst, total } = calculateGST(amount);
 
     try {
       setIsPaymentProcessing(true);
@@ -194,11 +205,14 @@ const WalletPage = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: amount * 100, // Razorpay expects amount in smallest currency unit (paise)
+          amount: total * 100, // Razorpay expects amount in smallest currency unit (paise)
           currency: "INR",
           receipt: `wallet-topup-${Date.now()}`,
           notes: {
             purpose: "Wallet Top-up",
+            baseAmount: amount,
+            gst: gst,
+            totalAmount: total,
           },
         }),
       });
@@ -212,10 +226,10 @@ const WalletPage = () => {
       // Initialize Razorpay payment
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: amount * 100,
+        amount: total * 100,
         currency: "INR",
-        name: "WhatsApp Business Platform",
-        description: "Wallet Recharge",
+        name: "Zaptick - Wallet Recharge",
+        description: "Wallet Recharge (including 18% GST)",
         order_id: orderData.orderId,
         handler: async function (response: any) {
           try {
@@ -229,7 +243,9 @@ const WalletPage = () => {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                amount: amount,
+                amount: amount, // Base amount to be credited to wallet
+                totalAmount: total, // Total amount paid including GST
+                gst: gst,
               }),
             });
 
@@ -243,9 +259,11 @@ const WalletPage = () => {
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  amount,
+                  amount, // Only the base amount is credited to wallet
                   paymentMethod: "Razorpay",
                   paymentId: response.razorpay_payment_id,
+                  totalPaid: total,
+                  gst: gst,
                 }),
               });
 
@@ -282,7 +300,7 @@ const WalletPage = () => {
           contact: "",
         },
         theme: {
-          color: "#6366F1",
+          color: "#378A4F", // Green primary color
         },
         modal: {
           ondismiss: function () {
@@ -306,6 +324,7 @@ const WalletPage = () => {
       setPaymentInitiated(false);
     }
   };
+
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -589,7 +608,7 @@ const WalletPage = () => {
 
       {/* Add Funds Dialog */}
       <Dialog open={showAddFundsDialog} onOpenChange={setShowAddFundsDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>Add Funds to Wallet</DialogTitle>
             <DialogDescription>
@@ -627,6 +646,7 @@ const WalletPage = () => {
                     variant={amount === amt ? "default" : "outline"}
                     size="sm"
                     onClick={() => setAmount(amt)}
+                    className={amount === amt ? "bg-green-600 hover:bg-green-700" : ""}
                   >
                     ₹{amt.toLocaleString()}
                   </Button>
@@ -634,11 +654,30 @@ const WalletPage = () => {
               </div>
             </div>
 
-            <Alert variant="outline" className="bg-muted">
-              <CreditCard className="h-4 w-4" />
-              <AlertTitle>Secure Payment</AlertTitle>
-              <AlertDescription>
-                Your payment will be processed securely through Razorpay.
+            {/* GST Calculation Display */}
+            {amount >= 100 && (
+              <div className="space-y-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Wallet Credit Amount:</span>
+                  <span className="text-sm font-semibold">₹{amount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">GST (18%):</span>
+                  <span className="text-sm">₹{calculateGST(amount).gst.toFixed(2)}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold">Total Amount to Pay:</span>
+                  <span className="text-sm font-bold text-green-600">₹{calculateGST(amount).total.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            <Alert className="bg-green-50 border-green-200">
+              <CreditCard className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-800">Secure Payment</AlertTitle>
+              <AlertDescription className="text-green-700">
+                Your payment will be processed securely through Razorpay. GST will be collected as per government regulations.
               </AlertDescription>
             </Alert>
           </div>
@@ -653,7 +692,7 @@ const WalletPage = () => {
             </Button>
             <Button
               onClick={handleAddFunds}
-              className="gap-2"
+              className="gap-2 bg-green-600 hover:bg-green-700"
               disabled={amount < 100 || isPaymentProcessing}
             >
               {isPaymentProcessing ? (
@@ -664,7 +703,7 @@ const WalletPage = () => {
               ) : (
                 <>
                   <CreditCard className="h-4 w-4" />
-                  Pay ₹{amount.toLocaleString()}
+                  Pay ₹{amount >= 100 ? calculateGST(amount).total.toFixed(2) : '0.00'}
                 </>
               )}
             </Button>

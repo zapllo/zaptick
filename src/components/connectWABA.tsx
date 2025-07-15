@@ -10,6 +10,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Phone, Plus } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 
 declare global {
   interface Window {
@@ -183,31 +184,133 @@ export default function ConnectWabaButton() {
     );
   };
 
+
   return (
-    <Card className="flex h-72 justify-center items-center border-2 ">
-      <h1>
-
-        Connect a new WhatsApp Business Account
-
-      </h1>
-      <CardContent className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-          <Phone className="h-8 w-8 text-primary" />
+    <Card className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-gray-200 bg-gradient-to-br from-white to-green-50/30  transition-all duration-300 hover:border-green-300 hover:shadow-lg dark:border-gray-700 dark:from-muted/40 dark:to-green-900/10">
+      {/* Header */}
+      <CardHeader className="text-center pb-2">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+            <FaWhatsapp className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+            Ready to connect
+          </div>
         </div>
-        <p className="text-center text-sm text-muted-foreground px-4">
-          Connect your WhatsApp Business account to start sending messages
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Connect WhatsApp Business
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Add your WhatsApp Business account to unlock powerful messaging features
         </p>
+      </CardHeader>
+
+      {/* Content */}
+      <CardContent className="flex flex-col items-center gap-4 px-6">
+        {/* Features */}
+        <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+              <Phone className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">Business Messaging</p>
+              <p className="text-xs text-gray-500">Send messages to customers</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+              <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">Template Management</p>
+              <p className="text-xs text-gray-500">Create and manage templates</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+              <Phone className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">Real-time Analytics</p>
+              <p className="text-xs text-gray-500">Track message performance</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Status indicator */}
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          {!sdkReady ? (
+            <>
+              <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>Initializing Facebook SDK...</span>
+            </>
+          ) : !user?.id ? (
+            <>
+              <div className="h-2 w-2 rounded-full bg-red-500" />
+              <span>Please log in to continue</span>
+            </>
+          ) : (
+            <>
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+              <span>Ready to connect</span>
+            </>
+          )}
+        </div>
       </CardContent>
-      <CardFooter>
-        <Button
-          disabled={!sdkReady || !user?.id || isConnecting}
-          onClick={launchWhatsAppSignup}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          {isConnecting ? "Connecting..." : "Connect WABA"}
-        </Button>
+
+      {/* Footer */}
+      <CardFooter className="pt-2">
+        <div className="w-full space-y-3">
+          <Button
+            disabled={!sdkReady || !user?.id || isConnecting}
+            onClick={launchWhatsAppSignup}
+            className="w-full gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+            size="lg"
+          >
+            {isConnecting ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                <span>Connecting...</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span>Connect WhatsApp Account</span>
+              </>
+            )}
+          </Button>
+
+          <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <div className="h-3 w-3 rounded-full bg-green-500/20 flex items-center justify-center">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+              </div>
+              <span>Secure</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-3 w-3 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              </div>
+              <span>5 min setup</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-3 w-3 rounded-full bg-purple-500/20 flex items-center justify-center">
+                <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+              </div>
+              <span>Free</span>
+            </div>
+          </div>
+        </div>
       </CardFooter>
+
+      {/* Decorative elements */}
+      <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
+      <div className="absolute -left-4 -bottom-4 h-12 w-12 rounded-full bg-green-500/5" />
+
+      {/* Hover overlay */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </Card>
   );
 }

@@ -6,7 +6,11 @@ export interface ICompany extends Document {
   website?: string;
   industry?: string;
   size?: string;
-  walletBalance: number;  // Add wallet balance to company
+  location?: string; // Add location field
+  category?: string; // Add category field
+  phone?: string; // Add phone field
+  countryCode?: string; // Add country code field
+  walletBalance: number;
   createdAt: Date;
   logo?: string;
   updatedAt: Date;
@@ -45,16 +49,31 @@ const CompanySchema = new Schema<ICompany>(
       type: String,
       trim: true,
     },
+    location: {
+      type: String,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    countryCode: {
+      type: String,
+      trim: true,
+    },
     logo: {
       type: String,
       trim: true,
     },
-
     website: {
       type: String,
       trim: true,
     },
     industry: {
+      type: String,
+      trim: true,
+    },
+    category: {
       type: String,
       trim: true,
     },
@@ -90,7 +109,6 @@ const CompanySchema = new Schema<ICompany>(
       lastSyncAt: Date
     }]
   },
-
   { timestamps: true }
 );
 

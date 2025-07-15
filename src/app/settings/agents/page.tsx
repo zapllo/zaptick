@@ -59,7 +59,20 @@ import {
     XCircle,
     AlertCircle,
     Eye,
+    Search,
+    Filter,
+    Mail,
+    Calendar,
+    Crown,
+    ArrowRight,
+    Activity,
+    Clock,
     Settings,
+    UserCheck,
+    AlertTriangle,
+    TrendingUp,
+    Globe,
+    Zap,
 } from "lucide-react";
 
 interface Role {
@@ -97,6 +110,8 @@ export default function AgentsPage() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedRole, setSelectedRole] = useState<string>("all");
 
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const { toast } = useToast();
@@ -186,7 +201,7 @@ export default function AgentsPage() {
             if (data.success) {
                 toast({
                     title: "Success",
-                    description: "User created successfully",
+                    description: "Team member added successfully",
                 });
                 setIsAddDialogOpen(false);
                 setNewUser({
@@ -200,7 +215,7 @@ export default function AgentsPage() {
             } else {
                 toast({
                     title: "Error",
-                    description: data.message || "Failed to create user",
+                    description: data.message || "Failed to add team member",
                     variant: "destructive",
                 });
             }
@@ -208,7 +223,7 @@ export default function AgentsPage() {
             console.error('Error creating user:', error);
             toast({
                 title: "Error",
-                description: "Failed to create user",
+                description: "Failed to add team member",
                 variant: "destructive",
             });
         }
@@ -244,14 +259,14 @@ export default function AgentsPage() {
             if (data.success) {
                 toast({
                     title: "Success",
-                    description: "User updated successfully",
+                    description: "Team member updated successfully",
                 });
                 setIsEditDialogOpen(false);
                 fetchUsers();
             } else {
                 toast({
                     title: "Error",
-                    description: data.message || "Failed to update user",
+                    description: data.message || "Failed to update team member",
                     variant: "destructive",
                 });
             }
@@ -259,7 +274,7 @@ export default function AgentsPage() {
             console.error('Error updating user:', error);
             toast({
                 title: "Error",
-                description: "Failed to update user",
+                description: "Failed to update team member",
                 variant: "destructive",
             });
         }
@@ -278,7 +293,7 @@ export default function AgentsPage() {
             if (data.success) {
                 toast({
                     title: "Success",
-                    description: "User deleted successfully",
+                    description: "Team member removed successfully",
                 });
                 setIsDeleteDialogOpen(false);
                 setSelectedUser(null);
@@ -286,7 +301,7 @@ export default function AgentsPage() {
             } else {
                 toast({
                     title: "Error",
-                    description: data.message || "Failed to delete user",
+                    description: data.message || "Failed to remove team member",
                     variant: "destructive",
                 });
             }
@@ -294,7 +309,7 @@ export default function AgentsPage() {
             console.error('Error deleting user:', error);
             toast({
                 title: "Error",
-                description: "Failed to delete user",
+                description: "Failed to remove team member",
                 variant: "destructive",
             });
         }
@@ -345,437 +360,722 @@ export default function AgentsPage() {
         }
     };
 
+    const getRoleIcon = (role: string) => {
+        switch (role) {
+            case 'owner':
+                return <Crown className="h-4 w-4 text-yellow-500" />;
+            case 'admin':
+                return <Shield className="h-4 w-4 text-blue-500" />;
+            case 'agent':
+                return <UserCheck className="h-4 w-4 text-green-500" />;
+            default:
+                return <UserCheck className="h-4 w-4 text-gray-500" />;
+        }
+    };
+
+    const filteredUsers = users.filter(user => {
+        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = selectedRole === "all" || user.role === selectedRole;
+        return matchesSearch && matchesRole;
+    });
+
+    const stats = {
+        total: users.length,
+        active: users.filter(u => u.isActive).length,
+        admins: users.filter(u => u.role === 'admin').length,
+        agents: users.filter(u => u.role === 'agent').length,
+    };
+
     return (
         <Layout>
-            <div className="container mx-auto px-4 py-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold">Team Management</h1>
-                        <p className="text-muted-foreground mt-1">
-                            Manage your team members and their access permissions
-                        </p>
-                    </div>
-                    <div className="flex gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={() => window.location.href = '/settings/roles'}
-                        >
-                            <Shield className="h-4 w-4 mr-2" />
-                            Manage Roles
-                        </Button>
-                        <Button onClick={() => setIsAddDialogOpen(true)}>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            Add Team Member
-                        </Button>
-                    </div>
-                </div>
-
-                {isLoading ? (
-                    <div className="space-y-3">
-                        <Skeleton className="h-12 w-full" />
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                    </div>
-                ) : users.length === 0 ? (
-                    <Card className="text-center py-16">
-                        <CardContent>
-                            <div className="flex flex-col items-center justify-center space-y-4">
-                                <div className="rounded-full bg-primary/10 p-4">
-                                    <Users className="h-12 w-12 text-primary" />
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+                <div className="container mx-auto px-4 py-8">
+                    {/* Header */}
+                    <div className="mb-8">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                                        <Users className="h-6 w-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent dark:from-white dark:to-gray-300">
+                                            Team Management
+                                        </h1>
+                                        <p className="text-gray-600 dark:text-gray-400">
+                                            Manage your team members and their permissions
+                                        </p>
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-semibold">No Team Members Yet</h3>
-                                <p className="text-muted-foreground max-w-md mx-auto">
-                                    Start building your team by inviting team members to help manage your WhatsApp communications.
-                                </p>
-                                <Button onClick={() => setIsAddDialogOpen(true)}>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    className="border-2 border-dashed border-gray-300 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200"
+                                    onClick={() => window.location.href = '/settings/roles'}
+                                >
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    Manage Roles
+                                </Button>
+                                <Button
+                                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
+                                    onClick={() => setIsAddDialogOpen(true)}
+                                >
                                     <UserPlus className="h-4 w-4 mr-2" />
-                                    Invite Your First Team Member
+                                    Add Team Member
                                 </Button>
                             </div>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Team Members</CardTitle>
-                            <CardDescription>
-                                Manage your team members and their access levels
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>User</TableHead>
-                                        <TableHead>Role</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Last Login</TableHead>
-                                        <TableHead>Added</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {users.map((user) => (
-                                        <TableRow key={user._id} className="group">
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar className="h-10 w-10">
-                                                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                                                            {user.name.charAt(0).toUpperCase()}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div>
-                                                        <div className="font-medium">{user.name}</div>
-                                                        <div className="text-sm text-muted-foreground">{user.email}</div>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col gap-1">
-                                                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                                                        {user.role === 'owner' ? 'Owner' : user.role === 'admin' ? "Admin" : "Agent"}
-                                                    </Badge>
-                                                    {user.roleId && (
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {user.roleId.name}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                {user.isActive ? (
-                                                    <span className="flex items-center text-green-600">
-                                                        <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                        Active
-                                                    </span>
-                                                ) : (
-                                                    <span className="flex items-center text-red-600">
-                                                        <XCircle className="h-4 w-4 mr-1" />
-                                                        Inactive
-                                                    </span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {user.lastLoginAt ? (
-                                                    format(new Date(user.lastLoginAt), "MMM dd, yyyy")
-                                                ) : (
-                                                    <span className="text-muted-foreground">Never</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                {format(new Date(user.createdAt), "MMM dd, yyyy")}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 opacity-0 group-hover:opacity-100"
-                                                            >
-                                                                <MoreVertical className="h-4 w-4" />
-                                                                <span className="sr-only">Actions</span>
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleViewClick(user)}>
-                                                                <Eye className="mr-2 h-4 w-4" />
-                                                                View Details
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => handleEditClick(user)}>
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                Edit User
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-red-600"
-                                                                onClick={() => handleDeleteClick(user)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                Delete User
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
+                        </div>
+                    </div>
+
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Members</p>
+                                        <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</p>
+                                    </div>
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10">
+                                        <Users className="h-6 w-6 text-blue-500" />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                    <TrendingUp className="h-4 w-4" />
+                                    <span>Active team</span>
+                                </div>
+                            </CardContent>
+                            <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-blue-500/5" />
+                        </Card>
+
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-gray-800">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-green-600 dark:text-green-400">Active Users</p>
+                                        <p className="text-3xl font-bold text-green-900 dark:text-green-100">{stats.active}</p>
+                                    </div>
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
+                                        <Activity className="h-6 w-6 text-green-500" />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <Globe className="h-4 w-4" />
+                                    <span>Online now</span>
+                                </div>
+                            </CardContent>
+                            <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-green-500/5" />
+                        </Card>
+
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-gray-800">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Admins</p>
+                                        <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{stats.admins}</p>
+                                    </div>
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10">
+                                        <Shield className="h-6 w-6 text-purple-500" />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <Zap className="h-4 w-4" />
+                                    <span>Full access</span>
+                                </div>
+                            </CardContent>
+                            <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-500/5" />
+                        </Card>
+
+                        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-50 to-white dark:from-orange-900/20 dark:to-gray-800">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Agents</p>
+                                        <p className="text-3xl font-bold text-orange-900 dark:text-orange-100">{stats.agents}</p>
+                                    </div>
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
+                                        <UserCheck className="h-6 w-6 text-orange-500" />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <Clock className="h-4 w-4" />
+                                    <span>Support team</span>
+                                </div>
+                            </CardContent>
+                            <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-orange-500/5" />
+                        </Card>
+                    </div>
+
+                    {isLoading ? (
+                        <Card className="border-0 shadow-lg">
+                            <CardContent className="p-8">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4">
+                                        <Skeleton className="h-12 w-12 rounded-full" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-[200px]" />
+                                            <Skeleton className="h-3 w-[150px]" />
+                                        </div>
+                                    </div>
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <div key={i} className="flex items-center gap-4">
+                                            <Skeleton className="h-10 w-10 rounded-full" />
+                                            <div className="space-y-2">
+                                                <Skeleton className="h-4 w-[180px]" />
+                                                <Skeleton className="h-3 w-[120px]" />
+                                            </div>
+                                        </div>
                                     ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Add User Dialog */}
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Add Team Member</DialogTitle>
-                            <DialogDescription>
-                                Invite a new team member to your workspace
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Full Name *</Label>
-                                <Input
-                                    id="name"
-                                    placeholder="John Doe"
-                                    value={newUser.name}
-                                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email Address *</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="john@example.com"
-                                    value={newUser.email}
-                                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Temporary Password *</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="Enter temporary password"
-                                    value={newUser.password}
-                                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    User will be asked to change this on first login
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="role-type">User Type</Label>
-                                <Select
-                                    value={newUser.role}
-                                    onValueChange={(value) => setNewUser({ ...newUser, role: value })}
-                                >
-                                    <SelectTrigger id="role-type">
-                                        <SelectValue placeholder="Select user type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="agent">Agent</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="role">Role (Optional)</Label>
-                                <Select
-                                    value={newUser.roleId}
-                                    onValueChange={(value) => setNewUser({ ...newUser, roleId: value })}
-                                >
-                                    <SelectTrigger id="role">
-                                        <SelectValue placeholder="Select role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="No">No specific role</SelectItem>
-                                        {roles.map((role) => (
-                                            <SelectItem key={role._id} value={role._id}>
-                                                {role.name}
-                                                {role.isDefault && " (Default)"}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button onClick={handleAddUser}>
-                                Add User
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Edit User Dialog */}
-                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Edit Team Member</DialogTitle>
-                            <DialogDescription>
-                                Update team member information and permissions
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-name">Full Name *</Label>
-                                <Input
-                                    id="edit-name"
-                                    placeholder="John Doe"
-                                    value={editUser.name}
-                                    onChange={(e) => setEditUser({ ...editUser, name: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-email">Email Address *</Label>
-                                <Input
-                                    id="edit-email"
-                                    type="email"
-                                    placeholder="john@example.com"
-                                    value={editUser.email}
-                                    onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-role-type">User Type</Label>
-                                <Select
-                                    value={editUser.role}
-                                    onValueChange={(value) => setEditUser({ ...editUser, role: value })}
-                                >
-                                    <SelectTrigger id="edit-role-type">
-                                        <SelectValue placeholder="Select user type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="agent">Agent</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="edit-role">Role</Label>
-                                <Select
-                                    value={editUser.roleId}
-                                    onValueChange={(value) => setEditUser({ ...editUser, roleId: value })}
-                                >
-                                    <SelectTrigger id="edit-role">
-                                        <SelectValue placeholder="Select role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="None">No specific role</SelectItem>
-                                        {roles.map((role) => (
-                                            <SelectItem key={role._id} value={role._id}>
-                                                {role.name}
-                                                {role.isDefault && " (Default)"}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="edit-active"
-                                    checked={editUser.isActive}
-                                    onCheckedChange={(checked) =>
-                                        setEditUser({ ...editUser, isActive: checked })
-                                    }
-                                />
-                                <label
-                                    htmlFor="edit-active"
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                    User is active
-                                </label>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button onClick={handleUpdateUser}>
-                                Save Changes
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* View User Dialog */}
-                <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-                    <DialogContent className="sm:max-w-lg">
-                        <DialogHeader>
-                            <DialogTitle>Team Member Details</DialogTitle>
-                        </DialogHeader>
-                        {selectedUser && (
-                            <div className="space-y-6 py-4">
-                                <div className="flex items-center gap-4">
-                                    <Avatar className="h-16 w-16">
-                                        <AvatarFallback className="bg-primary/10 text-primary text-lg font-medium">
-                                            {selectedUser.name.charAt(0).toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : users.length === 0 ? (
+                        <Card className="border-0 shadow-lg">
+                            <CardContent className="py-16">
+                                <div className="flex flex-col items-center justify-center space-y-6 text-center">
+                                    <div className="rounded-full bg-gradient-to-br from-primary/10 to-primary/5 p-6">
+                                        <Users className="h-16 w-16 text-primary" />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                                            Welcome to Team Management
+                                        </h3>
+                                        <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                                            Start building your team by inviting members to help manage your WhatsApp communications and grow your business.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
+                                        onClick={() => setIsAddDialogOpen(true)}
+                                    >
+                                        <UserPlus className="h-5 w-5 mr-2" />
+                                        Invite Your First Team Member
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="border-0 shadow-lg">
+                            <CardHeader className="pb-6">
+                                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                                     <div>
-                                        <h3 className="text-xl font-semibold">{selectedUser.name}</h3>
-                                        <p className="text-muted-foreground">{selectedUser.email}</p>
-                                        <div className="flex gap-2 mt-2">
-                                            <Badge variant={selectedUser.role === 'admin' ? 'default' : 'secondary'}>
-                                                {selectedUser.role === 'owner' ? 'Owner' : selectedUser.role === 'admin' ? "Admin" : "Agent"}
-                                            </Badge>
-                                            {selectedUser.isActive ? (
-                                                <Badge variant="outline" className="text-green-600 border-green-600">
-                                                    Active
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="outline" className="text-red-600 border-red-600">
-                                                    Inactive
-                                                </Badge>
-                                            )}
+                                        <CardTitle className="text-xl font-semibold">Team Members</CardTitle>
+                                        <CardDescription className="mt-1">
+                                            Manage your team members and their access levels
+                                        </CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <Input
+                                                placeholder="Search members..."
+                                                className="pl-9 w-64"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                            />
                                         </div>
+                                        <Select value={selectedRole} onValueChange={setSelectedRole}>
+                                            <SelectTrigger className="w-[140px]">
+                                                <Filter className="h-4 w-4 mr-2" />
+                                                <SelectValue placeholder="Filter by role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Roles</SelectItem>
+                                                <SelectItem value="admin">Admin</SelectItem>
+                                                <SelectItem value="agent">Agent</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="hover:bg-transparent border-gray-200 dark:border-gray-700">
+                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Member</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Role</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Status</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Last Activity</TableHead>
+                                                <TableHead className="font-semibold text-gray-900 dark:text-gray-100">Joined</TableHead>
+                                                <TableHead className="text-right font-semibold text-gray-900 dark:text-gray-100">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredUsers.map((user) => (
+                                                <TableRow key={user._id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                                                    <TableCell className="py-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <Avatar className="h-12 w-12 ring-2 ring-gray-100 dark:ring-gray-700">
+                                                                <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/5 text-primary font-semibold text-lg">
+                                                                    {user.name.charAt(0).toUpperCase()}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div>
+                                                                <div className="font-semibold text-gray-900 dark:text-white">{user.name}</div>
+                                                                <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                                    <Mail className="h-3 w-3" />
+                                                                    {user.email}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {getRoleIcon(user.role)}
+                                                                <Badge variant={user.role === 'admin' ? 'default' : user.role === 'owner' ? 'secondary' : 'outline'} className="font-medium">
+                                                                    {user.role === 'owner' ? 'Owner' : user.role === 'admin' ? "Admin" : "Agent"}
+                                                                </Badge>
+                                                            </div>
+                                                            {user.roleId && (
+                                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    {user.roleId.name}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {user.isActive ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                                                                <span className="text-sm font-medium text-green-600 dark:text-green-400">Active</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-red-500" />
+                                                                <span className="text-sm font-medium text-red-600 dark:text-red-400">Inactive</span>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                            <Clock className="h-4 w-4" />
+                                                            {user.lastLoginAt ? (
+                                                                format(new Date(user.lastLoginAt), "MMM dd, yyyy")
+                                                            ) : (
+                                                                <span className="text-gray-400">Never</span>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                            <Calendar className="h-4 w-4" />
+                                                            {format(new Date(user.createdAt), "MMM dd, yyyy")}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                                    >
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                        <span className="sr-only">Actions</span>
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-48">
+                                                                    <DropdownMenuItem onClick={() => handleViewClick(user)} className="flex items-center gap-2">
+                                                                        <Eye className="h-4 w-4" />
+                                                                        View Details
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => handleEditClick(user)} className="flex items-center gap-2">
+                                                                        <Edit className="h-4 w-4" />
+                                                                        Edit Member
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        className="text-red-600 focus:text-red-600 flex items-center gap-2"
+                                                                        onClick={() => handleDeleteClick(user)}
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                        Remove Member
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="text-sm font-medium text-muted-foreground">Last Login</Label>
-                                        <p className="mt-1">
-                                            {selectedUser.lastLoginAt
-                                                ? format(new Date(selectedUser.lastLoginAt), "MMM dd, yyyy 'at' HH:mm")
-                                                : "Never logged in"
+                    {/* Add User Dialog */}
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <UserPlus className="h-5 w-5 text-primary" />
+                                    Add Team Member
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Invite a new team member to your workspace
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Full Name *</Label>
+                                    <Input
+                                        id="name"
+                                        placeholder="John Doe"
+                                        value={newUser.name}
+                                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                                        className="border-gray-200 focus:border-primary focus:ring-primary"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email Address *</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="john@example.com"
+                                        value={newUser.email}
+                                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                        className="border-gray-200 focus:border-primary focus:ring-primary"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Temporary Password *</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        placeholder="Enter temporary password"
+                                        value={newUser.password}
+                                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                        className="border-gray-200 focus:border-primary focus:ring-primary"
+                                    />
+                                    <p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                                        User will be asked to change this on first login
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="role-type">User Type</Label>
+                                    <Select
+                                        value={newUser.role}
+                                        onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                                    >
+                                        <SelectTrigger id="role-type" className="border-gray-200 focus:border-primary focus:ring-primary">
+                                            <SelectValue placeholder="Select user type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="agent">
+                                                <div className="flex items-center gap-2">
+                                                    <UserCheck className="h-4 w-4 text-green-500" />
+                                                    Agent
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="admin">
+                                                <div className="flex items-center gap-2">
+                                                    <Shield className="h-4 w-4 text-blue-500" />
+                                                    Admin
+                                                </div>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="role">Role (Optional)</Label>
+                                    <Select
+                                        value={newUser.roleId}
+                                        onValueChange={(value) => setNewUser({ ...newUser, roleId: value })}
+                                    >
+                                        <SelectTrigger id="role" className="border-gray-200 focus:border-primary focus:ring-primary">
+                                            <SelectValue placeholder="Select role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="None">No specific role</SelectItem>
+                                            {roles.map((role) => (
+                                                <SelectItem key={role._id} value={role._id}>
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>{role.name}</span>
+                                                        {role.isDefault && (
+                                                            <Badge variant="outline" className="ml-2 text-xs">
+                                                                Default
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    onClick={handleAddUser}
+                                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                                >
+                                    Add Member
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Edit User Dialog */}
+                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Edit className="h-5 w-5 text-primary" />
+                                    Edit Team Member
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Update team member information and permissions
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-name">Full Name *</Label>
+                                    <Input
+                                        id="edit-name"
+                                        placeholder="John Doe"
+                                        value={editUser.name}
+                                        onChange={(e) => setEditUser({ ...editUser, name: e.target.value })}
+                                        className="border-gray-200 focus:border-primary focus:ring-primary"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-email">Email Address *</Label>
+                                    <Input
+                                        id="edit-email"
+                                        type="email"
+                                        placeholder="john@example.com"
+                                        value={editUser.email}
+                                        onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
+                                        className="border-gray-200 focus:border-primary focus:ring-primary"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-role-type">User Type</Label>
+                                    <Select
+                                        value={editUser.role}
+                                        onValueChange={(value) => setEditUser({ ...editUser, role: value })}
+                                    >
+                                        <SelectTrigger id="edit-role-type" className="border-gray-200 focus:border-primary focus:ring-primary">
+                                            <SelectValue placeholder="Select user type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="agent">
+                                                <div className="flex items-center gap-2">
+                                                    <UserCheck className="h-4 w-4 text-green-500" />
+                                                    Agent
+                                                </div>
+                                            </SelectItem>
+                                            <SelectItem value="admin">
+                                                <div className="flex items-center gap-2">
+                                                    <Shield className="h-4 w-4 text-blue-500" />
+                                                    Admin
+                                                </div>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-role">Role</Label>
+                                    <Select
+                                        value={editUser.roleId}
+                                        onValueChange={(value) => setEditUser({ ...editUser, roleId: value })}
+                                    >
+                                        <SelectTrigger id="edit-role" className="border-gray-200 focus:border-primary focus:ring-primary">
+                                            <SelectValue placeholder="Select role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="None">No specific role</SelectItem>
+                                            {roles.map((role) => (
+                                                <SelectItem key={role._id} value={role._id}>
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span>{role.name}</span>
+                                                        {role.isDefault && (
+                                                            <Badge variant="outline" className="ml-2 text-xs">
+                                                                Default
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id="edit-active"
+                                            checked={editUser.isActive}
+                                            onCheckedChange={(checked) =>
+                                                setEditUser({ ...editUser, isActive: checked })
                                             }
-                                        </p>
+                                        />
+                                        <label
+                                            htmlFor="edit-active"
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                            User is active
+                                        </label>
                                     </div>
-                                    <div>
-                                        <Label className="text-sm font-medium text-muted-foreground">Added On</Label>
-                                        <p className="mt-1">
-                                            {format(new Date(selectedUser.createdAt), "MMM dd, yyyy")}
-                                        </p>
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                        {editUser.isActive ? (
+                                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                        ) : (
+                                            <XCircle className="h-3 w-3 text-red-500" />
+                                        )}
+                                        {editUser.isActive ? "Active" : "Inactive"}
                                     </div>
-                                    {selectedUser.invitedBy && (
-                                        <div className="col-span-2">
-                                            <Label className="text-sm font-medium text-muted-foreground">Invited By</Label>
-                                            <p className="mt-1">{selectedUser.invitedBy.name}</p>
-                                        </div>
-                                    )}
                                 </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    onClick={handleUpdateUser}
+                                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                                >
+                                    Save Changes
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
 
-                                {selectedUser.roleId && (
-                                    <div>
-                                        <Label className="text-sm font-medium text-muted-foreground mb-3 block">
-                                            Role Permissions
-                                        </Label>
-                                        <Card>
+                    {/* View User Dialog */}
+                    <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+                        <DialogContent className="sm:max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Eye className="h-5 w-5 text-primary" />
+                                    Team Member Details
+                                </DialogTitle>
+                            </DialogHeader>
+                            {selectedUser && (
+                                <div className="space-y-6 py-4">
+                                    <div className="flex items-center gap-6 p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl border">
+                                        <Avatar className="h-20 w-20 ring-4 ring-primary/20">
+                                            <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/5 text-primary text-2xl font-semibold">
+                                                {selectedUser.name.charAt(0).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="space-y-2">
+                                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedUser.name}</h3>
+                                            <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                                <Mail className="h-4 w-4" />
+                                                {selectedUser.email}
+                                            </p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1">
+                                                    {getRoleIcon(selectedUser.role)}
+                                                    <Badge variant={selectedUser.role === 'admin' ? 'default' : selectedUser.role === 'owner' ? 'secondary' : 'outline'}>
+                                                        {selectedUser.role === 'owner' ? 'Owner' : selectedUser.role === 'admin' ? "Admin" : "Agent"}
+                                                    </Badge>
+                                                </div>
+                                                {selectedUser.isActive ? (
+                                                    <Badge variant="outline" className="text-green-600 border-green-600">
+                                                        <div className="h-2 w-2 rounded-full bg-green-500 mr-1 animate-pulse" />
+                                                        Active
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-red-600 border-red-600">
+                                                        <div className="h-2 w-2 rounded-full bg-red-500 mr-1" />
+                                                        Inactive
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Card className="border-0 shadow-sm">
+                                            <CardContent className="p-4">
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        <Clock className="h-4 w-4" />
+                                                        Last Login
+                                                    </div>
+                                                    <p className="text-gray-900 dark:text-white">
+                                                        {selectedUser.lastLoginAt
+                                                            ? format(new Date(selectedUser.lastLoginAt), "MMM dd, yyyy 'at' HH:mm")
+                                                            : "Never logged in"
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card className="border-0 shadow-sm">
+                                            <CardContent className="p-4">
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        <Calendar className="h-4 w-4" />
+                                                        Joined Date
+                                                    </div>
+                                                    <p className="text-gray-900 dark:text-white">
+                                                        {format(new Date(selectedUser.createdAt), "MMM dd, yyyy")}
+                                                    </p>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        {selectedUser.invitedBy && (
+                                            <Card className="border-0 shadow-sm md:col-span-2">
+                                                <CardContent className="p-4">
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            <UserPlus className="h-4 w-4" />
+                                                            Invited By
+                                                        </div>
+                                                        <p className="text-gray-900 dark:text-white">{selectedUser.invitedBy.name}</p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+                                    </div>
+
+                                    {selectedUser.roleId && (
+                                        <Card className="border-0 shadow-sm">
                                             <CardHeader className="pb-3">
-                                                <CardTitle className="text-lg">{selectedUser.roleId.name}</CardTitle>
+                                                <CardTitle className="text-lg flex items-center gap-2">
+                                                    <Shield className="h-5 w-5 text-primary" />
+                                                    Role Permissions
+                                                </CardTitle>
+                                                <CardDescription className="font-medium">
+                                                    {selectedUser.roleId.name}
+                                                </CardDescription>
                                                 {selectedUser.roleId.description && (
-                                                    <CardDescription>{selectedUser.roleId.description}</CardDescription>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                        {selectedUser.roleId.description}
+                                                    </p>
                                                 )}
                                             </CardHeader>
                                             <CardContent>
                                                 <div className="space-y-3">
                                                     {selectedUser.roleId.permissions.map((permission, index) => (
-                                                        <div key={index} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                                                            <div className="flex items-center gap-2">
+                                                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border">
+                                                            <div className="flex items-center gap-3">
                                                                 <span className="text-lg">{getResourceIcon(permission.resource)}</span>
-                                                                <span className="font-medium capitalize">{permission.resource}</span>
+                                                                <span className="font-medium capitalize text-gray-900 dark:text-white">
+                                                                    {permission.resource}
+                                                                </span>
                                                             </div>
                                                             <div className="flex gap-1">
                                                                 {permission.actions.map((action) => (
-                                                                    <Badge key={action} variant="outline" className="text-xs">
+                                                                    <Badge key={action} variant="secondary" className="text-xs">
                                                                         {action}
                                                                     </Badge>
                                                                 ))}
@@ -785,64 +1085,72 @@ export default function AgentsPage() {
                                                 </div>
                                             </CardContent>
                                         </Card>
+                                    )}
+                                </div>
+                            )}
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                                    Close
+                                </Button>
+                                <Button 
+                                    onClick={() => {
+                                        setIsViewDialogOpen(false);
+                                        if (selectedUser) {
+                                            setTimeout(() => handleEditClick(selectedUser), 100);
+                                        }
+                                    }}
+                                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                                >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit Member
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Delete Confirmation Dialog */}
+                    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-red-600">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    Remove Team Member?
+                                </DialogTitle>
+                                <DialogDescription>
+                                    This action cannot be undone. The user will lose access to your workspace immediately.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                                {selectedUser && (
+                                    <div className="flex items-center gap-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                                        <Avatar className="h-12 w-12 ring-2 ring-red-200">
+                                            <AvatarFallback className="bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300 font-medium">
+                                                {selectedUser.name.charAt(0).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <div className="font-medium text-red-900 dark:text-red-100">{selectedUser.name}</div>
+                                            <div className="text-sm text-red-700 dark:text-red-300">{selectedUser.email}</div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                        )}
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-                                Close
-                            </Button>
-                            <Button onClick={() => {
-                                setIsViewDialogOpen(false);
-                                if (selectedUser) {
-                                    setTimeout(() => handleEditClick(selectedUser), 100);
-                                }
-                            }}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit User
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Delete Confirmation Dialog */}
-                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="text-red-600">Delete Team Member?</DialogTitle>
-                            <DialogDescription>
-                                This action cannot be undone. The user will lose access to your workspace immediately.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                            {selectedUser && (
-                                <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
-                                    <Avatar className="h-10 w-10">
-                                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                                            {selectedUser.name.charAt(0).toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <div className="font-medium">{selectedUser.name}</div>
-                                        <div className="text-sm text-muted-foreground">{selectedUser.email}</div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={handleDeleteUser}
-                            >
-                                Delete User
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleDeleteUser}
+                                    className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Remove Member
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </Layout>
     );

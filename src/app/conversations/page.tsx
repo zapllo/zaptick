@@ -2888,7 +2888,7 @@ function ConversationsPageContent() {
                     </TooltipProvider>
                   </div>
                 ) : (
-                  <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200 shadow-sm overflow-hidden h-fit max-w-4xl mx-auto">
+                  <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200 shadow-sm overflow-hidden h-fit  mx-auto">
                     <CardContent className="p-0">
                       <div className="flex items-start">
                         <div className="bg-amber-200/60 p-5 ml-2 flex items-center rounded-full justify-center">

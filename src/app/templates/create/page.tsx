@@ -355,8 +355,14 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                               className="w-full h-32 object-cover"
                               onError={(e) => {
                                 // Fallback to placeholder if image fails to load
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).nextElementSibling!.style.display = 'flex';
+                                const img = e.target as HTMLImageElement;
+                                if (img && img.style) {
+                                  img.style.display = 'none';
+                                  const sibling = img.nextElementSibling as HTMLElement;
+                                  if (sibling && sibling.style) {
+                                    sibling.style.display = 'flex';
+                                  }
+                                }
                               }}
                             />
                           )}
@@ -790,71 +796,160 @@ export default function CreateTemplatePage() {
     );
   };
 
-const handleCreateTemplate = async () => {
-  if (!form.name || !form.category || !form.wabaId || !form.language) {
-    toast.error('Please fill in all required fields');
-    return;
-  }
+  const handleCreateTemplate = async () => {
+    if (!form.name || !form.category || !form.wabaId || !form.language) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-  // Validate template name before submission
-  if (!validateTemplateName(form.name)) {
-    toast.error(nameError || 'Invalid template name');
-    return;
-  }
+    // Validate template name before submission
+    if (!validateTemplateName(form.name)) {
+      toast.error(nameError || 'Invalid template name');
+      return;
+    }
 
-  try {
-    setCreating(true);
+    try {
+      setCreating(true);
 
-    // For authentication templates, we'll send minimal required data
-    if (form.category === 'AUTHENTICATION') {
-      const requestBody = {
-        name: form.name,
-        category: form.category,
-        language: form.language,
-        wabaId: form.wabaId,
-        authSettings: {
-          codeExpirationMinutes: authSettings.codeExpirationMinutes,
-          codeLength: authSettings.codeLength,
-          addCodeEntryOption: authSettings.addCodeEntryOption
+      // For authentication templates, we'll send minimal required data
+      if (form.category === 'AUTHENTICATION') {
+        const requestBody = {
+          name: form.name,
+          category: form.category,
+          language: form.language,
+          wabaId: form.wabaId,
+          authSettings: {
+            codeExpirationMinutes: authSettings.codeExpirationMinutes,
+            codeLength: authSettings.codeLength,
+            addCodeEntryOption: authSettings.addCodeEntryOption
+          }
+        };
+
+        const response = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          toast.success('Authentication template created successfully!');
+          router.push('/templates');
+        } else {
+          toast.error(data.error || 'Failed to create template');
+          console.error('API error details:', data.details);
         }
+
+        setCreating(false);
+        return;
+      }
+
+      // For non-authentication templates, validate content
+      if (!form.content) {
+        toast.error('Please enter message content');
+        return;
+      }
+
+      // Build components array for non-authentication templates
+      const components = [];
+
+      // Add header component if present
+      if (form.headerType === 'text' && form.headerText) {
+        components.push({
+          type: 'HEADER',
+          format: 'TEXT',
+          text: form.headerText
+        });
+      } else if (['image', 'video', 'document'].includes(form.headerType) && form.mediaHandle) {
+        components.push({
+          type: 'HEADER',
+          format: form.mediaType,
+          example: {
+            header_handle: [form.mediaHandle]
+          }
+        });
+      }
+
+      // Add body component (required)
+      const bodyComponent: any = {
+        type: 'BODY',
+        text: form.content
       };
+
+      // Add examples for body variables if any
+      if (form.variables.length > 0) {
+        bodyComponent.example = {
+          body_text: [form.variables.map(v => v.example)]
+        };
+      }
+
+      components.push(bodyComponent);
+
+      // Add footer component if present
+      if (footerText) {
+        components.push({
+          type: 'FOOTER',
+          text: footerText
+        });
+      }
+
+      // Add buttons component if present
+      if (form.buttons.length > 0) {
+        const buttonsComponent: any = {
+          type: 'BUTTONS',
+          buttons: form.buttons.map(button => {
+            const buttonObj: any = {
+              type: button.type,
+              text: button.text
+            };
+
+            if (button.type === 'URL') {
+              buttonObj.url = button.url;
+              if (button.urlType === 'dynamic') {
+                buttonObj.example = [button.urlExample || button.url];
+              }
+            } else if (button.type === 'PHONE_NUMBER') {
+              buttonObj.phone_number = button.phone_number;
+            } else if (button.type === 'COPY_CODE') {
+              buttonObj.copy_code = button.copy_code;
+            }
+
+            return buttonObj;
+          })
+        };
+
+        components.push(buttonsComponent);
+      }
 
       const response = await fetch('/api/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          name: form.name,
+          category: form.category,
+          language: form.language,
+          wabaId: form.wabaId,
+          components: components
+        })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Authentication template created successfully!');
+        toast.success('Template created successfully! It will be reviewed by WhatsApp.');
         router.push('/templates');
       } else {
         toast.error(data.error || 'Failed to create template');
         console.error('API error details:', data.details);
       }
-
+    } catch (error) {
+      console.error('Failed to create template:', error);
+      toast.error('Failed to create template');
+    } finally {
       setCreating(false);
-      return;
     }
-
-    // For non-authentication templates, validate content
-    if (!form.content) {
-      toast.error('Please enter message content');
-      return;
-    }
-
-    // Rest of the function for standard templates...
-    // [existing code remains unchanged]
-  } catch (error) {
-    console.error('Failed to create template:', error);
-    toast.error('Failed to create template');
-  } finally {
-    setCreating(false);
-  }
-};
-
+  };
   const handleNext = () => {
     // Validation for each step
     if (currentStep === 1) {
@@ -1988,7 +2083,7 @@ const handleCreateTemplate = async () => {
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             This variable requires an example value
                           </div>
-)}
+                        )}
                       </div>
 
                       <div className="px-4 py-3 bg-gray-50 border-t rounded-b-lg">
@@ -2135,7 +2230,7 @@ const handleCreateTemplate = async () => {
                     "ml-auto",
                     "bg-primary hover:bg-primary/80 cursor-pointer text-white"
                   )}
-                  disabled={creating || (currentStep === 1 && nameError)}
+                  disabled={creating || (currentStep === 1 && nameError !== null)}
                 >
                   {creating ? (
                     <>

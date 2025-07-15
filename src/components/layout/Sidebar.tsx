@@ -30,7 +30,8 @@ import {
   Shield,
   Crown,
   Users,
-  Star
+  Star,
+  Workflow
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -57,12 +58,12 @@ interface SidebarProps {
     id: string;
     name: string;
     email: string;
-    role: 'admin' | 'agent';
+    role: 'admin' | 'agent' | 'owner';
     wabaAccounts?: any[];
     image?: string;
   };
   userPermissions?: {
-    role: 'admin' | 'agent';
+    role: 'admin' | 'agent' | 'owner';
     permissions: {
       resource: string;
       actions: string[];
@@ -210,11 +211,17 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
       wabaRequired: true,
       description: "Performance insights"
     },
+    // {
+    //   title: "API Keys",
+    //   href: "/api-keys",
+    //   icon: <KeySquare size={20} strokeWidth={1.5} />,
+    //   description: "Developer access"
+    // },
     {
-      title: "API Keys",
-      href: "/api-keys",
-      icon: <KeySquare size={20} strokeWidth={1.5} />,
-      description: "Developer access"
+      title: "Integrations",
+      href: "/integrations",
+      icon: <Workflow size={20} strokeWidth={1.5} />,
+      description: "Explore all the integrations"
     },
     {
       title: "Help & Support",
@@ -299,7 +306,7 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-2 h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  className="border-2 border-primary ed-500 top-[68px] h-8 w-8 rounded-full shadow-lg  bg-background hover:bg-muted/50 transition-colors z-50"
                   onClick={() => handleCollapsedChange(true)}
                 >
                   <ChevronLeft size={16} />
@@ -314,7 +321,7 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
           <Button
             variant="outline"
             size="icon"
-            className="absolute -right-4 top-[75px] h-8 w-8 rounded-full shadow-lg border-2 border-background bg-background hover:bg-muted/50 transition-colors z-50"
+            className="absolute -right-6 scale-110 border-2 border-primary ed-500 top-[68px] h-8 w-8 rounded-full shadow-lg  bg-background hover:bg-muted/50 transition-colors z-50"
             onClick={() => handleCollapsedChange(false)}
           >
             <ChevronRight size={14} />
@@ -374,8 +381,8 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                       <button
                         className={cn(
                           "group flex w-full items-center transition-all duration-200",
-                          collapsed 
-                            ? "justify-center h-12 w-12 rounded-xl mx-auto" 
+                          collapsed
+                            ? "justify-center h-12 w-12 rounded-xl mx-auto"
                             : "rounded-xl px-4 py-3 text-sm font-medium",
                           (pathname === item.href || pathname?.startsWith(item.href + "/"))
                             ? collapsed
@@ -480,8 +487,8 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                     href={item.href}
                     className={cn(
                       "group flex items-center transition-all duration-200",
-                      collapsed 
-                        ? "justify-center h-12 w-12 rounded-xl mx-auto" 
+                      collapsed
+                        ? "justify-center h-12 w-12 rounded-xl mx-auto"
                         : "rounded-xl px-4 py-3 text-sm font-medium",
                       pathname === item.href
                         ? collapsed
@@ -585,8 +592,8 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                   </Avatar>
                   <div className={cn(
                     "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
-                    user.role === 'admin' 
-                      ? "bg-gradient-to-r from-amber-500 to-orange-500" 
+                    user.role === 'admin'
+                      ? "bg-gradient-to-r from-amber-500 to-orange-500"
                       : "bg-gradient-to-r from-green-500 to-emerald-500"
                   )} />
                 </div>
@@ -596,18 +603,23 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="truncate font-semibold leading-none text-sm">{user.name}</p>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={cn(
                             "text-[10px] px-1.5 py-0 h-5",
-                            user.role === 'admin' 
+                            user.role === 'admin'
                               ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-700 border-amber-500/30"
                               : "bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 border-green-500/30"
                           )}
                         >
-                          {user.role === 'admin' ? (
+                          {user.role === 'owner' ? (
                             <>
                               <Crown className="mr-1 h-3 w-3" />
+                              Owner
+                            </>
+                          ) : user.role === 'admin' ? (
+                            <>
+                              <Star className="mr-1 h-3 w-3" />
                               Admin
                             </>
                           ) : (

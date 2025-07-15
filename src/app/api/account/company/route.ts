@@ -29,42 +29,48 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const company = await Company.findById(user.companyId);
+    const updateData = await req.json();
+    const { name, address, website, industry, category, location, phone, countryCode, size, logo } = updateData;
+
+    
+    const company = await Company.findByIdAndUpdate(
+      user.companyId,
+      {
+        name,
+        address,
+        website,
+        industry,
+        category,
+        location,
+        phone,
+        countryCode,
+        size,
+        logo
+      },
+      { new: true, runValidators: true }
+    );
+
     if (!company) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
-
-    const { name, address, website, industry, size, logo } = await req.json();
-
-    // Validate required fields
-    if (!name) {
-      return NextResponse.json({ error: 'Company name is required' }, { status: 400 });
-    }
-
-    // Update company
-    company.name = name.trim();
-    if (address !== undefined) company.address = address?.trim();
-    if (website !== undefined) company.website = website?.trim();
-    if (industry !== undefined) company.industry = industry?.trim();
-    if (size !== undefined) company.size = size?.trim();
-    if (logo !== undefined) company.logo = logo?.trim();
-
     await company.save();
 
     return NextResponse.json({
       success: true,
-      message: 'Company information updated successfully',
       company: {
         id: company._id,
         name: company.name,
         address: company.address,
         website: company.website,
         industry: company.industry,
+        category: company.category,
+        location: company.location,
+        phone: company.phone,
+        countryCode: company.countryCode,
         size: company.size,
         logo: company.logo
       }
     });
-
   } catch (error) {
     console.error('Update company error:', error);
     return NextResponse.json({ error: 'Failed to update company information' }, { status: 500 });

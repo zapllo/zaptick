@@ -38,7 +38,12 @@ import {
   RotateCcw,
   Archive,
   Star,
-  Crown
+  Crown,
+  FilterX,
+  X,
+  Gauge,
+  BarChart3,
+  ArrowUpRight
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -377,12 +382,12 @@ export default function TemplatesPage() {
 
     if (sortConfig.key && sortConfig.direction) {
       sortableTemplates.sort((a, b) => {
-const aValue = a[sortConfig.key as keyof Template] ?? '';
-const bValue = b[sortConfig.key as keyof Template] ?? '';
-if (aValue < bValue) {
-  return sortConfig.direction === 'ascending' ? -1 : 1;
-}
-if (aValue > bValue) {
+        const aValue = a[sortConfig.key as keyof Template] ?? '';
+        const bValue = b[sortConfig.key as keyof Template] ?? '';
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
           return sortConfig.direction === 'ascending' ? 1 : -1;
         }
         return 0;
@@ -506,18 +511,28 @@ if (aValue > bValue) {
     return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-gray-400" />;
   };
 
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setSelectedStatus("ANY");
+    setSelectedCategory("all");
+    setSelectedAgent("all");
+    setShowDeleted(false);
+  };
+
   // Calculate stats
   const totalTemplates = templates.length;
   const approvedTemplates = templates.filter(t => t.status === 'approved').length;
   const pendingTemplates = templates.filter(t => t.status === 'pending').length;
   const totalUsage = templates.reduce((sum, t) => sum + t.useCount, 0);
+  const approvalRate = totalTemplates > 0 ? Math.round((approvedTemplates / totalTemplates) * 100) : 0;
 
   return (
     <ProtectedRoute resource="templates" action="read">
       <Layout>
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
-            <div className="  mx-auto p-6 space-y-8">
+            <div className="mx-auto p-6 space-y-8">
               {/* Header Section */}
               <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                 <div className="space-y-1">
@@ -564,74 +579,208 @@ if (aValue > bValue) {
 
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-blue-600">Total Templates</p>
-                        <p className="text-3xl font-bold text-blue-900">{totalTemplates}</p>
-                        <p className="text-xs text-blue-600/80">
-                          {totalTemplates > 0 ? '+12% from last month' : 'Get started'}
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          <p className="text-sm font-medium text-slate-600">Total Templates</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-blue-900 transition-colors duration-300">
+                            {totalTemplates.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {totalTemplates > 0 ? 'Active library' : 'Start creating'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="p-3 bg-blue-200/50 rounded-xl">
-                        <FileText className="h-6 w-6 text-blue-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 group-hover:scale-110 transition-all duration-300">
+                          <FileText className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-green-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-green-600">Approved</p>
-                        <p className="text-3xl font-bold text-green-900">{approvedTemplates}</p>
-                        <p className="text-xs text-green-600/80">
-                          {((approvedTemplates / totalTemplates) * 100 || 0).toFixed(0)}% approval rate
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                          <p className="text-sm font-medium text-slate-600">Approved</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-green-900 transition-colors duration-300">
+                            {approvedTemplates.toLocaleString()}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className="h-1 w-12 bg-green-500/20 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-green-500 transition-all duration-700 ease-out"
+                                style={{ width: `${approvalRate}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-slate-500">{approvalRate}% rate</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-3 bg-green-200/50 rounded-xl">
-                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 group-hover:scale-110 transition-all duration-300">
+                          <CheckCircle className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-amber-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-amber-600">Pending Review</p>
-                        <p className="text-3xl font-bold text-amber-900">{pendingTemplates}</p>
-                        <p className="text-xs text-amber-600/80">
-                          {pendingTemplates > 0 ? 'Awaiting approval' : 'All reviewed'}
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          <p className="text-sm font-medium text-slate-600">Pending Review</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-amber-900 transition-colors duration-300">
+                            {pendingTemplates.toLocaleString()}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-amber-500" />
+                              <p className="text-xs text-slate-500">
+                                {pendingTemplates > 0 ? 'Awaiting approval' : 'All reviewed'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-3 bg-amber-200/50 rounded-xl">
-                        <Clock className="h-6 w-6 text-amber-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:scale-110 transition-all duration-300">
+                          <Clock className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100/50 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardContent className="relative p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-purple-600">Total Usage</p>
-                        <p className="text-3xl font-bold text-purple-900">{totalUsage.toLocaleString()}</p>
-                        <p className="text-xs text-purple-600/80">
-                          {totalUsage > 0 ? '+25% this week' : 'No usage yet'}
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                          <p className="text-sm font-medium text-slate-600">Total Usage</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold text-slate-900 group-hover:text-purple-900 transition-colors duration-300">
+                            {totalUsage.toLocaleString()}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <ArrowUpRight className="h-3 w-3 text-purple-500" />
+                              <p className="text-xs text-slate-500">
+                                {totalUsage > 0 ? 'Messages sent' : 'No usage yet'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-3 bg-purple-200/50 rounded-xl">
-                        <Activity className="h-6 w-6 text-purple-600" />
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 group-hover:scale-110 transition-all duration-300">
+                          <Activity className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Applied Filters */}
+              {(searchQuery || selectedStatus !== "ANY" || selectedCategory !== "all" || selectedAgent !== "all" || showDeleted) && (
+                <Card className="border-0 shadow-sm bg-amber-50 border-amber-200">
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-amber-600" />
+                        <span className="text-sm font-medium text-amber-900">Active Filters:</span>
+                      </div>
+
+                      {searchQuery && (
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                          <Search className="h-3 w-3" />
+                          {searchQuery}
+                          <button onClick={() => setSearchQuery("")}>
+                            <X className="h-3 w-3 ml-1" />
+                          </button>
+                        </Badge>
+                      )}
+
+                      {selectedStatus !== "ANY" && (
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                          <Gauge className="h-3 w-3" />
+                          {selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1).toLowerCase()}
+                          <button onClick={() => setSelectedStatus("ANY")}>
+                            <X className="h-3 w-3 ml-1" />
+                          </button>
+                        </Badge>
+                      )}
+
+                      {selectedCategory !== "all" && (
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                          <FileText className="h-3 w-3" />
+                          {selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}
+                          <button onClick={() => setSelectedCategory("all")}>
+                            <X className="h-3 w-3 ml-1" />
+                          </button>
+                        </Badge>
+                      )}
+
+                      {selectedAgent !== "all" && (
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                          <Users className="h-3 w-3" />
+                          {teamMembers.find(m => m.id === selectedAgent)?.name || "Unknown Agent"}
+                          <button onClick={() => setSelectedAgent("all")}>
+                            <X className="h-3 w-3 ml-1" />
+                          </button>
+                        </Badge>
+                      )}
+
+                   {showDeleted && (
+                        <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                          <Archive className="h-3 w-3" />
+                          Deleted Templates
+                          <button onClick={() => setShowDeleted(false)}>
+                            <X className="h-3 w-3 ml-1" />
+                          </button>
+                        </Badge>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-3 text-xs text-amber-700 hover:bg-amber-100"
+                        onClick={clearAllFilters}
+                      >
+                        <FilterX className="h-3 w-3 mr-1" />
+                        Clear All
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Filters & Controls */}
               <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
@@ -806,7 +955,7 @@ if (aValue > bValue) {
                         <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mx-auto">
                           <FileText className="h-12 w-12 text-primary" />
                         </div>
-                     <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center">
+                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center">
                           <Sparkles className="h-4 w-4 text-white" />
                         </div>
                       </div>

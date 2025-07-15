@@ -6,6 +6,8 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import {
   Card,
   CardContent,
@@ -18,8 +20,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Zap, Shield, BarChart, CheckCircle, Users, Globe } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MessageSquare, Zap, Shield, BarChart, CheckCircle, Users, Globe, User, Building2, MapPin, Briefcase } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { BiCategory } from "react-icons/bi";
 
 // Animation variants
 const fadeIn = {
@@ -42,15 +52,57 @@ const featureItem = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
 };
 
+// Industry options
+const INDUSTRIES = [
+  "Technology",
+  "E-commerce",
+  "Healthcare",
+  "Education",
+  "Finance",
+  "Real Estate",
+  "Food & Beverage",
+  "Fashion & Retail",
+  "Travel & Tourism",
+  "Automotive",
+  "Manufacturing",
+  "Consulting",
+  "Marketing & Advertising",
+  "Non-profit",
+  "Other"
+];
+
+// Company categories
+const COMPANY_CATEGORIES = [
+  "Startup",
+  "SME (Small & Medium Enterprise)",
+  "Enterprise",
+  "Agency",
+  "Freelancer",
+  "Non-profit",
+  "Government",
+  "Other"
+];
+
 export default function SignupPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [companyName, setCompanyName] = useState("");
+  const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
   const { signup } = useAuth();
+
+  // Personal Information
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Company Information
+  const [companyName, setCompanyName] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [companyLocation, setCompanyLocation] = useState("");
+  const [companyIndustry, setCompanyIndustry] = useState("");
+  const [companyCategory, setCompanyCategory] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
+  const [companyCountryCode, setCompanyCountryCode] = useState("+91");
 
   // Counter animation for stats
   const [count1, setCount1] = useState(0);
@@ -91,14 +143,63 @@ export default function SignupPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
     try {
-      await signup(name, email, password, companyName);
+      await signup(
+        name,
+        email,
+        password,
+        companyName,
+        companyWebsite,
+        companyLocation,
+        companyIndustry,
+        companyCategory,
+        companyPhone,
+        companyCountryCode
+      );
     } catch (err: any) {
       setError(err.message || "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      // Validate personal info
+      if (!name || !email || !password) {
+        setError("Please fill in all required fields");
+        return;
+      }
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters long");
+        return;
+      }
+      setError("");
+      setCurrentStep(2);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(1);
+    setError("");
+  };
+
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center mb-6">
+      <div className="flex items-center space-x-4">
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep === 1 ? 'bg-green-600 text-white' : 'bg-green-600 text-white'
+          }`}>
+          {currentStep > 1 ? <CheckCircle className="h-4 w-4" /> : '1'}
+        </div>
+        <div className={`h-0.5 w-8 ${currentStep > 1 ? 'bg-green-600' : 'bg-gray-300'}`} />
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep === 2 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'
+          }`}>
+          2
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex items-center flex-col md:flex-row bg-gradient-to-br from-background via-background/95 to-green-50/20 overflow-hidden">
@@ -180,6 +281,7 @@ export default function SignupPage() {
             </div>
           </motion.div>
 
+          {/* Feature cards */}
           <motion.div
             variants={staggerContainer}
             initial="hidden"
@@ -235,6 +337,7 @@ export default function SignupPage() {
             </motion.div>
           </motion.div>
 
+          {/* Testimonial and trust badges remain the same */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -341,14 +444,20 @@ export default function SignupPage() {
           className="w-full max-w-md z-10"
         >
           <Card className="border shadow-lg overflow-hidden backdrop-blur-sm">
-
             <form onSubmit={handleSubmit}>
               <CardHeader>
-                <CardTitle className="text-xl">Get started with Zaptick</CardTitle>
+                <CardTitle className="text-xl">
+                  {currentStep === 1 ? "Personal Information" : "Company Information"}
+                </CardTitle>
                 <CardDescription>
-                  Create your account and elevate your WhatsApp Business experience
+                  {currentStep === 1
+                    ? "Create your personal account details"
+                    : "Tell us about your business"
+                  }
                 </CardDescription>
+                {renderStepIndicator()}
               </CardHeader>
+
               <CardContent className="space-y-4">
                 {error && (
                   <motion.div
@@ -360,83 +469,192 @@ export default function SignupPage() {
                   </motion.div>
                 )}
 
-                <motion.div variants={fadeIn} className="space-y-2 mt-4">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Jane Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                  />
-                </motion.div>
-
-                <motion.div variants={fadeIn} className="space-y-2">
-                  <Label htmlFor="email">Business Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                  />
-                </motion.div>
-
-                <motion.div variants={fadeIn} className="space-y-2">
-                  <Label htmlFor="companyName">Company Name</Label>
-                  <Input
-                    id="companyName"
-                    placeholder="Your Company"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    required
-                    className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                  />
-                </motion.div>
-
-                <motion.div variants={fadeIn} className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <span className="text-xs text-muted-foreground">
-                      {passwordStrength > 0 ? `Strength: ${['Weak', 'Fair', 'Good', 'Strong'][passwordStrength - 1]}` : 'Min. 6 characters'}
-                    </span>
-                  </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                  />
-
-                  {/* Password strength indicator */}
-                  {password.length > 0 && (
-                    <div className="flex gap-1 mt-1.5">
-                      {[1, 2, 3, 4].map((level) => (
-                        <motion.div
-                          key={level}
-                          initial={{ width: 0 }}
-                          animate={{ width: "100%" }}
-                          className={`h-1 rounded-full flex-1 ${level <= passwordStrength
-                              ? level === 1
-                                ? "bg-red-400"
-                                : level === 2
-                                  ? "bg-orange-400"
-                                  : level === 3
-                                    ? "bg-yellow-400"
-                                    : "bg-green-500"
-                              : "bg-gray-200"
-                            }`}
+                {currentStep === 1 ? (
+                  <>
+                    <motion.div variants={fadeIn} className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="name"
+                          placeholder="Jane Doe"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
                         />
-                      ))}
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={fadeIn} className="space-y-2">
+                      <Label htmlFor="email">Business Email *</Label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="you@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={fadeIn} className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label htmlFor="password">Password *</Label>
+                        <span className="text-xs text-muted-foreground">
+                          {passwordStrength > 0 ? `Strength: ${['Weak', 'Fair', 'Good', 'Strong'][passwordStrength - 1]}` : 'Min. 6 characters'}
+                        </span>
+                      </div>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                      />
+
+                      {/* Password strength indicator */}
+                      {password.length > 0 && (
+                        <div className="flex gap-1 mt-1.5">
+                          {[1, 2, 3, 4].map((level) => (
+                            <motion.div
+                              key={level}
+                              initial={{ width: 0 }}
+                              animate={{ width: "100%" }}
+                              className={`h-1 rounded-full flex-1 ${level <= passwordStrength
+                                ? level === 1
+                                  ? "bg-red-400"
+                                  : level === 2
+                                    ? "bg-orange-400"
+                                    : level === 3
+                                      ? "bg-yellow-400"
+                                      : "bg-green-500"
+                                : "bg-gray-200"
+                                }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  </>
+                ) : (
+                  <>
+                    <motion.div variants={fadeIn} className="space-y-2">
+                      <Label htmlFor="companyName">Company Name *</Label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="companyName"
+                          placeholder="Your Company Name"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          required
+                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={fadeIn} className="space-y-2">
+                      <Label htmlFor="companyPhone">Company Phone</Label>
+                      <div className="phone-input-container">
+                        <PhoneInput
+                          country={'in'}
+                          value={companyPhone}
+                          onChange={(phone, country: any) => {
+                            setCompanyPhone(phone);
+                            setCompanyCountryCode(country.dialCode);
+                          }}
+                          inputProps={{
+                            name: 'companyPhone',
+                            required: false,
+                            autoFocus: false
+                          }}
+                          containerClass="w-full"
+                          inputClass="w-full h-11 pl-12 pr-4 border border-slate-200 rounded-md focus:border-green-400 focus:ring-2 focus:ring-green-200 bg-white transition-all"
+                          buttonClass="border-slate-200 hover:bg-slate-50 rounded-l-md"
+                          dropdownClass="bg-white border-slate-200 shadow-lg"
+                          searchClass="bg-white border-slate-200"
+                          enableSearch={true}
+                          disableSearchIcon={false}
+                          searchPlaceholder="Search countries..."
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={fadeIn} className="space-y-2">
+                      <Label htmlFor="companyWebsite">Company Website</Label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="companyWebsite"
+                          placeholder="https://www.yourcompany.com"
+                          value={companyWebsite}
+                          onChange={(e) => setCompanyWebsite(e.target.value)}
+                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={fadeIn} className="space-y-2">
+                      <Label htmlFor="companyLocation">Company Location</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="companyLocation"
+                          placeholder="City, Country"
+                          value={companyLocation}
+                          onChange={(e) => setCompanyLocation(e.target.value)}
+                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                        />
+                      </div>
+                    </motion.div>
+                    <div className="flex items-center justify-between w-full">
+                      <motion.div variants={fadeIn} className="space-y-2">
+                        <Label htmlFor="companyIndustry">Industry</Label>
+                        <Select value={companyIndustry} onValueChange={setCompanyIndustry}>
+                          <SelectTrigger className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400">
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="h-4 w-4 text-muted-foreground" />
+                              <SelectValue placeholder="Select your industry" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INDUSTRIES.map((industry) => (
+                              <SelectItem key={industry} value={industry}>
+                                {industry}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </motion.div>
+
+                      <motion.div variants={fadeIn} className="space-y-2">
+                        <Label htmlFor="companyCategory">Company Category</Label>
+                        <Select value={companyCategory} onValueChange={setCompanyCategory}>
+                          <SelectTrigger className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400">
+                            <div className="flex items-center gap-2">
+                              <BiCategory className="h-4 w-4 text-muted-foreground" />
+                              <SelectValue placeholder="Select category" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COMPANY_CATEGORIES.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </motion.div>
                     </div>
-                  )}
-                </motion.div>
+                  </>
+                )}
 
                 <TooltipProvider>
                   <Tooltip>
@@ -458,27 +676,50 @@ export default function SignupPage() {
                 </TooltipProvider>
               </CardContent>
 
-              <CardFooter className="flex flex-col">
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full mt-4"
-                >
-                  <Button
-                    className="w-full  h-12 text-base bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg transition-all duration-300"
-                    type="submit"
-                    disabled={isLoading}
+              <CardFooter className="flex mt-2 flex-col">
+                <div className="flex gap-2 w-full">
+                  {currentStep === 2 && (
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1"
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full h-12 text-base"
+                        onClick={handlePrevStep}
+                        disabled={isLoading}
+                      >
+                        Back
+                      </Button>
+                    </motion.div>
+                  )}
+
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1"
                   >
-                    {isLoading ? (
-                      <>
-                        <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                        Creating your account...
-                      </>
-                    ) : (
-                      "Create Your Zaptick Account"
-                    )}
-                  </Button>
-                </motion.div>
+                    <Button
+                      className="w-full h-12 text-base bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg transition-all duration-300"
+                      type={currentStep === 1 ? "button" : "submit"}
+                      onClick={currentStep === 1 ? handleNextStep : undefined}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : currentStep === 1 ? (
+                        "Continue"
+                      ) : (
+                        "Create Your Zaptick Account"
+                      )}
+                    </Button>
+                  </motion.div>
+                </div>
 
                 <motion.p
                   initial={{ opacity: 0 }}

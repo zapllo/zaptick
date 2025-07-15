@@ -4,6 +4,7 @@ export interface IContact extends Document {
   name: string;
   phone: string;
   email?: string;
+  countryCode?: string; // Add this field
   wabaId: string;
   phoneNumberId: string;
   userId: string;
@@ -33,6 +34,10 @@ const ContactSchema = new Schema({
     type: String,
     trim: true,
     lowercase: true
+  },
+  countryCode: { // Add this field
+    type: String,
+    trim: true
   },
   wabaId: {
     type: String,

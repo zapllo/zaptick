@@ -9,7 +9,11 @@ import {
   CheckCheck,
   Filter as FilterIcon,
   Check,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Copy,
+  Trash2,
+  Move,
+  GripVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +81,23 @@ type ConditionOperator =
   | "is_unknown"
   | "has_any_value";
 
+// Individual condition structure
+interface Condition {
+  id: string;
+  type: FilterType;
+  field?: string;
+  operator?: ConditionOperator;
+  value?: any;
+  values?: string[];
+}
+
+// Condition group structure
+interface ConditionGroup {
+  id: string;
+  conditions: Condition[];
+  operator: LogicalOperator; // AND/OR within this group
+}
+
 // Filter structure
 interface Filter {
   id: string;
@@ -85,6 +106,7 @@ interface Filter {
   operator?: ConditionOperator;
   value?: any;
   values?: string[];
+  groupId?: string; // Which group this condition belongs to
 }
 
 // Props definition
@@ -94,14 +116,14 @@ interface AudienceFilterProps {
   eventFields: { label: string; key: string; type: "text" | "number" | "date" | "select"; options?: string[] }[];
   onApplyFilters: (filters: {
     tags: string[];
-    conditions: Filter[];
-    operator: LogicalOperator;
+    conditionGroups: ConditionGroup[];
+    groupOperator: LogicalOperator; // AND/OR between groups
     whatsappOptedIn: boolean;
   }) => void;
   initialFilters?: {
     tags: string[];
-    conditions: Filter[];
-    operator: LogicalOperator;
+    conditionGroups: ConditionGroup[];
+    groupOperator: LogicalOperator;
     whatsappOptedIn: boolean;
   };
 }
@@ -116,14 +138,20 @@ const AudienceFilter = ({
   // State for selected tags
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilters?.tags || []);
 
-  // State for logical operator
-  const [logicalOperator, setLogicalOperator] = useState<LogicalOperator>(initialFilters?.operator || "AND");
+  // State for condition groups
+  const [conditionGroups, setConditionGroups] = useState<ConditionGroup[]>(
+    initialFilters?.conditionGroups || []
+  );
 
-  // State for conditions
-  const [conditions, setConditions] = useState<Filter[]>(initialFilters?.conditions || []);
+  // State for operator between groups
+  const [groupOperator, setGroupOperator] = useState<LogicalOperator>(
+    initialFilters?.groupOperator || "AND"
+  );
 
   // State for WhatsApp opted in
-  const [whatsappOptedIn, setWhatsappOptedIn] = useState<boolean>(initialFilters?.whatsappOptedIn || false);
+  const [whatsappOptedIn, setWhatsappOptedIn] = useState<boolean>(
+    initialFilters?.whatsappOptedIn || false
+  );
 
   // State for search input
   const [searchQuery, setSearchQuery] = useState("");
@@ -132,7 +160,7 @@ const AudienceFilter = ({
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
 
   // Check if any filters are active
-  const hasActiveFilters = selectedTags.length > 0 || conditions.length > 0 || whatsappOptedIn;
+  const hasActiveFilters = selectedTags.length > 0 || conditionGroups.length > 0 || whatsappOptedIn;
 
   // Function to toggle a tag
   const toggleTag = (tag: string) => {
@@ -143,69 +171,146 @@ const AudienceFilter = ({
     );
   };
 
-  // Function to check if a field is already used in conditions
-  const isFieldAlreadySelected = (type: FilterType, fieldKey: string) => {
-    return conditions.some(condition =>
-      condition.type === type && condition.field === fieldKey
+  // Function to add a new condition group
+  const addConditionGroup = () => {
+    const newGroup: ConditionGroup = {
+      id: Date.now().toString(),
+      conditions: [],
+      operator: "AND"
+    };
+    setConditionGroups([...conditionGroups, newGroup]);
+  };
+
+  // Function to remove a condition group
+  const removeConditionGroup = (groupId: string) => {
+    setConditionGroups(conditionGroups.filter(group => group.id !== groupId));
+  };
+
+  // Function to update group operator
+  const updateGroupOperator = (groupId: string, operator: LogicalOperator) => {
+    setConditionGroups(groups =>
+      groups.map(group =>
+        group.id === groupId ? { ...group, operator } : group
+      )
     );
   };
 
-  // Function to add a new condition
-  const addCondition = (type: FilterType, field?: string) => {
-    // If field is already selected, don't add a new condition
-    if (field && isFieldAlreadySelected(type, field)) {
-      return;
-    }
-
-    const newCondition: Filter = {
-      id: Date.now().toString(),
+  // Function to add a condition to a group
+  const addConditionToGroup = (groupId: string, type: FilterType, field?: string) => {
+    const newCondition: Condition = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       type,
       field: field || (type === 'trait' ? traitFields[0]?.key : eventFields[0]?.key),
       operator: type === 'trait' && getFieldType(type, field) === 'date' ? 'on' : 'equals',
       value: '',
     };
 
-    setConditions([...conditions, newCondition]);
-  };
-
-  // Function to remove a condition
-  const removeCondition = (id: string) => {
-    setConditions(conditions.filter(condition => condition.id !== id));
-  };
-
-  // Function to toggle a condition by field
-  const toggleCondition = (type: FilterType, fieldKey: string) => {
-    // Check if this field is already in a condition
-    const existingCondition = conditions.find(
-      condition => condition.type === type && condition.field === fieldKey
+    setConditionGroups(groups =>
+      groups.map(group =>
+        group.id === groupId
+          ? { ...group, conditions: [...group.conditions, newCondition] }
+          : group
+      )
     );
+  };
 
-    if (existingCondition) {
-      // Remove the condition if it exists
-      removeCondition(existingCondition.id);
-    } else {
-      // Add a new condition if it doesn't exist
-      addCondition(type, fieldKey);
+  // Function to remove a condition from a group
+  const removeConditionFromGroup = (groupId: string, conditionId: string) => {
+    setConditionGroups(groups =>
+      groups.map(group =>
+        group.id === groupId
+          ? { ...group, conditions: group.conditions.filter(c => c.id !== conditionId) }
+          : group
+      )
+    );
+  };
+
+  // Function to update a condition in a group
+  const updateConditionInGroup = (groupId: string, conditionId: string, updates: Partial<Condition>) => {
+    setConditionGroups(groups =>
+      groups.map(group =>
+        group.id === groupId
+          ? {
+              ...group,
+              conditions: group.conditions.map(condition =>
+                condition.id === conditionId ? { ...condition, ...updates } : condition
+              )
+            }
+          : group
+      )
+    );
+  };
+
+  // Function to duplicate a condition
+  const duplicateCondition = (groupId: string, conditionId: string) => {
+    const group = conditionGroups.find(g => g.id === groupId);
+    const condition = group?.conditions.find(c => c.id === conditionId);
+    
+    if (condition) {
+      const duplicatedCondition: Condition = {
+        ...condition,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      };
+      
+      setConditionGroups(groups =>
+        groups.map(group =>
+          group.id === groupId
+            ? { ...group, conditions: [...group.conditions, duplicatedCondition] }
+            : group
+        )
+      );
     }
   };
 
-  // Function to update a condition
-  const updateCondition = (id: string, updates: Partial<Filter>) => {
-    setConditions(conditions.map(condition =>
-      condition.id === id ? { ...condition, ...updates } : condition
-    ));
+  // Function to move condition to different group
+  const moveConditionToGroup = (fromGroupId: string, toGroupId: string, conditionId: string) => {
+    const fromGroup = conditionGroups.find(g => g.id === fromGroupId);
+    const condition = fromGroup?.conditions.find(c => c.id === conditionId);
+    
+    if (condition) {
+      // Remove from source group
+      setConditionGroups(groups =>
+        groups.map(group => {
+          if (group.id === fromGroupId) {
+            return { ...group, conditions: group.conditions.filter(c => c.id !== conditionId) };
+          }
+          if (group.id === toGroupId) {
+            return { ...group, conditions: [...group.conditions, condition] };
+          }
+          return group;
+        })
+      );
+    }
   };
 
   // Function to handle Apply Filters click
   const handleApplyFilters = () => {
-    onApplyFilters({
+    // Filter out empty groups and invalid conditions
+    const validGroups = conditionGroups
+      .map(group => ({
+        ...group,
+        conditions: group.conditions.filter(c => 
+          c.field && c.operator && (
+            c.operator === 'is_unknown' || 
+            c.operator === 'has_any_value' || 
+            (c.value !== undefined && c.value !== null && c.value !== '')
+          )
+        )
+      }))
+      .filter(group => group.conditions.length > 0);
+
+    const filtersToApply = {
       tags: selectedTags,
-      conditions,
-      operator: logicalOperator,
+      conditionGroups: validGroups,
+      groupOperator,
       whatsappOptedIn
-    });
+    };
     
-    // Always collapse the filters after applying, even if no filters are active
+    console.log('AudienceFilter - Applying filters:', JSON.stringify(filtersToApply, null, 2));
+    
+    onApplyFilters(filtersToApply);
+    
+    // Always collapse the filters after applying
     setIsFiltersCollapsed(true);
   };
 
@@ -217,14 +322,15 @@ const AudienceFilter = ({
   // Function to clear all filters
   const handleClearAllFilters = () => {
     setSelectedTags([]);
-    setConditions([]);
+    setConditionGroups([]);
     setWhatsappOptedIn(false);
     setIsFiltersCollapsed(false);
+    
     // Also call onApplyFilters to update the parent component
     onApplyFilters({
       tags: [],
-      conditions: [],
-      operator: logicalOperator,
+      conditionGroups: [],
+      groupOperator,
       whatsappOptedIn: false
     });
   };
@@ -258,6 +364,122 @@ const AudienceFilter = ({
   const filteredTraitFields = filterFieldsBySearch(traitFields, searchQuery);
   const filteredEventFields = filterFieldsBySearch(eventFields, searchQuery);
 
+  // Render value input based on field type and operator
+  const renderValueInput = (groupId: string, condition: Condition) => {
+    const fieldType = getFieldType(condition.type, condition.field);
+    
+    if (condition.operator === 'is_unknown' || condition.operator === 'has_any_value') {
+      return (
+        <div className="text-sm text-muted-foreground py-2">
+          No value needed for this operator
+        </div>
+      );
+    }
+
+    if (fieldType === 'date') {
+      // For relative date operators, show number input
+      if (condition.operator === 'more_than' || condition.operator === 'exactly' || condition.operator === 'less_than') {
+        return (
+          <div className="space-y-2">
+            <Input
+              type="number"
+              min="0"
+              placeholder="Enter days"
+              value={condition.value || ''}
+              onChange={(e) =>
+                updateConditionInGroup(groupId, condition.id, { 
+                  value: e.target.value ? parseInt(e.target.value) : '' 
+                })
+              }
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Number of days ago
+            </p>
+          </div>
+        );
+      }
+      
+      // For absolute date operators, show date picker
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-left font-normal"
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {condition.value ? (
+                format(new Date(condition.value), "PPP")
+              ) : (
+                <span>Pick a date</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={condition.value ? new Date(condition.value) : undefined}
+              onSelect={(date) =>
+                updateConditionInGroup(groupId, condition.id, {
+                  value: date ? date.toISOString().split('T')[0] : ''
+                })
+              }
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      );
+    }
+
+    if (fieldType === 'select') {
+      return (
+        <Select
+          value={condition.value}
+          onValueChange={(value) =>
+            updateConditionInGroup(groupId, condition.id, { value })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select value" />
+          </SelectTrigger>
+          <SelectContent>
+            {getFieldOptions(condition.type)
+              .find(f => f.key === condition.field)?.options?.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    if (fieldType === 'number') {
+      return (
+        <Input
+          type="number"
+          value={condition.value || ''}
+          onChange={(e) =>
+            updateConditionInGroup(groupId, condition.id, { value: e.target.value })
+          }
+          placeholder="Enter number"
+        />
+      );
+    }
+
+    return (
+      <Input
+        type="text"
+        value={condition.value || ''}
+        onChange={(e) =>
+          updateConditionInGroup(groupId, condition.id, { value: e.target.value })
+        }
+        placeholder="Enter value"
+      />
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Collapsed state - show when filters are collapsed */}
@@ -269,7 +491,7 @@ const AudienceFilter = ({
                 <FilterIcon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">
                   {hasActiveFilters 
-                    ? `${selectedTags.length + conditions.length + (whatsappOptedIn ? 1 : 0)} filters applied`
+                    ? `${selectedTags.length + conditionGroups.reduce((acc, group) => acc + group.conditions.length, 0) + (whatsappOptedIn ? 1 : 0)} filters applied`
                     : 'No filters applied'
                   }
                 </span>
@@ -305,10 +527,10 @@ const AudienceFilter = ({
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
               <FilterIcon className="h-5 w-5 mr-2" />
-              Audience Filters
+              Advanced Audience Filters
             </CardTitle>
             <CardDescription>
-              Define your target audience by adding filters and conditions
+              Create complex filter logic with multiple condition groups
             </CardDescription>
           </CardHeader>
 
@@ -379,297 +601,301 @@ const AudienceFilter = ({
                   </Popover>
                 )}
               </div>
-
-              {selectedTags.length > 0 && (
-                <div className="pt-2">
-                  <div className="flex items-center space-x-2">
-                    <Select
-                      value={logicalOperator}
-                      onValueChange={(value) => setLogicalOperator(value as LogicalOperator)}
-                    >
-                      <SelectTrigger className="w-24">
-                        <SelectValue placeholder="Operator" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="AND">AND</SelectItem>
-                        <SelectItem value="OR">OR</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <span className="text-sm text-muted-foreground">
-                      combine with other filters
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
             <Separator />
 
-            {/* Conditions Section */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Filter by User Properties and Events</Label>
+            {/* Condition Groups Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Condition Groups</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addConditionGroup}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Group
+                </Button>
+              </div>
 
-              {conditions.length > 0 && (
-                <div className="space-y-4">
-                  {conditions.map((condition, index) => (
-                    <div key={condition.id} className="border rounded-md p-3 relative">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 absolute right-2 top-2"
-                        onClick={() => removeCondition(condition.id)}
+              {conditionGroups.length > 0 && (
+                <div className="space-y-6">
+                  {conditionGroups.length > 1 && (
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-sm">Combine groups with:</Label>
+                      <Select
+                        value={groupOperator}
+                        onValueChange={(value) => setGroupOperator(value as LogicalOperator)}
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AND">AND</SelectItem>
+                          <SelectItem value="OR">OR</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <Label className="text-xs mb-1.5 block">Field</Label>
-                          <Select
-                            value={condition.field}
-                            onValueChange={(value) =>
-                              updateCondition(condition.id, { field: value, value: '' })
-                            }
-                          >
-                            <SelectTrigger className='w-full'>
-                              <SelectValue placeholder="Select field" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getFieldOptions(condition.type).map((field) => (
-                                <SelectItem key={field.key} value={field.key}>
-                                  {field.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                  {conditionGroups.map((group, groupIndex) => (
+                    <div key={group.id} className="relative">
+                      {groupIndex > 0 && (
+                        <div className="absolute -top-3 left-6 bg-white px-2 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded">
+                          {groupOperator}
                         </div>
-
-                        <div>
-                          <Label className="text-xs mb-1.5 block">Operator</Label>
-                          <Select
-                            value={condition.operator}
-                            onValueChange={(value) =>
-                              updateCondition(condition.id, { operator: value as ConditionOperator })
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select operator" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getFieldType(condition.type, condition.field) === 'date' ? (
-                                <>
-                                  <SelectItem value="more_than">more than</SelectItem>
-                                  <SelectItem value="exactly">exactly</SelectItem>
-                                  <SelectItem value="less_than">less than</SelectItem>
-                                  <SelectItem value="after">after</SelectItem>
-                                  <SelectItem value="on">on</SelectItem>
-                                  <SelectItem value="before">before</SelectItem>
-                                  <SelectItem value="is_unknown">is unknown</SelectItem>
-                                  <SelectItem value="has_any_value">has any value</SelectItem>
-                                </>
-                              ) : getFieldType(condition.type, condition.field) === 'number' ? (
-                                <>
-                                  <SelectItem value="equals">Equals</SelectItem>
-                                  <SelectItem value="not_equals">Does not equal</SelectItem>
-                                  <SelectItem value="greater_than">Greater than</SelectItem>
-                                  <SelectItem value="less_than">Less than</SelectItem>
-                                  <SelectItem value="between">Between</SelectItem>
-                                </>
-                              ) : (
-                                <>
-                                  <SelectItem value="equals">Equals</SelectItem>
-                                  <SelectItem value="not_equals">Does not equal</SelectItem>
-                                  <SelectItem value="contains">Contains</SelectItem>
-                                  <SelectItem value="not_contains">Does not contain</SelectItem>
-                                </>
+                      )}
+                      
+                      <Card className="border-2 border-dashed border-gray-200 hover:border-gray-300 transition-colors">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">
+                                Group {groupIndex + 1}
+                              </span>
+                              {group.conditions.length > 1 && (
+                                <Select
+                                  value={group.operator}
+                                  onValueChange={(value) => updateGroupOperator(group.id, value as LogicalOperator)}
+                                >
+                                  <SelectTrigger className="w-20 h-7">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="AND">AND</SelectItem>
+                                    <SelectItem value="OR">OR</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label className="text-xs mb-1.5 block">Value</Label>
-                          {getFieldType(condition.type, condition.field) === 'select' ? (
-                            <Select
-                              value={condition.value}
-                              onValueChange={(value) =>
-                                updateCondition(condition.id, { value })
-                              }
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeConditionGroup(group.id)}
                             >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select value" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getFieldOptions(condition.type)
-                                  .find(f => f.key === condition.field)?.options?.map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                      {option}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          ) : getFieldType(condition.type, condition.field) === 'date' ? (
-                            condition.operator === 'is_unknown' || condition.operator === 'has_any_value' ? (
-                              <div className="text-sm text-muted-foreground py-2">
-                                No value needed for this operator
-                              </div>
-                            ) : (
-                              <Popover>
-                                <PopoverTrigger asChild>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardHeader>
+
+                        <CardContent className="space-y-4">
+                          {group.conditions.map((condition, conditionIndex) => (
+                            <div key={condition.id} className="border rounded-md p-3 relative bg-white">
+                              {conditionIndex > 0 && (
+                                <div className="absolute -top-2 left-4 bg-white px-2 py-1 text-xs font-medium text-primary border border-primary/20 rounded">
+                                  {group.operator}
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    Condition {conditionIndex + 1}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
                                   <Button
-                                    variant="outline"
-                                    className="w-full justify-start text-left font-normal"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => duplicateCondition(group.id, condition.id)}
+                                    className="h-6 w-6 p-0"
                                   >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {condition.value ? (
-                                      format(new Date(condition.value), "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
+                                    <Copy className="h-3 w-3" />
                                   </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={condition.value ? new Date(condition.value) : undefined}
-                                    onSelect={(date) =>
-                                      updateCondition(condition.id, {
-                                        value: date ? date.toISOString().split('T')[0] : ''
-                                      })
+                                  {conditionGroups.length > 1 && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                          <Move className="h-3 w-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent>
+                                        <DropdownMenuLabel>Move to Group</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {conditionGroups.map((targetGroup, idx) => (
+                                          targetGroup.id !== group.id && (
+                                            <DropdownMenuItem
+                                              key={targetGroup.id}
+                                              onClick={() => moveConditionToGroup(group.id, targetGroup.id, condition.id)}
+                                            >
+                                              Group {idx + 1}
+                                            </DropdownMenuItem>
+                                          )
+                                        ))}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeConditionFromGroup(group.id, condition.id)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <Label className="text-xs mb-1.5 block">Field</Label>
+                                  <Select
+                                    value={condition.field}
+                                    onValueChange={(value) =>
+                                      updateConditionInGroup(group.id, condition.id, { field: value, value: '' })
                                     }
-                                    initialFocus
+                                  >
+                                    <SelectTrigger className='w-full'>
+                                      <SelectValue placeholder="Select field" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {getFieldOptions(condition.type).map((field) => (
+                                        <SelectItem key={field.key} value={field.key}>
+                                          {field.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div>
+                                  <Label className="text-xs mb-1.5 block">Operator</Label>
+                                  <Select
+                                    value={condition.operator}
+                                    onValueChange={(value) =>
+                                      updateConditionInGroup(group.id, condition.id, { operator: value as ConditionOperator })
+                                    }
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select operator" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {getFieldType(condition.type, condition.field) === 'date' ? (
+                                        <>
+                                          <SelectItem value="more_than">more than</SelectItem>
+                                          <SelectItem value="exactly">exactly</SelectItem>
+                                          <SelectItem value="less_than">less than</SelectItem>
+                                          <SelectItem value="after">after</SelectItem>
+                                          <SelectItem value="on">on</SelectItem>
+                                          <SelectItem value="before">before</SelectItem>
+                                          <SelectItem value="is_unknown">is unknown</SelectItem>
+                                          <SelectItem value="has_any_value">has any value</SelectItem>
+                                        </>
+                                      ) : getFieldType(condition.type, condition.field) === 'number' ? (
+                                        <>
+                                          <SelectItem value="equals">Equals</SelectItem>
+                                          <SelectItem value="not_equals">Does not equal</SelectItem>
+                                          <SelectItem value="greater_than">Greater than</SelectItem>
+                                          <SelectItem value="less_than">Less than</SelectItem>
+                                          <SelectItem value="between">Between</SelectItem>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <SelectItem value="equals">Equals</SelectItem>
+                                          <SelectItem value="not_equals">Does not equal</SelectItem>
+                                          <SelectItem value="contains">Contains</SelectItem>
+                                          <SelectItem value="not_contains">Does not contain</SelectItem>
+                                        </>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div>
+                                  <Label className="text-xs mb-1.5 block">Value</Label>
+                                  {renderValueInput(group.id, condition)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Add Condition Button */}
+                          <div className="flex gap-2">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Add Condition
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80 p-0" align="start">
+                                <div className="p-3">
+                                  <Input
+                                    placeholder="Search properties and events..."
+                                    className="mb-2"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                   />
-                                </PopoverContent>
-                              </Popover>
-                            )
-                          ) : getFieldType(condition.type, condition.field) === 'number' ? (
-                            <Input
-                              type="number"
-                              value={condition.value || ''}
-                              onChange={(e) =>
-                                updateCondition(condition.id, { value: e.target.value })
-                              }
-                            />
-                          ) : (
-                            <Input
-                              type="text"
-                              value={condition.value || ''}
-                              onChange={(e) =>
-                                updateCondition(condition.id, { value: e.target.value })
-                              }
-                              placeholder="Enter value"
-                            />
-                          )}
-                        </div>
-                      </div>
+                                  <ScrollArea className="h-60">
+                                    <div className="space-y-1">
+                                      {filteredTraitFields.length > 0 && (
+                                        <>
+                                          <div className="font-medium text-xs uppercase px-2 py-1 text-muted-foreground">
+                                            User Properties
+                                          </div>
+                                          {filteredTraitFields.map((field) => (
+                                            <div
+                                              key={`trait-${field.key}`}
+                                              className="flex items-center space-x-2 px-2 py-1 hover:bg-muted/50 rounded-md cursor-pointer"
+                                             onClick={() => {
+                                                addConditionToGroup(group.id, 'trait', field.key);
+                                                setSearchQuery('');
+                                              }}
+                                            >
+                                              <label className="flex-1 text-sm cursor-pointer">
+                                                {field.label}
+                                              </label>
+                                            </div>
+                                          ))}
+                                        </>
+                                      )}
+
+                                      {filteredTraitFields.length > 0 && filteredEventFields.length > 0 && (
+                                        <Separator className="my-2" />
+                                      )}
+
+                                      {filteredEventFields.length > 0 && (
+                                        <>
+                                          <div className="font-medium text-xs uppercase px-2 py-1 text-muted-foreground">
+                                            User Events
+                                          </div>
+                                          {filteredEventFields.map((field) => (
+                                            <div
+                                              key={`event-${field.key}`}
+                                              className="flex items-center space-x-2 px-2 py-1 hover:bg-muted/50 rounded-md cursor-pointer"
+                                              onClick={() => {
+                                                addConditionToGroup(group.id, 'event', field.key);
+                                                setSearchQuery('');
+                                              }}
+                                            >
+                                              <label className="flex-1 text-sm cursor-pointer">
+                                                {field.label}
+                                              </label>
+                                            </div>
+                                          ))}
+                                        </>
+                                      )}
+
+                                      {filteredTraitFields.length === 0 && filteredEventFields.length === 0 && (
+                                        <div className="py-6 text-center text-sm text-muted-foreground">
+                                          No matching fields found
+                                        </div>
+                                      )}
+                                    </div>
+                                  </ScrollArea>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   ))}
                 </div>
               )}
-
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Filter
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="start">
-                    <div className="p-3">
-                      <Input
-                        placeholder="Search properties and events..."
-                        className="mb-2"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                      <ScrollArea className="h-60">
-                        <div className="space-y-1">
-                          {filteredTraitFields.length > 0 && (
-                            <>
-                              <div className="font-medium text-xs uppercase px-2 py-1 text-muted-foreground">
-                                User Properties
-                              </div>
-                              {filteredTraitFields.map((field) => {
-                                const isSelected = isFieldAlreadySelected('trait', field.key);
-                                return (
-                                  <div
-                                    key={`trait-${field.key}`}
-                                    className="flex items-center space-x-2 px-2 py-1 hover:bg-muted/50 rounded-md cursor-pointer"
-                                    onClick={() => toggleCondition('trait', field.key)}
-                                  >
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => {}}
-                                      id={`check-trait-${field.key}`}
-                                    />
-                                    <label
-                                      htmlFor={`check-trait-${field.key}`}
-                                      className="flex-1 text-sm cursor-pointer"
-                                    >
-                                      {field.label}
-                                    </label>
-                                  </div>
-                                );
-                              })}
-                            </>
-                          )}
-
-                          {filteredTraitFields.length > 0 && filteredEventFields.length > 0 && (
-                            <Separator className="my-2" />
-                          )}
-
-                          {filteredEventFields.length > 0 && (
-                            <>
-                              <div className="font-medium text-xs uppercase px-2 py-1 text-muted-foreground">
-                                User Events
-                              </div>
-                              {filteredEventFields.map((field) => {
-                                const isSelected = isFieldAlreadySelected('event', field.key);
-                                return (
-                                  <div
-                                    key={`event-${field.key}`}
-                                    className="flex items-center space-x-2 px-2 py-1 hover:bg-muted/50 rounded-md cursor-pointer"
-                                    onClick={() => toggleCondition('event', field.key)}
-                                  >
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => {}}
-                                      id={`check-event-${field.key}`}
-                                    />
-                                    <label
-                                      htmlFor={`check-event-${field.key}`}
-                                      className="flex-1 text-sm cursor-pointer"
-                                    >
-                                      {field.label}
-                                    </label>
-                                  </div>
-                                );
-                              })}
-                            </>
-                          )}
-
-                          {filteredTraitFields.length === 0 && filteredEventFields.length === 0 && (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
-                              No matching fields found
-                            </div>
-                          )}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {conditions.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setConditions([])}
-                  >
-                    Clear All
-                  </Button>
-                )}
-              </div>
             </div>
 
             <Separator />
@@ -716,7 +942,12 @@ const AudienceFilter = ({
             <Accordion type="single" collapsible defaultValue="filters">
               <AccordionItem value="filters">
                 <AccordionTrigger className="text-sm">
-                  {selectedTags.length + conditions.length + (whatsappOptedIn ? 1 : 0)} active filters
+                  {selectedTags.length + conditionGroups.reduce((acc, group) => acc + group.conditions.length, 0) + (whatsappOptedIn ? 1 : 0)} active filters
+                  {conditionGroups.length > 1 && (
+                    <Badge variant="outline" className="ml-2">
+                      Groups: {groupOperator}
+                    </Badge>
+                  )}
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-3 text-sm">
@@ -733,26 +964,54 @@ const AudienceFilter = ({
                       </div>
                     )}
 
-                    {conditions.length > 0 && (
+                    {conditionGroups.length > 0 && (
                       <div>
-                        <p className="font-medium mb-1">Conditions</p>
-                        <div className="space-y-1">
-                          {conditions.map(condition => {
-                            const field = getFieldOptions(condition.type).find(f => f.key === condition.field);
-                            return (
-                              <div key={condition.id} className="text-xs text-muted-foreground">
-                                {field?.label || condition.field}
-                                {' '}
-                                {condition.operator?.replace('_', ' ')}
-                                {' '}
-                                {condition.operator !== 'is_unknown' && condition.operator !== 'has_any_value' &&
-                                  (getFieldType(condition.type, condition.field) === 'date' && condition.value ?
-                                    format(new Date(condition.value), 'PPP') :
-                                    condition.value)
-                                }
+                        <p className="font-medium mb-1">
+                          Condition Groups {conditionGroups.length > 1 && `(${groupOperator})`}
+                        </p>
+                        <div className="space-y-2">
+                          {conditionGroups.map((group, groupIndex) => (
+                            <div key={group.id} className="border rounded-md p-2 bg-slate-50">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-slate-600">
+                                  Group {groupIndex + 1}
+                                </span>
+                                {group.conditions.length > 1 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {group.operator}
+                                  </Badge>
+                                )}
                               </div>
-                            );
-                          })}
+                              <div className="space-y-1">
+                                {group.conditions.map((condition, conditionIndex) => {
+                                  const field = getFieldOptions(condition.type).find(f => f.key === condition.field);
+                                  return (
+                                    <div key={condition.id} className="flex items-center gap-2 text-xs">
+                                      {conditionIndex > 0 && (
+                                        <span className="text-xs text-primary font-medium">
+                                          {group.operator}
+                                        </span>
+                                      )}
+                                      <div className="text-muted-foreground">
+                                        {field?.label || condition.field}
+                                        {' '}
+                                        {condition.operator?.replace('_', ' ')}
+                                        {' '}
+                                        {condition.operator !== 'is_unknown' && condition.operator !== 'has_any_value' &&
+                                          (getFieldType(condition.type, condition.field) === 'date' && condition.value ?
+                                            (typeof condition.value === 'number' ? 
+                                              `${condition.value} days ago` : 
+                                              format(new Date(condition.value), 'PPP')
+                                            ) :
+                                            condition.value)
+                                        }
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}

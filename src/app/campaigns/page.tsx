@@ -42,7 +42,9 @@ import {
   Send,
   BarChart3,
   ArrowUpRight,
-  Gauge
+  Gauge,
+  FilterX,
+  X
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -355,6 +357,13 @@ const CampaignsPage = () => {
     return Math.round((value / total) * 100);
   };
 
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setTypeFilter("all");
+  };
+
   // Calculate stats
   const totalCampaigns = campaigns.length;
   const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
@@ -372,7 +381,7 @@ const CampaignsPage = () => {
     <Layout>
       <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
-          <div className="max-w-7xl mx-auto p-6 space-y-8">
+          <div className="mx-auto p-6 space-y-8">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
               <div className="space-y-1">
@@ -416,77 +425,179 @@ const CampaignsPage = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-blue-600">Total Campaigns</p>
-                      <p className="text-3xl font-bold text-blue-900">{totalCampaigns}</p>
-                      <p className="text-xs text-blue-600/80">
-                        {totalCampaigns > 0 ? '+12% from last month' : 'Get started'}
-                      </p>
-                    </div>
-                    <div className="p-3 bg-blue-200/50 rounded-xl">
-                      <Rocket className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-green-600">Active Campaigns</p>
-                      <p className="text-3xl font-bold text-green-900">{activeCampaigns}</p>
-                      <p className="text-xs text-green-600/80">
-                        Currently running
-                      </p>
-                    </div>
-                    <div className="p-3 bg-green-200/50 rounded-xl">
-                      <PlayCircle className="h-6 w-6 text-green-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-purple-600">Total Audience</p>
-                      <p className="text-3xl font-bold text-purple-900">{totalAudience.toLocaleString()}</p>
-                      <p className="text-xs text-purple-600/80">
-                        Contacts reached
-                      </p>
-                    </div>
-                    <div className="p-3 bg-purple-200/50 rounded-xl">
-                      <Users className="h-6 w-6 text-purple-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-amber-600">Avg Delivery Rate</p>
-                      <p className="text-3xl font-bold text-amber-900">{avgDeliveryRate}%</p>
-                      <div className="w-full bg-amber-200/50 rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-amber-600 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${avgDeliveryRate}%` }}
-                        />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <p className="text-sm font-medium text-slate-600">Total Campaigns</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-blue-900 transition-colors duration-300">
+                          {totalCampaigns.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {totalCampaigns > 0 ? '+12% from last month' : 'Get started'}
+                        </p>
                       </div>
                     </div>
-                    <div className="p-3 bg-amber-200/50 rounded-xl">
-                      <Send className="h-6 w-6 text-amber-600" />
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 group-hover:scale-110 transition-all duration-300">
+                        <Rocket className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-green-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <p className="text-sm font-medium text-slate-600">Active Campaigns</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-green-900 transition-colors duration-300">
+                          {activeCampaigns.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Currently running
+                        </p>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:bg-green-500/20 group-hover:scale-110 transition-all duration-300">
+                        <PlayCircle className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                        <p className="text-sm font-medium text-slate-600">Total Audience</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-purple-900 transition-colors duration-300">
+                          {totalAudience.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Contacts reached
+                        </p>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 group-hover:scale-110 transition-all duration-300">
+                        <Users className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-amber-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="relative p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        <p className="text-sm font-medium text-slate-600">Avg Delivery Rate</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-2xl font-bold text-slate-900 group-hover:text-amber-900 transition-colors duration-300">
+                          {avgDeliveryRate}%
+                        </p>
+                        <div className="w-full bg-amber-200/50 rounded-full h-2 mt-2">
+                          <div 
+                            className="bg-amber-600 h-2 rounded-full transition-all duration-700 ease-out"
+                            style={{ width: `${avgDeliveryRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 group-hover:scale-110 transition-all duration-300">
+                        <Send className="h-6 w-6 text-amber-600" />
+                      </div>
+                      <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Applied Filters */}
+            {(searchQuery || statusFilter !== "all" || typeFilter !== "all") && (
+              <Card className="border-0 shadow-sm bg-amber-50 border-amber-200">
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-900">Active Filters:</span>
+                    </div>
+
+                    {searchQuery && (
+                      <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                        <Search className="h-3 w-3" />
+                        {searchQuery}
+                        <button onClick={() => setSearchQuery("")}>
+                          <X className="h-3 w-3 ml-1" />
+                        </button>
+                      </Badge>
+                    )}
+
+                    {statusFilter !== "all" && (
+                      <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                        <Activity className="h-3 w-3" />
+                        {statusFilter === "active" ? "Active" :
+                          statusFilter === "paused" ? "Paused" :
+                            statusFilter === "scheduled" ? "Scheduled" :
+                              statusFilter === "draft" ? "Draft" :
+                                statusFilter === "completed" ? "Completed" : "Failed"}
+                        <button onClick={() => setStatusFilter("all")}>
+                          <X className="h-3 w-3 ml-1" />
+                        </button>
+                      </Badge>
+                    )}
+
+                    {typeFilter !== "all" && (
+                      <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                        <Rocket className="h-3 w-3" />
+                        {typeFilter === "ongoing" ? "Ongoing" : "One-time"}
+                        <button onClick={() => setTypeFilter("all")}>
+                          <X className="h-3 w-3 ml-1" />
+                        </button>
+                      </Badge>
+                    )}
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-3 text-xs text-amber-700 hover:bg-amber-100"
+                      onClick={clearAllFilters}
+                    >
+                      <FilterX className="h-3 w-3 mr-1" />
+                      Clear All
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Filters & Controls */}
             <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
@@ -613,7 +724,7 @@ const CampaignsPage = () => {
                         <Rocket className="h-12 w-12 text-primary" />
                       </div>
                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center">
-                        <Sparkles className="h-4 w-4 text-white" />
+                     <Sparkles className="h-4 w-4 text-white" />
                       </div>
                     </div>
                     
@@ -766,7 +877,7 @@ const CampaignsPage = () => {
                         
                         <CardContent className="space-y-4 pb-4">
                           <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">Audience</span>
                               <div className="flex items-center gap-1">
                                 <Users className="h-3 w-3 text-muted-foreground" />
@@ -1172,7 +1283,7 @@ const CampaignsPage = () => {
               open={isViewDetailsOpen}
               onOpenChange={setIsViewDetailsOpen}
             >
-              <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
                 {selectedCampaign ? (
                   <>
                     <DialogHeader>
@@ -1288,7 +1399,7 @@ const CampaignsPage = () => {
                                     />
                                   </div>
 
-                                  <div className="space-y-2">
+                              <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                       <span className="text-sm">Read</span>
                                       <span className="text-sm font-medium">
@@ -1456,7 +1567,7 @@ const CampaignsPage = () => {
                                         ? `${Math.round((selectedCampaign.metrics.delivered / selectedCampaign.audience.count) * 100)}%`
                                         : "0%"}
                                     </div>
-                                   <p className="text-xs text-muted-foreground mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       {selectedCampaign.metrics.delivered} of {selectedCampaign.audience.count} messages
                                     </p>
                                   </div>
