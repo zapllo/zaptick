@@ -21,10 +21,13 @@ import {
   AlertTriangle,
   CheckCircle as CheckIcon,
   Info,
+  Copy,
+  Check,
 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { FaWhatsapp } from 'react-icons/fa';
 
 interface UserData {
   id: string;
@@ -62,6 +65,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   /* ------------------------------------------------------------------ */
   /*  Fetch user data on component mount                                */
@@ -158,6 +162,26 @@ export default function HomePage() {
       });
     } finally {
       setLoadingHealth(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string, idType: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(idType);
+      setTimeout(() => setCopiedId(null), 2000);
+      toast({
+        title: "Copied!",
+        description: `${idType} copied to clipboard`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive"
+      });
     }
   };
 
@@ -398,7 +422,7 @@ export default function HomePage() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
-                      <Phone className="h-6 w-6 text-white" />
+                      <FaWhatsapp className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900 wark:text-white">WhatsApp Business</p>
@@ -535,12 +559,67 @@ export default function HomePage() {
                         {healthStatus.phoneNumbers[0].status || "Active"}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 wark:text-gray-300 mb-3">
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mb-4">
                       Your WhatsApp phone number is registered and {healthStatus.phoneNumbers[0].verified ? "verified" : "active"}.
                     </p>
-                    <div className="text-xs text-muted-foreground bg-gray-50 wark:bg-gray-800 px-2 py-1 rounded font-mono">
-                      ID: {healthStatus.phoneNumbers[0].id.substring(0, 12)}...
+
+                    {/* Phone Number ID */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 wark:text-gray-400">Phone Number ID</span>
+                        <button
+                          onClick={() => copyToClipboard(healthStatus.phoneNumbers[0].id, 'Phone Number ID')}
+                          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 hover:bg-gray-200 wark:bg-gray-700 wark:hover:bg-gray-600 px-2 py-1 text-xs font-medium text-gray-600 wark:text-gray-300 transition-all duration-200 hover:scale-105"
+                        >
+                          {copiedId === 'Phone Number ID' ? (
+                            <>
+                              <Check className="h-3 w-3 text-green-500" />
+                              <span className="text-green-500">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 bg-gray-50 wark:bg-gray-800 px-3 py-2 rounded-lg border">
+                        <code className="text-xs font-mono text-gray-700 wark:text-gray-300 flex-1 truncate">
+                          {healthStatus.phoneNumbers[0].id}
+                        </code>
+                      </div>
                     </div>
+
+                    {/* WABA ID */}
+                    {user?.wabaAccounts && user.wabaAccounts.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-500 wark:text-gray-400">WABA ID</span>
+                          <button
+                            onClick={() => copyToClipboard(user.wabaAccounts[0].wabaId, 'WABA ID')}
+                            className="inline-flex items-center gap-1 rounded-lg bg-gray-100 hover:bg-gray-200 wark:bg-gray-700 wark:hover:bg-gray-600 px-2 py-1 text-xs font-medium text-gray-600 wark:text-gray-300 transition-all duration-200 hover:scale-105"
+                          >
+                            {copiedId === 'WABA ID' ? (
+                              <>
+                                <Check className="h-3 w-3 text-green-500" />
+                                <span className="text-green-500">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 bg-gray-50 wark:bg-gray-800 px-3 py-2 rounded-lg border">
+                          <code className="text-xs font-mono text-gray-700 wark:text-gray-300 flex-1 truncate">
+                            {user.wabaAccounts[0].wabaId}
+                          </code>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Quality Rating Card */}
@@ -575,22 +654,26 @@ export default function HomePage() {
                   <div className="group rounded-xl border-2 border-blue-100 bg-gradient-to-br from-blue-50/50 to-white p-5 transition-all duration-300 hover:border-blue-200 hover:shadow-md wark:from-blue-900/10 wark:to-muted/40">
                     <h4 className="font-semibold text-gray-900 wark:text-white mb-4">Quick Actions</h4>
                     <div className="space-y-2">
-                      <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
-                        <span className="flex items-center gap-2">
-                          <ActivitySquare className="h-4 w-4 text-blue-500" />
-                          View message metrics
-                        </span>
-                        <ArrowRight className="h-4 w-4 text-gray-400" />
-                      </button>
-                      <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
-                        <span className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-blue-500" />
-                          Optimize templates
-                        </span>
-                        <ArrowRight className="h-4 w-4 text-gray-400" />
-                      </button>
-                      <Link href='/settings/whatsapp-profile'>
+                      <Link href='/analytics'>
                         <button className="w-full text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
+                          <span className="flex items-center gap-2">
+                            <ActivitySquare className="h-4 w-4 text-blue-500" />
+                            View message metrics
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-gray-400" />
+                        </button>
+                      </Link>
+                      <Link href='/templates'>
+                        <button className="w-full mt-2 text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
+                          <span className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-blue-500" />
+                            Optimize templates
+                          </span>
+                          <ArrowRight className="h-4 w-4 text-gray-400" />
+                        </button>
+                      </Link>
+                      <Link href='/settings/whatsapp-profile'>
+                        <button className="w-full mt-2 text-left text-sm bg-white border hover:bg-blue-50 hover:border-blue-200 px-3 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:hover:bg-blue-900/20">
                           <span className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-blue-500" />
                             Review business profile
@@ -680,7 +763,7 @@ export default function HomePage() {
                 }
                 onClick={() => setActiveTab('whatsapp')}
               >
-                <Phone className="h-4 w-4 inline mr-2" />
+                <FaWhatsapp className="h-4 w-4 inline mr-2" />
                 WhatsApp
                 {activeTab === 'whatsapp' && (
                   <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 h-0.5 w-8 bg-primary rounded-full" />
@@ -735,7 +818,7 @@ export default function HomePage() {
                       autoPlay
                       muted
                       loop
-                      className='h-[450px] w-full object-cover'
+                      className='h-[550px] w-full object-cover'
                     />
                   </div>
                   <div className="mt-3 text-center">
@@ -873,24 +956,24 @@ export default function HomePage() {
 
           {/* Quick action buttons */}
           <div className="flex flex-wrap gap-3 pt-4 border-t">
-            <Link href="/live-chat">
+            {/* <Link href="/live-chat">
               <button className="inline-flex items-center gap-2 rounded-lg border border-dashed border-muted-foreground/30 px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                 <MessageSquare className="h-4 w-4" />
                 Live Chat Setup
               </button>
-            </Link>
+            </Link> */}
             <Link href="/templates">
               <button className="inline-flex items-center gap-2 rounded-lg border border-dashed border-muted-foreground/30 px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                 <FolderKanban className="h-4 w-4" />
                 Template Library
               </button>
             </Link>
-            <Link href="/ai-assistant">
+            {/* <Link href="/ai-assistant">
               <button className="inline-flex items-center gap-2 rounded-lg border border-dashed border-muted-foreground/30 px-4 py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                 <Bot className="h-4 w-4" />
                 AI Assistant
               </button>
-            </Link>
+            </Link> */}
           </div>
         </div>
       </main>

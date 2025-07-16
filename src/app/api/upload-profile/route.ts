@@ -61,131 +61,200 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }, { status: 404 });
     }
 
-    // Validate file type based on intended use
-    const allowedTypes: Record<string, string[]> = {
-      'image': ['image/jpeg', 'image/png', 'image/jpg'],
-      'video': ['video/mp4', 'video/3gpp'],
-      'document': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-      'audio': ['audio/mpeg', 'audio/ogg', 'audio/aac', 'audio/amr'],
-      'profile_picture': ['image/jpeg', 'image/png', 'image/jpg']
-    };
-
-    if (!type || !allowedTypes[type]?.includes(file.type)) {
-      return NextResponse.json(
-        { error: `Invalid file type ${file.type} for selected media type ${type}. Allowed types: ${allowedTypes[type]?.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    console.log('Using WABA account:', {
-      wabaId: wabaAccount.wabaId,
-      phoneNumberId: wabaAccount.phoneNumberId
-    });
-
-    // Upload to WhatsApp Media API via Interakt
-    const mediaFormData = new FormData();
-    mediaFormData.append('file', file);
-    mediaFormData.append('type', type === 'profile_picture' ? 'image' : type);
-    mediaFormData.append('messaging_product', 'whatsapp');
-
-    console.log('Uploading to Interakt API:', {
-      url: `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/media`,
-      headers: {
-        'x-waba-id': wabaAccount.wabaId,
-        'x-access-token': INT_TOKEN ? 'Present' : 'Missing'
+    // For profile pictures, we need to use the media_handle endpoint
+    if (type === 'profile_picture') {
+      // Validate that it's an image
+      if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+        return NextResponse.json(
+          { error: `Invalid file type ${file.type} for profile picture. Only JPEG and PNG are supported.` },
+          { status: 400 }
+        );
       }
-    });
 
-    const uploadResponse = await fetch(
-      `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/media`,
-      {
-        method: 'POST',
+      // Use media_handle endpoint for profile pictures
+      const mediaFormData = new FormData();
+      mediaFormData.append('file', file);
+      mediaFormData.append('type', 'image/jpeg'); // WhatsApp expects image/jpeg or image/png
+      mediaFormData.append('messaging_product', 'whatsapp');
+
+      console.log('Uploading profile picture to media_handle endpoint:', {
+        url: `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/media_handle`,
         headers: {
-          'x-access-token': INT_TOKEN!,
           'x-waba-id': wabaAccount.wabaId,
-        },
-        body: mediaFormData
-      }
-    );
+          'x-access-token': INT_TOKEN ? 'Present' : 'Missing'
+        }
+      });
 
-    const responseText = await uploadResponse.text();
-    console.log('Interakt API response:', {
-      status: uploadResponse.status,
-      statusText: uploadResponse.statusText,
-      response: responseText
-    });
-
-    if (!uploadResponse.ok) {
-      console.error('Media upload error:', responseText);
-      return NextResponse.json(
-        { error: `Failed to upload media to WhatsApp: ${responseText}` },
-        { status: 500 }
-      );
-    }
-
-    let uploadData;
-    try {
-      uploadData = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse upload response:', parseError);
-      return NextResponse.json(
-        { error: 'Invalid response from WhatsApp API' },
-        { status: 500 }
-      );
-    }
-
-    const mediaId = uploadData.id;
-    if (!mediaId) {
-      console.error('No media ID in response:', uploadData);
-      return NextResponse.json(
-        { error: 'No media ID received from WhatsApp' },
-        { status: 500 }
-      );
-    }
-
-    // Get media URL for preview
-    let mediaUrl = '';
-    try {
-      const mediaInfoResponse = await fetch(
-        `https://amped-express.interakt.ai/api/v17.0/${mediaId}`,
+      const uploadResponse = await fetch(
+        `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/media_handle`,
         {
-          method: 'GET',
+          method: 'POST',
           headers: {
             'x-access-token': INT_TOKEN!,
             'x-waba-id': wabaAccount.wabaId,
-          }
+          },
+          body: mediaFormData
         }
       );
 
-      if (mediaInfoResponse.ok) {
-        const mediaInfo = await mediaInfoResponse.json();
-        mediaUrl = mediaInfo.url || '';
+      const responseText = await uploadResponse.text();
+      console.log('Media handle API response:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        response: responseText
+      });
+
+      if (!uploadResponse.ok) {
+        console.error('Media handle upload error:', responseText);
+        return NextResponse.json(
+          { error: `Failed to upload profile picture: ${responseText}` },
+          { status: 500 }
+        );
       }
-    } catch (mediaInfoError) {
-      console.warn('Failed to get media URL:', mediaInfoError);
-      // Don't fail the upload if we can't get the URL
+
+      let uploadData;
+      try {
+        uploadData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse upload response:', parseError);
+        return NextResponse.json(
+          { error: 'Invalid response from WhatsApp API' },
+          { status: 500 }
+        );
+      }
+
+      const mediaHandle = uploadData.h;
+      if (!mediaHandle) {
+        console.error('No media handle in response:', uploadData);
+        return NextResponse.json(
+          { error: 'No media handle received from WhatsApp' },
+          { status: 500 }
+        );
+      }
+
+      console.log('Profile picture upload successful:', {
+        mediaHandle: mediaHandle,
+        fileName: file.name,
+        wabaAccount: wabaAccount.wabaId
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Profile picture uploaded successfully',
+        mediaHandle: mediaHandle,
+        type: type,
+        fileName: file.name,
+        fileSize: file.size,
+        wabaAccount: {
+          wabaId: wabaAccount.wabaId,
+          phoneNumberId: wabaAccount.phoneNumberId
+        }
+      });
+
+    } else {
+      // For other media types, use the regular media endpoint
+      const allowedTypes: Record<string, string[]> = {
+        'image': ['image/jpeg', 'image/png', 'image/jpg'],
+        'video': ['video/mp4', 'video/3gpp'],
+        'document': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        'audio': ['audio/mpeg', 'audio/ogg', 'audio/aac', 'audio/amr']
+      };
+
+      if (!allowedTypes[type]?.includes(file.type)) {
+        return NextResponse.json(
+          { error: `Invalid file type ${file.type} for selected media type ${type}. Allowed types: ${allowedTypes[type]?.join(', ')}` },
+          { status: 400 }
+        );
+      }
+
+      const mediaFormData = new FormData();
+      mediaFormData.append('file', file);
+      mediaFormData.append('type', file.type);
+      mediaFormData.append('messaging_product', 'whatsapp');
+
+      const uploadResponse = await fetch(
+        `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/media`,
+        {
+          method: 'POST',
+          headers: {
+            'x-access-token': INT_TOKEN!,
+            'x-waba-id': wabaAccount.wabaId,
+          },
+          body: mediaFormData
+        }
+      );
+
+      const responseText = await uploadResponse.text();
+      console.log('Regular media API response:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        response: responseText
+      });
+
+      if (!uploadResponse.ok) {
+        console.error('Media upload error:', responseText);
+        return NextResponse.json(
+          { error: `Failed to upload media: ${responseText}` },
+          { status: 500 }
+        );
+      }
+
+      let uploadData;
+      try {
+        uploadData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse upload response:', parseError);
+        return NextResponse.json(
+          { error: 'Invalid response from WhatsApp API' },
+          { status: 500 }
+        );
+      }
+
+      const mediaId = uploadData.id;
+      if (!mediaId) {
+        console.error('No media ID in response:', uploadData);
+        return NextResponse.json(
+          { error: 'No media ID received from WhatsApp' },
+          { status: 500 }
+        );
+      }
+
+      // Get media URL for preview
+      let mediaUrl = '';
+      try {
+        const mediaInfoResponse = await fetch(
+          `https://amped-express.interakt.ai/api/v17.0/${mediaId}`,
+          {
+            method: 'GET',
+            headers: {
+              'x-access-token': INT_TOKEN!,
+              'x-waba-id': wabaAccount.wabaId,
+            }
+          }
+        );
+
+        if (mediaInfoResponse.ok) {
+          const mediaInfo = await mediaInfoResponse.json();
+          mediaUrl = mediaInfo.url || '';
+        }
+      } catch (mediaInfoError) {
+        console.warn('Failed to get media URL:', mediaInfoError);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Media uploaded successfully',
+        mediaId: mediaId,
+        mediaUrl: mediaUrl,
+        type: type,
+        fileName: file.name,
+        fileSize: file.size,
+        wabaAccount: {
+          wabaId: wabaAccount.wabaId,
+          phoneNumberId: wabaAccount.phoneNumberId
+        }
+      });
     }
-
-    console.log('Upload successful:', {
-      mediaId: mediaId,
-      mediaUrl: mediaUrl,
-      fileName: file.name,
-      wabaAccount: wabaAccount.wabaId
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Media uploaded successfully',
-      mediaId: mediaId,
-      mediaUrl: mediaUrl,
-      type: type,
-      fileName: file.name,
-      fileSize: file.size,
-      wabaAccount: {
-        wabaId: wabaAccount.wabaId,
-        phoneNumberId: wabaAccount.phoneNumberId
-      }
-    });
 
   } catch (error) {
     console.error('Media upload error:', error);

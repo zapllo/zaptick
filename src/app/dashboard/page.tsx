@@ -684,7 +684,7 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="container mx-auto space-y-6 p-6">
+      <div className=" mx-auto space-y-6 p-6">
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">

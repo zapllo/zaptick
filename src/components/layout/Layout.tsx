@@ -17,7 +17,8 @@ import {
   Sparkles,
   Plus,
   LayoutDashboard,
-  Users
+  Users,
+  File
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,6 +49,7 @@ import {
 } from "@/components/ui/command";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
+import { FaWhatsapp } from "react-icons/fa";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -631,20 +633,20 @@ export default function Layout({ children }: LayoutProps) {
           </CommandEmpty>
           <CommandGroup heading="Quick Actions">
             <PermissionCheck resource="conversations" action="write" fallback={null}>
-              <CommandItem onSelect={() => router.push('/conversations/new')} className="cursor-pointer">
+              <CommandItem onSelect={() => router.push('/conversations')} className="cursor-pointer">
                 <MessageSquare className="mr-3 h-4 w-4" />
                 <span>New conversation</span>
               </CommandItem>
             </PermissionCheck>
             <PermissionCheck resource="contacts" action="write" fallback={null}>
-              <CommandItem onSelect={() => router.push('/contacts/new')} className="cursor-pointer">
+              <CommandItem onSelect={() => router.push('/contacts')} className="cursor-pointer">
                 <User className="mr-3 h-4 w-4" />
                 <span>Add contact</span>
               </CommandItem>
             </PermissionCheck>
             <CommandItem className="cursor-pointer">
-              <Bell className="mr-3 h-4 w-4" />
-              <span>Notifications</span>
+              <File className="mr-3 h-4 w-4" />
+              <span>New Template</span>
             </CommandItem>
           </CommandGroup>
           <CommandSeparator />
@@ -668,7 +670,7 @@ export default function Layout({ children }: LayoutProps) {
               </CommandItem>
             </PermissionCheck>
             <PermissionCheck resource="settings" action="read" fallback={null}>
-              <CommandItem onSelect={() => router.push('/settings')} className="cursor-pointer">
+              <CommandItem onSelect={() => router.push('/settings/account')} className="cursor-pointer">
                 <Settings className="mr-3 h-4 w-4" />
                 <span>Settings</span>
               </CommandItem>
@@ -679,9 +681,9 @@ export default function Layout({ children }: LayoutProps) {
               <CommandSeparator />
               <CommandGroup heading="WhatsApp Business Accounts">
                 {user.wabaAccounts.map((account, i) => (
-                  <CommandItem key={i} onSelect={() => router.push(`/settings/waba/${account.id}`)} className="cursor-pointer">
-                    <MessageCircle className="mr-3 h-4 w-4" />
-                    <span>{account.name || `Account ${i + 1}`}</span>
+                  <CommandItem key={i} onSelect={() => router.push(`/settings/whatsapp-profile`)} className="cursor-pointer">
+                    <FaWhatsapp className="mr-3 h-4 w-4" />
+                    <span>{account.name || `WhatsApp Profile ${i + 1}`}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>

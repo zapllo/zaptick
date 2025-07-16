@@ -267,7 +267,7 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
       <aside
         className={cn(
           "fixed left-0 top-0 z-30 flex h-screen flex-col bg-background/95 backdrop-blur-xl border-r transition-all duration-300 ease-in-out",
-          collapsed ? "w-[70px]" : "w-[280px]",
+          collapsed ? "w-[75px]" : "w-[280px]",
         )}
       >
         {/* Header */}

@@ -438,7 +438,7 @@ export default function AccountPage() {
     return (
         <ProtectedRoute>
             <Layout>
-                <div className="container mx-auto p-6 max-w-7xl">
+                <div className=" mx-auto p-6 ">
                     <div className="space-y-8">
                         {/* Header */}
                         <div className="space-y-4">

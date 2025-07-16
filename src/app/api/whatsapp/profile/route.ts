@@ -5,7 +5,6 @@ import User from '@/models/User';
 import Company from '@/models/Company';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
-const phoneNumberId = process.env.PHONE_NUMBER_ID;
 
 export async function GET(req: NextRequest) {
     try {
@@ -35,6 +34,7 @@ export async function GET(req: NextRequest) {
         const profileData = {
             about: company.whatsappProfile?.about || '',
             profilePictureUrl: company.whatsappProfile?.profilePictureUrl || '',
+            profilePictureHandle: company.whatsappProfile?.profilePictureHandle || '',
             email: company.whatsappProfile?.email || '',
             website: company.whatsappProfile?.website || '',
             address: company.whatsappProfile?.address || '',
@@ -206,7 +206,7 @@ async function updateWhatsAppBusinessProfile(wabaAccount: any, profileData: any)
             messaging_product: 'whatsapp'
         };
 
-        // Add fields that are provided (excluding profile picture for now)
+        // Add fields that are provided
         if (profileData.about) {
             updatePayload.about = profileData.about;
         }
@@ -231,15 +231,20 @@ async function updateWhatsAppBusinessProfile(wabaAccount: any, profileData: any)
             updatePayload.vertical = profileData.businessCategory;
         }
 
+        // Add profile picture handle if provided
+        if (profileData.profilePictureHandle) {
+            updatePayload.profile_picture_handle = profileData.profilePictureHandle;
+        }
+
         console.log('Updating WhatsApp Business Profile:', {
             wabaId: wabaAccount.wabaId,
             phoneNumberId: wabaAccount.phoneNumberId,
             payload: updatePayload
         });
 
-        // Update business profile (without profile picture first)
+        // Update business profile with all fields including profile picture
         const profileResponse = await fetch(
-            `https://amped-express.interakt.ai/api/v17.0/${phoneNumberId}/whatsapp_business_profile`,
+            `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/whatsapp_business_profile`,
             {
                 method: 'POST',
                 headers: {
@@ -251,70 +256,22 @@ async function updateWhatsAppBusinessProfile(wabaAccount: any, profileData: any)
             }
         );
 
+        const responseText = await profileResponse.text();
+        console.log('WhatsApp Business Profile update response:', {
+            status: profileResponse.status,
+            statusText: profileResponse.statusText,
+            response: responseText
+        });
+
         if (!profileResponse.ok) {
-            const errorData = await profileResponse.text();
-            console.error('WhatsApp Business Profile update error:', errorData);
-            throw new Error(`Failed to update business profile: ${errorData}`);
+            console.error('WhatsApp Business Profile update error:', responseText);
+            throw new Error(`Failed to update business profile: ${responseText}`);
         }
 
         console.log('WhatsApp Business Profile updated successfully');
 
-        // Update profile picture separately if provided
-        if (profileData.profilePictureHandle) {
-            await updateProfilePictureDirectly(wabaAccount, profileData.profilePictureHandle);
-        }
-
     } catch (error) {
         console.error('Error updating WhatsApp Business Profile:', error);
-        throw error;
-    }
-}
-
-// Helper function to update profile picture directly
-async function updateProfilePictureDirectly(wabaAccount: any, mediaHandle: string) {
-    try {
-        console.log('Updating profile picture directly:', {
-            wabaId: wabaAccount.wabaId,
-            phoneNumberId: wabaAccount.phoneNumberId,
-            mediaHandle: mediaHandle
-        });
-
-        // Update profile picture in a separate request
-        const picturePayload = {
-            messaging_product: 'whatsapp',
-            profile_picture_handle: mediaHandle
-        };
-
-        const pictureResponse = await fetch(
-            `https://amped-express.interakt.ai/api/v17.0/${phoneNumberId}/whatsapp_business_profile`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-access-token': INT_TOKEN!,
-                    'x-waba-id': wabaAccount.wabaId,
-                },
-                body: JSON.stringify(picturePayload)
-            }
-        );
-
-        const responseText = await pictureResponse.text();
-        console.log('Profile picture update response:', {
-            status: pictureResponse.status,
-            statusText: pictureResponse.statusText,
-            response: responseText
-        });
-
-        if (!pictureResponse.ok) {
-            console.error('Profile picture update error:', responseText);
-            throw new Error(`Failed to update profile picture: ${responseText}`);
-        }
-
-        console.log('Profile picture updated successfully');
-        return { success: true, mediaHandle };
-
-    } catch (error) {
-        console.error('Error updating profile picture:', error);
         throw error;
     }
 }

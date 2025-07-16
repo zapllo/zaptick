@@ -129,7 +129,7 @@ async function processMessage(
   const senderPhone = waId.replace(/^\+?/, '');
   const ts = new Date(+m.timestamp * 1000);
 
-  /* ---- contact ------------------------------------------------------- */
+   /* ---- contact ------------------------------------------------------- */
 
   let contact = await Contact.findOne({
     $or: [
@@ -143,7 +143,9 @@ async function processMessage(
 
   if (!contact) {
     const waContact = contacts.find((c: any) => c.wa_id === waId);
-    contact = await Contact.create({
+    
+    // Create contact without companyId for now
+    const contactData = {
       name: waContact?.profile?.name || `+${senderPhone}`,
       phone: `+${senderPhone}`,
       wabaId: wabaAcc.wabaId,
@@ -151,7 +153,15 @@ async function processMessage(
       userId,
       whatsappOptIn: true,
       lastMessageAt: ts,
-    });
+    };
+
+    // Only add companyId if the user has one
+    const user = await User.findById(userId);
+    if (user && user.companyId) {
+      (contactData as any).companyId = user.companyId;
+    }
+
+    contact = await Contact.create(contactData);
   } else {
     contact.lastMessageAt = ts;
     contact.whatsappOptIn = true;

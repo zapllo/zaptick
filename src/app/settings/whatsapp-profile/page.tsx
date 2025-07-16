@@ -10,9 +10,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, AlertCircle, CheckCircle2, Loader2, Share2, Search } from "lucide-react";
+import {
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Share2,
+  Search,
+  Phone,
+  Mail,
+  Globe,
+  MapPin,
+  Building2,
+  Camera,
+  Info,
+  Sparkles,
+  Zap,
+  Check,
+  ArrowRight,
+  Settings,
+  User,
+  MessageCircle,
+  Video,
+  MoreVertical
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { FaWhatsapp } from "react-icons/fa";
 
 interface ProfileData {
   about: string;
@@ -26,10 +51,10 @@ interface ProfileData {
     wabaId: string;
     businessName: string;
     phoneNumberId: string;
+    phoneNumber: string;
     lastSyncAt: string;
   }>;
 }
-
 
 export default function WhatsAppProfileSettings() {
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -42,13 +67,13 @@ export default function WhatsAppProfileSettings() {
     businessDescription: '',
     wabaAccounts: []
   });
-  const [selectedWaba, setSelectedWaba] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [notification, setNotification] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
+  const [activeField, setActiveField] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Load profile data and user's WABA accounts on mount
@@ -267,7 +292,6 @@ export default function WhatsAppProfileSettings() {
     }
   };
 
-
   // Utility to prettify the category
   const prettyCategory = (raw: string) =>
     raw
@@ -277,344 +301,623 @@ export default function WhatsAppProfileSettings() {
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
 
+  const businessCategories = [
+    { value: "AUTO", label: "🚗 Automotive" },
+    { value: "BEAUTY", label: "💄 Beauty, Spa & Salon" },
+    { value: "APPAREL", label: "👔 Clothing & Apparel" },
+    { value: "EDU", label: "📚 Education" },
+    { value: "ENTERTAIN", label: "🎭 Entertainment" },
+    { value: "EVENT_PLAN", label: "🎉 Event Planning" },
+    { value: "FINANCE", label: "💰 Finance & Banking" },
+    { value: "GROCERY", label: "🛒 Food & Grocery" },
+    { value: "GOVT", label: "🏛️ Government & Public Service" },
+    { value: "HOTEL", label: "🏨 Hotel & Lodging" },
+    { value: "HEALTH", label: "🏥 Medical & Health" },
+    { value: "NONPROFIT", label: "❤️ Non-Profit" },
+    { value: "PROF_SERVICES", label: "💼 Professional Services" },
+    { value: "RETAIL", label: "🛍️ Shopping & Retail" },
+    { value: "TRAVEL", label: "✈️ Travel & Transportation" },
+    { value: "RESTAURANT", label: "🍽️ Restaurant" },
+    { value: "OTHER", label: "📦 Other" },
+  ];
+
   return (
     <Layout>
-      <div className="container mx-auto py-10 px-4 ">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">WhatsApp Business Profile</h1>
-            <p className="text-muted-foreground mt-2">Manage how your business appears to customers on WhatsApp</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 wark:from-gray-900 wark:via-gray-800 wark:to-gray-900">
+        <div className=" mx-auto p-6">
+          {/* Header Section */}
+          <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-r from-green-50 via-white to-emerald-50 p-8 shadow-sm mb-8 wark:from-green-900/10 wark:via-gray-800 wark:to-emerald-900/10">
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                  <FaWhatsapp className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 wark:text-white mb-2">
+                    WhatsApp Business Profile
+                  </h1>
+                  <p className="text-gray-600 wark:text-gray-300">
+                    Manage how your business appears to customers on WhatsApp
+                  </p>
+                  {profileData.wabaAccounts.length > 0 && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 wark:bg-green-900/30 wark:text-green-400">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500 mr-2 animate-pulse" />
+                        {profileData.wabaAccounts.length} account(s) connected
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="hidden md:flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-green-500" />
+                <span className="text-sm text-gray-600 wark:text-gray-300">Live Preview</span>
+              </div>
+            </div>
+
+            {/* Decorative elements */}
+            <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-green-500/5" />
+            <div className="absolute -right-4 -bottom-4 h-20 w-20 rounded-full bg-green-500/10" />
           </div>
 
-        
-        </div>
+          {/* Notification */}
+          {notification.type && (
+            <div className="mb-6 animate-in slide-in-from-top-2 duration-300">
+              <Alert
+                variant={notification.type === "success" ? "default" : "destructive"}
+                className="border-l-4 border-l-green-500 bg-green-50 wark:bg-green-900/20"
+              >
+                {notification.type === "success" ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                )}
+                <AlertTitle className="text-green-800 wark:text-green-200">
+                  {notification.type === "success" ? "Success!" : "Error"}
+                </AlertTitle>
+                <AlertDescription className="text-green-700 wark:text-green-300">
+                  {notification.message}
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
 
-        <Separator className="mb-8" />
-
-        {notification.type && (
-          <Alert
-            variant={notification.type === "success" ? "default" : "destructive"}
-            className="mb-6"
-          >
-            {notification.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : (
-              <AlertCircle className="h-4 w-4" />
-            )}
-            <AlertTitle>
-              {notification.type === "success" ? "Success" : "Error"}
-            </AlertTitle>
-            <AlertDescription>
-              {notification.message}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <Card className="shadow-md border-0">
-              <CardHeader>
-                <CardTitle>Business Profile Settings</CardTitle>
-                <CardDescription>
-                  Configure your business information that appears to customers
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* Business Logo */}
-                {/* Business Logo */}
-                <div className="space-y-2">
-                  <Label htmlFor="businessLogo" className="text-sm font-medium">Profile Picture</Label>
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-20 w-20">
-                      <AvatarImage src={profileData.profilePictureUrl} alt="Business profile" />
-                      <AvatarFallback className="bg-primary/10">
-                        {profileData.businessDescription?.charAt(0).toUpperCase() || 'B'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <label htmlFor="businessLogo" className="cursor-pointer">
-                        <div className="border rounded-md flex items-center justify-center p-4 hover:bg-accent transition-colors">
-                          {isUploading ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <Upload size={18} className="mr-2 text-primary" />
-                          )}
-                          <span className="text-sm">
-                            {isUploading ? 'Uploading...' : 'Upload new picture'}
-                          </span>
-                        </div>
-                      </label>
-                      <Input
-                        id="businessLogo"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png"
-                        className="hidden"
-                        onChange={handleProfilePictureUpload}
-                        disabled={isUploading}
-                      />
-                      <p className="text-xs text-muted-foreground mt-2">
-                        JPEG or PNG, square image recommended, max 5MB
-                      </p>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {/* Settings Form */}
+            <div className="space-y-6">
+              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm wark:bg-gray-800/80">
+                <CardHeader className="pb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/10">
+                      <Settings className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Profile Settings</CardTitle>
+                      <CardDescription>
+                        Configure your business information
+                      </CardDescription>
                     </div>
                   </div>
-                </div>
+                </CardHeader>
 
-                <Separator />
+                <CardContent className="space-y-8">
+                  {/* Profile Picture Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">Profile Picture</Label>
+                    </div>
 
-                {/* Business Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="about" className="text-sm font-medium">About Your Business</Label>
-                  <Textarea
-                    id="about"
-                    placeholder="Tell customers about your business, products or services"
-                    className="resize-none h-24"
-                    value={profileData.about}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, about: e.target.value }))}
-                    maxLength={256}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {profileData.about.length}/256 characters
-                  </p>
-                </div>
+                    <div className="flex items-center gap-6">
+                      <div className="relative group">
+                        <Avatar className="h-24 w-24 border-4 border-white shadow-lg transition-all duration-300 group-hover:scale-105">
+                          <AvatarImage src={profileData.profilePictureUrl} alt="Business profile" />
+                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary text-2xl font-bold">
+                            {profileData.businessDescription?.charAt(0).toUpperCase() || 'B'}
+                          </AvatarFallback>
+                        </Avatar>
+                        {isUploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                            <Loader2 className="h-6 w-6 animate-spin text-white" />
+                          </div>
+                        )}
+                      </div>
 
-                {/* Business Category */}
-                {/* Business Category */}
-                <div className="space-y-2">
-                  <Label htmlFor="businessCategory" className="text-sm font-medium">Business Category</Label>
-                  <Select
-                    value={profileData.businessCategory}
-                    onValueChange={(value) => setProfileData(prev => ({ ...prev, businessCategory: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your business category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AUTO">Automotive</SelectItem>
-                      <SelectItem value="BEAUTY">Beauty, Spa & Salon</SelectItem>
-                      <SelectItem value="APPAREL">Clothing & Apparel</SelectItem>
-                      <SelectItem value="EDU">Education</SelectItem>
-                      <SelectItem value="ENTERTAIN">Entertainment</SelectItem>
-                      <SelectItem value="EVENT_PLAN">Event Planning</SelectItem>
-                      <SelectItem value="FINANCE">Finance & Banking</SelectItem>
-                      <SelectItem value="GROCERY">Food & Grocery</SelectItem>
-                      <SelectItem value="GOVT">Government & Public Service</SelectItem>
-                      <SelectItem value="HOTEL">Hotel & Lodging</SelectItem>
-                      <SelectItem value="HEALTH">Medical & Health</SelectItem>
-                      <SelectItem value="NONPROFIT">Non-Profit</SelectItem>
-                      <SelectItem value="PROF_SERVICES">Professional Services</SelectItem>
-                      <SelectItem value="RETAIL">Shopping & Retail</SelectItem>
-                      <SelectItem value="TRAVEL">Travel & Transportation</SelectItem>
-                      <SelectItem value="RESTAURANT">Restaurant</SelectItem>
-                      <SelectItem value="ALCOHOL">Alcohol</SelectItem>
-                      <SelectItem value="ONLINE_GAMBLING">Online Gambling</SelectItem>
-                      <SelectItem value="PHYSICAL_GAMBLING">Physical Gambling</SelectItem>
-                      <SelectItem value="OTC_DRUGS">Over-the-Counter Drugs</SelectItem>
-                      <SelectItem value="OTHER">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* Contact Information */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">Business Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="business@example.com"
-                      value={profileData.email}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                    />
+                      <div className="flex-1 space-y-3">
+                        <label htmlFor="businessLogo" className="cursor-pointer">
+                          <div className="group relative overflow-hidden rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-4 transition-all duration-300 hover:border-primary hover:bg-primary/5 wark:border-gray-700 wark:bg-gray-800">
+                            <div className="flex items-center justify-center gap-3 text-gray-600 wark:text-gray-300">
+                              {isUploading ? (
+                                <>
+                                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                  <span className="font-medium">Uploading...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-5 w-5 text-primary" />
+                                  <span className="font-medium">Upload new picture</span>
+                                </>
+                              )}
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          </div>
+                        </label>
+                        <Input
+                          id="businessLogo"
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          className="hidden"
+                          onChange={handleProfilePictureUpload}
+                          disabled={isUploading}
+                        />
+                        <p className="text-xs text-gray-500 wark:text-gray-400">
+                          JPEG or PNG, square image recommended, max 5MB
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="website" className="text-sm font-medium">Website</Label>
-                    <Input
-                      id="website"
-                      type="url"
-                      placeholder="https://example.com"
-                      value={profileData.website}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
-                    />
+                  <Separator className="bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+                  {/* Business About */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">About Your Business</Label>
+                    </div>
+                    <div className="relative">
+                      <Textarea
+                        placeholder="Tell customers about your business, products or services..."
+                        className={`resize-none h-24 transition-all duration-300 ${activeField === 'about' ? 'ring-2 ring-primary/20 border-primary' : ''
+                          }`}
+                        value={profileData.about}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, about: e.target.value }))}
+                        onFocus={() => setActiveField('about')}
+                        onBlur={() => setActiveField(null)}
+                        maxLength={256}
+                      />
+                      <div className="absolute bottom-3 right-3 text-xs text-gray-400">
+                        {profileData.about.length}/256
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-sm font-medium">Business Address</Label>
+                  {/* Business Category */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">Business Category</Label>
+                    </div>
+                    <Select
+                      value={profileData.businessCategory}
+                      onValueChange={(value) => setProfileData(prev => ({ ...prev, businessCategory: value }))}
+                    >
+                      <SelectTrigger className="h-12 transition-all duration-300 hover:border-primary/50">
+                        <SelectValue placeholder="Select your business category" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {businessCategories.map((category) => (
+                          <SelectItem key={category.value} value={category.value}>
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Contact Information Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        <Label className="text-sm font-semibold">Business Email</Label>
+                      </div>
+                      <Input
+                        type="email"
+                        placeholder="business@example.com"
+                        className={`h-12 transition-all duration-300 ${activeField === 'email' ? 'ring-2 ring-primary/20 border-primary' : ''
+                          }`}
+                        value={profileData.email}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                        onFocus={() => setActiveField('email')}
+                        onBlur={() => setActiveField(null)}
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-primary" />
+                        <Label className="text-sm font-semibold">Website</Label>
+                      </div>
+                      <Input
+                        type="url"
+                        placeholder="https://example.com"
+                        className={`h-12 transition-all duration-300 ${activeField === 'website' ? 'ring-2 ring-primary/20 border-primary' : ''
+                          }`}
+                        value={profileData.website}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
+                        onFocus={() => setActiveField('website')}
+                        onBlur={() => setActiveField(null)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Business Address */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">Business Address</Label>
+                    </div>
                     <Textarea
-                      id="address"
                       placeholder="Enter your business address"
-                      className="resize-none h-20"
+                      className={`resize-none h-20 transition-all duration-300 ${activeField === 'address' ? 'ring-2 ring-primary/20 border-primary' : ''
+                        }`}
                       value={profileData.address}
                       onChange={(e) => setProfileData(prev => ({ ...prev, address: e.target.value }))}
+                      onFocus={() => setActiveField('address')}
+                      onBlur={() => setActiveField(null)}
                     />
                   </div>
-                </div>
 
-                {/* Business Description (for verification) */}
-                <div className="space-y-2">
-                  <Label htmlFor="businessDescription" className="text-sm font-medium">
-                    Business Description (for verification)
-                  </Label>
-                  <Textarea
-                    id="businessDescription"
-                    placeholder="Detailed description of your business for verification purposes"
-                    className="resize-none h-20"
-                    value={profileData.businessDescription}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, businessDescription: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This helps WhatsApp verify your business and may not be visible to customers
-                  </p>
+                  {/* Business Description */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">Business Name</Label>
+                    </div>
+                    <Input
+                      placeholder="Your business name"
+                      className={`h-12 transition-all duration-300 ${activeField === 'businessDescription' ? 'ring-2 ring-primary/20 border-primary' : ''
+                        }`}
+                      value={profileData.businessDescription}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, businessDescription: e.target.value }))}
+                      onFocus={() => setActiveField('businessDescription')}
+                      onBlur={() => setActiveField(null)}
+                    />
+                  </div>
+                </CardContent>
+
+                <CardFooter className="pt-6">
+                  <Button
+                    onClick={updateBusinessProfile}
+                    disabled={isLoading}
+                    className="w-full h-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Updating Profile...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="mr-2 h-5 w-5" />
+                        Update WhatsApp Profile
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+
+            {/* Enhanced WhatsApp Preview */}
+            <div className="relative">
+              <div className="sticky top-8">
+                <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm wark:bg-gray-800/80 overflow-hidden">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/10">
+                        <FaWhatsapp className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Live Preview</CardTitle>
+                        <CardDescription>
+                          How customers will see your business
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="flex justify-center p-6">
+                    {/* Enhanced Phone Mockup */}
+                    <div className="relative">
+                      {/* Phone Frame */}
+                      <div className="relative w-80 h-[850px] bg-black rounded-[2.5rem] p-2 shadow-2xl">
+                        {/* Screen */}
+                        <div className="w-full h-full bg-[#0d1421] rounded-[2rem] overflow-hidden relative">
+                          {/* Status Bar */}
+                          <div className="flex items-center justify-between px-6 py-3 bg-[#0d1421] text-white text-sm">
+                            <div className="flex items-center gap-1">
+                              <div className="w-1 h-1 bg-white rounded-full"></div>
+                              <div className="w-1 h-1 bg-white rounded-full"></div>
+                              <div className="w-1 h-1 bg-white/50 rounded-full"></div>
+                              {/* <span className="text-xs ml-2">Airtel</span> */}
+                            </div>
+
+                            <div className="text-xs">
+                              {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-6 h-3 border border-white rounded-sm">
+                                <div className="w-4 h-1 bg-white rounded-full mt-0.5 ml-0.5"></div>
+                              </div>
+                              <div className="text-xs">100%</div>
+                            </div>
+                          </div>
+
+                          {/* Header */}
+                          <div className="flex items-center justify-between px-4 py-3 bg-[#1f2937] border-b border-gray-700">
+                            <div className="flex items-center gap-3">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-green-400 text-sm font-medium">Business Info</span>
+                            </div>
+                            <MoreVertical className="h-5 w-5 text-gray-400" />
+                          </div>
+
+                          {/* Profile Content */}
+                          <div className="px-4 py-6 space-y-6">
+                            {/* Avatar and Name */}
+                            <div className="flex flex-col items-center text-center space-y-4">
+                              <div className="relative">
+                                <Avatar className="h-20 w-20 border-3 border-green-500/30 shadow-lg">
+                                  <AvatarImage
+                                    src={profileData.profilePictureUrl}
+                                    alt="Business profile"
+                                  />
+                                  <AvatarFallback className="bg-gradient-to-br from-green-500/20 to-green-600/20 text-green-400 text-2xl font-bold">
+                                    {profileData.businessDescription?.charAt(0).toUpperCase() || "B"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                  <Check className="h-3 w-3 text-white" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <h3 className="text-white font-semibold text-lg">
+                                  {profileData.businessDescription || "Your Business Name"}
+                                </h3>
+                                {profileData.wabaAccounts.length > 0 && (
+                                  <p className="text-gray-400 text-sm font-mono">
+                                    {profileData.wabaAccounts[0].phoneNumber || "+1 (555) 123-4567"}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3">
+                              <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white h-10 rounded-lg transition-all duration-200 hover:scale-105">
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                Message
+                              </Button>
+
+                              <Button variant="outline" className="flex-1  h-10 rounded-lg transition-all duration-200 hover:scale-105">
+                                <Phone className="h-4 w-4 mr-2" />
+                                Call
+                              </Button>
+                              <Button variant="outline" className=" h-10 w-10 rounded-lg transition-all duration-200 hover:scale-105">
+                                <Video className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {/* Business Info */}
+                            <div className="space-y-4">
+                              {profileData.about && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Info className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm font-medium text-gray-300">About</span>
+                                  </div>
+                                  <p className="text-sm text-gray-400 leading-relaxed bg-gray-800/50 p-3 rounded-lg">
+                                    {profileData.about}
+                                  </p>
+                                </div>
+                              )}
+
+                              {profileData.businessCategory && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm font-medium text-gray-300">Category</span>
+                                  </div>
+                                  <p className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
+                                    {businessCategories.find(c => c.value === profileData.businessCategory)?.label || prettyCategory(profileData.businessCategory)}
+                                  </p>
+                                </div>
+                              )}
+
+                              {profileData.email && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Mail className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm font-medium text-gray-300">Email</span>
+                                  </div>
+                                  <p className="text-sm text-blue-400 bg-gray-800/50 p-3 rounded-lg break-all">
+                                    {profileData.email}
+                                  </p>
+                                </div>
+                              )}
+
+                              {profileData.website && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Globe className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm font-medium text-gray-300">Website</span>
+                                  </div>
+                                  <p className="text-sm text-blue-400 bg-gray-800/50 p-3 rounded-lg break-all">
+                                    {profileData.website}
+                                  </p>
+                                </div>
+                              )}
+
+                              {profileData.address && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm font-medium text-gray-300">Address</span>
+                                  </div>
+                                  <p className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg whitespace-pre-line">
+                                    {profileData.address}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Empty State */}
+                              {!profileData.about && !profileData.businessCategory && !profileData.email && !profileData.website && !profileData.address && (
+                                <div className="text-center py-8 space-y-3">
+                                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto">
+                                    <User className="h-8 w-8 text-gray-400" />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-gray-400 text-sm">Complete your profile</p>
+                                    <p className="text-gray-500 text-xs">Add business information to get started</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Phone Shadow */}
+                      <div className="absolute inset-0 bg-black/20 rounded-[2.5rem] -z-10 transform translate-y-1"></div>
+                    </div>
+                  </CardContent>
+
+                  <CardFooter className="pt-4 pb-6">
+                    <div className="w-full text-center">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 wark:bg-green-900/20 wark:text-green-400 wark:border-green-800">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Real-time Preview
+                      </Badge>
+                    </div>
+                  </CardFooter>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Help Section */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Tips Card */}
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50 wark:from-blue-900/20 wark:to-indigo-900/20">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                    <Info className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-blue-900 wark:text-blue-200">
+                      Profile Optimization Tips
+                    </h4>
+                    <ul className="text-sm text-blue-800 wark:text-blue-300 space-y-2">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Use a clear, professional profile picture</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Write a compelling business description</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Include your website and contact information</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <span>Select the most relevant business category</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
+            </Card>
 
-              <CardFooter className="flex flex-col space-y-4">
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={updateBusinessProfile}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating Profile...
-                    </>
-                  ) : (
-                    'Update WhatsApp Profile'
-                  )}
-                </Button>
-
-               
-              </CardFooter>
+            {/* Important Notes Card */}
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-orange-50 wark:from-amber-900/20 wark:to-orange-900/20">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
+                    <AlertCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-amber-900 wark:text-amber-200">
+                      Important Notes
+                    </h4>
+                    <ul className="text-sm text-amber-800 wark:text-amber-300 space-y-2">
+                      <li className="flex items-start gap-2">
+                        <ArrowRight className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <span>Profile changes may take a few minutes to appear</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <ArrowRight className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <span>Business verification may be required for certain features</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <ArrowRight className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <span>Changes apply to all connected WhatsApp accounts</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <ArrowRight className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <span>Profile picture should be square and at least 640x640px</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </div>
 
-          {/* Preview Section */}
-          <div className="grid grid-cols-1  -mt-28">
-            {/* Settings Card */}
-            <div>{/* (unchanged settings form code) */}</div>
-
-            {/* ===== Redesigned Preview Section ===== */}
-            <div className="hidden lg:block ">
-              <Card className="border-0 shadow-md h-full">
-                <CardHeader>
-                  <CardTitle className="text-base">Profile Preview</CardTitle>
-                  <CardDescription>
-                    How customers will see your business
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="flex flex-col items-center justify-center p-6 space-y-6">
-                  {/* Phone Mockup */}
-                  <div className="w-full max-w-sm mx-auto rounded-2xl p-2 overflow-hidden shadow-lg bg-[#0d0d0d] text-white">
-                    {/* Top Section – avatar, name, phone */}
-                    <div className="flex flex-col items-center pt-24 pb-6 border-b border-[#1f1f1f]">
-                      <Avatar className="h-24 w-24 mb-3 border-2 border-[#2d2d2d]">
-                        <AvatarImage
-                          src={profileData.profilePictureUrl}
-                          alt="Business profile"
-                        />
-                        <AvatarFallback className="bg-green-800/20 text-green-400 text-2xl">
-                          {profileData.businessDescription?.charAt(0).toUpperCase() ||
-                            "B"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <h3 className="flex items-center gap-1 font-semibold text-lg">
-                        {profileData.businessDescription || "Your Business Name"}
-                        <CheckCircle2 className="h-4 w-4 text-blue-500" />
-                      </h3>
-                   
-                    </div>
-
-                    {/* Quick Action Buttons */}
-                    <div className="flex">
-                      <button className="flex-1 flex flex-col items-center justify-center py-3 border-r border-[#1f1f1f] hover:bg-[#1a1a1a] transition-colors">
-                        <Share2 className="h-4 w-4 mb-0.5" />
-                        <span className="text-[11px] font-medium">Share</span>
-                      </button>
-                      <button className="flex-1 flex flex-col items-center justify-center py-3 hover:bg-[#1a1a1a] transition-colors">
-                        <Search className="h-4 w-4 mb-0.5" />
-                        <span className="text-[11px] font-medium">Search</span>
-                      </button>
-                    </div>
-
-                    {/* Info Section */}
-                    <div className="space-y-4 px-4 py-5">
-                      {profileData.about && (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-300">About</p>
-                          <p className="text-sm text-gray-400 leading-snug">
-                            {profileData.about}
-                          </p>
-                        </div>
-                      )}
-
-                      {profileData.businessCategory && (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-300">Category</p>
-                          <p className="text-sm text-gray-400 leading-snug">
-                            {prettyCategory(profileData.businessCategory)}
-                          </p>
-                        </div>
-                      )}
-
-                      {profileData.email && (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-300">Email</p>
-                          <p className="text-sm text-blue-400 leading-snug break-all">
-                            {profileData.email}
-                          </p>
-                        </div>
-                      )}
-
-                      {profileData.website && (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-300">Website</p>
-                          <p className="text-sm text-blue-400 leading-snug break-all">
-                            {profileData.website}
-                          </p>
-                        </div>
-                      )}
-
-                      {profileData.address && (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-300">Address</p>
-                          <p className="text-sm text-gray-400 leading-snug whitespace-pre-line">
-                            {profileData.address}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+          {/* Connected Accounts Section */}
+          {profileData.wabaAccounts.length > 0 && (
+            <Card className="mt-8 border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 wark:from-green-900/20 wark:to-emerald-900/20">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                    <FaWhatsapp className="h-5 w-5 text-white" />
                   </div>
-
-                  <p className="text-xs text-muted-foreground text-center">
-                    This is how your business profile will appear to customers
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                  <div>
+                    <CardTitle className="text-lg text-green-900 wark:text-green-200">
+                      Connected WhatsApp Accounts
+                    </CardTitle>
+                    <CardDescription className="text-green-700 wark:text-green-300">
+                      Profile updates will apply to all connected accounts
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {profileData.wabaAccounts.map((account, index) => (
+                    <div
+                      key={account.wabaId}
+                      className="flex items-center justify-between p-4 bg-white/60 wark:bg-gray-800/60 rounded-xl border border-green-200/50 wark:border-green-700/50 transition-all duration-200 hover:bg-white/80 wark:hover:bg-gray-800/80"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/10">
+                          <Phone className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-900 wark:text-green-200">
+                            {account.businessName || `Business Account ${index + 1}`}
+                          </p>
+                          <p className="text-sm text-green-700 wark:text-green-300 font-mono">
+                            {account.phoneNumber}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-700">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
+                        Active
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
-
-        {/* Help Section */}
-        <Card className="mt-8 bg-blue-50 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-blue-900 mb-2">Important Notes</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Profile changes may take a few minutes to appear to customers</li>
-                  <li>• Business verification may be required for certain features</li>
-                  <li>• Profile picture should be square and at least 640x640 pixels</li>
-                  <li>• Some fields may require WhatsApp approval for business accounts</li>
-                  <li>• Changes apply to all connected WhatsApp Business accounts</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </Layout>
   );
