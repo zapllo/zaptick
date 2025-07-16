@@ -227,12 +227,13 @@ export default function WhatsAppProfileSettings() {
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'image');
+      formData.append('type', 'profile_picture');
       formData.append('wabaId', primaryWaba.wabaId);
 
       console.log('Uploading profile picture...', {
         fileName: file.name,
         fileSize: file.size,
+        fileType: file.type,
         wabaId: primaryWaba.wabaId
       });
 
@@ -250,14 +251,20 @@ export default function WhatsAppProfileSettings() {
       const uploadData = await uploadResponse.json();
       console.log('Media uploaded successfully:', uploadData);
 
-      // Now update the profile with the media ID for all accounts
+      // Update local state with the S3 URL immediately
+      setProfileData(prev => ({
+        ...prev,
+        profilePictureUrl: uploadData.s3Url
+      }));
+
+      // Now update the WhatsApp profile with the media handle for all accounts
       const profileUpdateResponse = await fetch("/api/whatsapp/profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          profilePictureHandle: uploadData.mediaId,
+          profilePictureHandle: uploadData.mediaHandle,
           // Don't send wabaId - update all accounts
         }),
       });
@@ -267,13 +274,6 @@ export default function WhatsAppProfileSettings() {
         console.error('Profile update error:', errorData);
         throw new Error(errorData.error || 'Failed to update profile picture');
       }
-
-      // Update local state with the new profile picture
-      const previewUrl = uploadData.mediaUrl || URL.createObjectURL(file);
-      setProfileData(prev => ({
-        ...prev,
-        profilePictureUrl: previewUrl
-      }));
 
       toast({
         title: "Success",
@@ -624,34 +624,33 @@ export default function WhatsAppProfileSettings() {
                       {/* Phone Frame */}
                       <div className="relative w-80 h-[850px] bg-black rounded-[2.5rem] p-2 shadow-2xl">
                         {/* Screen */}
-                        <div className="w-full h-full bg-[#0d1421] rounded-[2rem] overflow-hidden relative">
+                        <div className="w-full h-full bg-[#ffffff] rounded-[2rem] overflow-hidden relative">
                           {/* Status Bar */}
-                          <div className="flex items-center justify-between px-6 py-3 bg-[#0d1421] text-white text-sm">
+                          <div className="flex items-center justify-between px-6 py-3 text-black text-sm">
                             <div className="flex items-center gap-1">
-                              <div className="w-1 h-1 bg-white rounded-full"></div>
-                              <div className="w-1 h-1 bg-white rounded-full"></div>
-                              <div className="w-1 h-1 bg-white/50 rounded-full"></div>
-                              {/* <span className="text-xs ml-2">Airtel</span> */}
+                              <div className="w-1 h-1 bg-black rounded-full"></div>
+                              <div className="w-1 h-1 bg-black rounded-full"></div>
+                              <div className="w-1 h-1 bg-black/50 rounded-full"></div>
                             </div>
 
                             <div className="text-xs">
                               {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-6 h-3 border border-white rounded-sm">
-                                <div className="w-4 h-1 bg-white rounded-full mt-0.5 ml-0.5"></div>
+                              <div className="w-6 h-3 border border-black rounded-sm">
+                                <div className="w-4 h-1 bg-black rounded-full mt-0.5 ml-0.5"></div>
                               </div>
                               <div className="text-xs">100%</div>
                             </div>
                           </div>
 
                           {/* Header */}
-                          <div className="flex items-center justify-between px-4 py-3 bg-[#1f2937] border-b border-gray-700">
+                          <div className="flex items-center justify-between px-4 py-3 bg-[#ffffff] border-b border-gray-600">
                             <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                              <span className="text-green-400 text-sm font-medium">Business Info</span>
+                              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+                              <span className="text-green-600 text-sm font-medium">Business Info</span>
                             </div>
-                            <MoreVertical className="h-5 w-5 text-gray-400" />
+                            <MoreVertical className="h-5 w-5 text-gray-600" />
                           </div>
 
                           {/* Profile Content */}
@@ -659,22 +658,22 @@ export default function WhatsAppProfileSettings() {
                             {/* Avatar and Name */}
                             <div className="flex flex-col items-center text-center space-y-4">
                               <div className="relative">
-                                <Avatar className="h-20 w-20 border-3 border-green-500/30 shadow-lg">
+                                <Avatar className="h-20 w-20 border-3 border-green-600/30 shadow-lg">
                                   <AvatarImage
                                     src={profileData.profilePictureUrl}
                                     alt="Business profile"
                                   />
-                                  <AvatarFallback className="bg-gradient-to-br from-green-500/20 to-green-600/20 text-green-400 text-2xl font-bold">
+                                  <AvatarFallback className="bg-gradient-to-br from-green-600/20 to-green-600/20 text-green-600 text-2xl font-bold">
                                     {profileData.businessDescription?.charAt(0).toUpperCase() || "B"}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                  <Check className="h-3 w-3 text-white" />
+                                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+                                  <Check className="h-3 w-3 text-green-200" />
                                 </div>
                               </div>
 
                               <div className="space-y-1">
-                                <h3 className="text-white font-semibold text-lg">
+                                <h3 className="text-black font-semibold text-lg">
                                   {profileData.businessDescription || "Your Business Name"}
                                 </h3>
                                 {profileData.wabaAccounts.length > 0 && (
@@ -706,10 +705,10 @@ export default function WhatsAppProfileSettings() {
                               {profileData.about && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <Info className="h-4 w-4 text-green-500" />
-                                    <span className="text-sm font-medium text-gray-300">About</span>
+                                    <Info className="h-4 w-4 text-green-600" />
+                                    <span className="text-sm font-medium text-gray-800">About</span>
                                   </div>
-                                  <p className="text-sm text-gray-400 leading-relaxed bg-gray-800/50 p-3 rounded-lg">
+                                  <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 p-3 rounded-lg">
                                     {profileData.about}
                                   </p>
                                 </div>
@@ -718,10 +717,10 @@ export default function WhatsAppProfileSettings() {
                               {profileData.businessCategory && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <Building2 className="h-4 w-4 text-green-500" />
-                                    <span className="text-sm font-medium text-gray-300">Category</span>
+                                    <Building2 className="h-4 w-4 text-green-600" />
+                                    <span className="text-sm font-medium text-gray-800">Category</span>
                                   </div>
-                                  <p className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg">
+                                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
                                     {businessCategories.find(c => c.value === profileData.businessCategory)?.label || prettyCategory(profileData.businessCategory)}
                                   </p>
                                 </div>
@@ -730,10 +729,10 @@ export default function WhatsAppProfileSettings() {
                               {profileData.email && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <Mail className="h-4 w-4 text-green-500" />
-                                    <span className="text-sm font-medium text-gray-300">Email</span>
+                                    <Mail className="h-4 w-4 text-green-600" />
+                                    <span className="text-sm font-medium text-gray-800">Email</span>
                                   </div>
-                                  <p className="text-sm text-blue-400 bg-gray-800/50 p-3 rounded-lg break-all">
+                                  <p className="text-sm text-blue-600 bg-gray-50 p-3 rounded-lg break-all">
                                     {profileData.email}
                                   </p>
                                 </div>
@@ -742,10 +741,10 @@ export default function WhatsAppProfileSettings() {
                               {profileData.website && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <Globe className="h-4 w-4 text-green-500" />
-                                    <span className="text-sm font-medium text-gray-300">Website</span>
+                                    <Globe className="h-4 w-4 text-green-600" />
+                                    <span className="text-sm font-medium text-gray-800">Website</span>
                                   </div>
-                                  <p className="text-sm text-blue-400 bg-gray-800/50 p-3 rounded-lg break-all">
+                                  <p className="text-sm text-blue-600 bg-gray-50 p-3 rounded-lg break-all">
                                     {profileData.website}
                                   </p>
                                 </div>
@@ -754,10 +753,10 @@ export default function WhatsAppProfileSettings() {
                               {profileData.address && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-green-500" />
-                                    <span className="text-sm font-medium text-gray-300">Address</span>
+                                    <MapPin className="h-4 w-4 text-green-600" />
+                                    <span className="text-sm font-medium text-gray-800">Address</span>
                                   </div>
-                                  <p className="text-sm text-gray-400 bg-gray-800/50 p-3 rounded-lg whitespace-pre-line">
+                                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg whitespace-pre-line">
                                     {profileData.address}
                                   </p>
                                 </div>
@@ -766,12 +765,12 @@ export default function WhatsAppProfileSettings() {
                               {/* Empty State */}
                               {!profileData.about && !profileData.businessCategory && !profileData.email && !profileData.website && !profileData.address && (
                                 <div className="text-center py-8 space-y-3">
-                                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto">
-                                    <User className="h-8 w-8 text-gray-400" />
+                                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto">
+                                    <User className="h-8 w-8 text-gray-600" />
                                   </div>
                                   <div className="space-y-1">
-                                    <p className="text-gray-400 text-sm">Complete your profile</p>
-                                    <p className="text-gray-500 text-xs">Add business information to get started</p>
+                                    <p className="text-gray-600 text-sm">Complete your profile</p>
+                                    <p className="text-gray-400 text-xs">Add business information to get started</p>
                                   </div>
                                 </div>
                               )}

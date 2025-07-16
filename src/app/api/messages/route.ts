@@ -8,8 +8,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
-// ... existing code ...
-
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -30,7 +28,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Read the request body ONCE and store it
     const requestData = await req.json();
     const {
       contactId,
@@ -43,50 +40,46 @@ export async function POST(req: NextRequest) {
       templateComponents
     } = requestData;
 
+    console.log('Request data:', JSON.stringify(requestData, null, 2));
+
     if (!contactId) {
       return NextResponse.json({
         error: 'Missing required field: contactId'
       }, { status: 400 });
     }
 
-    // For text messages, validate message content
     if (messageType === 'text' && !message) {
       return NextResponse.json({
         error: 'Missing required field: message for text message'
       }, { status: 400 });
     }
 
-    // For template messages, validate required fields
     if (messageType === 'template' && !templateName) {
       return NextResponse.json({
         error: 'Missing required field: templateName for template message'
       }, { status: 400 });
     }
 
-    // Find the contact
     const contact = await Contact.findById(contactId);
     if (!contact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
 
-    // Ensure wabaAccounts exists and find the WABA account
     const wabaAccounts = user.wabaAccounts || [];
     const wabaAccount = wabaAccounts.find((account: any) => account.wabaId === contact.wabaId);
     if (!wabaAccount) {
       return NextResponse.json({ error: 'WABA account not found' }, { status: 404 });
     }
 
-    // Validate phone number format
     let phoneNumber = contact.phone;
     if (!phoneNumber.startsWith('+')) {
       phoneNumber = '+' + phoneNumber;
     }
 
-    // Prepare WhatsApp message payload based on message type
     let whatsappPayload;
 
     if (messageType === 'template') {
-      // Basic template structure
+      // Basic template structure - start minimal
       whatsappPayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -100,12 +93,24 @@ export async function POST(req: NextRequest) {
         }
       };
 
-      // Add components if provided (for templates with variables or media)
-      if (templateComponents && Array.isArray(templateComponents) && templateComponents.length > 0) {
-        (whatsappPayload.template as any).components = templateComponents;
+      // ONLY add components if they exist AND have parameters
+      if (templateComponents && 
+          Array.isArray(templateComponents) && 
+          templateComponents.length > 0) {
+        
+        // Filter out any components without parameters
+        const validComponents = templateComponents.filter(comp => 
+          comp.parameters && 
+          Array.isArray(comp.parameters) && 
+          comp.parameters.length > 0
+        );
+
+        // Only add components array if we have valid components
+        if (validComponents.length > 0) {
+          whatsappPayload.template.components = validComponents;
+        }
       }
     } else {
-      // Default text message payload
       whatsappPayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -118,12 +123,8 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    console.log('Sending message to WhatsApp:');
-    console.log('Phone Number ID:', wabaAccount.phoneNumberId);
-    console.log('WABA ID:', contact.wabaId);
-    console.log('Payload:', JSON.stringify(whatsappPayload, null, 2));
+    console.log('Final WhatsApp payload:', JSON.stringify(whatsappPayload, null, 2));
 
-    // Validate required environment variables
     if (!INT_TOKEN) {
       console.error('INTERAKT_API_TOKEN is not set');
       return NextResponse.json({
@@ -131,7 +132,6 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // Send message via Interakt API
     const interaktResponse = await fetch(
       `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/messages`,
       {
@@ -147,14 +147,12 @@ export async function POST(req: NextRequest) {
     );
 
     console.log('Interakt response status:', interaktResponse.status);
-    console.log('Interakt response headers:', Object.fromEntries(interaktResponse.headers.entries()));
 
     const responseText = await interaktResponse.text();
-    console.log('WhatsApp API response text:', responseText);
+    console.log('WhatsApp API response:', responseText);
 
     let interaktData;
 
-    // Handle non-JSON responses
     if (!responseText || responseText === 'Invalid request' || responseText.startsWith('<!DOCTYPE')) {
       console.error('Invalid response from WhatsApp API:', responseText);
       return NextResponse.json({
@@ -179,7 +177,6 @@ export async function POST(req: NextRequest) {
     if (!interaktResponse.ok) {
       console.error('WhatsApp API error:', interaktData);
 
-      // Handle specific error cases
       let errorMessage = 'Failed to send message';
       if (interaktData.error?.message) {
         errorMessage = interaktData.error.message;
@@ -199,7 +196,6 @@ export async function POST(req: NextRequest) {
     // Create or update conversation
     let conversation = await Conversation.findOne({ contactId: contact._id });
 
-    // Determine content for displaying in the conversation
     const messageContent = messageType === 'template'
       ? `Template: ${templateName}`
       : message;
@@ -223,7 +219,6 @@ export async function POST(req: NextRequest) {
       conversation.lastMessageAt = new Date();
       conversation.status = 'active';
 
-      // Check if still within 24 hours
       const now = new Date();
       const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       conversation.isWithin24Hours = conversation.lastMessageAt > last24Hours;
@@ -243,7 +238,6 @@ export async function POST(req: NextRequest) {
 
     await conversation.save();
 
-    // Update contact's last message time
     contact.lastMessageAt = new Date();
     await contact.save();
 

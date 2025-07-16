@@ -41,22 +41,22 @@ export default function WalletLayout({ children }: WalletLayoutProps) {
       active: pathname === "/wallet/insights",
     },
     {
-      label: "Billing Details",
+      label: "Subscription Plans",
       icon: <CreditCard className="h-4 w-4 mr-2" />,
-      href: "/wallet/billing",
-      active: pathname === "/wallet/billing",
+      href: "/wallet/plans",
+      active: pathname === "/wallet/plans",
     },
 
   ];
 
   return (
     <Layout>
-      <div className="flex flex-col lg:flex-row h-full">
+      <div className="flex flex-col  lg:flex-row h-full">
         {/* Wallet Sidebar */}
         <aside className="w-full lg:w-64 border-r  bg-background">
           <div className="px-4 py-6 border-b">
-            <h2 className="text-xl font-semibold">Wallet</h2>
-            <p className="text-sm text-muted-foreground mt-1">Manage your funds and billing</p>
+            <h2 className="text-xl font-semibold">Billing</h2>
+            <p className="text-sm text-muted-foreground mt-1">Manage your wallet and billing</p>
           </div>
           <nav className="p-4 space-y-1">
             {routes.map((route) => (

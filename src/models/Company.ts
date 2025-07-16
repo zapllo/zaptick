@@ -11,6 +11,15 @@ export interface ICompany extends Document {
   phone?: string; // Add phone field
   countryCode?: string; // Add country code field
   walletBalance: number;
+  currency?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: 'active' | 'expired' | 'cancelled';
+  subscriptionStartDate?: Date;
+  subscriptionEndDate?: Date;
+  billingCycle?: 'monthly' | 'quarterly' | 'yearly';
+  lastPaymentId?: string;
+  lastPaymentAmount?: number;
+  lastPaymentDate?: Date;
   createdAt: Date;
   logo?: string;
   updatedAt: Date;
@@ -81,10 +90,48 @@ const CompanySchema = new Schema<ICompany>(
       type: String,
       trim: true,
     },
+    currency: {
+      type: String,
+      default: 'INR'
+    },
     walletBalance: {
       type: Number,
       default: 0
     },
+    walletBalance: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  subscriptionPlan: {
+    type: String,
+    enum: ['free', 'starter', 'growth', 'advanced', 'enterprise'],
+    default: 'free'
+  },
+  subscriptionStatus: {
+    type: String,
+    enum: ['active', 'expired', 'cancelled'],
+    default: 'expired'
+  },
+  subscriptionStartDate: {
+    type: Date
+  },
+  subscriptionEndDate: {
+    type: Date
+  },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'quarterly', 'yearly']
+  },
+  lastPaymentId: {
+    type: String
+  },
+  lastPaymentAmount: {
+    type: Number
+  },
+  lastPaymentDate: {
+    type: Date
+  },
     whatsappProfile: {
       about: String,
       profilePictureUrl: String,

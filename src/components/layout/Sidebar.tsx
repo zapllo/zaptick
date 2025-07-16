@@ -90,7 +90,7 @@ interface SidebarItem {
 export default function Sidebar({ user, userPermissions, isCollapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(isCollapsed || false);
+  const [collapsed, setCollapsed] = useState(isCollapsed || true);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -272,11 +272,11 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
       >
         {/* Header */}
         <div className={cn(
-          "flex items-center h-[65px] border-b px-4 relative",
+          "flex items-center h-[65px] border- px-4 relative",
           collapsed && "justify-center px-2"
         )}>
           {collapsed ? (
-            <div className="flex items-center justify-center">
+            <div className="flex mt-2 items-center justify-center">
               <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/20">
                 <img
                   src="/tick.png"

@@ -74,7 +74,7 @@ interface UserPermissions {
 
 export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [commandOpen, setCommandOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
@@ -282,7 +282,7 @@ export default function Layout({ children }: LayoutProps) {
         sidebarCollapsed ? "md:ml-[70px]" : "md:ml-[280px]"
       )}>
         {/* Header */}
-        <header className="sticky top-0 z-50 flex h-[65px] items-center border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6">
+        <header className={`sticky top-0 z-50 flex h-[65px] items-center border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6 ${sidebarCollapsed?"ml-2":""}`}>
           <div className="flex flex-1 items-center gap-4">
             {/* Mobile menu button */}
             <Button
@@ -517,7 +517,7 @@ export default function Layout({ children }: LayoutProps) {
 
                             <button
                               className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                              onClick={() => router.push('/settings/subscription')}
+                              onClick={() => router.push('/wallet/plans')}
                             >
                               <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-3 rounded-xl group-hover:from-pink-500/30 group-hover:to-pink-600/20 transition-colors">
                                 <CreditCard className="h-5 w-5 text-pink-600" />
@@ -590,7 +590,7 @@ export default function Layout({ children }: LayoutProps) {
                       </DropdownMenuItem>
                     </PermissionCheck>
                     <PermissionCheck resource="settings" action="read" fallback={null}>
-                      <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/settings/billing')}>
+                      <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/wallet/plans')}>
                         <CreditCard className="mr-3 h-4 w-4" />
                         <span>Billing</span>
                       </DropdownMenuItem>

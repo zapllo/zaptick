@@ -231,8 +231,9 @@ async function updateWhatsAppBusinessProfile(wabaAccount: any, profileData: any)
             updatePayload.vertical = profileData.businessCategory;
         }
 
-        // Add profile picture handle if provided
+      // Add profile picture handle if provided - ensure it's a valid media handle
         if (profileData.profilePictureHandle) {
+            // Media handles from the media_handle endpoint should start with a pattern like "2:c2FtcGxl..."
             updatePayload.profile_picture_handle = profileData.profilePictureHandle;
         }
 

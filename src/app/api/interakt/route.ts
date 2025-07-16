@@ -648,6 +648,7 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
       if (response.ok) {
         // Record the auto reply in the conversation
         const responseData = JSON.parse(responseText);
+        
       
       } else {
         console.error('Failed to send auto reply:', responseText);

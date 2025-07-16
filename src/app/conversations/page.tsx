@@ -116,6 +116,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FaSearch } from "react-icons/fa";
 import EmojiPicker from 'emoji-picker-react';
 import { type EmojiClickData } from 'emoji-picker-react';
+
 // Interface definitions aligned with our models
 interface Contact {
   id: string;
@@ -299,9 +300,6 @@ function ConversationsPageContent() {
   // Add these state variables
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
 
-
-  // Update this in your useEffect hooks section
-
   // Add this near the top of your component where other useEffects are defined
   useEffect(() => {
     const handleContactIdFromUrl = async () => {
@@ -366,7 +364,6 @@ function ConversationsPageContent() {
     handleContactIdFromUrl();
   }, [contacts, conversations, selectedWabaId]);
 
-
   // Add these helper functions
   const formatTemplatePreview = (text: string) => {
     if (!text) return '';
@@ -382,14 +379,16 @@ function ConversationsPageContent() {
 
   const hasTemplateVariables = (template: Template) => {
     return template.components?.some(comp =>
+      // Only check for TEXT variables in body and TEXT headers
       (comp.type === 'body' && comp.text?.includes('{{')) ||
-      (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
+      (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
+      // Remove the media header check since those don't need variables
     );
   };
+
   // Template dialog states
   const [templateVariables, setTemplateVariables] = useState<{ [key: string]: string }>({});
   const [showTemplateVariablesDialog, setShowTemplateVariablesDialog] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<{ type: string, url: string } | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -419,6 +418,7 @@ function ConversationsPageContent() {
   useEffect(() => {
     checkScrollability();
   }, [contacts, conversations]);
+
   // Bulk selection states
   const [selectedConversations, setSelectedConversations] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
@@ -541,6 +541,7 @@ function ConversationsPageContent() {
       setIsBulkProcessing(false);
     }
   };
+
   // Helper functions
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -553,6 +554,7 @@ function ConversationsPageContent() {
     const date = new Date(timestamp);
     return format(date, "h:mm a"); // Changed from "HH:mm" to "h:mm a"
   }
+
   const getDateGroupLabel = (timestamp: string) => {
     const date = new Date(timestamp);
     if (isToday(date)) return "Today";
@@ -837,6 +839,7 @@ function ConversationsPageContent() {
       toast({ title: "Failed to remove tag", variant: "destructive" });
     }
   };
+
   // Add this helper function to safely check for tags
   const hasTag = (conversation: Conversation, tagName: string) => {
     if (!conversation.contact) return false;
@@ -844,8 +847,6 @@ function ConversationsPageContent() {
     if (!Array.isArray(conversation.contact.tags)) return false;
     return conversation.contact.tags.includes(tagName);
   };
-
-
 
   // Filter functions
   // Update the applyFilters function
@@ -1001,8 +1002,6 @@ function ConversationsPageContent() {
     const filtered = applyFilters(conversations);
     setFilteredConversations(filtered);
   }, [searchQuery, filters, conversations, activeTagFilter]);
-
-
 
   // Reset filters function
   const resetFilters = () => {
@@ -1181,7 +1180,6 @@ function ConversationsPageContent() {
   };
 
   // Effects
-  // Effects
   useEffect(() => {
     fetchWabaAccounts();
     fetchLabels();
@@ -1227,8 +1225,6 @@ function ConversationsPageContent() {
       });
     }
   };
-
-  // useEffect(() => { scrollToBottom(); }, [messages]);
 
   const createLabel = async () => {
     if (!newLabelName.trim()) return;
@@ -1394,7 +1390,6 @@ function ConversationsPageContent() {
 
   // Modified sendTemplate function
   const sendTemplate = async (template: Template, skipVariables = false) => {
-    // Get contact ID - prioritize selectedContact over activeConversation contact
     let contactId: string;
     let wabaId: string;
 
@@ -1415,101 +1410,104 @@ function ConversationsPageContent() {
 
     if (isSending) return;
 
-    // Check if template has components that need variables
-    const needsVariables = template.components?.some(comp =>
-      comp.type === 'body' && comp.text?.includes('{{') ||
-      comp.type === 'header' && (comp.format === 'IMAGE' || comp.format === 'VIDEO' || comp.format === 'DOCUMENT')
+    // Check if template has TEXT variables that need to be filled
+    const hasTextVariables = template.components?.some(comp =>
+      (comp.type === 'body' && comp.text?.includes('{{')) ||
+      (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
     );
 
-    // If template needs variables and we haven't collected them yet
-    if (needsVariables && !skipVariables) {
+    if (hasTextVariables && !skipVariables) {
       setSelectedTemplate(template);
-      setTemplateVariables({}); // Reset variables
-      setSelectedMedia(null); // Reset media
+      setTemplateVariables({});
       setShowTemplateVariablesDialog(true);
       return;
     }
 
     setIsSending(true);
     try {
-      // Prepare components with variables
-      let templateComponents: TemplateComponent[] = [];
+      // Prepare the request payload
+      const requestPayload: any = {
+        contactId: contactId,
+        messageType: 'template',
+        templateName: template.name,
+        language: template.language,
+        conversationId: activeConversation?.id,
+        senderName: currentUser.name
+      };
 
-      if (template.components && template.components.length > 0) {
-        templateComponents = template.components.map(component => {
-          // Create a base component
-          const templateComponent: TemplateComponent = {
-            type: component.type
-          };
+      // Only add templateComponents if there are actual text variables to fill
+      if (hasTextVariables) {
+        const templateComponents: any[] = [];
 
-          // For header with media
-          if (component.type === 'header' && component.format) {
-            if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format) && selectedMedia) {
-              templateComponent.parameters = [{
-                type: component.format.toLowerCase() as 'image' | 'video' | 'document',
-                [component.format.toLowerCase()]: {
-                  link: selectedMedia.url,
-                  ...(component.format === 'DOCUMENT' && { filename: selectedMedia.url.split('/').pop() })
-                }
-              }];
-            }
-          }
-
-          // For body with text variables
-          if (component.type === 'body' && component.text) {
-            // Extract variables from the template text
+        template.components?.forEach(component => {
+          // Handle body components with variables
+          if (component.type === 'body' && component.text?.includes('{{')) {
             const variables = (component.text.match(/\{\{[^}]+\}\}/g) || [])
               .map((v: string) => v.replace(/\{\{|\}\}/g, '').trim());
 
             if (variables.length > 0) {
-              templateComponent.parameters = variables.map((varName: string) => ({
-                type: 'text',
-                text: templateVariables[varName] || `[${varName}]` // Use entered value or placeholder
-              }));
+              templateComponents.push({
+                type: 'body',
+                parameters: variables.map((varName: string) => ({
+                  type: 'text',
+                  text: templateVariables[varName] || `[${varName}]`
+                }))
+              });
             }
           }
 
-          return templateComponent;
-        }).filter(comp => comp.type); // Filter out any invalid components
+          // Handle TEXT header components with variables
+          if (component.type === 'header' && component.format === 'TEXT' && component.text?.includes('{{')) {
+            const variables = (component.text.match(/\{\{[^}]+\}\}/g) || [])
+              .map((v: string) => v.replace(/\{\{|\}\}/g, '').trim());
+
+            if (variables.length > 0) {
+              templateComponents.push({
+                type: 'header',
+                parameters: variables.map((varName: string) => ({
+                  type: 'text',
+                  text: templateVariables[varName] || `[${varName}]`
+                }))
+              });
+            }
+          }
+        });
+
+        // Only add templateComponents if we have valid components
+        if (templateComponents.length > 0) {
+          requestPayload.templateComponents = templateComponents;
+        }
       }
+
+      console.log('Sending template request:', JSON.stringify(requestPayload, null, 2));
 
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactId: contactId,
-          wabaId: wabaId,
-          messageType: 'template',
-          templateId: template.id,
-          templateName: template.name,
-          language: template.language,
-          templateComponents: templateComponents.length > 0 ? templateComponents : undefined,
-          conversationId: activeConversation?.id,
-          senderName: currentUser.name
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
       const data = await response.json();
+
       if (data.success) {
-        // If this was a new conversation, fetch it and set as active
         if (!activeConversation && data.conversationId) {
           const convResponse = await fetch(`/api/conversations/${data.conversationId}`);
           const convData = await convResponse.json();
           if (convData.success) {
             setActiveConversation(convData.conversation);
-            setSelectedContact(null); // Clear selected contact
-            fetchConversations(); // Refresh conversations list
+            setSelectedContact(null);
+            fetchConversations();
           }
         } else if (activeConversation) {
-          // Otherwise, fetch the updated messages
           fetchMessages(activeConversation.id);
-          fetchConversations(); // Refresh conversations list
+          fetchConversations();
         }
 
         setShowTemplateDialog(false);
         setShowTemplateVariablesDialog(false);
         toast({ title: "Template sent successfully" });
       } else {
+        console.error('Template sending failed:', data);
         toast({
           title: "Failed to send template",
           description: data.error || "Please try again",
@@ -1527,10 +1525,8 @@ function ConversationsPageContent() {
   const TemplateVariablesDialog = () => {
     if (!selectedTemplate) return null;
 
-    // Extract variable names from template
+    // Extract variable names from template body only (not header media)
     const variableNames: string[] = [];
-    let hasMediaHeader = false;
-    let mediaType = '';
 
     selectedTemplate.components?.forEach(component => {
       if (component.type === 'body' && component.text) {
@@ -1543,11 +1539,15 @@ function ConversationsPageContent() {
         });
       }
 
-      if (component.type === 'header' && component.format) {
-        if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
-          hasMediaHeader = true;
-          mediaType = component.format.toLowerCase();
-        }
+      // Handle TEXT headers with variables (not IMAGE/VIDEO/DOCUMENT)
+      if (component.type === 'header' && component.format === 'TEXT' && component.text) {
+        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+        matches.forEach((match: string) => {
+          const varName = match.replace(/\{\{|\}\}/g, '').trim();
+          if (!variableNames.includes(varName)) {
+            variableNames.push(varName);
+          }
+        });
       }
     });
 
@@ -1562,25 +1562,7 @@ function ConversationsPageContent() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Media upload if needed */}
-            {hasMediaHeader && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Upload {mediaType}</label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="text"
-                    placeholder={`Enter ${mediaType} URL`}
-                    value={selectedMedia?.url || ''}
-                    onChange={(e) => setSelectedMedia({ type: mediaType, url: e.target.value })}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Enter a publicly accessible URL for your {mediaType}
-                </p>
-              </div>
-            )}
-
-            {/* Text variables */}
+            {/* Only show text variables - no media upload needed */}
             {variableNames.map((varName, index) => (
               <div key={index} className="space-y-2">
                 <label className="text-sm font-medium">{varName}</label>
@@ -1594,6 +1576,12 @@ function ConversationsPageContent() {
                 />
               </div>
             ))}
+
+            {variableNames.length === 0 && (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                This template has no variables to fill
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -1605,6 +1593,7 @@ function ConversationsPageContent() {
             </Button>
             <Button
               onClick={() => selectedTemplate && sendTemplate(selectedTemplate, true)}
+              disabled={variableNames.some(varName => !templateVariables[varName]?.trim())}
             >
               Send Template
             </Button>
@@ -1798,131 +1787,142 @@ function ConversationsPageContent() {
 
   return (
     <Layout>
-      <div className="h-screen flex w-full  flex-col bg-background">
-        {/* Top Navigation Bar */}
-        <div className="h-16 border-b bg-card flex items-center justify-between px-4 lg:px-6">
+      <div className="h-screen flex w-full   flex-col ">
+        {/* Top Navigation Bar - Modern Design */}
+        <div className="h-16 border-b border-border/50 bg-gradient-to-r from-background to-background/95 backdrop-blur-md flex items-center justify-between px-4 lg:px-6 shadow-sm">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden rounded-full hover:bg-accent/50 transition-all duration-200"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               <AlignJustify className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-semibold hidden md:block">Conversations</h1>
-            {/* <div className="flex items-center gap-2">
-              <Select value={selectedWabaId} onValueChange={setSelectedWabaId} >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {wabaAccounts.map(account => (
-                    <SelectItem key={account.wabaId} value={account.wabaId}>
-                      {account.businessName || account.phoneNumber || account.wabaId}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div> */}
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
+                <MessageSquare className="h-4 w-4 text-primary" />
+              </div>
+              <div className="hidden md:block">
+                <h1 className="text-lg font-semibold text-foreground">Conversations</h1>
+                <p className="text-xs text-muted-foreground">
+                  {filteredConversations.length} conversation{filteredConversations.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
           </div>
 
-
-
-
-
-
-          {/* Pill list section */}
+          {/* Enhanced Tag Filter Pills */}
           {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).length > 0 ? (
-            <div className="relative">
-              {/* ← arrow */}
-              <div className="absolute bg-white border cursor-pointer left-0 top-0 h-[42px] flex items-center ml-4 rounded rounded-r-none z-10">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={scrollLeft}
-                  className="h-8 w-8"
-                  disabled={!canScrollLeft}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
+            <div className="relative flex-1 max-w-2xl mx-8 hidden lg:block">
+              {/* Left scroll button with enhanced styling */}
+              <div className="absolute left-0 top-0 h-full flex items-center z-20">
+                <div className="bg-gradient-to-r from-background via-background to-background/80 pl-2 pr-4 h-full flex items-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={scrollLeft}
+                    className={cn(
+                      "h-8 w-8 rounded-full transition-all duration-200 hover:scale-105",
+                      canScrollLeft
+                        ? "bg-white/80 hover:bg-white shadow-sm border border-border/50"
+                        : "opacity-50 cursor-not-allowed"
+                    )}
+                    disabled={!canScrollLeft}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
-              {/* scrollable pill list */}
+              {/* Scrollable tag container with modern styling */}
               <div
                 ref={scrollContainerRef}
                 onScroll={checkScrollability}
-                className="ml-12 h-[42px] overflow-x-auto w-full max-w-[600px] border rounded rounded-l-none overflow-y-hidden scrollbar-hide scroll-smooth"
+                className="h-10 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth px-12"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
-                <Tabs
-                  value={activeTagFilter ?? "all"}
-                  onValueChange={(v) => setActiveTagFilter(v === "all" ? null : v)}
-                  className="w-full"
-                >
-                  <TabsList className="flex items-center  gap-2 bg-transparent h-full px-12">
-                    {/* ALL */}
-                    <TabsTrigger
-                      value="all"
-                      className="flex items-center gap-2 px-3  h-8 rounded-md text-sm font-medium whitespace-nowrap
-             data-[state=inactive]:cursor-pointer data-[state=inactive]:border-gray-200
-             data-[state=inactive]:text-gray-700 data-[state=inactive]:bg-white
-             data-[state=active]:border data-[state=active]:border-primary -300
-             data-[state=active]:text-primary -900 data-[state=active]:bg-primary/20
-             hover:bg-gray-50 transition-colors"
-                    >
-                      All
-                    </TabsTrigger>
+                <div className="h-full bg-gradient-to-r from-accent/20 to-accent/10 rounded-full border border-border/30 backdrop-blur-sm">
+                  <Tabs
+                    value={activeTagFilter ?? "all"}
+                    onValueChange={(v) => setActiveTagFilter(v === "all" ? null : v)}
+                    className="w-full h-full"
+                  >
+                    <TabsList className="h-full bg-transparent flex items-center gap-1 px-4">
+                      {/* ALL Tab - Enhanced */}
+                      <TabsTrigger
+                        value="all"
+                        className="group relative flex items-center gap-2 px-4 py-2 h-8 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105
+                          data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-accent/50
+                          data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg
+                          border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Inbox className="h-3.5 w-3.5" />
+                          <span>All</span>
+                          <div className="flex items-center justify-center bg-background/20 text-current text-xs h-5 min-w-5 px-1.5 rounded-full font-medium">
+                            {conversations.length}
+                          </div>
+                        </div>
+                      </TabsTrigger>
 
-                    {/* DYNAMIC TAGS */}
-                    {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).map((tag, index) => {
-                      // Count conversations with contacts that have this tag
-                      const tagCount = conversations.filter(conv => {
-                        return conv.contact &&
-                          Array.isArray(conv.contact.tags) &&
-                          conv.contact.tags.includes(tag);
-                      }).length;
+                      {/* Dynamic Tags - Enhanced */}
+                      {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).map((tag, index) => {
+                        const tagCount = conversations.filter(conv => {
+                          return conv.contact &&
+                            Array.isArray(conv.contact.tags) &&
+                            conv.contact.tags.includes(tag);
+                        }).length;
 
-                      // Only show tabs for tags that have conversations
-                      if (tagCount === 0) return null;
-                      return (
-                        <TabsTrigger
-                          key={tag}
-                          value={tag}
-                          className="flex items-center gap-2 px-3 h-8 rounded-md text-sm font-medium whitespace-nowrap
-                 data-[state=inactive]:cursor-pointer data-[state=inactive]:border-gray-200
-                 data-[state=inactive]:text-gray-700 data-[state=inactive]:bg-white
-                 data-[state=active]:border data-[state=active]:border-primary -300
-                 data-[state=active]:text-primary -900 data-[state=active]:bg-primary/20
-                 hover:bg-gray-50 transition-colors"
-                        >
-                          <h1 className='text-black'>{tag}</h1>
-                          <span className="text-xs text-gray-500 bg-[#e1dfe1] px-1.5 py-0.5 rounded">
-                            {tagCount}
-                          </span>
-                        </TabsTrigger>
-                      );
-                    })}
-                  </TabsList>
-                </Tabs>
+                        if (tagCount === 0) return null;
+
+                        return (
+                          <TabsTrigger
+                            key={tag}
+                            value={tag}
+                            className="group relative flex items-center gap-2 px-4 py-2 h-8 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105
+                              data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-accent/50
+                              data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg
+                              border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-current opacity-60"></div>
+                              <span>{tag}</span>
+                              <div className="flex items-center justify-center bg-background/20 text-current text-xs h-5 min-w-5 px-1.5 rounded-full font-medium">
+                                {tagCount}
+                              </div>
+                            </div>
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </Tabs>
+                </div>
               </div>
 
-              {/* Right gradient fade */}
-              <div className="absolute bg-white right-0 top-0 h-[42px] border rounded-r bg-gradient-to-l from-white via-white to-transparent flex items-center pr-2 pointer-events-none z-10">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={scrollRight}
-                  className="h-7 w-7 pointer-events-auto"
-                >
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Button>
+              {/* Right scroll button with enhanced styling */}
+              <div className="absolute right-0 top-0 h-full flex items-center z-20">
+                <div className="bg-gradient-to-l from-background via-background to-background/80 pr-2 pl-4 h-full flex items-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={scrollRight}
+                    className={cn(
+                      "h-8 w-8 rounded-full transition-all duration-200 hover:scale-105",
+                      canScrollRight
+                        ? "bg-white/80 hover:bg-white shadow-sm border border-border/50"
+                        : "opacity-50 cursor-not-allowed"
+                    )}
+                    disabled={!canScrollRight}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ) : null}
 
-
-
+          {/* Action Buttons - Enhanced */}
           <div className="flex items-center gap-2">
             <TooltipProvider>
               <Tooltip>
@@ -1932,11 +1932,17 @@ function ConversationsPageContent() {
                     size="icon"
                     onClick={refreshData}
                     disabled={isRefreshing}
+                    className="rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
                   >
                     <RefreshCcw className={cn("h-5 w-5", isRefreshing && "animate-spin")} />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Refresh conversations</TooltipContent>
+                  <TooltipContent side="bottom" className="bg-popover/95 backdrop-blur-sm border">
+                  <p className="flex items-center text-black gap-2">
+                    <RefreshCcw className="h-3 w-3" />
+                    Refresh conversations
+                  </p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
@@ -1947,36 +1953,68 @@ function ConversationsPageContent() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setShowContactDialog(true)}
+                    className="rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105 relative group"
                   >
-                    <PlusCircle className="h-5 w-5" />
+                    <PlusCircle className="h-5 w-5 group-hover:rotate-90 transition-transform duration-200" />
+                    <div className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>New conversation</TooltipContent>
+                <TooltipContent side="bottom" className="bg-popover/95 backdrop-blur-sm border">
+                  <p className="flex items-center text-black gap-2">
+                    <PlusCircle className="h-3 w-3" />
+                    New conversation
+                  </p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
-            {/* Bulk Select Toggle */}
-
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
+                >
                   <MoreVertical className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => window.location.href = '/contacts'}>
-                  <User className="h-4 w-4 mr-2" />
-                  Manage Contacts
+              <DropdownMenuContent align="end" className="w-52 bg-popover/95 backdrop-blur-sm border-border/50">
+                <DropdownMenuItem
+                  onClick={() => window.location.href = '/contacts'}
+                  className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 mr-3 group-hover:bg-blue-200 transition-colors">
+                    <User className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Manage Contacts</p>
+                    <p className="text-xs text-muted-foreground">Add, edit, or organize</p>
+                  </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.location.href = '/templates'}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Message Templates
+                <DropdownMenuItem
+                  onClick={() => window.location.href = '/templates'}
+                  className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 mr-3 group-hover:bg-purple-200 transition-colors">
+                    <FileText className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Message Templates</p>
+                    <p className="text-xs text-muted-foreground">Create and manage</p>
+                  </div>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
+                <DropdownMenuItem
+                  onClick={() => window.location.href = '/settings'}
+                  className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 mr-3 group-hover:bg-gray-200 transition-colors">
+                    <Settings className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Settings</p>
+                    <p className="text-xs text-muted-foreground">Configure preferences</p>
+                  </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1984,39 +2022,149 @@ function ConversationsPageContent() {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Conversations List Sidebar */}
-
-          {/* Conversations List Sidebar */}
+         {/* Conversations List Sidebar - Modern Design */}
           <div className={cn(
-            "w-full md:w-80 lg:w-96 flex flex-col bg-white border-r overflow-hidden",
+            "w-full md:w-80 lg:w-96 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-hidden backdrop-blur-md shadow-sm",
             !isMobileMenuOpen && "hidden md:flex",
             isMobileMenuOpen && "absolute inset-0 z-50 md:relative"
           )}>
-            {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+            {/* Enhanced Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-card to-card/95">
               {isBulkSelectMode ? (
-                <div className="flex items-center gap-2 w-full">
-                  <Button variant="ghost" size="icon" onClick={exitBulkMode} className="p-1">
-                    <ArrowLeft className="h-5 w-5" />
+                <div className="flex items-center gap-3 w-full">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={exitBulkMode} 
+                    className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
                   </Button>
-                  <span className="font-medium">{selectedConversations.length} chat{selectedConversations.length !== 1 ? 's' : ''} selected</span>
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                      <LiaCheckDoubleSolid className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-foreground">
+                        {selectedConversations.length} chat{selectedConversations.length !== 1 ? 's' : ''} selected
+                      </span>
+                      <p className="text-xs text-muted-foreground">Bulk actions available</p>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <h2 className="font-medium text-lg">Inbox</h2>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
+                    <Inbox className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-lg text-foreground">Inbox</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {filteredConversations.length} conversation{filteredConversations.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
               )}
-              <div className="flex items-center relative gap-1">
-
+              
+              <div className="flex items-center relative gap-2">
                 {isBulkSelectMode ? (
-                  <Button variant="ghost" size="icon" onClick={() => {
-                    setShowBulkActions(!showBulkActions);
-                  }}>
-                    <MoreVertical className="h-5 w-5 text-gray-500" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-sm border-border/50">
+                      <DropdownMenuItem 
+                        onClick={() => setShowBulkTagDialog(true)}
+                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 mr-3 group-hover:bg-blue-200 transition-colors">
+                          <Tag className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Apply Tag</p>
+                          <p className="text-xs text-muted-foreground">Add tags to conversations</p>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => {}}
+                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 mr-3 group-hover:bg-purple-200 transition-colors">
+                          <Users className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Add to Broadcast</p>
+                          <p className="text-xs text-muted-foreground">Create broadcast list</p>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => setShowBulkAssignDialog(true)}
+                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 mr-3 group-hover:bg-green-200 transition-colors">
+                          <UserPlus className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Assign To</p>
+                          <p className="text-xs text-muted-foreground">Assign to team member</p>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => {}}
+                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 mr-3 group-hover:bg-orange-200 transition-colors">
+                          <UserX className="h-4 w-4 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Unassign</p>
+                          <p className="text-xs text-muted-foreground">Remove assignments</p>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => setShowBulkDeleteDialog(true)}
+                        className="cursor-pointer hover:bg-destructive/10 transition-colors group text-destructive"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 mr-3 group-hover:bg-red-200 transition-colors">
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Delete Chats</p>
+                          <p className="text-xs text-muted-foreground">Permanently remove</p>
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : (
-                  <Button variant="ghost" size="icon" onClick={() => setIsBulkSelectMode(true)}>
-                    <LiaCheckDoubleSolid className="h-5 w-5 scale-150 text-primary" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setIsBulkSelectMode(true)}
+                          className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
+                        >
+                          <LiaCheckDoubleSolid className="h-4 w-4 text-primary" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p className="flex items-center gap-2">
+                          <LiaCheckDoubleSolid className="h-3 w-3" />
+                          Bulk select mode
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
+                
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -2024,101 +2172,112 @@ function ConversationsPageContent() {
                         variant={getActiveFilterCount() > 0 ? "default" : "ghost"}
                         size="icon"
                         onClick={() => setShowFilterDialog(true)}
-                        className={getActiveFilterCount() > 0 ? "relative" : ""}
+                        className={cn(
+                          "h-8 w-8 rounded-full transition-all duration-200 hover:scale-105 relative",
+                          getActiveFilterCount() > 0 
+                            ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md" 
+                            : "hover:bg-accent/50"
+                        )}
                       >
-                        <Filter className="h-5 w-5 scale-125 text-primary" />
+                        <Filter className="h-4 w-4" />
                         {getActiveFilterCount() > 0 && (
-                          <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium flex items-center justify-center rounded-full">
+                          <span className="absolute -top-1 -right-1 h-5 w-5 bg-background text-primary text-[10px] font-bold flex items-center justify-center rounded-full ring-2 ring-primary animate-pulse">
                             {getActiveFilterCount()}
                           </span>
                         )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      {getActiveFilterCount() > 0 ? `${getActiveFilterCount()} filters active` : "Filter conversations"}
+                    <TooltipContent side="bottom">
+                      <p className="flex items-center gap-2">
+                        <Filter className="h-3 w-3" />
+                        {getActiveFilterCount() > 0 ? `${getActiveFilterCount()} filters active` : "Filter conversations"}
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {isBulkSelectMode && selectedConversations.length > 0 && showBulkActions && (
-                  <div className="absolute top-12 w-56 -right-12 bg-white shadow-lg rounded-md z-50 border">
-                    <div className="py-1">
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => setShowBulkTagDialog(true)}>
-                        Apply tag
-                      </button>
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => { }}>
-                        Add to broadcast list
-                      </button>
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => setShowBulkAssignDialog(true)}>
-                        Assign to
-                      </button>
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100" onClick={() => { }}>
-                        Unassign chats
-                      </button>
-                      <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500" onClick={() => setShowBulkDeleteDialog(true)}>
-                        Delete chats
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Search bar */}
-            <div className="p-2 border-b">
+            {/* Enhanced Search Bar */}
+            <div className="p-4 border-b border-border/50 bg-card/30">
               <div className="flex items-center gap-2">
                 {searchQuery.trim().length > 0 && (
-                  <Button variant="ghost" size="icon" onClick={() => setSearchQuery("")} className="p-1">
-                    <ArrowLeft className="h-5 w-5" />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setSearchQuery("")} 
+                    className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
                   </Button>
                 )}
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search conversations"
+                    placeholder="Search conversations..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className={cn("pl-10", searchQuery.trim().length > 0 ? "flex-1" : "w-full")}
+                    className={cn(
+                      "pl-10 h-10 bg-background/50 border-border/50 focus:border-primary focus:ring-1 focus:ring-primary/20 rounded-lg transition-all duration-200",
+                      searchQuery.trim().length > 0 ? "flex-1" : "w-full"
+                    )}
                   />
+                  {searchQuery.trim().length > 0 && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="flex items-center justify-center w-5 h-5 bg-primary/10 rounded-full">
+                        <span className="text-xs font-medium text-primary">
+                          {filteredConversations.length}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Conversations List */}
+            {/* Enhanced Conversations List */}
             <div className="flex-1 overflow-y-auto">
-              {/* New conversation indicator */}
+              {/* New conversation indicator - Enhanced */}
               {selectedContact && (
                 <div
-                  className="flex items-center border-b p-3 cursor-pointer hover:bg-gray-50 bg-primary/5"
+                  className="group flex items-center border-b border-border/50 p-4 cursor-pointer hover:bg-accent/30 bg-gradient-to-r from-primary/5 to-primary/10 transition-all duration-200"
                   onClick={() => {
                     console.log('Clicking on new conversation with contact:', selectedContact);
                     setIsMobileMenuOpen(false);
                   }}
                 >
                   <div className="relative mr-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-primary/10 text-primary">
+                    <Avatar className="h-12 w-12 ring-2 ring-primary/20 transition-all duration-200 group-hover:ring-primary/40">
+                      <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-semibold">
                         {selectedContact.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center animate-pulse">
+                      <Plus className="h-2.5 w-2.5 text-primary-foreground" />
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium">{selectedContact.name}</h3>
-                      <Badge variant="secondary" className="ml-2 text-xs bg-primary text-primary-foreground">New</Badge>
+                      <h3 className="font-semibold text-foreground">{selectedContact.name}</h3>
+                      <Badge className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-sm">
+                        New
+                      </Badge>
                     </div>
-                    <p className="text-sm text-gray-600 truncate">Start conversation</p>
+                    <p className="text-sm text-muted-foreground">Start conversation</p>
                   </div>
                 </div>
               )}
 
-              {/* Existing conversations */}
+              {/* Existing conversations - Enhanced */}
               {filteredConversations.map((conversation) => (
                 <div
                   key={conversation.id}
                   className={cn(
-                    "flex items-center border-b p-3 cursor-pointer hover:bg-gray-50",
-                    activeConversation?.id === conversation.id && !isBulkSelectMode ? "bg-accent" : "",
-                    selectedConversations.includes(conversation.id) && "bg-green-50"
+                    "group flex items-center border-b border-border/30 p-4 cursor-pointer transition-all duration-200",
+                    "hover:bg-accent/30 hover:border-border/50",
+                    activeConversation?.id === conversation.id && !isBulkSelectMode ? "bg-accent/50 border-primary/20" : "",
+                    selectedConversations.includes(conversation.id) && "bg-green-50 border-green-200",
+                    isBulkSelectMode && "hover:bg-accent/20"
                   )}
                   onClick={() => {
                     if (isBulkSelectMode) {
@@ -2126,7 +2285,6 @@ function ConversationsPageContent() {
                     } else {
                       console.log('Selecting conversation with contact:', conversation.contact);
                       if (!conversation.contact?.id) {
-                        // If contact ID is missing, fetch complete conversation data
                         fetchConversationDetails(conversation.id);
                       }
                       setActiveConversation(conversation);
@@ -2135,79 +2293,96 @@ function ConversationsPageContent() {
                     }
                   }}
                 >
-                  {/* Contact Avatar with Selection */}
+                  {/* Enhanced Contact Avatar with Selection */}
                   <div className="relative mr-3">
                     {isBulkSelectMode ? (
                       <div className={cn(
-                        "h-8 w-8 rounded-full flex items-center justify-center border-2",
+                        "h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-200",
                         selectedConversations.includes(conversation.id)
-                          ? "border-primary -500 bg-green-100"
-                          : "border-gray-200 bg-gray-100"
+                          ? "border-primary bg-primary/10 scale-105"
+                          : "border-border bg-muted hover:border-primary/50"
                       )}>
                         {selectedConversations.includes(conversation.id) && (
-                          <IoMdCheckmark className="h-5 w-5  text-primary -500" />
+                          <IoMdCheckmark className="h-5 w-5 text-primary" />
                         )}
                       </div>
                     ) : (
                       <div className="relative">
-                        <Avatar className="h-12 w-12">
-                          <AvatarFallback className="bg-gray-200 text-gray-700">
+                        <Avatar className={cn(
+                          "h-12 w-12 transition-all duration-200",
+                          activeConversation?.id === conversation.id && "ring-2 ring-primary/50"
+                        )}>
+                          <AvatarFallback className="bg-gradient-to-br from-muted to-muted/70 text-foreground font-medium">
                             {conversation.contact.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         {conversation.contact.whatsappOptIn && (
-                          <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-background"></span>
+                          <span className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                            <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                          </span>
                         )}
                       </div>
                     )}
                   </div>
 
-                  {/* Message Content */}
+                  {/* Enhanced Message Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium">{conversation.contact.name}</h3>
-                      <span className="text-xs text-gray-500">{formatMessageTime(conversation.lastMessageAt)}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-semibold text-foreground truncate">{conversation.contact.name}</h3>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {formatMessageTime(conversation.lastMessageAt)}
+                      </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    {/* Enhanced Labels and Tags */}
+                    <div className="flex flex-wrap gap-1 mb-1">
                       {conversation.labels && conversation.labels.length > 0 && (
                         <Badge
                           variant="outline"
                           className={cn(
-                            "text-[10px] h-4 px-1.5",
-                            `bg-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-100 text-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-800`
+                            "text-[10px] h-4 px-1.5 font-medium",
+                            `bg-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-100 text-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-800 border-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-200`
                           )}
                         >
                           {labels.find(l => l.id === conversation.labels[0])?.name || "Label"}
                         </Badge>
                       )}
                       {conversation.assignedTo && (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-blue-50 text-blue-700">
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-blue-50 text-blue-700 border-blue-200 font-medium">
                           {teamMembers.find(u => u.id === conversation.assignedTo)?.name.split(' ')[0] || "Assigned"}
                         </Badge>
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-sm text-gray-600 truncate max-w-[160px]">
+                    {/* Enhanced Message Preview */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground truncate max-w-[180px] leading-relaxed">
                         {conversation.lastMessageType === "image" ? (
-                          <span className="flex items-center gap-1">
-                            <ImageIcon className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 rounded bg-blue-100 flex items-center justify-center">
+                              <ImageIcon className="h-2 w-2 text-blue-600" />
+                            </div>
                             Photo
                           </span>
                         ) : conversation.lastMessageType === "video" ? (
-                          <span className="flex items-center gap-1">
-                            <Video className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 rounded bg-purple-100 flex items-center justify-center">
+                              <Video className="h-2 w-2 text-purple-600" />
+                            </div>
                             Video
                           </span>
                         ) : conversation.lastMessageType === "document" ? (
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 rounded bg-orange-100 flex items-center justify-center">
+                              <FileText className="h-2 w-2 text-orange-600" />
+                            </div>
                             Document
                           </span>
                         ) : conversation.lastMessageType === "template" ? (
-                          <span className="flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 rounded bg-green-100 flex items-center justify-center">
+                              <FileText className="h-2 w-2 text-green-600" />
+                            </div>
                             Template
                           </span>
                         ) : (
@@ -2215,12 +2390,24 @@ function ConversationsPageContent() {
                         )}
                       </p>
 
-                      <div className="flex items-center gap-1">
+                      {/* Enhanced Status Indicators */}
+                      <div className="flex items-center gap-1.5">
                         {conversation.isWithin24Hours && (
-                          <Zap className="h-3 w-3 text-green-500" />
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                                  <Zap className="h-2.5 w-2.5 text-green-600" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>24-hour window active</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                         {conversation.unreadCount > 0 && (
-                          <div className="flex items-center justify-center bg-green-500 text-white text-xs h-5 min-w-5 px-1.5 rounded-full">
+                          <div className="flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white text-xs h-5 min-w-5 px-1.5 rounded-full font-semibold shadow-sm animate-pulse">
                             {conversation.unreadCount}
                           </div>
                         )}
@@ -2230,33 +2417,41 @@ function ConversationsPageContent() {
                 </div>
               ))}
 
+              {/* Enhanced Empty State */}
               {filteredConversations.length === 0 && !selectedContact && (
-                <div className="text-center py-10 px-4">
+                <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
                   {getActiveFilterCount() > 0 ? (
                     <>
-                      <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
-                        <Filter className="h-6 w-6 text-muted-foreground" />
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted to-muted/70 flex items-center justify-center mb-6">
+                        <Filter className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="font-medium text-foreground mb-1">No conversations match filters</h3>
-                      <p className="text-muted-foreground text-sm mb-4">Try adjusting your filters to see more results</p>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">No conversations match filters</h3>
+                      <p className="text-muted-foreground text-sm mb-6 max-w-sm leading-relaxed">
+                        Try adjusting your filters to see more results, or clear all filters to view all conversations.
+                      </p>
                       <Button
                         onClick={resetFilters}
                         size="sm"
                         variant="outline"
+                        className="hover:bg-accent transition-colors"
                       >
+                        <X className="h-4 w-4 mr-2" />
                         Clear Filters
                       </Button>
                     </>
                   ) : (
                     <>
-                      <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
-                        <MessageSquare className="h-6 w-6 text-muted-foreground" />
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-6">
+                        <MessageSquare className="h-8 w-8 text-primary" />
                       </div>
-                      <h3 className="font-medium text-foreground mb-1">No conversations</h3>
-                      <p className="text-muted-foreground text-sm mb-4">Start your first conversation</p>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">No conversations yet</h3>
+                      <p className="text-muted-foreground text-sm mb-6 max-w-sm leading-relaxed">
+                        Start your first conversation with a customer to see it appear here.
+                      </p>
                       <Button
                         onClick={() => setShowContactDialog(true)}
                         size="sm"
+                        className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-sm"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         New Chat
@@ -2266,16 +2461,16 @@ function ConversationsPageContent() {
                 </div>
               )}
             </div>
-
-
-            {/* Context Menu for Bulk Actions */}
-
           </div>
+
+
+
+
+          
 
           {/* Chat Area */}
           {(activeConversation || selectedContact) ? (
             <div className="flex-1  flex flex-col">
-
               {/* Chat Header */}
               <div className="bg-card border-b px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -2421,9 +2616,7 @@ function ConversationsPageContent() {
                     {/* Add Tag Button */}
                     <DropdownMenu>
                       <DropdownMenuTrigger className="cursor-pointer" asChild>
-
                         <Tag className="h-4 w-4 scale-125 text-primary" />
-
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         {/* Existing contact tags to toggle */}
@@ -2447,9 +2640,7 @@ function ConversationsPageContent() {
                     {/* Chat Actions Dropdown - enhanced UI */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild className="cursor-pointer">
-
                         <MoreVertical className="h-4 scale-125 text-primary" />
-
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         {/* Assign to team member */}
@@ -2576,7 +2767,7 @@ function ConversationsPageContent() {
               </div>
 
               {/* Messages Area - keeping the existing styling for the chat area */}
-              <ScrollArea style={{ backgroundImage: "url('/bg.png')" }} className="flex-1 object-contain h-[300px] p-4 ">
+              <ScrollArea style={{ backgroundImage: "url('/bg.png')" }} className="flex-1 object-contain h-[300px] p-4 "> 
                 <div className="space-y-4 max-w-7xl mx-auto">
                   {selectedContact && messages.length === 0 && (
                     <div className="text-center py-10">
@@ -2602,9 +2793,6 @@ function ConversationsPageContent() {
                             {dateLabel}
                           </div>
                         </div>
-
-                        {/* Messages for this date */}
-
 
                         {/* Messages for this date */}
                         {dateMessages.map((message) => {
@@ -2648,9 +2836,6 @@ function ConversationsPageContent() {
                                   )}
                                 >
                                   {/* Message Tail */}
-
-
-                                  {/* Message Tail */}
                                   <div
                                     className={cn(
                                       "absolute w-[20px] h-[20px] rounded-[10px] bottom-[7px]",
@@ -2666,7 +2851,6 @@ function ConversationsPageContent() {
                                       cursor: 'auto'
                                     }}
                                   />
-
 
                                   {/* Handle different message types */}
                                   {message.messageType === 'text' && (
@@ -2752,7 +2936,6 @@ function ConversationsPageContent() {
                             </div>
                           );
                         })}
-
                       </div>
                     );
                   })}
@@ -2942,6 +3125,12 @@ function ConversationsPageContent() {
 
 
 
+
+
+
+
+
+
           {/* Contact Info Side Panel - enhanced with Card components */}
           <Sheet open={showInfoPanel} onOpenChange={setShowInfoPanel}>
             <SheetContent className="w-[350px] h-full sm:w-[400px] p-0 overflow-y-scroll">
@@ -3048,7 +3237,6 @@ function ConversationsPageContent() {
             </DialogContent>
           </Dialog>
 
-          {/* Template Selection Dialog - modernized with improved preview */}
           {/* Template Selection Dialog - improved with better preview */}
           <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
             <DialogContent className="max-w-2xl">
@@ -3073,10 +3261,10 @@ function ConversationsPageContent() {
                 <ScrollArea className="w-1/2 pr-2 border-r">
                   <div className="space-y-2 pb-2">
                     {templates.map((template) => {
-                      // Determine if template has variables or media
+                      // Determine if template has variables
                       const hasVariables = template.components?.some(comp =>
                         (comp.type === 'body' && comp.text?.includes('{{')) ||
-                        (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
+                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
                       );
 
                       return (
@@ -3195,7 +3383,7 @@ function ConversationsPageContent() {
                       {/* Variable requirements */}
                       {selectedTemplate.components?.some(comp =>
                         (comp.type === 'body' && comp.text?.includes('{{')) ||
-                        (comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format || ''))
+                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
                       ) && (
                           <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-100 text-xs text-blue-700">
                             <div className="flex items-center">
@@ -3421,153 +3609,6 @@ function ConversationsPageContent() {
             </DialogContent>
           </Dialog>
 
-          {/* Replace your existing Bulk Tag Dialog with this implementation */}
-          <Dialog open={showBulkTagDialog} onOpenChange={setShowBulkTagDialog}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add Tags to Conversations</DialogTitle>
-                <DialogDescription>
-                  Add tags to {selectedConversations.length} selected conversations
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4 py-2">
-                {/* Search/Create input for new tag */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Create new tag</label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter new tag name"
-                      value={bulkTagName}
-                      onChange={(e) => setBulkTagName(e.target.value)}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (bulkTagName.trim()) {
-                          // Add to selected tags if not already there
-                          setSelectedBulkTags(prev =>
-                            prev.includes(bulkTagName.trim())
-                              ? prev
-                              : [...prev, bulkTagName.trim()]
-                          );
-                          setBulkTagName("");
-                        }
-                      }}
-                      disabled={!bulkTagName.trim()}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <Separator />
-
-                {/* Search existing tags */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Select existing tags</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search tags..."
-                      className="pl-10"
-                      value={tagSearchQuery}
-                      onChange={(e) => setTagSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Existing tags with checkboxes */}
-                <ScrollArea className="h-48 border rounded-md">
-                  <div className="p-2 space-y-1">
-                    {getUniqueTags()
-                      .filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase()))
-                      .map((tag, index) => (
-                        <div key={index} className="flex items-center space-x-2 p-1.5 hover:bg-accent rounded-md">
-                          <Checkbox
-                            id={`tag-${index}`}
-                            checked={selectedBulkTags.includes(tag)}
-                            onCheckedChange={(checked) => {
-                              setSelectedBulkTags(prev =>
-                                checked
-                                  ? [...prev, tag]
-                                  : prev.filter(t => t !== tag)
-                              );
-                            }}
-                          />
-                          <label
-                            htmlFor={`tag-${index}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 w-full cursor-pointer"
-                          >
-                            {tag}
-                          </label>
-                        </div>
-                      ))}
-
-                    {getUniqueTags().filter(tag => tag.toLowerCase().includes(tagSearchQuery.toLowerCase())).length === 0 && (
-                      <div className="p-2 text-center text-sm text-muted-foreground">
-                        {tagSearchQuery.trim()
-                          ? `No tags matching "${tagSearchQuery}"`
-                          : "No tags available"
-                        }
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-
-                {/* Selected tags display */}
-                {selectedBulkTags.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Selected tags</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedBulkTags.map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="px-2 py-1">
-                          {tag}
-                          <X
-                            className="h-3 w-3 ml-1.5 cursor-pointer"
-                            onClick={() => setSelectedBulkTags(prev => prev.filter(t => t !== tag))}
-                          />
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowBulkTagDialog(false);
-                    setSelectedBulkTags([]);
-                    setBulkTagName("");
-                    setTagSearchQuery("");
-                  }}
-                  disabled={isBulkProcessing}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={bulkAddTags}
-                  disabled={selectedBulkTags.length === 0 || isBulkProcessing}
-                >
-                  {isBulkProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
-                      Adding...
-                    </>
-                  ) : (
-                    <>
-                      <Tag className="h-4 w-4 mr-2" />
-                      Add Tags
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
           {/* Bulk Tag Dialog */}
           <Dialog open={showBulkTagDialog} onOpenChange={setShowBulkTagDialog}>
             <DialogContent className="max-w-md">
@@ -3766,7 +3807,6 @@ function ConversationsPageContent() {
               <Separator className="my-1" />
               <div className="space-y-4 py-2 max-h-[60vh] -mt-3  overflow-y-auto pr-2">
                 <div className="flex items-center justify-between">
-                  {/* <h4 className="font-medium">Active Filters</h4> */}
                   {getActiveFilterCount() > 0 && (
                     <Button
                       variant="ghost"
@@ -4456,6 +4496,11 @@ function ConversationsPageContent() {
       </div>
     );
   }
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 }
 
 export default function ConversationsPage() {

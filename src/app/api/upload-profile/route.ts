@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
+import Company from '@/models/Company';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -22,6 +32,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const user = await User.findById(decoded.id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const company = await Company.findById(user.companyId);
+    if (!company) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
     const contentLength = request.headers.get('content-length');
@@ -71,14 +86,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      // Use media_handle endpoint for profile pictures
+      // First, upload to S3
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const uploadParams = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
+        Key: `profile-pictures/${user.companyId}/${Date.now()}-${file.name}`,
+        Body: buffer,
+        ContentType: file.type,
+      };
+
+      const command = new PutObjectCommand(uploadParams);
+      await s3.send(command);
+
+      const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uploadParams.Key}`;
+
+      console.log('File uploaded to S3:', {
+        url: s3Url,
+        key: uploadParams.Key
+      });
+
+      // Upload to WhatsApp using media_handle endpoint
       const mediaFormData = new FormData();
       mediaFormData.append('file', file);
-      mediaFormData.append('type', 'image/jpeg'); // WhatsApp expects image/jpeg or image/png
+      mediaFormData.append('type', file.type);
       mediaFormData.append('messaging_product', 'whatsapp');
 
       console.log('Uploading profile picture to media_handle endpoint:', {
         url: `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/media_handle`,
+        fileType: file.type,
         headers: {
           'x-waba-id': wabaAccount.wabaId,
           'x-access-token': INT_TOKEN ? 'Present' : 'Missing'
@@ -132,8 +169,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
+      // Update company profile with both S3 URL and media handle
+      company.whatsappProfile = {
+        ...company.whatsappProfile,
+        profilePictureUrl: s3Url,
+        profilePictureHandle: mediaHandle,
+        lastUpdated: new Date()
+      };
+
+      await company.save();
+
       console.log('Profile picture upload successful:', {
         mediaHandle: mediaHandle,
+        s3Url: s3Url,
         fileName: file.name,
         wabaAccount: wabaAccount.wabaId
       });
@@ -142,6 +190,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         success: true,
         message: 'Profile picture uploaded successfully',
         mediaHandle: mediaHandle,
+        s3Url: s3Url,
         type: type,
         fileName: file.name,
         fileSize: file.size,
@@ -167,6 +216,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
+      // Upload to S3
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const uploadParams = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
+        Key: `media/${type}/${user.companyId}/${Date.now()}-${file.name}`,
+        Body: buffer,
+        ContentType: file.type,
+      };
+
+      const command = new PutObjectCommand(uploadParams);
+      await s3.send(command);
+
+      const s3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${uploadParams.Key}`;
+
+      // Upload to WhatsApp
       const mediaFormData = new FormData();
       mediaFormData.append('file', file);
       mediaFormData.append('type', file.type);
@@ -219,33 +285,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      // Get media URL for preview
-      let mediaUrl = '';
-      try {
-        const mediaInfoResponse = await fetch(
-          `https://amped-express.interakt.ai/api/v17.0/${mediaId}`,
-          {
-            method: 'GET',
-            headers: {
-              'x-access-token': INT_TOKEN!,
-              'x-waba-id': wabaAccount.wabaId,
-            }
-          }
-        );
-
-        if (mediaInfoResponse.ok) {
-          const mediaInfo = await mediaInfoResponse.json();
-          mediaUrl = mediaInfo.url || '';
-        }
-      } catch (mediaInfoError) {
-        console.warn('Failed to get media URL:', mediaInfoError);
-      }
-
       return NextResponse.json({
         success: true,
         message: 'Media uploaded successfully',
         mediaId: mediaId,
-        mediaUrl: mediaUrl,
+        s3Url: s3Url,
         type: type,
         fileName: file.name,
         fileSize: file.size,
