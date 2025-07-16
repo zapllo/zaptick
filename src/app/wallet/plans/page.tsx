@@ -519,7 +519,7 @@ export default function PricingPage() {
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium text-gray-700">What's included</span>
+                      <span className="text-sm font-medium text-gray-700">What&apos;s included</span>
                     </div>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {plan.features.slice(0, 6).map((feature, index) => (
