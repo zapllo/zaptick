@@ -5,6 +5,8 @@ import User from '@/models/User';
 import Contact from '@/models/Contact';
 import Conversation from '@/models/Conversation';
 import { v4 as uuidv4 } from 'uuid';
+import { renderTemplateBody, extractHeaderMedia } from '@/lib/renderTemplate'
+import Template from '@/models/Template';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -37,7 +39,8 @@ export async function POST(req: NextRequest) {
       templateName,
       templateId,
       language = 'en',
-      templateComponents
+      templateComponents,
+      templateData
     } = requestData;
 
     console.log('Request data:', JSON.stringify(requestData, null, 2));
@@ -77,9 +80,13 @@ export async function POST(req: NextRequest) {
     }
 
     let whatsappPayload;
-
+    // --- render template locally so the chat can show it later ------------
+    let renderedBody = message;
+    let headerMedia = {};
+ 
     if (messageType === 'template') {
-      // Basic template structure - start minimal
+
+      // Basic template structure
       whatsappPayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -93,24 +100,12 @@ export async function POST(req: NextRequest) {
         }
       };
 
-      // ONLY add components if they exist AND have parameters
-      if (templateComponents && 
-          Array.isArray(templateComponents) && 
-          templateComponents.length > 0) {
-        
-        // Filter out any components without parameters
-        const validComponents = templateComponents.filter(comp => 
-          comp.parameters && 
-          Array.isArray(comp.parameters) && 
-          comp.parameters.length > 0
-        );
-
-        // Only add components array if we have valid components
-        if (validComponents.length > 0) {
-          whatsappPayload.template.components = validComponents;
-        }
+      // Add components if provided
+      if (templateComponents && Array.isArray(templateComponents) && templateComponents.length > 0) {
+        whatsappPayload.template.components = templateComponents;
       }
     } else {
+      // Regular text message
       whatsappPayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -122,7 +117,19 @@ export async function POST(req: NextRequest) {
         }
       };
     }
+   if (messageType === 'template') {
+      const tpl = await Template.findOne({
+        name: templateName,
+        wabaId: contact.wabaId,
+      });
 
+      if (tpl) {
+        renderedBody = renderTemplateBody(tpl, templateComponents);
+        headerMedia = extractHeaderMedia(tpl, templateComponents);
+      } else {
+        renderedBody = `Template: ${templateName}`; // fallback
+      }
+    }
     console.log('Final WhatsApp payload:', JSON.stringify(whatsappPayload, null, 2));
 
     if (!INT_TOKEN) {
@@ -197,8 +204,9 @@ export async function POST(req: NextRequest) {
     let conversation = await Conversation.findOne({ contactId: contact._id });
 
     const messageContent = messageType === 'template'
-      ? `Template: ${templateName}`
+      ? renderedBody            // ← body text, not just the stub
       : message;
+
 
     const newMessage = {
       id: uuidv4(),

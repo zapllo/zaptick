@@ -49,6 +49,10 @@ const MessageSchema = new Schema({
     enum: ['text', 'image', 'video', 'document', 'audio', 'template', 'system', 'note'], // Added 'system' and 'note'
     default: 'text'
   },
+  replyTo: {
+    type: String,
+    default: null
+  },
   timestamp: { type: Date, default: Date.now },
   status: {
     type: String,

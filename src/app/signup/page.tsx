@@ -52,36 +52,93 @@ const featureItem = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
 };
 
-// Industry options
-const INDUSTRIES = [
-  "Technology",
-  "E-commerce",
-  "Healthcare",
-  "Education",
-  "Finance",
-  "Real Estate",
-  "Food & Beverage",
-  "Fashion & Retail",
-  "Travel & Tourism",
-  "Automotive",
-  "Manufacturing",
-  "Consulting",
-  "Marketing & Advertising",
-  "Non-profit",
-  "Other"
-];
+// Industry categories mapping
+const INDUSTRY_CATEGORIES = {
+  "Marketing & Advertising": [
+    "Digital Marketing",
+    "Traditional Advertising"
+  ],
+  "Retail": [
+    "Ecommerce & Online Stores",
+    "Physical Stores & Brick Mortar",
+    "Omnichannel Ecommerce & Physical Stores"
+  ],
+  "Education": [
+    "Schools & Universities",
+    "Coaching Classes & Training Institutes",
+    "Online Learning Platforms",
+    "Books & Publications"
+  ],
+  "Entertainment, Social Media & Gaming": [
+    "Movies & TV Shows",
+    "Events & Performing Arts",
+    "Cinema Halls & Multiplexes",
+    "Magazines & Publications",
+    "Gaming",
+    "Social Media Figures",
+    "Gambling & Real Money Gaming"
+  ],
+  "Finance": [
+    "Banks",
+    "Investments",
+    "Payment Aggregators",
+    "Insurance",
+    "Loans"
+  ],
+  "Healthcare": [
+    "Medical Services",
+    "Prescription Medicines & Drugs",
+    "Hospitals"
+  ],
+  "Public Utilities & Non-Profits": [
+    "Government Services",
+    "Charities",
+    "Religious Organizations"
+  ],
+  "Professional Services": [
+    "Legal Consulting Services",
+    "Other Services"
+  ],
+  "Technology": [
+    "Software & IT Services",
+    "Technology & Hardware"
+  ],
+  "Travel & Hospitality": [
+    "Hotels & Lodging",
+    "Transportation",
+    "Tour Agencies",
+    "Clubs"
+  ],
+  "Automotive": [
+    "Automobile Dealers",
+    "Automotive Services"
+  ],
+  "Real Estate & Construction": [
+    "Property Sales",
+    "Building & Construction"
+  ],
+  "Restaurants": [
+    "Fast Food",
+    "Fine Dining",
+    "Catering"
+  ],
+  "Manufacturing & Impex": [
+    "Consumer Goods Production",
+    "Industrial Production",
+    "Impex"
+  ],
+  "Fitness & Wellness": [
+    "Gyms & Fitness Centers",
+    "Fitness Services",
+    "Spas & Salons"
+  ],
+  "Others": [
+    "Miscellaneous"
+  ]
+};
 
-// Company categories
-const COMPANY_CATEGORIES = [
-  "Startup",
-  "SME (Small & Medium Enterprise)",
-  "Enterprise",
-  "Agency",
-  "Freelancer",
-  "Non-profit",
-  "Government",
-  "Other"
-];
+// Get industries array
+const INDUSTRIES = Object.keys(INDUSTRY_CATEGORIES);
 
 export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -104,6 +161,9 @@ export default function SignupPage() {
   const [companyPhone, setCompanyPhone] = useState("");
   const [companyCountryCode, setCompanyCountryCode] = useState("+91");
 
+  // Available categories based on selected industry
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
   // Counter animation for stats
   const [count1, setCount1] = useState(0);
   const [count2, setCount2] = useState(0);
@@ -122,6 +182,18 @@ export default function SignupPage() {
       clearInterval(timer2);
     };
   }, []);
+
+  // Update categories when industry changes
+  useEffect(() => {
+    if (companyIndustry) {
+      setAvailableCategories(INDUSTRY_CATEGORIES[companyIndustry as keyof typeof INDUSTRY_CATEGORIES] || []);
+      // Reset category when industry changes
+      setCompanyCategory("");
+    } else {
+      setAvailableCategories([]);
+      setCompanyCategory("");
+    }
+  }, [companyIndustry]);
 
   // Password strength checker
   useEffect(() => {
@@ -337,7 +409,7 @@ export default function SignupPage() {
             </motion.div>
           </motion.div>
 
-          {/* Testimonial and trust badges remain the same */}
+          {/* Testimonial and trust badges */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -352,7 +424,7 @@ export default function SignupPage() {
 
             <div className="flex items-start gap-4 relative">
               <div className="h-12 w-12 rounded-full overflow-hidden bg-muted flex-shrink-0 border-2 border-green-100">
-                <Image
+                {/* <Image
                   src="/testimonial-avatar.png"
                   alt="User testimonial"
                   width={48}
@@ -362,7 +434,7 @@ export default function SignupPage() {
                     const target = e.target as HTMLImageElement;
                     target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23d4d4d8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
                   }}
-                />
+                /> */}
               </div>
               <div>
                 <div className="flex mb-1">
@@ -609,12 +681,13 @@ export default function SignupPage() {
                           id="companyLocation"
                           placeholder="City, Country"
                           value={companyLocation}
-                          onChange={(e) => setCompanyLocation(e.target.value)}
+            onChange={(e) => setCompanyLocation(e.target.value)}
                           className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
                         />
                       </div>
                     </motion.div>
-                    <div className="flex items-center justify-between w-full">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <motion.div variants={fadeIn} className="space-y-2">
                         <Label htmlFor="companyIndustry">Industry</Label>
                         <Select value={companyIndustry} onValueChange={setCompanyIndustry}>
@@ -635,16 +708,20 @@ export default function SignupPage() {
                       </motion.div>
 
                       <motion.div variants={fadeIn} className="space-y-2">
-                        <Label htmlFor="companyCategory">Company Category</Label>
-                        <Select value={companyCategory} onValueChange={setCompanyCategory}>
+                        <Label htmlFor="companyCategory">Category</Label>
+                        <Select 
+                          value={companyCategory} 
+                          onValueChange={setCompanyCategory}
+                          disabled={!companyIndustry}
+                        >
                           <SelectTrigger className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400">
                             <div className="flex items-center gap-2">
                               <BiCategory className="h-4 w-4 text-muted-foreground" />
-                              <SelectValue placeholder="Select category" />
+                              <SelectValue placeholder={companyIndustry ? "Select category" : "Select industry first"} />
                             </div>
                           </SelectTrigger>
                           <SelectContent>
-                            {COMPANY_CATEGORIES.map((category) => (
+                            {availableCategories.map((category) => (
                               <SelectItem key={category} value={category}>
                                 {category}
                               </SelectItem>

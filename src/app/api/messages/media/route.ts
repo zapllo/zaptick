@@ -32,6 +32,15 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate media type
+    const validMediaTypes = ['image', 'video', 'document', 'audio'];
+    if (!validMediaTypes.includes(mediaType)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid media type'
+      }, { status: 400 });
+    }
+
     // Find the contact
     const contact = await Contact.findById(contactId);
     if (!contact) {
@@ -58,6 +67,7 @@ export async function POST(req: NextRequest) {
     // Check if mediaUrl is a handle or URL
     const isMediaHandle = /^[a-zA-Z0-9]+$/.test(mediaUrl);
 
+    // Build message data based on media type
     const messageData = {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
@@ -65,12 +75,18 @@ export async function POST(req: NextRequest) {
       type: mediaType,
       [mediaType]: isMediaHandle ? {
         id: mediaUrl,
-        caption: caption || ''
+        ...(caption && { caption })
       } : {
         link: mediaUrl,
-        caption: caption || ''
+        ...(caption && { caption })
       }
     };
+
+    // For documents, add filename if available
+    if (mediaType === 'document' && !isMediaHandle) {
+      const filename = mediaUrl.split('/').pop() || 'document';
+      messageData[mediaType].filename = filename;
+    }
 
     console.log('Sending media message:', JSON.stringify(messageData, null, 2));
 
@@ -116,22 +132,19 @@ export async function POST(req: NextRequest) {
     const newMessage = {
       id: uuidv4(),
       senderId: 'agent' as const,
-      content: caption || 'Media message',
+      content: caption || `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} message`,
       messageType: mediaType,
       timestamp: new Date(),
       status: 'sent' as const,
       whatsappMessageId: interaktData.messages?.[0]?.id,
       senderName: user.name || 'Agent',
-      media: {
-        url: mediaUrl,
-        caption,
-        type: mediaType
-      }
+      mediaUrl,
+      mediaCaption: caption
     };
 
     if (conversation) {
       conversation.messages.push(newMessage);
-      conversation.lastMessage = caption || 'Media message';
+      conversation.lastMessage = caption || `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} message`;
       conversation.lastMessageType = mediaType;
       conversation.lastMessageAt = new Date();
       conversation.status = 'active';
@@ -146,7 +159,7 @@ export async function POST(req: NextRequest) {
         phoneNumberId: contact.phoneNumberId,
         userId: decoded.id,
         messages: [newMessage],
-        lastMessage: caption || 'Media message',
+        lastMessage: caption || `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} message`,
         lastMessageType: mediaType,
         lastMessageAt: new Date(),
         isWithin24Hours: true
@@ -168,7 +181,8 @@ export async function POST(req: NextRequest) {
         status: newMessage.status,
         whatsappMessageId: newMessage.whatsappMessageId,
         senderName: newMessage.senderName,
-        media: newMessage.media
+        mediaUrl: newMessage.mediaUrl,
+        mediaCaption: newMessage.mediaCaption
       },
       conversationId: conversation._id
     });

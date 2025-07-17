@@ -321,7 +321,7 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
           <Button
             variant="outline"
             size="icon"
-            className="absolute -right-6 scale-110 border-2 border-primary ed-500 top-[68px] h-8 w-8 rounded-full shadow-lg  bg-background hover:bg-muted/50 transition-colors z-50"
+            className="absolute -right-4  border-2 border-primary ed-500 top-[68px] h-7 w-7 rounded-full shadow-lg  bg-background hover:bg-muted/50 transition-colors z-50"
             onClick={() => handleCollapsedChange(false)}
           >
             <ChevronRight size={14} />

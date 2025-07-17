@@ -366,9 +366,7 @@ export async function GET(req: NextRequest) {
           language: template.language,
           status: template.status.toLowerCase(),
           content: template.components.find((c: any) => c.type === 'BODY')?.text || '',
-          variables: template.components
-            .find((c: any) => c.type === 'BODY')?.text
-            ?.match(/\{\{(\d+)\}\}/g)?.length || 0,
+          variables: template.components.find((c: any) => c.type === 'BODY')?.text?.match(/\{\{(\d+)\}\}/g)?.length || 0,
           createdAt: template.createdAt,
           updatedAt: template.updatedAt,
           approvedAt: template.approvedAt,
@@ -377,8 +375,12 @@ export async function GET(req: NextRequest) {
           rejectionReason: template.rejectionReason,
           type: hasMediaHeader ? 'media' : 'text',
           mediaType: hasMediaHeader ? template.components.find((c: any) => c.type === 'HEADER')?.format : null,
-          createdBy: template.createdBy || "Unknown"
+          createdBy: template.createdBy || "Unknown",
+
+          // 👇 ADD THIS LINE
+          components: template.components
         };
+
       })
     });
 

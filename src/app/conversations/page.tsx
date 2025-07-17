@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { IoIosSearch, IoMdCheckmark } from "react-icons/io";
 import { LiaCheckDoubleSolid } from "react-icons/lia";
@@ -58,7 +58,8 @@ import {
   Download,
   Trash2,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Reply
 } from "lucide-react";
 import { FaRegUserCircle } from "react-icons/fa";
 import Layout from "@/components/layout/Layout";
@@ -116,6 +117,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FaSearch } from "react-icons/fa";
 import EmojiPicker from 'emoji-picker-react';
 import { type EmojiClickData } from 'emoji-picker-react';
+import Link from "next/link";
+import FileUpload from "@/components/FileUpload";
+
+
+/**
+ * A helper to locate messages quickly when rendering replies.
+ */
+function useMessageMap(messages: IMessage[]) {
+  return useMemo(() => {
+    const map: Record<string, IMessage> = {};
+    messages.forEach((m) => {
+      if (m.whatsappMessageId) map[m.whatsappMessageId] = m;
+      map[m.id] = m;
+    });
+    return map;
+  }, [messages]);
+}
+
+
 
 // Interface definitions aligned with our models
 interface Contact {
@@ -268,12 +288,110 @@ function ConversationsPageContent() {
     name: "",
     firstName: ""
   });
+  const [replyingTo, setReplyingTo] = useState<{
+    id: string;
+    content: string;
+    senderName: string;
+  } | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // Add new state for file uploads
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [uploadType, setUploadType] = useState<'IMAGE' | 'VIDEO' | 'DOCUMENT'>('IMAGE');
+
+
+  const messageMap = useMessageMap(messages);
+
+  const renderReplySnippet = (msg: IMessage) => {
+    if (!msg.replyTo) return null;
+    const original = messageMap[msg.replyTo] as IMessage | undefined;
+    return (
+      <div className="mb-1 pl-2 border-l-2 border-primary/40 text-xs text-muted-foreground max-w-full truncate">
+        <span className="font-medium">
+          {original?.senderName || (original?.senderId === "agent" ? "You" : getCurrentContact()?.name || "Customer")}
+        </span>
+        : {original?.content || "[Deleted message]"}
+      </div>
+    );
+  };
+
+
+  const handleFileSelect = (file: File, type: string) => {
+    console.log('File selected:', file.name, type);
+  };
+
+  const handleUploadComplete = async (url: string, type: string, caption?: string) => {
+    if (!getCurrentContact()) {
+      toast({
+        title: "Contact information missing",
+        description: "Please select a contact to send media",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const contactId = selectedContact?.id || activeConversation?.contact?.id;
+
+      const response = await fetch('/api/messages/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId,
+          mediaUrl: url,
+          caption: caption || '',
+          mediaType: type.toLowerCase()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (!activeConversation && data.conversationId) {
+          const convResponse = await fetch(`/api/conversations/${data.conversationId}`);
+          const convData = await convResponse.json();
+          if (convData.success) {
+            setActiveConversation(convData.conversation);
+            setSelectedContact(null);
+            fetchConversations();
+          }
+        } else if (activeConversation) {
+          fetchMessages(activeConversation.id);
+          fetchConversations();
+        }
+
+        setShowFileUpload(false);
+        toast({ title: "Media sent successfully" });
+      } else {
+        toast({
+          title: "Failed to send media",
+          description: data.message || "Please try again",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error sending media:', error);
+      toast({
+        title: "Failed to send media",
+        description: "Network error. Please check your connection and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleMediaUpload = (type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => {
+    setUploadType(type);
+    setShowFileUpload(true);
+  };
+
+
 
   // Add a function to handle emoji selection
   const handleEmojiClick = (emojiData: EmojiClickData) => {
@@ -386,9 +504,11 @@ function ConversationsPageContent() {
     );
   };
 
-  // Template dialog states
+  // Enhanced template dialog states
   const [templateVariables, setTemplateVariables] = useState<{ [key: string]: string }>({});
+  const [templateMediaInputs, setTemplateMediaInputs] = useState<{ [key: string]: string }>({});
   const [showTemplateVariablesDialog, setShowTemplateVariablesDialog] = useState(false);
+
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -587,6 +707,33 @@ function ConversationsPageContent() {
     }
   };
 
+
+  // Add this useEffect to auto-select the first conversation
+  useEffect(() => {
+    // Auto-select first conversation when page loads
+    if (!activeConversation && !selectedContact && filteredConversations.length > 0) {
+      const firstConversation = filteredConversations[0];
+      console.log('Auto-selecting first conversation:', firstConversation);
+
+      // Check if contact details are available
+      if (firstConversation.contact?.id) {
+        setActiveConversation(firstConversation);
+        console.log('Contact ID available:', firstConversation.contact.id);
+      } else {
+        // If contact details are missing, fetch them
+        console.log('Contact details missing, fetching conversation details...');
+        fetchConversationDetails(firstConversation.id).then(() => {
+          // After fetching, the conversation should have contact details
+          const updatedConversation = conversations.find(c => c.id === firstConversation.id);
+          if (updatedConversation?.contact?.id) {
+            setActiveConversation(updatedConversation);
+            console.log('Contact ID now available:', updatedConversation.contact.id);
+          }
+        });
+      }
+    }
+  }, [filteredConversations, activeConversation, selectedContact, conversations]);
+
   const getCurrentContact = () => selectedContact || activeConversation?.contact;
   const getCurrentChatTitle = () => getCurrentContact()?.name || "Select a conversation";
   const isWithin24Hours = () => {
@@ -610,7 +757,9 @@ function ConversationsPageContent() {
       default: return <Clock className={cn(iconClass, "text-muted-foreground")} />; // Clock for pending
     }
   };
-
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showAddTagDialog, setShowAddTagDialog] = useState(false);
   const [newTag, setNewTag] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
@@ -636,6 +785,31 @@ function ConversationsPageContent() {
     setIsBulkSelectMode(false);
     clearSelection();
   };
+  // Update the handleScroll function to work with regular div
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLDivElement;
+    const { scrollTop, scrollHeight, clientHeight } = target;
+
+    // Check if user is near the bottom (within 100px)
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+    setShouldAutoScroll(isNearBottom);
+
+    // Detect if user is actively scrolling
+    setIsUserScrolling(true);
+
+    // Clear scrolling state after a delay
+    setTimeout(() => {
+      setIsUserScrolling(false);
+    }, 150);
+  }, []);
+
+  // Update the scrollToBottom function
+  const scrollToBottom = useCallback(() => {
+    if (scrollAreaRef.current && messagesEndRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, []);
 
   // Bulk action functions
   const bulkAssignConversations = async () => {
@@ -1208,14 +1382,19 @@ function ConversationsPageContent() {
     }
   }, [activeConversation]);
 
-  // Add this new function to fetch conversation details if needed
+  // Also update the fetchConversationDetails function to return a promise
   const fetchConversationDetails = async (conversationId: string) => {
     try {
       const response = await fetch(`/api/conversations/${conversationId}`);
       const data = await response.json();
       if (data.success && data.conversation) {
-        // Update the active conversation with complete details
-        setActiveConversation(data.conversation);
+        // Update the conversations list with complete details
+        setConversations(prevConversations =>
+          prevConversations.map(conv =>
+            conv.id === conversationId ? data.conversation : conv
+          )
+        );
+        return data.conversation;
       }
     } catch (error) {
       console.error('Error fetching conversation details:', error);
@@ -1225,6 +1404,7 @@ function ConversationsPageContent() {
       });
     }
   };
+
 
   const createLabel = async () => {
     if (!newLabelName.trim()) return;
@@ -1253,7 +1433,13 @@ function ConversationsPageContent() {
       toast({ title: "Failed to create label", variant: "destructive" });
     }
   };
+  function getOriginalMessageContent(id: string) {
+    const original = messages.find(msg => msg.whatsappMessageId === id || msg.id === id);
+    return original?.content || '[Deleted message]';
+  }
 
+
+  // Also update the sendMessage function to better handle the contact ID extraction
   const sendMessage = async () => {
     if (!messageInput.trim() || isSending) return;
 
@@ -1281,14 +1467,18 @@ function ConversationsPageContent() {
 
       if (!contactId) {
         console.error('Contact ID missing from active conversation:', activeConversation);
+        console.log('Attempting to fetch complete conversation details...');
 
         // Attempt to fetch complete conversation details
         try {
-          const response = await fetch(`/api/conversations/${activeConversation.id}`);
-          const data = await response.json();
-          if (data.success && data.conversation && data.conversation.contact?.id) {
-            contactId = data.conversation.contact.id;
+          const conversationDetails = await fetchConversationDetails(activeConversation.id);
+          if (conversationDetails?.contact?.id) {
+            contactId = conversationDetails.contact.id;
+            wabaId = conversationDetails.wabaId;
             console.log('Retrieved contact ID from API:', contactId);
+
+            // Update the active conversation with complete details
+            setActiveConversation(conversationDetails);
           } else {
             toast({
               title: "Contact information missing",
@@ -1315,6 +1505,20 @@ function ConversationsPageContent() {
       });
       return;
     }
+
+    // Ensure we have both contactId and wabaId before proceeding
+    if (!contactId || !wabaId) {
+      console.error('Missing required parameters after all attempts:', { contactId, wabaId });
+      toast({
+        title: "Contact information missing",
+        description: "Please select a contact to send a message",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    console.log('Sending message with:', { contactId, wabaId, messageInput: messageInput.trim() });
+
 
     // Ensure we have both contactId and wabaId before proceeding
     if (!contactId || !wabaId) {
@@ -1388,7 +1592,47 @@ function ConversationsPageContent() {
     }
   };
 
-  // Modified sendTemplate function
+  const sendReplyMessage = async (originalMessageId: string, content: string) => {
+    if (!activeConversation || !getCurrentContact()) return;
+
+    const payload = {
+      contactId: getCurrentContact().id,
+      conversationId: activeConversation.id,
+      replyToMessageId: originalMessageId,
+      message: content
+    };
+
+    const res = await fetch('/api/messages/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      fetchMessages(activeConversation.id); // Refresh messages
+    } else {
+      toast({ title: 'Failed to send reply', variant: 'destructive' });
+    }
+  };
+
+
+  const handleSend = async () => {
+    if (!messageInput.trim() || isSending) return;
+
+    if (replyingTo) {
+      // -----  it's a reply  -----
+      await sendReplyMessage(replyingTo.id, messageInput.trim()); 
+      setReplyingTo(null);          // hide the reply banner
+    } else {
+      // -----  normal message  ---
+      await sendMessage();
+    }
+
+    setMessageInput("");
+  };
+
+
   const sendTemplate = async (template: Template, skipVariables = false) => {
     let contactId: string;
     let wabaId: string;
@@ -1410,15 +1654,48 @@ function ConversationsPageContent() {
 
     if (isSending) return;
 
-    // Check if template has TEXT variables that need to be filled
-    const hasTextVariables = template.components?.some(comp =>
-      (comp.type === 'body' && comp.text?.includes('{{')) ||
-      (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
-    );
+    console.log('Full template object:', template);
+    console.log('Template components:', template.components);
 
-    if (hasTextVariables && !skipVariables) {
+    // Handle different template formats
+    let hasTextVariables = false;
+    let hasMediaHeaders = false;
+
+    if (template.components) {
+      // Standard WhatsApp template format
+      hasTextVariables = template.components.some(comp =>
+        (comp.type === 'body' && comp.text?.includes('{{')) ||
+        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
+        (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
+      );
+
+      hasMediaHeaders = template.components.some(comp =>
+        comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+      );
+    } else {
+      // Your custom template format
+      // Check if content has variables
+      hasTextVariables = template.content?.includes('{{') || false;
+
+      // Check if it's a media template
+      hasMediaHeaders = template.mediaType && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(template.mediaType);
+    }
+
+    console.log('Template analysis:', {
+      templateName: template.name,
+      hasTextVariables,
+      hasMediaHeaders,
+      skipVariables,
+      shouldShowDialog: (hasTextVariables || hasMediaHeaders) && !skipVariables,
+      templateFormat: template.components ? 'standard' : 'custom'
+    });
+
+    // If template has variables or media headers and we're not skipping the dialog
+    if ((hasTextVariables || hasMediaHeaders) && !skipVariables) {
+      console.log('Opening template variables dialog');
       setSelectedTemplate(template);
       setTemplateVariables({});
+      setTemplateMediaInputs({});
       setShowTemplateVariablesDialog(true);
       return;
     }
@@ -1435,14 +1712,66 @@ function ConversationsPageContent() {
         senderName: currentUser.name
       };
 
-      // Only add templateComponents if there are actual text variables to fill
-      if (hasTextVariables) {
+      // Handle template components for your custom format
+      if (hasTextVariables || hasMediaHeaders) {
         const templateComponents: any[] = [];
 
-        template.components?.forEach(component => {
-          // Handle body components with variables
-          if (component.type === 'body' && component.text?.includes('{{')) {
-            const variables = (component.text.match(/\{\{[^}]+\}\}/g) || [])
+        if (template.components) {
+          // Standard WhatsApp template format (existing code)
+          template.components.forEach(component => {
+            // ... your existing component handling code ...
+          });
+        } else {
+          // Handle your custom template format
+          if (hasMediaHeaders && template.mediaType) {
+            // For media templates, we need to add a header component
+            if (template.mediaType === 'IMAGE') {
+              const imageUrl = templateMediaInputs['header_image'];
+              if (imageUrl) {
+                templateComponents.push({
+                  type: 'header',
+                  parameters: [{
+                    type: 'image',
+                    image: {
+                      link: imageUrl
+                    }
+                  }]
+                });
+              }
+            } else if (template.mediaType === 'VIDEO') {
+              const videoUrl = templateMediaInputs['header_video'];
+              if (videoUrl) {
+                templateComponents.push({
+                  type: 'header',
+                  parameters: [{
+                    type: 'video',
+                    video: {
+                      link: videoUrl
+                    }
+                  }]
+                });
+              }
+            } else if (template.mediaType === 'DOCUMENT') {
+              const documentUrl = templateMediaInputs['header_document'];
+              const filename = templateMediaInputs['header_document_filename'] || 'document';
+              if (documentUrl) {
+                templateComponents.push({
+                  type: 'header',
+                  parameters: [{
+                    type: 'document',
+                    document: {
+                      link: documentUrl,
+                      filename: filename
+                    }
+                  }]
+                });
+              }
+            }
+          }
+
+          // Handle text variables in content
+          if (hasTextVariables && template.content) {
+            const variables = (template.content.match(/\{\{[^}]+\}\}/g) || [])
               .map((v: string) => v.replace(/\{\{|\}\}/g, '').trim());
 
             if (variables.length > 0) {
@@ -1455,23 +1784,7 @@ function ConversationsPageContent() {
               });
             }
           }
-
-          // Handle TEXT header components with variables
-          if (component.type === 'header' && component.format === 'TEXT' && component.text?.includes('{{')) {
-            const variables = (component.text.match(/\{\{[^}]+\}\}/g) || [])
-              .map((v: string) => v.replace(/\{\{|\}\}/g, '').trim());
-
-            if (variables.length > 0) {
-              templateComponents.push({
-                type: 'header',
-                parameters: variables.map((varName: string) => ({
-                  type: 'text',
-                  text: templateVariables[varName] || `[${varName}]`
-                }))
-              });
-            }
-          }
-        });
+        }
 
         // Only add templateComponents if we have valid components
         if (templateComponents.length > 0) {
@@ -1505,6 +1818,8 @@ function ConversationsPageContent() {
 
         setShowTemplateDialog(false);
         setShowTemplateVariablesDialog(false);
+        setTemplateMediaInputs({});
+        setTemplateVariables({});
         toast({ title: "Template sent successfully" });
       } else {
         console.error('Template sending failed:', data);
@@ -1525,47 +1840,122 @@ function ConversationsPageContent() {
   const TemplateVariablesDialog = () => {
     if (!selectedTemplate) return null;
 
-    // Extract variable names from template body only (not header media)
-    const variableNames: string[] = [];
+    console.log('TemplateVariablesDialog called with:', {
+      selectedTemplate: selectedTemplate?.name,
+      showTemplateVariablesDialog
+    });
 
-    selectedTemplate.components?.forEach(component => {
-      if (component.type === 'body' && component.text) {
-        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+    // Extract text variable names from template
+    const textVariableNames: string[] = [];
+    let hasMediaHeader = false;
+    let mediaHeaderType = '';
+
+    if (selectedTemplate.components) {
+      // Standard WhatsApp template format
+      selectedTemplate.components.forEach(component => {
+        if (component.type === 'body' && component.text) {
+          const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+          matches.forEach((match: string) => {
+            const varName = match.replace(/\{\{|\}\}/g, '').trim();
+            if (!textVariableNames.includes(varName)) {
+              textVariableNames.push(varName);
+            }
+          });
+        }
+
+        if (component.type === 'header') {
+          if (component.format === 'TEXT' && component.text) {
+            const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+            matches.forEach((match: string) => {
+              const varName = match.replace(/\{\{|\}\}/g, '').trim();
+              if (!textVariableNames.includes(varName)) {
+                textVariableNames.push(varName);
+              }
+            });
+          } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
+            hasMediaHeader = true;
+            mediaHeaderType = component.format;
+          }
+        }
+      });
+    } else {
+      // Your custom template format
+      if (selectedTemplate.content) {
+        const matches = selectedTemplate.content.match(/\{\{[^}]+\}\}/g) || [];
         matches.forEach((match: string) => {
           const varName = match.replace(/\{\{|\}\}/g, '').trim();
-          if (!variableNames.includes(varName)) {
-            variableNames.push(varName);
+          if (!textVariableNames.includes(varName)) {
+            textVariableNames.push(varName);
           }
         });
       }
 
-      // Handle TEXT headers with variables (not IMAGE/VIDEO/DOCUMENT)
-      if (component.type === 'header' && component.format === 'TEXT' && component.text) {
-        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
-        matches.forEach((match: string) => {
-          const varName = match.replace(/\{\{|\}\}/g, '').trim();
-          if (!variableNames.includes(varName)) {
-            variableNames.push(varName);
-          }
-        });
+      if (selectedTemplate.mediaType && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(selectedTemplate.mediaType)) {
+        hasMediaHeader = true;
+        mediaHeaderType = selectedTemplate.mediaType;
       }
+    }
+
+    const canSend = textVariableNames.every(varName => templateVariables[varName]?.trim()) &&
+      (!hasMediaHeader ||
+        (mediaHeaderType === 'IMAGE' && templateMediaInputs['header_image']?.trim()) ||
+        (mediaHeaderType === 'VIDEO' && templateMediaInputs['header_video']?.trim()) ||
+        (mediaHeaderType === 'DOCUMENT' && templateMediaInputs['header_document']?.trim())
+      );
+
+    console.log('Dialog analysis:', {
+      textVariableNames,
+      hasMediaHeader,
+      mediaHeaderType,
+      canSend
     });
 
     return (
       <Dialog open={showTemplateVariablesDialog} onOpenChange={setShowTemplateVariablesDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Template Variables</DialogTitle>
+            <DialogTitle>Template Variables & Media</DialogTitle>
             <DialogDescription>
-              Enter values for the variables in this template
+              Fill in the required values for "{selectedTemplate.name}"
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Only show text variables - no media upload needed */}
-            {variableNames.map((varName, index) => (
+            {/* Media Header Inputs */}
+            {hasMediaHeader && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-primary">
+                  Header {mediaHeaderType.toLowerCase()} URL *
+                </label>
+                <Input
+                  placeholder={`Enter ${mediaHeaderType.toLowerCase()} URL`}
+                  value={templateMediaInputs[`header_${mediaHeaderType.toLowerCase()}`] || ''}
+                  onChange={(e) => setTemplateMediaInputs(prev => ({
+                    ...prev,
+                    [`header_${mediaHeaderType.toLowerCase()}`]: e.target.value
+                  }))}
+                  className="border-primary/50 focus:border-primary"
+                />
+                {mediaHeaderType === 'DOCUMENT' && (
+                  <Input
+                    placeholder="Document filename (optional)"
+                    value={templateMediaInputs['header_document_filename'] || ''}
+                    onChange={(e) => setTemplateMediaInputs(prev => ({
+                      ...prev,
+                      'header_document_filename': e.target.value
+                    }))}
+                  />
+                )}
+                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  ⚠️ This template requires a valid {mediaHeaderType.toLowerCase()} URL to be sent.
+                </p>
+              </div>
+            )}
+
+            {/* Text Variables */}
+            {textVariableNames.map((varName, index) => (
               <div key={index} className="space-y-2">
-                <label className="text-sm font-medium">{varName}</label>
+                <label className="text-sm font-medium">{varName} *</label>
                 <Input
                   placeholder={`Enter value for ${varName}`}
                   value={templateVariables[varName] || ''}
@@ -1577,7 +1967,7 @@ function ConversationsPageContent() {
               </div>
             ))}
 
-            {variableNames.length === 0 && (
+            {textVariableNames.length === 0 && !hasMediaHeader && (
               <div className="text-center py-4 text-sm text-muted-foreground">
                 This template has no variables to fill
               </div>
@@ -1593,9 +1983,16 @@ function ConversationsPageContent() {
             </Button>
             <Button
               onClick={() => selectedTemplate && sendTemplate(selectedTemplate, true)}
-              disabled={variableNames.some(varName => !templateVariables[varName]?.trim())}
+              disabled={!canSend || isSending}
             >
-              Send Template
+              {isSending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                  Sending...
+                </>
+              ) : (
+                "Send Template"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1755,35 +2152,94 @@ function ConversationsPageContent() {
     }
   };
 
+
+
   if (wabaAccounts.length === 0) {
     return (
       <Layout>
-        <div className="h-screen flex items-center justify-center bg-background">
-          <Card className="max-w-md mx-auto shadow-md">
-            <CardHeader className="text-center">
-              <div className="bg-primary/10 p-4 rounded-full w-fit mx-auto mb-4">
-                <AlertCircle className="h-8 w-8 text-primary" />
+        <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/20 to-background p-4">
+          <div className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-green-50/30 p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-green-200 wark:from-muted/40 wark:to-green-900/10 max-w-lg w-full">
+            {/* Header Section */}
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg transition-all duration-300 group-hover:scale-110">
+                  <MessageSquare className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 wark:text-white mb-1">
+                    WhatsApp Business
+                  </h1>
+                  <p className="text-sm text-green-600 font-medium">
+                    Ready to Connect
+                  </p>
+                </div>
               </div>
-              <CardTitle className="text-2xl">Connect WhatsApp</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Connect your WhatsApp Business Account to start managing conversations with your customers.
-              </CardDescription>
-            </CardHeader>
-            <CardFooter className="flex justify-center pb-6">
-              <Button
-                onClick={() => window.location.href = '/dashboard'}
-                className="text-primary-foreground"
-                size="lg"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Connect Account
-              </Button>
-            </CardFooter>
-          </Card>
+
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700 wark:bg-green-900/30 wark:text-green-400 shadow-sm">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                Setup Required
+              </span>
+            </div>
+
+            {/* Description Section */}
+            <div className="space-y-4 mb-8">
+              <p className="text-gray-700 wark:text-gray-300 leading-relaxed">
+                Connect your WhatsApp Business Account to start managing conversations with your customers in real-time.
+              </p>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-gray-600 wark:text-gray-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 wark:bg-green-900/30">
+                    <Users className="h-4 w-4 text-green-600 wark:text-green-400" />
+                  </div>
+                  <span>Manage customer conversations</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600 wark:text-gray-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 wark:bg-blue-900/30">
+                    <Zap className="h-4 w-4 text-blue-600 wark:text-blue-400" />
+                  </div>
+                  <span>Automated message templates</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600 wark:text-gray-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 wark:bg-purple-900/30">
+                    <Shield className="h-4 w-4 text-purple-600 wark:text-purple-400" />
+                  </div>
+                  <span>Secure business messaging</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="space-y-4 cursor-pointer">
+              <Link href='/dashboard'>
+                <Button
+                  onClick={() => window.location.href = '/dashboard'}
+                  className="w-full h-12 bg-gradient-to-r  from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                  size="lg"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Go to Dashboard
+                </Button>
+              </Link>
+
+              <div className="flex items-center mt-4 justify-center gap-2 text-xs text-gray-500 wark:text-gray-400">
+                <Info className="h-3 w-3" />
+                <span>Quick setup • 2 minutes</span>
+              </div>
+            </div>
+
+            {/* Decorative Elements */}
+            <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
+            <div className="absolute -left-4 -bottom-4 h-12 w-12 rounded-full bg-green-400/20 transition-all duration-300 group-hover:scale-125" />
+
+            {/* Subtle Pattern Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </div>
         </div>
       </Layout>
     );
   }
+
 
   return (
     <Layout>
@@ -1937,7 +2393,7 @@ function ConversationsPageContent() {
                     <RefreshCcw className={cn("h-5 w-5", isRefreshing && "animate-spin")} />
                   </Button>
                 </TooltipTrigger>
-                  <TooltipContent side="bottom" className="bg-popover/95 backdrop-blur-sm border">
+                <TooltipContent side="bottom" className="bg-popover/95 backdrop-blur-sm border">
                   <p className="flex items-center text-black gap-2">
                     <RefreshCcw className="h-3 w-3" />
                     Refresh conversations
@@ -2022,7 +2478,7 @@ function ConversationsPageContent() {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-         {/* Conversations List Sidebar - Modern Design */}
+          {/* Conversations List Sidebar - Modern Design */}
           <div className={cn(
             "w-full md:w-80 lg:w-96 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-hidden backdrop-blur-md shadow-sm",
             !isMobileMenuOpen && "hidden md:flex",
@@ -2032,10 +2488,10 @@ function ConversationsPageContent() {
             <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-card to-card/95">
               {isBulkSelectMode ? (
                 <div className="flex items-center gap-3 w-full">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={exitBulkMode} 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={exitBulkMode}
                     className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -2065,13 +2521,13 @@ function ConversationsPageContent() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex items-center relative gap-2">
                 {isBulkSelectMode ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
                       >
@@ -2079,7 +2535,7 @@ function ConversationsPageContent() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-sm border-border/50">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => setShowBulkTagDialog(true)}
                         className="cursor-pointer hover:bg-accent/50 transition-colors group"
                       >
@@ -2091,8 +2547,8 @@ function ConversationsPageContent() {
                           <p className="text-xs text-muted-foreground">Add tags to conversations</p>
                         </div>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {}}
+                      <DropdownMenuItem
+                        onClick={() => { }}
                         className="cursor-pointer hover:bg-accent/50 transition-colors group"
                       >
                         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 mr-3 group-hover:bg-purple-200 transition-colors">
@@ -2103,7 +2559,7 @@ function ConversationsPageContent() {
                           <p className="text-xs text-muted-foreground">Create broadcast list</p>
                         </div>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => setShowBulkAssignDialog(true)}
                         className="cursor-pointer hover:bg-accent/50 transition-colors group"
                       >
@@ -2115,8 +2571,8 @@ function ConversationsPageContent() {
                           <p className="text-xs text-muted-foreground">Assign to team member</p>
                         </div>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {}}
+                      <DropdownMenuItem
+                        onClick={() => { }}
                         className="cursor-pointer hover:bg-accent/50 transition-colors group"
                       >
                         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 mr-3 group-hover:bg-orange-200 transition-colors">
@@ -2128,7 +2584,7 @@ function ConversationsPageContent() {
                         </div>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => setShowBulkDeleteDialog(true)}
                         className="cursor-pointer hover:bg-destructive/10 transition-colors group text-destructive"
                       >
@@ -2146,9 +2602,9 @@ function ConversationsPageContent() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setIsBulkSelectMode(true)}
                           className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
                         >
@@ -2164,7 +2620,7 @@ function ConversationsPageContent() {
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                
+
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -2174,8 +2630,8 @@ function ConversationsPageContent() {
                         onClick={() => setShowFilterDialog(true)}
                         className={cn(
                           "h-8 w-8 rounded-full transition-all duration-200 hover:scale-105 relative",
-                          getActiveFilterCount() > 0 
-                            ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md" 
+                          getActiveFilterCount() > 0
+                            ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
                             : "hover:bg-accent/50"
                         )}
                       >
@@ -2202,10 +2658,10 @@ function ConversationsPageContent() {
             <div className="p-4 border-b border-border/50 bg-card/30">
               <div className="flex items-center gap-2">
                 {searchQuery.trim().length > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => setSearchQuery("")} 
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSearchQuery("")}
                     className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -2466,541 +2922,834 @@ function ConversationsPageContent() {
 
 
 
-          
 
-          {/* Chat Area */}
+
+          {/* Chat Area - Modern & Professional Design */}
           {(activeConversation || selectedContact) ? (
-            <div className="flex-1  flex flex-col">
-              {/* Chat Header */}
-              <div className="bg-card border-b px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="md:hidden mr-1"
-                    onClick={() => setIsMobileMenuOpen(true)}
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
+            <div className="flex-1 flex flex-col bg-gradient-to-b from-background to-background/95 backdrop-blur-md shadow-sm">
+              {/* Enhanced Chat Header */}
+              <div className="bg-gradient-to-r from-card to-card/95 border-b border-border/50 px-4 py-3 shadow-sm backdrop-blur-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="md:hidden mr-1 h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
+                      onClick={() => setIsMobileMenuOpen(true)}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
 
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback>
-                      {getCurrentChatTitle().charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/20 transition-all duration-200 hover:ring-primary/40">
+                        <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-semibold">
+                          {getCurrentChatTitle().charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {getCurrentContact()?.whatsappOptIn && (
+                        <span className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                          <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                        </span>
+                      )}
+                    </div>
 
-                  <div>
-                    <h2 className="font-medium text-foreground">{getCurrentChatTitle()}</h2>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                        <Circle className={cn(
-                          "h-2 w-2",
-                          activeConversation?.status === 'active' && "fill-green-500 text-green-500",
-                          activeConversation?.status === 'pending' && "fill-amber-500 text-amber-500",
-                          activeConversation?.status === 'resolved' && "fill-blue-500 text-blue-500",
-                          activeConversation?.status === 'closed' && "fill-slate-500 text-slate-500",
-                          !activeConversation && "fill-green-500 text-green-500"
-                        )} />
-                        {selectedContact ? 'New Conversation' :
-                          activeConversation?.status === 'active' ? 'Active' :
-                            activeConversation?.status === 'closed' ? 'Closed' :
-                              activeConversation?.status === 'resolved' ? 'Resolved' : 'Pending'}
-                      </span>
-
-                      {getCurrentContact()?.tags && getCurrentContact()?.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1  max-w-[200px]">
-                          {getCurrentContact()?.tags.map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className="text-xs h-5 px-1.5 bg-primary/10 text-primary border-primary/20"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-semibold text-foreground text-lg">{getCurrentChatTitle()}</h2>
+                        <div className="flex items-center gap-1.5">
+                          <Circle className={cn(
+                            "h-2.5 w-2.5 transition-all duration-200",
+                            activeConversation?.status === 'active' && "fill-green-500 text-green-500",
+                            activeConversation?.status === 'pending' && "fill-amber-500 text-amber-500",
+                            activeConversation?.status === 'resolved' && "fill-blue-500 text-blue-500",
+                            activeConversation?.status === 'closed' && "fill-slate-500 text-slate-500",
+                            !activeConversation && "fill-green-500 text-green-500"
+                          )} />
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {selectedContact ? 'New Conversation' :
+                              activeConversation?.status === 'active' ? 'Active' :
+                                activeConversation?.status === 'closed' ? 'Closed' :
+                                  activeConversation?.status === 'resolved' ? 'Resolved' : 'Pending'}
+                          </span>
                         </div>
-                      )}
-                      {activeConversation?.labels && activeConversation.labels.length > 0 && (
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-xs h-5 px-1.5",
-                            labels.find(l => l.id === activeConversation.labels[0])?.color
-                              ? `bg-${labels.find(l => l.id === activeConversation.labels[0])?.color}-100 text-${labels.find(l => l.id === activeConversation.labels[0])?.color}-800`
-                              : "bg-blue-100 text-blue-800"
-                          )}
-                        >
-                          {labels.find(l => l.id === activeConversation.labels[0])?.name || "Label"}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center  gap4">
-                  {activeConversation?.assignedTo ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Badge
-                          variant="outline"
-                          className="h-8 border-primary border  cursor-pointer"
-                        >
-                          <User className="h-3 w-3" />
-                          {teamMembers.find(u => u.id === activeConversation.assignedTo)?.name.split(' ')[0] || 'Agent'}
-                          <ChevronDown className="h-3 w-3 ml-0.5" />
-                        </Badge>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="cursor-pointer">
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            <span>Reassign to</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            {teamMembers.map(member => (
-                              <DropdownMenuItem
-                                key={member.id}
-                                onClick={() => assignConversation(member.id)}
-                                className="cursor-pointer"
-                              >
-                                <div className="flex items-center w-full">
-                                  <User className="h-4 w-4 mr-2" />
-                                  <span>{member.name}</span>
-                                  {member.id === activeConversation.assignedTo && (
-                                    <Check className="h-4 w-4 ml-auto" />
-                                  )}
-                                </div>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
-                          onClick={() => assignConversation('')}
-                          className="text-red-600 cursor-pointer"
-                        >
-                          <UserX className="h-4 w-4 mr-2" />
-                          <span>Unassign</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Badge
-                          variant="outline"
-                          className="text-xs h-5 px-1.5 bg-gray-50 text-gray-600 border-gray-200 cursor-pointer hover:bg-gray-100 flex items-center gap-1"
-                        >
-                          <UserPlus className="h-3 w-3" />
-                          Assign
-                          <ChevronDown className="h-3 w-3 ml-0.5" />
-                        </Badge>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        {teamMembers.map(member => (
-                          <DropdownMenuItem
-                            key={member.id}
-                            onClick={() => assignConversation(member.id)}
-                            className="cursor-pointer"
-                          >
-                            <User className="h-4 w-4 mr-2" />
-                            <span>{member.name}</span>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  <div className='flex items-center gap-2 ml-4'>
-                    {/* Add Tag Button */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="cursor-pointer" asChild>
-                        <Tag className="h-4 w-4 scale-125 text-primary" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        {/* Existing contact tags to toggle */}
-                        {getCurrentContact()?.tags && getCurrentContact()?.tags.map((tag, index) => (
-                          <DropdownMenuCheckboxItem
-                            key={index}
-                            checked={true}
-                            onCheckedChange={() => handleRemoveTag(tag)}
-                          >
-                            {tag}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setShowAddTagDialog(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add New Tag
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    {/* Chat Actions Dropdown - enhanced UI */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild className="cursor-pointer">
-                        <MoreVertical className="h-4 scale-125 text-primary" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        {/* Assign to team member */}
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <UserPlus className="h-4 w-4 mr-2" />
-                            <span>Assign to</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="w-48">
-                            {teamMembers.map(member => (
-                              <DropdownMenuItem
-                                key={member.id}
-                                onClick={() => assignConversation(member.id)}
-                              >
-                                <User className="h-4 w-4 mr-2" />
-                                <span>{member.name}</span>
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        {/* Add label */}
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <Tag className="h-4 w-4 mr-2" />
-                            <span>Add label</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="w-48">
-                            {labels.map(label => (
-                              <DropdownMenuItem
-                                key={label.id}
-                                onClick={() => addLabelToConversation(label.id)}
-                                className={`bg-${label.color}-100 text-${label.color}-800 hover:bg-${label.color}-200`}
-                              >
-                                <span>{label.name}</span>
-                              </DropdownMenuItem>
-                            ))}
-
-                            {labels.length > 0 && <DropdownMenuSeparator />}
-
-                            <DropdownMenuItem
-                              onClick={() => setShowCreateLabelDialog(true)}
-                              className="text-primary hover:bg-primary/10"
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              <span>Create new label</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        {/* Add note */}
-                        <DropdownMenuItem onClick={() => setShowNoteDialog(true)}>
-                          <Clipboard className="h-4 w-4 mr-2" />
-                          <span>Add note</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
-                        {/* Status management */}
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <Clock className="h-4 w-4 mr-2" />
-                            <span>Change status</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="w-48">
-                            <DropdownMenuItem
-                              onClick={() => changeConversationStatus('active')}
-                              className="text-green-700"
-                            >
-                              <Circle className="h-4 w-4 mr-2 fill-green-500 text-green-500" />
-                              <span>Active</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => changeConversationStatus('pending')}
-                              className="text-amber-700"
-                            >
-                              <Circle className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
-                              <span>Pending</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => changeConversationStatus('resolved')}
-                              className="text-blue-700"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2 text-blue-500" />
-                              <span>Resolved</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => changeConversationStatus('closed')}
-                              className="text-slate-700"
-                            >
-                              <Archive className="h-4 w-4 mr-2 text-slate-500" />
-                              <span>Closed</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
-                        <DropdownMenuSeparator />
-
-                        {/* Send template */}
-                        <DropdownMenuItem onClick={() => setShowTemplateDialog(true)}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          <span>Send template</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="cursor-pointer rounded-full"
-                            onClick={() => setShowInfoPanel(true)}
-                          >
-                            <FaRegUserCircle className='scale-125 text-primary' />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Contact info</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-              </div>
-
-              {/* Messages Area - keeping the existing styling for the chat area */}
-              <ScrollArea style={{ backgroundImage: "url('/bg.png')" }} className="flex-1 object-contain h-[300px] p-4 "> 
-                <div className="space-y-4 max-w-7xl mx-auto">
-                  {selectedContact && messages.length === 0 && (
-                    <div className="text-center py-10">
-                      <div className="bg-primary/10 p-4 rounded-full w-fit mx-auto mb-4">
-                        <MessageSquare className="h-8 w-8 text-primary" />
                       </div>
-                      <h3 className="text-lg font-medium text-foreground mb-2">Start the conversation</h3>
-                      <p className="text-muted-foreground max-w-md mx-auto">
-                        Send your first message to {selectedContact.name} to begin the conversation.
-                      </p>
-                    </div>
-                  )}
 
-                  {/* Messages with date separators */}
-                  {Object.entries(getGroupedMessages()).map(([dateKey, dateMessages]) => {
-                    const dateLabel = getDateGroupLabel(dateMessages[0].timestamp);
-
-                    return (
-                      <div key={dateKey} className="space-y-4">
-                        {/* Date separator */}
-                        <div className="flex items-center justify-center my-6">
-                          <div className="bg-muted px-3 py-1 rounded-full text-xs font-medium text-muted-foreground">
-                            {dateLabel}
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        {getCurrentContact()?.tags && getCurrentContact()?.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 max-w-[250px]">
+                            {getCurrentContact()?.tags.map((tag, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="text-[10px] h-4 px-1.5 bg-primary/10 text-primary border-primary/20 font-medium hover:bg-primary/20 transition-colors"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
                           </div>
-                        </div>
-
-                        {/* Messages for this date */}
-                        {dateMessages.map((message) => {
-                          // For system messages (assignments, status changes, notes)
-                          if (message.messageType === 'system' || message.messageType === 'note') {
-                            return (
-                              <div key={message.id} className="flex justify-center">
-                                <div className="bg-[#e1dfe1] px-3 py-1.5 rounded-xl text-xs text-muted-foreground max-w-[80%] text-center">
-                                  {message.content}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          // For regular messages
-                          return (
-                            <div
-                              key={message.id}
-                              className={cn(
-                                "flex",
-                                message.senderId === "agent" ? "justify-end" : "justify-start"
-                              )}
-                            >
-                              <div className="max-w-[75%] space-y-1 group">
-                                {/* Message sender name */}
-                                <div className={cn(
-                                  "text-xs text-muted-foreground",
-                                  message.senderId === "agent" ? "text-right" : "text-left"
-                                )}>
-                                  {message.senderId === "agent"
-                                    ? (message.senderName || currentUser.name)
-                                    : getCurrentContact()?.name}
-                                </div>
-
-                                <div
-                                  className={cn(
-                                    "px-2 py-3 rounded-lg relative",
-                                    message.senderId === "agent"
-                                      ? "bg-[#eafeef] text-black rounded-br-none"
-                                      : "bg-card text-card-foreground rounded-bl-none"
-                                  )}
-                                >
-                                  {/* Message Tail */}
-                                  <div
-                                    className={cn(
-                                      "absolute w-[20px] h-[20px] rounded-[10px] bottom-[7px]",
-                                      message.senderId === "agent"
-                                        ? "right-[-14px]"
-                                        : "left-[-14px]"
-                                    )}
-                                    style={{
-                                      boxShadow: message.senderId === "agent"
-                                        ? 'rgb(234, 254, 239) -6px 6px 0px 0px' // Negative x-offset for right-side tail
-                                        : 'rgb(255, 255, 255) 6px 6px 0px 0px',  // Positive x-offset for left-side tail
-                                      backgroundColor: 'transparent',
-                                      cursor: 'auto'
-                                    }}
-                                  />
-
-                                  {/* Handle different message types */}
-                                  {message.messageType === 'text' && (
-                                    <div className="flex gap-8">
-                                      <p className="text-sm">{message.content}</p>
-                                      <div className={cn(
-                                        "flex items-center mt-3 gap-1 text-xs text-muted-foreground opacity-70",
-                                        message.senderId === "agent" ? "justify-end" : "justify-start"
-                                      )}>
-                                        <span>{formatFullMessageTime(message.timestamp)}</span>
-                                        {message.senderId === "agent" && getStatusIcon(message.status)}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {message.messageType === 'image' && (
-                                    <div className="space-y-2 p-0 w-64 max-h-[200px] h-full object-cover">
-                                      <img
-                                        src={message.mediaUrl}
-                                        alt={message.mediaCaption || "Image"}
-                                        className="rounded-md w-full max-h-[200px] h-full object-cover cursor-pointer"
-                                        onClick={() => setSelectedImageUrl(message.mediaUrl)}
-                                      />
-                                      {message.mediaCaption && (
-                                        <p className="text-sm">{message.mediaCaption}</p>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {message.messageType === 'video' && (
-                                    <div className="space-y-2">
-                                      <video
-                                        src={message.mediaUrl}
-                                        controls
-                                        className="rounded-md max-w-full max-h-[300px]"
-                                      />
-                                      {message.mediaCaption && (
-                                        <p className="text-sm">{message.mediaCaption}</p>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {message.messageType === 'audio' && (
-                                    <div className="space-y-2">
-                                      <audio
-                                        src={message.mediaUrl}
-                                        controls
-                                        className="w-64"
-                                      />
-                                      {message.mediaCaption && (
-                                        <p className="text-sm">{message.mediaCaption}</p>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {message.messageType === 'document' && (
-                                    <div className="space-y-2">
-                                      <a
-                                        href={message.mediaUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center p-3 bg-accent/50 rounded-md hover:bg-accent"
-                                      >
-                                        <FileText className="h-6 w-6 mr-2 text-primary" />
-                                        <div>
-                                          <p className="text-sm font-medium">
-                                            {message.mediaCaption || message.mediaUrl?.split('/').pop() || "Document"}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">Click to open</p>
-                                        </div>
-                                      </a>
-                                    </div>
-                                  )}
-
-                                  {message.templateName && (
-                                    <div className="flex items-center gap-1 mt-2 text-xs opacity-75">
-                                      <FileText className="h-3 w-3" />
-                                      Template: {message.templateName}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                        )}
+                        {activeConversation?.labels && activeConversation.labels.length > 0 && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] h-4 px-1.5 font-medium",
+                              labels.find(l => l.id === activeConversation.labels[0])?.color
+                                ? `bg-${labels.find(l => l.id === activeConversation.labels[0])?.color}-100 text-${labels.find(l => l.id === activeConversation.labels[0])?.color}-800 border-${labels.find(l => l.id === activeConversation.labels[0])?.color}-200`
+                                : "bg-blue-100 text-blue-800 border-blue-200"
+                            )}
+                          >
+                            {labels.find(l => l.id === activeConversation.labels[0])?.name || "Label"}
+                          </Badge>
+                        )}
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
 
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+                  {/* Enhanced Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    {activeConversation?.assignedTo ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="h-8 border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-all duration-200 hover:scale-105"
+                          >
+                            <User className="h-3 w-3" />
+                            {teamMembers.find(u => u.id === activeConversation.assignedTo)?.name.split(' ')[0] || 'Agent'}
+                            <ChevronDown className="h-3 w-3 ml-0.5" />
+                          </Badge>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              <span>Reassign to</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="bg-popover/95 backdrop-blur-sm border-border/50">
+                              {teamMembers.map(member => (
+                                <DropdownMenuItem
+                                  key={member.id}
+                                  onClick={() => assignConversation(member.id)}
+                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                                >
+                                  <div className="flex items-center w-full">
+                                    <User className="h-4 w-4 mr-2" />
+                                    <span>{member.name}</span>
+                                    {member.id === activeConversation.assignedTo && (
+                                      <Check className="h-4 w-4 ml-auto text-primary" />
+                                    )}
+                                  </div>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => assignConversation('')}
+                            className="text-red-600 cursor-pointer hover:bg-red-50 transition-colors"
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            <span>Unassign</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="h-8 bg-accent/50 text-muted-foreground border-border/50 cursor-pointer hover:bg-accent/80 hover:text-foreground transition-all duration-200 hover:scale-105"
+                          >
+                            <UserPlus className="h-3 w-3" />
+                            Assign
+                            <ChevronDown className="h-3 w-3 ml-0.5" />
+                          </Badge>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
+                          {teamMembers.map(member => (
+                            <DropdownMenuItem
+                              key={member.id}
+                              onClick={() => assignConversation(member.id)}
+                              className="cursor-pointer hover:bg-accent/50 transition-colors"
+                            >
+                              <User className="h-4 w-4 mr-2" />
+                              <span>{member.name}</span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
 
-              {/* Message Input - enhanced UI */}
-              <div className="bg-gradient-to-r from-card to-card/90 border-t shadow-sm px-4 py-3">
-                {isWithin24Hours() ? (
-                  <div className="flex items-end gap-3 max-w-4xl mx-auto">
-                    <div className="flex gap-2">
+                    <div className='flex items-center gap-2 ml-2'>
+                      {/* Enhanced Tag Button */}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                              <DropdownMenuTrigger className="cursor-pointer" asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="rounded-full h-10 w-10 bg-accent hover:bg-accent/80 text-accent-foreground transition-all"
+                                  className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
                                 >
-                                  <Paperclip className="h-4 w-4" />
+                                  <Tag className="h-4 w-4 text-primary" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-56 p-2">
-                                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-md focus:bg-accent">
-                                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <ImageIcon className="h-4 w-4 text-blue-600" />
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Photo or Video</p>
-                                    <p className="text-xs text-muted-foreground">Send media files</p>
-                                  </div>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-md focus:bg-accent mt-1">
-                                  <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
-                                    <FileText className="h-4 w-4 text-orange-600" />
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Document</p>
-                                    <p className="text-xs text-muted-foreground">Share files</p>
-                                  </div>
-                                </DropdownMenuItem>
+                              <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-sm border-border/50">
+                                {getCurrentContact()?.tags && getCurrentContact()?.tags.map((tag, index) => (
+                                  <DropdownMenuCheckboxItem
+                                    key={index}
+                                    checked={true}
+                                    onCheckedChange={() => handleRemoveTag(tag)}
+                                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                                  >
+                                    {tag}
+                                  </DropdownMenuCheckboxItem>
+                                ))}
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={() => setShowTemplateDialog(true)}
-                                  className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-md focus:bg-accent mt-1"
+                                  onClick={() => setShowAddTagDialog(true)}
+                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
                                 >
-                                  <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                                    <FileText className="h-4 w-4 text-purple-600" />
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">Template</p>
-                                    <p className="text-xs text-muted-foreground">Use saved templates</p>
-                                  </div>
+                                  <Plus className="h-4 w-4 mr-2 text-primary" />
+                                  Add New Tag
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TooltipTrigger>
-                          <TooltipContent side="top">Attach files</TooltipContent>
+                          <TooltipContent side="bottom">
+                            <p>Manage tags</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      {/* Enhanced Actions Menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
+                          >
+                            <MoreVertical className="h-4 w-4 text-primary" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-sm border-border/50">
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
+                              <UserPlus className="h-4 w-4 mr-2 text-blue-600" />
+                              <span>Assign to</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
+                              {teamMembers.map(member => (
+                                <DropdownMenuItem
+                                  key={member.id}
+                                  onClick={() => assignConversation(member.id)}
+                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                                >
+                                  <User className="h-4 w-4 mr-2" />
+                                  <span>{member.name}</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
+                              <Tag className="h-4 w-4 mr-2 text-purple-600" />
+                              <span>Add label</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
+                              {labels.map(label => (
+                                <DropdownMenuItem
+                                  key={label.id}
+                                  onClick={() => addLabelToConversation(label.id)}
+                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                                  style={{
+                                    backgroundColor: `rgb(${label.color === 'red' ? '254 226 226' :
+                                      label.color === 'blue' ? '219 234 254' :
+                                        label.color === 'green' ? '220 252 231' :
+                                          label.color === 'yellow' ? '254 249 195' :
+                                            label.color === 'purple' ? '243 232 255' :
+                                              label.color === 'orange' ? '255 237 213' :
+                                                label.color === 'pink' ? '252 231 243' :
+                                                  label.color === 'gray' ? '243 244 246' : '219 234 254'})`,
+                                    color: `rgb(${label.color === 'red' ? '153 27 27' :
+                                      label.color === 'blue' ? '30 64 175' :
+                                        label.color === 'green' ? '22 101 52' :
+                                          label.color === 'yellow' ? '133 77 14' :
+                                            label.color === 'purple' ? '107 33 168' :
+                                              label.color === 'orange' ? '154 52 18' :
+                                                label.color === 'pink' ? '157 23 77' :
+                                                  label.color === 'gray' ? '55 65 81' : '30 64 175'})`
+                                  }}
+                                >
+                                  <span>{label.name}</span>
+                                </DropdownMenuItem>
+                              ))}
+                              {labels.length > 0 && <DropdownMenuSeparator />}
+                              <DropdownMenuItem
+                                onClick={() => setShowCreateLabelDialog(true)}
+                                className="text-primary hover:bg-primary/10 cursor-pointer transition-colors"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                <span>Create new label</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+
+                          <DropdownMenuItem
+                            onClick={() => setShowNoteDialog(true)}
+                            className="cursor-pointer hover:bg-accent/50 transition-colors"
+                          >
+                            <Clipboard className="h-4 w-4 mr-2 text-green-600" />
+                            <span>Add note</span>
+                          </DropdownMenuItem>
+
+                          <DropdownMenuSeparator />
+
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
+                              <Clock className="h-4 w-4 mr-2 text-amber-600" />
+                              <span>Change status</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
+                              <DropdownMenuItem
+                                onClick={() => changeConversationStatus('active')}
+                                className="text-green-700 cursor-pointer hover:bg-green-50 transition-colors"
+                              >
+                                <Circle className="h-4 w-4 mr-2 fill-green-500 text-green-500" />
+                                <span>Active</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => changeConversationStatus('pending')}
+                                className="text-amber-700 cursor-pointer hover:bg-amber-50 transition-colors"
+                              >
+                                <Circle className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
+                                <span>Pending</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => changeConversationStatus('resolved')}
+                                className="text-blue-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2 text-blue-500" />
+                                <span>Resolved</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => changeConversationStatus('closed')}
+                                className="text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors"
+                              >
+                                <Archive className="h-4 w-4 mr-2 text-slate-500" />
+                                <span>Closed</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+
+                          <DropdownMenuSeparator />
+
+                          <DropdownMenuItem
+                            onClick={() => setShowTemplateDialog(true)}
+                            className="cursor-pointer hover:bg-accent/50 transition-colors"
+                          >
+                            <FileText className="h-4 w-4 mr-2 text-indigo-600" />
+                            <span>Send template</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {/* Enhanced Contact Info Button */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
+                              onClick={() => setShowInfoPanel(true)}
+                            >
+                              <FaRegUserCircle className='h-4 w-4 text-primary' />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Contact info</p>
+                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
+                  </div>
+                </div>
 
+                {/* Enhanced 24h Window Indicator */}
+                {/* {activeConversation?.isWithin24Hours && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                      <Zap className="h-3 w-3" />
+                      24-hour window active
+                    </div>
+                    {activeConversation.messageCount > 0 && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                        <MessageSquare className="h-3 w-3" />
+                        {activeConversation.messageCount} messages
+                      </div>
+                    )}
+                  </div>
+                )} */}
+              </div>
+
+              {/* Enhanced Messages Area */}
+              <div className="flex-1 flex flex-col overflow-hidden relative">
+                <div
+                  ref={scrollAreaRef}
+                  className="flex-1 overflow-y-auto"
+                  style={{ backgroundImage: "url('/bg.png')" }}
+                  onScroll={handleScroll}
+                >
+                  <div className="p-4 bg-cover bg-center bg-no-repeat min-h-full">
+                    <div className="space-y-4 mx-auto">
+                      {/* Enhanced Empty State for New Conversations */}
+                      {selectedContact && messages.length === 0 && (
+                        <div className="text-center py-12">
+                          <div className="relative inline-block">
+                            <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6 rounded-2xl w-fit mx-auto mb-6 backdrop-blur-sm border border-primary/20">
+                              <MessageSquare className="h-12 w-12 text-primary mx-auto" />
+                            </div>
+                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center animate-pulse">
+                              <Plus className="h-3 w-3 text-primary-foreground" />
+                            </div>
+                          </div>
+                          <h3 className="text-xl font-semibold text-foreground mb-3">Start the conversation</h3>
+                          <p className="text-muted-foreground  mx-auto leading-relaxed">
+                            Send your first message to <span className="font-medium text-foreground">{selectedContact.name}</span> to begin the conversation.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Your existing messages JSX stays the same */}
+                      {Object.entries(getGroupedMessages()).map(([dateKey, dateMessages]) => {
+                        const dateLabel = getDateGroupLabel(dateMessages[0].timestamp);
+
+                        return (
+                          <div key={dateKey} className="space-y-6">
+                            {/* Enhanced Date Separator */}
+                            <div className="flex items-center justify-center my-8">
+                              <div className="bg-background/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium text-muted-foreground border border-border/50 shadow-sm">
+                                {dateLabel}
+                              </div>
+                            </div>
+
+
+                            {/* Enhanced Messages */}
+                            {dateMessages.map((message) => {
+                              // Enhanced System Messages
+                              if (message.messageType === 'system' || message.messageType === 'note') {
+                                return (
+                                  <div key={message.id} className="flex justify-center">
+                                    <div className="bg-background/80 backdrop-blur-sm px-4 py-2 rounded-xl text-sm text-muted-foreground max-w-[80%] text-center border border-border/30 shadow-sm">
+                                      {message.content}
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              // Enhanced Regular Messages - WhatsApp Style
+                              return (
+                                <div
+                                  key={message.id}
+                                  className={cn(
+                                    "flex group mb-1",
+                                    message.senderId === "agent" ? "justify-end" : "justify-start"
+                                  )}
+                                >
+                                  <div className="max-w-[65%] min-w-[120px]">
+                                    {/* Sender Name - WhatsApp Style */}
+                                    <div className={cn(
+                                      "text-xs font-medium text-muted-foreground mb-1 px-1",
+                                      message.senderId === "agent" ? "text-right" : "text-left"
+                                    )}>
+                                      {message.senderId === "agent"
+                                        ? (message.senderName || currentUser.name)
+                                        : getCurrentContact()?.name}
+                                    </div>
+
+                                    <div
+                                      className={cn(
+                                        "px-3 py-2 rounded-lg relative shadow-sm",
+                                        message.senderId === "agent"
+                                          ? "bg-[#dcf8c6] text-black rounded-br-sm"
+                                          : "bg-white text-black rounded-bl-sm border border-gray-200"
+                                      )}
+                                    >
+                                      {/* 🔥 —‑‑‑‑‑‑‑‑‑ NEW REPLY PREVIEW BLOCK ‑‑‑‑‑‑‑‑‑‑‑‑ */}
+                                      {message.replyTo && (
+                                        <div className="mb-1 rounded-lg border-l-2 border-primary/50 bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+                                          {getOriginalMessageContent(message.replyTo)}
+                                        </div>
+                                      )}
+
+
+                                      {/* Enhanced Message Content */}
+                                      {message.messageType === 'text' && (
+                                        <div className="pb-4">
+                                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                            {message.content}
+                                          </p>
+
+                                          {/* WhatsApp-style timestamp and status in bottom right */}
+                                          <div className="flex items-center justify-end gap-1 mt-1 absolute bottom-1 right-2">
+                                            <span className="text-xs text-gray-500">
+                                              {format(new Date(message.timestamp), "h:mm a")}
+                                            </span>
+                                            {message.senderId === "agent" && (
+                                              <div className="flex items-center">
+                                                {message.status === 'sent' && (
+                                                  <Check className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                {message.status === 'delivered' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-gray-400" />
+                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'read' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-blue-500" />
+                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'failed' && (
+                                                  <AlertCircle className="h-3 w-3 text-red-500" />
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Enhanced Media Messages - WhatsApp Style */}
+                                      {message.messageType === 'image' && (
+                                        <div className="pb-4">
+                                          <div className="relative group/image mb-1">
+                                            <img
+                                              src={message.mediaUrl}
+                                              alt={message.mediaCaption || "Image"}
+                                              className="rounded-lg w-full max-w-sm max-h-64 object-cover cursor-pointer"
+                                              onClick={() => setSelectedImageUrl(message.mediaUrl)}
+                                            />
+                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                              <Eye className="h-6 w-6 text-white" />
+                                            </div>
+                                          </div>
+                                          {message.mediaCaption && (
+                                            <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
+                                          )}
+
+                                          {/* WhatsApp-style timestamp and status */}
+                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                            <span className="text-xs text-gray-500">
+                                              {format(new Date(message.timestamp), "h:mm a")}
+                                            </span>
+                                            {message.senderId === "agent" && (
+                                              <div className="flex items-center">
+                                                {message.status === 'sent' && (
+                                                  <Check className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                {message.status === 'delivered' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-gray-400" />
+                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'read' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-blue-500" />
+                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'failed' && (
+                                                  <AlertCircle className="h-3 w-3 text-red-500" />
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {message.messageType === 'video' && (
+                                        <div className="pb-4">
+                                          <video
+                                            src={message.mediaUrl}
+                                            controls
+                                            className="rounded-lg max-w-sm max-h-64 w-full mb-1"
+                                          />
+                                          {message.mediaCaption && (
+                                            <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
+                                          )}
+
+                                          {/* WhatsApp-style timestamp and status */}
+                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                            <span className="text-xs text-gray-500">
+                                              {format(new Date(message.timestamp), "h:mm a")}
+                                            </span>
+                                            {message.senderId === "agent" && (
+                                              <div className="flex items-center">
+                                                {message.status === 'sent' && (
+                                                  <Check className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                {message.status === 'delivered' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-gray-400" />
+                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'read' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-blue-500" />
+                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'failed' && (
+                                                  <AlertCircle className="h-3 w-3 text-red-500" />
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {message.messageType === 'audio' && (
+                                        <div className="pb-4">
+                                          <audio
+                                            src={message.mediaUrl}
+                                            controls
+                                            className="w-64 rounded-lg mb-1"
+                                          />
+                                          {message.mediaCaption && (
+                                            <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
+                                          )}
+
+                                          {/* WhatsApp-style timestamp and status */}
+                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                            <span className="text-xs text-gray-500">
+                                              {format(new Date(message.timestamp), "h:mm a")}
+                                            </span>
+                                            {message.senderId === "agent" && (
+                                              <div className="flex items-center">
+                                                {message.status === 'sent' && (
+                                                  <Check className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                {message.status === 'delivered' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-gray-400" />
+                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'read' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-blue-500" />
+                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'failed' && (
+                                                  <AlertCircle className="h-3 w-3 text-red-500" />
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {message.messageType === 'document' && (
+                                        <div className="pb-4">
+                                          <a
+                                            href={message.mediaUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-200 group/doc border border-gray-200 mb-1"
+                                          >
+                                            <div className="p-2 bg-blue-100 rounded-lg mr-3 group-hover/doc:bg-blue-200 transition-colors">
+                                              <FileText className="h-5 w-5 text-blue-600" />
+                                            </div>
+                                            <div className="flex-1">
+                                              <p className="text-sm font-medium text-gray-900">
+                                                {message.mediaCaption || message.mediaUrl?.split('/').pop() || "Document"}
+                                              </p>
+                                              <p className="text-xs text-gray-500">Click to open</p>
+                                            </div>
+                                            <ExternalLink className="h-4 w-4 text-gray-400 opacity-0 group-hover/doc:opacity-100 transition-opacity" />
+                                          </a>
+
+                                          {/* WhatsApp-style timestamp and status */}
+                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                            <span className="text-xs text-gray-500">
+                                              {format(new Date(message.timestamp), "h:mm a")}
+                                            </span>
+                                            {message.senderId === "agent" && (
+                                              <div className="flex items-center">
+                                                {message.status === 'sent' && (
+                                                  <Check className="h-3 w-3 text-gray-400" />
+                                                )}
+                                                {message.status === 'delivered' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-gray-400" />
+                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'read' && (
+                                                  <div className="relative">
+                                                    <Check className="h-3 w-3 text-blue-500" />
+                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                  </div>
+                                                )}
+                                                {message.status === 'failed' && (
+                                                  <AlertCircle className="h-3 w-3 text-red-500" />
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Enhanced Template Indicator */}
+                                      {message.templateName && (
+                                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                                          <FileText className="h-3 w-3" />
+                                          Template: {message.templateName}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {message.senderId === 'agent' || message.senderId === 'customer' ? (
+                                      <div className="flex justify-end items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                        <button
+                                          onClick={() =>
+                                            setReplyingTo({
+                                              id: message.whatsappMessageId,
+                                              content: message.content,
+                                              senderName: message.senderName || 'Customer'
+                                            })
+                                          }
+                                          className="hover:text-primary/80 transition"
+                                        >
+                                          <Reply className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    ) : null}
+
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+
+                          </div>
+                        );
+                      })}
+
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scroll to bottom button */}
+                {!shouldAutoScroll && (
+                  <div className="absolute bottom-4 right-4 z-10">
+                    <Button
+                      onClick={() => {
+                        scrollToBottom();
+                        setShouldAutoScroll(true);
+                      }}
+                      size="sm"
+                      className="rounded-full shadow-lg bg-primary/90 hover:bg-primary text-primary-foreground"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {replyingTo && (
+                <div className="mb-2 px-4 py-2 border-l-4 border-blue-500 bg-blue-50 text-sm text-blue-900 rounded">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <strong>{replyingTo.senderName}:</strong>
+                      <div className="truncate max-w-xs">{replyingTo.content}</div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setReplyingTo(null)}
+                      className="text-blue-500"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {/* Enhanced Message Input - Always Visible */}
+              <div className="flex-shrink-0 bg-gradient-to-r from-card/95 to-card/90 border-t border-border/50  shadow-lg px-4 py-4 backdrop-blur-md">
+                {isWithin24Hours() ? (
+                  <div className="flex items-end gap-3  mx-auto">
+                    {/* Enhanced Attachment Button */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-10 w-10 rounded-full bg-accent/50 hover:bg-accent/80 border-border/50 transition-all duration-200 hover:scale-105"
+                              >
+                                <Paperclip className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-56 p-2 bg-popover/95 backdrop-blur-sm border-border/50">
+                              <DropdownMenuItem
+                                onClick={() => handleMediaUpload('IMAGE')}
+                                className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group"
+                              >
+                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                                  <ImageIcon className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-sm">Photo or Video</p>
+                                  <p className="text-xs text-muted-foreground">Send media files</p>
+                                </div>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() => handleMediaUpload('DOCUMENT')}
+                                className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
+                              >
+                                <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                                  <FileText className="h-4 w-4 text-orange-600" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-sm">Document</p>
+                                  <p className="text-xs text-muted-foreground">Share files</p>
+                                </div>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() => setShowTemplateDialog(true)}
+                                className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
+                              >
+                                <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                                  <FileText className="h-4 w-4 text-purple-600" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-sm">Template</p>
+                                  <p className="text-xs text-muted-foreground">Use saved templates</p>
+                                </div>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="bg-popover/95 backdrop-blur-sm border-border/50">
+                          <p>Attach files</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    {/* Enhanced Message Input */}
                     <div className="flex-1 relative">
                       <Textarea
                         placeholder="Type a message..."
@@ -3009,30 +3758,36 @@ function ConversationsPageContent() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
-                            sendMessage();
+                            handleSend();
                           }
                         }}
-                        className="min-h-[48px] max-h-32 resize-none pr-12 py-3 pl-4 rounded-2xl bg-white shadow-sm border-muted focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                        className="min-h-[48px] max-h-32 resize-none pr-16 py-3 pl-4 rounded-2xl bg-background/95 backdrop-blur-sm border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 shadow-sm"
                         rows={1}
                       />
+
+                      {/* Enhanced Input Actions */}
                       <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
                         <div className="relative">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 rounded-full hover:bg-accent/50"
+                            className="h-8 w-8 p-0 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                           >
-                            <Smile className={`h-5 w-5 ${showEmojiPicker ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground transition-colors`} />
+                            <Smile className={cn(
+                              "h-4 w-4 transition-colors duration-200",
+                              showEmojiPicker ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                            )} />
                           </Button>
 
+                          {/* Enhanced Emoji Picker */}
                           {showEmojiPicker && (
-                            <div className="absolute bottom-10 right-0 z-50">
+                            <div className="absolute bottom-12 right-0 z-50">
                               <div
                                 className="fixed inset-0"
                                 onClick={() => setShowEmojiPicker(false)}
                               ></div>
-                              <div className="relative z-50 shadow-lg rounded-lg border border-border">
+                              <div className="relative z-50 shadow-xl rounded-lg border border-border/50 backdrop-blur-sm">
                                 <EmojiPicker
                                   onEmojiClick={handleEmojiClick}
                                   searchDisabled={false}
@@ -3049,15 +3804,44 @@ function ConversationsPageContent() {
                         </div>
                       </div>
                     </div>
+                    {/* Add File Upload Dialog */}
+                    <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
+                      <DialogContent className="max-w-">
+                        <DialogHeader>
+                          <DialogTitle>
+                            Upload {uploadType === 'IMAGE' ? 'Photo/Video' : uploadType === 'VIDEO' ? 'Video' : 'Document'}
+                          </DialogTitle>
+                          <DialogDescription>
+                            Select a file to upload and send to your contact
+                          </DialogDescription>
+                        </DialogHeader>
 
+                        <FileUpload
+                          onFileSelect={handleFileSelect}
+                          onUploadComplete={handleUploadComplete}
+                          accept={
+                            uploadType === 'IMAGE' ? 'image/*,video/*' :
+                              uploadType === 'VIDEO' ? 'video/*' :
+                                'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                          }
+                          type={uploadType}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    {/* Enhanced Send Button */}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            onClick={sendMessage}
+                            onClick={handleSend}
                             disabled={!messageInput.trim() || isSending}
                             size="icon"
-                            className="rounded-full h-12 w-12 bg-primary hover:bg-primary/90 transition-all shadow-md disabled:opacity-70"
+                            className={cn(
+                              "h-12 w-12 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50",
+                              !messageInput.trim() || isSending
+                                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                : "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground hover:scale-105"
+                            )}
                           >
                             {isSending ? (
                               <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent"></div>
@@ -3066,63 +3850,82 @@ function ConversationsPageContent() {
                             )}
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top">Send message</TooltipContent>
+                        <TooltipContent side="top" className="bg-popover/95 backdrop-blur-sm border-border/50">
+                          <p>Send message</p>
+                        </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                 ) : (
-                  <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200 shadow-sm overflow-hidden h-fit  mx-auto">
-                    <CardContent className="p-0">
-                      <div className="flex items-start">
-                        <div className="bg-amber-200/60 p-5 ml-2 flex items-center rounded-full justify-center">
-                          <AlertCircle className="h-6 w-6 text-amber-600" />
+                  /* Enhanced 24-hour Window Expired Card */
+                  <div className="max-w-2xl mx-auto">
+                    <Card className="bg-gradient-to-r from-amber-50/95 to-amber-100/95 border-amber-200/50 shadow-lg backdrop-blur-sm overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="flex items-start gap-4 p-6">
+                          <div className="flex-shrink-0">
+                            <div className="bg-amber-200/60 p-4 rounded-full flex items-center justify-center">
+                              <AlertCircle className="h-6 w-6 text-amber-600" />
+                            </div>
+                          </div>
+                          <div className="flex-1 space-y-4">
+                            <div>
+                              <h4 className="font-semibold text-amber-900 mb-2 text-lg">
+                                24-hour messaging window expired
+                              </h4>
+                              <p className="text-amber-700 text-sm leading-relaxed">
+                                For WhatsApp policy compliance, you can only send pre-approved message templates
+                                when the 24-hour conversation window has expired.
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Button
+                                onClick={() => setShowTemplateDialog(true)}
+                                className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-all duration-200 hover:scale-105"
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Choose Template
+                              </Button>
+                              <div className="flex items-center gap-2 text-xs text-amber-700">
+                                <Clock className="h-3 w-3" />
+                                <span>Templates only</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 p-4">
-                          <h4 className="font-medium text-amber-900 mb-1 text-lg">
-                            24-hour messaging window expired
-                          </h4>
-                          <p className="text-amber-700 text-sm mb-4 leading-relaxed">
-                            For WhatsApp policy compliance, you can only send pre-approved message templates
-                            when the 24-hour conversation window has expired.
-                          </p>
-                          <Button
-                            onClick={() => setShowTemplateDialog(true)}
-                            variant="outline"
-                            className="border-amber-300 cursor-pointer bg-amber-100 text-amber-800 hover:bg-amber-200 px-4 py-2 h-auto shadow-sm"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Choose Template
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-accent/5">
+            /* Enhanced Empty State */
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-background/95 to-accent/5 backdrop-blur-md">
               <div className="text-center p-8 max-w-md">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6">
-                  <MessageSquare className="h-8 w-8 text-primary" />
+                <div className="relative inline-block mb-8">
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6 rounded-2xl backdrop-blur-sm border border-primary/20">
+                    <MessageSquare className="h-12 w-12 text-primary mx-auto" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center animate-pulse">
+                    <Plus className="h-3 w-3 text-primary-foreground" />
+                  </div>
                 </div>
                 <h2 className="text-2xl font-semibold text-foreground mb-3">
                   No conversation selected
                 </h2>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
-                  Choose a conversation from the sidebar or start a new one
+                  Choose a conversation from the sidebar or start a new one to begin messaging your customers.
                 </p>
                 <Button
                   onClick={() => setShowContactDialog(true)}
-                  className="h-11 px-6 rounded-lg font-medium shadow-sm"
+                  className="h-12 px-8 rounded-xl font-medium shadow-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground transition-all duration-200 hover:scale-105"
                 >
-                  <PlusCircle className="h-4 w-4 mr-2" />
+                  <PlusCircle className="h-5 w-5 mr-2" />
                   Start conversation
                 </Button>
               </div>
             </div>
           )}
-
 
 
 
@@ -3261,11 +4064,18 @@ function ConversationsPageContent() {
                 <ScrollArea className="w-1/2 pr-2 border-r">
                   <div className="space-y-2 pb-2">
                     {templates.map((template) => {
-                      // Determine if template has variables
-                      const hasVariables = template.components?.some(comp =>
+                      // Enhanced variable detection - check for text variables AND media headers
+                      const hasTextVariables = template.components?.some(comp =>
                         (comp.type === 'body' && comp.text?.includes('{{')) ||
-                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
+                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
+                        (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
                       );
+
+                      const hasMediaHeaders = template.components?.some(comp =>
+                        comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+                      );
+
+                      const hasVariables = hasTextVariables || hasMediaHeaders;
 
                       return (
                         <div
@@ -3283,9 +4093,14 @@ function ConversationsPageContent() {
                               <h4 className="font-medium text-sm">{template.name}</h4>
                               <div className="flex gap-2 mt-1">
                                 <Badge variant="outline" className="text-xs">{template.category}</Badge>
-                                {hasVariables && (
+                                {hasTextVariables && (
                                   <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
                                     Variables
+                                  </Badge>
+                                )}
+                                {hasMediaHeaders && (
+                                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                                    Media
                                   </Badge>
                                 )}
                               </div>
@@ -3348,18 +4163,24 @@ function ConversationsPageContent() {
                             </div>
                           )}
 
-                          {/* Template body - highlight variables */}
-                          <div className="text-sm">
-                            {selectedTemplate.components?.find(c => c.type === 'body')?.text?.split(/(\{\{[^}]+\}\})/).map((part, index) => {
-                              if (part.match(/\{\{[^}]+\}\}/)) {
-                                return (
+                          <div className="text-sm whitespace-pre-wrap">
+                            {(() => {
+                              const bodyComponent = selectedTemplate.components?.find(c => c.type?.toUpperCase?.() === 'BODY');
+
+                              if (!bodyComponent || !bodyComponent.text) {
+                                return <span className="text-muted-foreground italic">No body content available</span>;
+                              }
+
+                              return bodyComponent.text.split(/(\{\{[^}]+\}\})/).map((part, index) =>
+                                part.match(/\{\{[^}]+\}\}/) ? (
                                   <span key={index} className="bg-blue-100 text-blue-800 px-1 rounded">
                                     {part}
                                   </span>
-                                );
-                              }
-                              return <span key={index}>{part}</span>;
-                            }) || 'No body content available'}
+                                ) : (
+                                  <span key={index}>{part}</span>
+                                )
+                              );
+                            })()}
                           </div>
 
                           {/* Template footer if exists */}
@@ -3380,15 +4201,29 @@ function ConversationsPageContent() {
                         </div>
                       </ScrollArea>
 
-                      {/* Variable requirements */}
-                      {selectedTemplate.components?.some(comp =>
+                      {/* Enhanced Variable/Media requirements */}
+                      {(selectedTemplate.components?.some(comp =>
                         (comp.type === 'body' && comp.text?.includes('{{')) ||
-                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
-                      ) && (
+                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
+                        (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
+                      ) || selectedTemplate.components?.some(comp =>
+                        comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+                      )) && (
                           <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-100 text-xs text-blue-700">
                             <div className="flex items-center">
                               <Info className="h-3.5 w-3.5 mr-1.5" />
-                              This template requires variable values to be entered before sending
+                              This template requires {
+                                selectedTemplate.components?.some(comp =>
+                                  (comp.type === 'body' && comp.text?.includes('{{')) ||
+                                  (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
+                                  (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
+                                ) && selectedTemplate.components?.some(comp =>
+                                  comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+                                ) ? 'variable values and media URLs' :
+                                  selectedTemplate.components?.some(comp =>
+                                    comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+                                  ) ? 'media URLs' : 'variable values'
+                              } to be entered before sending
                             </div>
                           </div>
                         )}
