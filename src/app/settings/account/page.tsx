@@ -69,16 +69,103 @@ import {
 import { format } from "date-fns";
 import PhoneInput from "react-phone-input-2";
 import 'react-phone-input-2/lib/style.css';
+import { BiCategory } from "react-icons/bi";
 
-const COMPANY_CATEGORIES = [
-    "Startup",
-    "SME (Small & Medium Enterprise)",
-    "Enterprise",
-    "Agency",
-    "Freelancer",
-    "Non-profit",
-    "Government",
-    "Other"
+// Industry categories mapping - same as signup page
+const INDUSTRY_CATEGORIES = {
+    "Marketing & Advertising": [
+        "Digital Marketing",
+        "Traditional Advertising"
+    ],
+    "Retail": [
+        "Ecommerce & Online Stores",
+        "Physical Stores & Brick Mortar",
+        "Omnichannel Ecommerce & Physical Stores"
+    ],
+    "Education": [
+        "Schools & Universities",
+        "Coaching Classes & Training Institutes",
+        "Online Learning Platforms",
+        "Books & Publications"
+    ],
+    "Entertainment, Social Media & Gaming": [
+        "Movies & TV Shows",
+        "Events & Performing Arts",
+        "Cinema Halls & Multiplexes",
+        "Magazines & Publications",
+        "Gaming",
+        "Social Media Figures",
+        "Gambling & Real Money Gaming"
+    ],
+    "Finance": [
+        "Banks",
+        "Investments",
+        "Payment Aggregators",
+        "Insurance",
+        "Loans"
+    ],
+    "Healthcare": [
+        "Medical Services",
+        "Prescription Medicines & Drugs",
+        "Hospitals"
+    ],
+    "Public Utilities & Non-Profits": [
+        "Government Services",
+        "Charities",
+        "Religious Organizations"
+    ],
+    "Professional Services": [
+        "Legal Consulting Services",
+        "Other Services"
+    ],
+    "Technology": [
+        "Software & IT Services",
+        "Technology & Hardware"
+    ],
+    "Travel & Hospitality": [
+        "Hotels & Lodging",
+        "Transportation",
+        "Tour Agencies",
+        "Clubs"
+    ],
+    "Automotive": [
+        "Automobile Dealers",
+        "Automotive Services"
+    ],
+    "Real Estate & Construction": [
+        "Property Sales",
+        "Building & Construction"
+    ],
+    "Restaurants": [
+        "Fast Food",
+        "Fine Dining",
+        "Catering"
+    ],
+    "Manufacturing & Impex": [
+        "Consumer Goods Production",
+        "Industrial Production",
+        "Impex"
+    ],
+    "Fitness & Wellness": [
+        "Gyms & Fitness Centers",
+        "Fitness Services",
+        "Spas & Salons"
+    ],
+    "Others": [
+        "Miscellaneous"
+    ]
+};
+
+// Get industries array
+const INDUSTRIES = Object.keys(INDUSTRY_CATEGORIES);
+
+const COMPANY_SIZES = [
+    "1-10 employees",
+    "11-50 employees",
+    "51-200 employees",
+    "201-500 employees",
+    "501-1000 employees",
+    "1000+ employees"
 ];
 
 interface UserData {
@@ -105,33 +192,6 @@ interface CompanyData {
     logo?: string;
 }
 
-const COMPANY_SIZES = [
-    "1-10 employees",
-    "11-50 employees",
-    "51-200 employees",
-    "201-500 employees",
-    "501-1000 employees",
-    "1000+ employees"
-];
-
-const INDUSTRIES = [
-    "Technology",
-    "E-commerce",
-    "Healthcare",
-    "Education",
-    "Finance",
-    "Real Estate",
-    "Food & Beverage",
-    "Fashion & Retail",
-    "Travel & Tourism",
-    "Automotive",
-    "Manufacturing",
-    "Consulting",
-    "Marketing & Advertising",
-    "Non-profit",
-    "Other"
-];
-
 export default function AccountPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [userData, setUserData] = useState<UserData | null>(null);
@@ -142,6 +202,9 @@ export default function AccountPage() {
     const [activeSection, setActiveSection] = useState<'profile' | 'company' | 'security'>('profile');
 
     const { toast } = useToast();
+
+    // Available categories based on selected industry
+    const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
     // Form states
     const [profileForm, setProfileForm] = useState({
@@ -170,6 +233,20 @@ export default function AccountPage() {
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
     const [isUpdatingCompany, setIsUpdatingCompany] = useState(false);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+    // Update categories when industry changes
+    useEffect(() => {
+        if (companyForm.industry) {
+            setAvailableCategories(INDUSTRY_CATEGORIES[companyForm.industry as keyof typeof INDUSTRY_CATEGORIES] || []);
+            // Don't reset category if it's valid for the new industry
+            const validCategories = INDUSTRY_CATEGORIES[companyForm.industry as keyof typeof INDUSTRY_CATEGORIES] || [];
+            if (companyForm.category && !validCategories.includes(companyForm.category)) {
+                setCompanyForm(prev => ({ ...prev, category: "" }));
+            }
+        } else {
+            setAvailableCategories([]);
+        }
+    }, [companyForm.industry]);
 
     useEffect(() => {
         fetchAccountData();
@@ -276,6 +353,19 @@ export default function AccountPage() {
                 variant: "destructive",
             });
             return;
+        }
+
+        // Validate industry-category relationship
+        if (companyForm.industry && companyForm.category) {
+            const validCategories = INDUSTRY_CATEGORIES[companyForm.industry as keyof typeof INDUSTRY_CATEGORIES];
+            if (!validCategories || !validCategories.includes(companyForm.category)) {
+                toast({
+                    title: "Error",
+                    description: "Invalid category for the selected industry",
+                    variant: "destructive",
+                });
+                return;
+            }
         }
 
         setIsUpdatingCompany(true);
@@ -512,7 +602,7 @@ export default function AccountPage() {
                                             const Icon = section.icon;
                                             const isActive = activeSection === section.id;
                                             const isDisabled = section.id === 'company' && !(userData?.isOwner || userData?.role === 'admin');
-                                            
+
                                             return (
                                                 <button
                                                     key={section.id}
@@ -520,9 +610,9 @@ export default function AccountPage() {
                                                     disabled={isDisabled}
                                                     className={`
                                                         w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 group
-                                                        ${isActive 
-                                                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' 
-                                                            : isDisabled 
+                                                        ${isActive
+                                                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                                                            : isDisabled
                                                                 ? 'text-muted-foreground cursor-not-allowed opacity-50'
                                                                 : 'hover:bg-muted hover:shadow-md hover:scale-[1.02]'
                                                         }
@@ -640,11 +730,11 @@ export default function AccountPage() {
                                                                 {getUserRoleDisplay()}
                                                             </Badge>
                                                             <p className="text-sm text-blue-700 wark:text-blue-300">
-                                                                {userData?.isOwner 
+                                                                {userData?.isOwner
                                                                     ? "You have full administrative access to this account."
                                                                     : userData?.role === 'admin'
-                                                                    ? "You have administrative privileges."
-                                                                    : "You have agent-level access."
+                                                                        ? "You have administrative privileges."
+                                                                        : "You have agent-level access."
                                                                 }
                                                             </p>
                                                         </div>
@@ -907,20 +997,23 @@ export default function AccountPage() {
                                                         </div>
 
                                                         <div className="space-y-3">
-                                                            <Label htmlFor="companyCategory" className="text-sm font-medium text-gray-700 wark:text-gray-300">
-                                                                Company Category
+                                                            <Label htmlFor="companySize" className="text-sm font-medium text-gray-700 wark:text-gray-300">
+                                                                Company Size
                                                             </Label>
                                                             <Select
-                                                                value={companyForm.category}
-                                                                onValueChange={(value) => setCompanyForm({ ...companyForm, category: value })}
+                                                                value={companyForm.size}
+                                                                onValueChange={(value) => setCompanyForm({ ...companyForm, size: value })}
                                                             >
                                                                 <SelectTrigger className="transition-all duration-200 focus:shadow-md">
-                                                                    <SelectValue placeholder="Select company category" />
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Users className="h-4 w-4 text-muted-foreground" />
+                                                                        <SelectValue placeholder="Select company size" />
+                                                                    </div>
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    {COMPANY_CATEGORIES.map((category) => (
-                                                                        <SelectItem key={category} value={category}>
-                                                                            {category}
+                                                                    {COMPANY_SIZES.map((size) => (
+                                                                        <SelectItem key={size} value={size}>
+                                                                            {size}
                                                                         </SelectItem>
                                                                     ))}
                                                                 </SelectContent>
@@ -943,46 +1036,55 @@ export default function AccountPage() {
                                                             />
                                                         </div>
 
-                                                        <div className="space-y-3">
-                                                            <Label htmlFor="industry" className="text-sm font-medium text-gray-700 wark:text-gray-300">
-                                                                Industry
-                                                            </Label>
-                                                            <Select
-                                                                value={companyForm.industry}
-                                                                onValueChange={(value) => setCompanyForm({ ...companyForm, industry: value })}
-                                                            >
-                                                                <SelectTrigger className="transition-all duration-200 focus:shadow-md">
-                                                                    <SelectValue placeholder="Select industry" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {INDUSTRIES.map((industry) => (
-                                                                        <SelectItem key={industry} value={industry}>
-                                                                            {industry}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            <div className="space-y-3">
+                                                                <Label htmlFor="industry" className="text-sm font-medium text-gray-700 wark:text-gray-300">
+                                                                    Industry
+                                                                </Label>
+                                                                <Select
+                                                                    value={companyForm.industry}
+                                                                    onValueChange={(value) => setCompanyForm({ ...companyForm, industry: value })}
+                                                                >
+                                                                    <SelectTrigger className="transition-all duration-200 focus:shadow-md">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                                                            <SelectValue placeholder="Select industry" />
+                                                                        </div>
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {INDUSTRIES.map((industry) => (
+                                                                            <SelectItem key={industry} value={industry}>
+                                                                                {industry}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
 
-                                                        <div className="space-y-3">
-                                                            <Label htmlFor="size" className="text-sm font-medium text-gray-700 wark:text-gray-300">
-                                                                Company Size
-                                                            </Label>
-                                                            <Select
-                                                                value={companyForm.size}
-                                                                onValueChange={(value) => setCompanyForm({ ...companyForm, size: value })}
-                                                            >
-                                                                <SelectTrigger className="transition-all duration-200 focus:shadow-md">
-                                                                    <SelectValue placeholder="Select company size" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {COMPANY_SIZES.map((size) => (
-                                                                        <SelectItem key={size} value={size}>
-                                                                            {size}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
+                                                            <div className="space-y-3">
+                                                                <Label htmlFor="companyCategory" className="text-sm font-medium text-gray-700 wark:text-gray-300">
+                                                                    Category
+                                                                </Label>
+                                                                <Select
+                                                                    value={companyForm.category}
+                                                                    onValueChange={(value) => setCompanyForm({ ...companyForm, category: value })}
+                                                                    disabled={!companyForm.industry}
+                                                                >
+                                                                    <SelectTrigger className="transition-all duration-200 focus:shadow-md">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <BiCategory className="h-4 w-4 text-muted-foreground" />
+                                                                            <SelectValue placeholder={companyForm.industry ? "Select category" : "Select industry first"} />
+                                                                        </div>
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {availableCategories.map((category) => (
+                                                                            <SelectItem key={category} value={category}>
+                                                                                {category}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
                                                         </div>
 
                                                         {/* Company stats */}
@@ -999,10 +1101,21 @@ export default function AccountPage() {
                                                             <div className="space-y-2">
                                                                 <div className="flex justify-between items-center">
                                                                     <span className="text-sm text-blue-700 wark:text-blue-300">Completion</span>
-                                                                    <span className="text-sm font-medium text-blue-900 wark:text-blue-100">85%</span>
+                                                                    <span className="text-sm font-medium text-blue-900 wark:text-blue-100">
+                                                                        {Math.round(
+                                                                            (Object.values(companyForm).filter(value => value && value.trim() !== '').length / Object.keys(companyForm).length) * 100
+                                                                        )}%
+                                                                    </span>
                                                                 </div>
                                                                 <div className="w-full bg-blue-200 wark:bg-blue-800 rounded-full h-2">
-                                                                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                                                                    <div
+                                                                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                                                                        style={{
+                                                                            width: `${Math.round(
+                                                                                (Object.values(companyForm).filter(value => value && value.trim() !== '').length / Object.keys(companyForm).length) * 100
+                                                                            )}%`
+                                                                        }}
+                                                                    />
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1071,8 +1184,105 @@ export default function AccountPage() {
                                                                             Change
                                                                         </Button>
                                                                     </DialogTrigger>
-                                                                    <DialogContent>
-                                                                        {/* Password dialog content - same as above */}
+                                                                    <DialogContent className="sm:max-w-md">
+                                                                        <DialogHeader>
+                                                                            <DialogTitle className="flex items-center gap-2">
+                                                                                <Lock className="h-5 w-5" />
+                                                                                Change Password
+                                                                            </DialogTitle>
+                                                                            <DialogDescription>
+                                                                                Enter your current password and choose a new secure password
+                                                                            </DialogDescription>
+                                                                        </DialogHeader>
+                                                                        <div className="space-y-4">
+                                                                            <div className="space-y-2">
+                                                                                <Label htmlFor="currentPassword">Current Password</Label>
+                                                                                <div className="relative">
+                                                                                    <Input
+                                                                                        id="currentPassword"
+                                                                                        type={showCurrentPassword ? "text" : "password"}
+                                                                                        value={passwordForm.currentPassword}
+                                                                                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                                                                        placeholder="Enter current password"
+                                                                                        className="pr-10"
+                                                                                    />
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                                                    >
+                                                                                        {showCurrentPassword ? (
+                                                                                            <EyeOff className="h-4 w-4" />
+                                                                                        ) : (
+                                                                                            <Eye className="h-4 w-4" />
+                                                                                        )}
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="space-y-2">
+                                                                                <Label htmlFor="newPassword">New Password</Label>
+                                                                                <div className="relative">
+                                                                                    <Input
+                                                                                        id="newPassword"
+                                                                                        type={showNewPassword ? "text" : "password"}
+                                                                                        value={passwordForm.newPassword}
+                                                                                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                                                                        placeholder="Enter new password"
+                                                                                        className="pr-10"
+                                                                                    />
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                                                                    >
+                                                                                        {showNewPassword ? (
+                                                                                            <EyeOff className="h-4 w-4" />
+                                                                                        ) : (
+                                                                                            <Eye className="h-4 w-4" />
+                                                                                        )}
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="space-y-2">
+                                                                                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                                                                                <Input
+                                                                                    id="confirmPassword"
+                                                                                    type="password"
+                                                                                    value={passwordForm.confirmPassword}
+                                                                                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                                                                    placeholder="Confirm new password"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                        <DialogFooter>
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                onClick={() => setIsPasswordDialogOpen(false)}
+                                                                                disabled={isChangingPassword}
+                                                                            >
+                                                                                Cancel
+                                                                            </Button>
+                                                                            <Button
+                                                                                onClick={handlePasswordChange}
+                                                                                disabled={isChangingPassword}
+                                                                                className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
+                                                                            >
+                                                                                {isChangingPassword ? (
+                                                                                    <>
+                                                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                                        Changing...
+                                                                                    </>
+                                                                                ) : (
+                                                                                    "Change Password"
+                                                                                )}
+                                                                            </Button>
+                                                                        </DialogFooter>
                                                                     </DialogContent>
                                                                 </Dialog>
                                                             </div>
@@ -1143,8 +1353,7 @@ export default function AccountPage() {
                                                                 <div className="space-y-1">
                                                                     <h4 className="font-medium text-red-700 wark:text-red-300">Delete Company Account</h4>
                                                                     <p className="text-sm text-red-600 wark:text-red-400">
-                                                                        Permanently delete your company and all associated data. This action cannot be undone.
-                                                                    </p>
+                                                                        Permanently delete your company and all associated data. This action cannot be undone.</p>
                                                                 </div>
                                                                 <Button variant="destructive" size="sm" disabled className="opacity-50">
                                                                     <Trash2 className="h-4 w-4 mr-2" />

@@ -68,7 +68,11 @@ export async function POST(req: NextRequest) {
         }
 
         // Only allow admins to create roles
-        if (currentUser.role !== 'admin') {
+        // if (currentUser.role !== 'admin') {
+        //     return NextResponse.json({ success: false, message: 'Insufficient permissions' }, { status: 403 });
+        // }
+        const isOwnerOrAdmin = currentUser.isOwner || currentUser.role === 'owner' || currentUser.role === 'admin';
+        if (!isOwnerOrAdmin) {
             return NextResponse.json({ success: false, message: 'Insufficient permissions' }, { status: 403 });
         }
 

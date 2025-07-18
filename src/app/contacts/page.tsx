@@ -1263,7 +1263,7 @@ export default function ContactsPage() {
               </div>
 
               {/* WABA Account Selector */}
-              <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+              {/* <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-6">
                   <div className="space-y-3">
                     <Label htmlFor="waba-select" className="text-sm font-medium">
@@ -1286,12 +1286,12 @@ export default function ContactsPage() {
                     </Select>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
 
 
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <CardContent className="relative p-6">
@@ -1418,7 +1418,7 @@ export default function ContactsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
+              </div> */}
 
 
 
@@ -1501,7 +1501,7 @@ export default function ContactsPage() {
 
               {/* Filters & Controls */}
               <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
                       <div className="relative flex-1 max-w-md">
@@ -1950,12 +1950,12 @@ export default function ContactsPage() {
                       ))}
                     </div>
                   ) : (
-                    <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                    <Card className="border-0  p-0 shadow-sm bg-white/80 backdrop-blur-sm">
                       <CardContent className="p-0">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto  p-0">
                           <Table>
-                            <TableHeader>
-                              <TableRow className="bg-slate-50/80 hover:bg-slate-50">
+                            <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
+                              <TableRow className="">
                                 <TableHead className="w-12">
                                   <Checkbox
                                     checked={selectedContacts.length === contacts.length && contacts.length > 0}
@@ -2165,7 +2165,7 @@ export default function ContactsPage() {
                                               variant="ghost"
                                               size="sm"
                                               onClick={() => handleViewContact(contact)}
-                                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                              className="h-8 w-8 p-0 "
                                             >
                                               <Eye className="h-3.5 w-3.5" />
                                             </Button>
@@ -2179,7 +2179,7 @@ export default function ContactsPage() {
                                               variant="ghost"
                                               size="sm"
                                               onClick={() => handleSendMessage(contact.id)}
-                                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                              className="h-8 w-8 p-0 "
                                             >
                                               <MessageSquare className="h-3.5 w-3.5" />
                                             </Button>
@@ -2192,7 +2192,7 @@ export default function ContactsPage() {
                                             <Button
                                               variant="ghost"
                                               size="sm"
-                                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                              className="h-8 w-8 p-0 "
                                             >
                                               <MoreVertical className="h-4 w-4" />
                                             </Button>
@@ -2235,7 +2235,7 @@ export default function ContactsPage() {
               {/* Add Contact Dialog */}
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
-                  <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                  <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
                         <UserPlus className="h-5 w-5 text-primary" />

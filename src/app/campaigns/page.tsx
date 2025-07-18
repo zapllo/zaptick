@@ -159,7 +159,7 @@ const CampaignsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   // Fetch campaigns on component mount
   useEffect(() => {
@@ -223,35 +223,35 @@ const CampaignsPage = () => {
   // Get status badge styling
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'active': { 
-        variant: "default" as const, 
-        className: "bg-green-100 text-green-700 border-green-200", 
-        icon: PlayCircle 
+      'active': {
+        variant: "default" as const,
+        className: "bg-green-100 text-green-700 border-green-200",
+        icon: PlayCircle
       },
-      'paused': { 
-        variant: "secondary" as const, 
-        className: "bg-yellow-100 text-yellow-700 border-yellow-200", 
-        icon: PauseCircle 
+      'paused': {
+        variant: "secondary" as const,
+        className: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        icon: PauseCircle
       },
-      'scheduled': { 
-        variant: "outline" as const, 
-        className: "bg-blue-100 text-blue-700 border-blue-200", 
-        icon: Calendar 
+      'scheduled': {
+        variant: "outline" as const,
+        className: "bg-blue-100 text-blue-700 border-blue-200",
+        icon: Calendar
       },
-      'draft': { 
-        variant: "outline" as const, 
-        className: "bg-gray-100 text-gray-700 border-gray-200", 
-        icon: ClipboardList 
+      'draft': {
+        variant: "outline" as const,
+        className: "bg-gray-100 text-gray-700 border-gray-200",
+        icon: ClipboardList
       },
-      'completed': { 
-        variant: "default" as const, 
-        className: "bg-emerald-100 text-emerald-700 border-emerald-200", 
-        icon: CheckCircle 
+      'completed': {
+        variant: "default" as const,
+        className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        icon: CheckCircle
       },
-      'failed': { 
-        variant: "destructive" as const, 
-        className: "bg-red-100 text-red-700 border-red-200", 
-        icon: XCircle 
+      'failed': {
+        variant: "destructive" as const,
+        className: "bg-red-100 text-red-700 border-red-200",
+        icon: XCircle
       }
     };
 
@@ -368,13 +368,13 @@ const CampaignsPage = () => {
   const totalCampaigns = campaigns.length;
   const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
   const totalAudience = campaigns.reduce((sum, c) => sum + c.audience.count, 0);
-  const avgDeliveryRate = campaigns.length > 0 
+  const avgDeliveryRate = campaigns.length > 0
     ? Math.round(campaigns.reduce((sum, c) => {
-        if (c.metrics && c.audience.count > 0) {
-          return sum + (c.metrics.delivered / c.audience.count) * 100;
-        }
-        return sum;
-      }, 0) / campaigns.length) 
+      if (c.metrics && c.audience.count > 0) {
+        return sum + (c.metrics.delivered / c.audience.count) * 100;
+      }
+      return sum;
+    }, 0) / campaigns.length)
     : 0;
 
   return (
@@ -399,10 +399,10 @@ const CampaignsPage = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   className="gap-2"
                   onClick={() => {
@@ -412,7 +412,7 @@ const CampaignsPage = () => {
                   <Download className="h-4 w-4" />
                   Export
                 </Button>
-                
+
                 <Button
                   onClick={() => router.push("/campaigns/create")}
                   className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
@@ -424,7 +424,7 @@ const CampaignsPage = () => {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <CardContent className="relative p-6">
@@ -539,7 +539,7 @@ const CampaignsPage = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </div> */}
 
             {/* Applied Filters */}
             {(searchQuery || statusFilter !== "all" || typeFilter !== "all") && (
@@ -601,7 +601,7 @@ const CampaignsPage = () => {
 
             {/* Filters & Controls */}
             <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
+              <CardContent className="">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
                     <div className="relative flex-1 max-w-md">
@@ -613,7 +613,7 @@ const CampaignsPage = () => {
                         className="pl-10 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                       />
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-36 bg-white">
@@ -629,7 +629,7 @@ const CampaignsPage = () => {
                           <SelectItem value="failed">Failed</SelectItem>
                         </SelectContent>
                       </Select>
-                      
+
                       <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-36 bg-white">
                           <SelectValue />
@@ -657,12 +657,12 @@ const CampaignsPage = () => {
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={fetchCampaigns}
                           className="gap-2"
@@ -673,7 +673,7 @@ const CampaignsPage = () => {
                       </TooltipTrigger>
                       <TooltipContent>Refresh campaigns</TooltipContent>
                     </Tooltip>
-                    
+
                     <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
                       <Button
                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -724,10 +724,10 @@ const CampaignsPage = () => {
                         <Rocket className="h-12 w-12 text-primary" />
                       </div>
                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center">
-                     <Sparkles className="h-4 w-4 text-white" />
+                        <Sparkles className="h-4 w-4 text-white" />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3">
                       <h3 className="text-2xl font-bold text-slate-900">
                         {searchQuery || statusFilter !== "all" || typeFilter !== "all"
@@ -745,7 +745,7 @@ const CampaignsPage = () => {
 
                     {!searchQuery && statusFilter === "all" && typeFilter === "all" && (
                       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Button 
+                        <Button
                           onClick={() => router.push("/campaigns/create")}
                           className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
                           size="lg"
@@ -753,8 +753,8 @@ const CampaignsPage = () => {
                           <Plus className="h-5 w-5" />
                           Create Your First Campaign
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="lg"
                           className="gap-2"
                           onClick={() => {
@@ -774,8 +774,8 @@ const CampaignsPage = () => {
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredCampaigns.map((campaign) => (
-                      <Card 
-                        key={campaign.id} 
+                      <Card
+                        key={campaign.id}
                         className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-all duration-200 group"
                       >
                         <CardHeader className="pb-3">
@@ -785,7 +785,7 @@ const CampaignsPage = () => {
                                 {getTypeIcon(campaign.type)}
                               </div>
                               <div className="flex-1">
-                                <CardTitle 
+                                <CardTitle
                                   className="text-lg font-semibold text-slate-900 group-hover:text-primary transition-colors cursor-pointer line-clamp-1"
                                   onClick={() => {
                                     setSelectedCampaign(campaign);
@@ -804,8 +804,8 @@ const CampaignsPage = () => {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
@@ -874,7 +874,7 @@ const CampaignsPage = () => {
                             </DropdownMenu>
                           </div>
                         </CardHeader>
-                        
+
                         <CardContent className="space-y-4 pb-4">
                           <div className="space-y-3">
                             <div className="flex items-center justify-between text-sm">
@@ -906,10 +906,10 @@ const CampaignsPage = () => {
                                   </span>
                                 </div>
                                 <div className="w-full bg-slate-200 rounded-full h-2">
-                                  <div 
+                                  <div
                                     className="bg-primary h-2 rounded-full transition-all duration-500"
-                                    style={{ 
-                                      width: `${calculateProgress(campaign.metrics.delivered, campaign.audience.count)}%` 
+                                    style={{
+                                      width: `${calculateProgress(campaign.metrics.delivered, campaign.audience.count)}%`
                                     }}
                                   />
                                 </div>
@@ -934,7 +934,7 @@ const CampaignsPage = () => {
                             </div>
                           )}
                         </CardContent>
-                        
+
                         <CardFooter className="pt-0">
                           <div className="flex items-center justify-between text-xs text-muted-foreground w-full">
                             <span>Created {format(new Date(campaign.createdAt), "MMM dd, yyyy")}</span>
@@ -966,12 +966,12 @@ const CampaignsPage = () => {
                     ))}
                   </div>
                 ) : (
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm p-0">
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto p-0">
                         <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50/80 hover:bg-slate-50">
+                          <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
+                            <TableRow className="">
                               <TableHead className="font-semibold text-slate-700">Campaign Name</TableHead>
                               <TableHead className="font-semibold text-slate-700">Type</TableHead>
                               <TableHead className="font-semibold text-slate-700">Status</TableHead>
@@ -987,7 +987,7 @@ const CampaignsPage = () => {
                               <TableRow key={campaign.id} className="hover:bg-slate-50/50 transition-colors">
                                 <TableCell>
                                   <div className="space-y-1">
-                                    <div 
+                                    <div
                                       className="font-medium text-slate-900 hover:text-primary cursor-pointer transition-colors"
                                       onClick={() => {
                                         setSelectedCampaign(campaign);
@@ -1043,10 +1043,10 @@ const CampaignsPage = () => {
                                         <span className="text-xs text-muted-foreground">delivered</span>
                                       </div>
                                       <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                        <div 
+                                        <div
                                           className="h-full bg-primary transition-all duration-500"
-                                          style={{ 
-                                            width: `${calculateProgress(campaign.metrics.delivered, campaign.audience.count)}%` 
+                                          style={{
+                                            width: `${calculateProgress(campaign.metrics.delivered, campaign.audience.count)}%`
                                           }}
                                         />
                                       </div>
@@ -1183,7 +1183,7 @@ const CampaignsPage = () => {
                     This action cannot be undone. The campaign will be permanently deleted.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                
+
                 {selectedCampaign && (
                   <div className="py-4">
                     <div className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 border">
@@ -1197,7 +1197,7 @@ const CampaignsPage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {selectedCampaign.status === "active" && (
                       <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                         <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -1211,7 +1211,7 @@ const CampaignsPage = () => {
                     )}
                   </div>
                 )}
-                
+
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
@@ -1236,7 +1236,7 @@ const CampaignsPage = () => {
                     Create a copy of this campaign with the same settings.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 {selectedCampaign && (
                   <div className="py-4">
                     <div className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 border">
@@ -1250,7 +1250,7 @@ const CampaignsPage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
                       <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div>
@@ -1262,7 +1262,7 @@ const CampaignsPage = () => {
                     </div>
                   </div>
                 )}
-                
+
                 <DialogFooter>
                   <Button
                     variant="outline"
@@ -1399,7 +1399,7 @@ const CampaignsPage = () => {
                                     />
                                   </div>
 
-                              <div className="space-y-2">
+                                  <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                       <span className="text-sm">Read</span>
                                       <span className="text-sm font-medium">

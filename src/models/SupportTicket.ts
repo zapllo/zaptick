@@ -135,16 +135,9 @@ const SupportTicketSchema = new Schema<ISupportTicket>(
   { timestamps: true }
 );
 
-// Generate ticket ID before saving
-SupportTicketSchema.pre('save', function(next) {
-  if (this.isNew && !this.ticketId) {
-    // Generate ticket ID like ZT-2024-001234
-    const now = new Date();
-    const year = now.getFullYear();
-    const random = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
-    this.ticketId = `ZT-${year}-${random}`;
-  }
-  next();
-});
+// Add indexes for better performance
+SupportTicketSchema.index({ companyId: 1, status: 1 });
+SupportTicketSchema.index({ ticketId: 1 });
+SupportTicketSchema.index({ userId: 1 });
 
 export default mongoose.models.SupportTicket || mongoose.model<ISupportTicket>('SupportTicket', SupportTicketSchema);

@@ -167,7 +167,7 @@ export default function TemplatesPage() {
     direction: 'ascending' | 'descending' | null;
   }>({ key: null, direction: null });
   const [showDeleted, setShowDeleted] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>("all");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -578,7 +578,7 @@ export default function TemplatesPage() {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <CardContent className="relative p-6">
@@ -706,7 +706,7 @@ export default function TemplatesPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
+              </div> */}
 
               {/* Applied Filters */}
               {(searchQuery || selectedStatus !== "ANY" || selectedCategory !== "all" || selectedAgent !== "all" || showDeleted) && (
@@ -784,7 +784,7 @@ export default function TemplatesPage() {
 
               {/* Filters & Controls */}
               <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
                       <div className="relative flex-1 max-w-md">
@@ -1146,12 +1146,12 @@ export default function TemplatesPage() {
                       ))}
                     </div>
                   ) : (
-                    <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                    <Card className="border-0 p-0 shadow-sm bg-white/80 backdrop-blur-sm">
                       <CardContent className="p-0">
                         <div className="overflow-x-auto">
                           <Table>
-                            <TableHeader>
-                              <TableRow className="bg-slate-50/80 hover:bg-slate-50">
+                          <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
+                              <TableRow className="">
                                 <TableHead className="w-12">
                                   <Checkbox
                                     checked={selectedTemplates.length === filteredTemplates.length && filteredTemplates.length > 0}

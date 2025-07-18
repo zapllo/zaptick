@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PermissionCheck from "./PermissionCheck";
 import Layout from "../layout/Layout";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 interface ProtectedRouteProps {
-    children: React.ReactNode;  
+    children: React.ReactNode;
     resource?: string;
     action?: string;
     adminOnly?: boolean;
@@ -71,6 +72,11 @@ export default function ProtectedRoute({
             <Layout>
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center">
+                        <DotLottieReact
+                            src="/denied.lottie"
+                            loop
+                            autoplay
+                        />
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
                         <p className="text-gray-600">You need company owner privileges to access this page.</p>
                     </div>
@@ -85,6 +91,11 @@ export default function ProtectedRoute({
             <Layout>
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center">
+                        <DotLottieReact
+                            src="/denied.lottie"
+                            loop
+                            autoplay
+                        />
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
                         <p className="text-gray-600">You need administrator privileges to access this page.</p>
                     </div>
@@ -103,6 +114,11 @@ export default function ProtectedRoute({
                     <Layout>
                         <div className="flex items-center justify-center h-64">
                             <div className="text-center">
+                                <DotLottieReact
+                                    src="/denied.lottie"
+                                    loop
+                                    autoplay
+                                />
                                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
                                 <p className="text-gray-600">You don&apos;t have permission to access this resource.</p>
                             </div>

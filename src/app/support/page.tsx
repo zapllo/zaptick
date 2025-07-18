@@ -183,240 +183,245 @@ export default function SupportPage() {
       </Layout>
     );
   }
-
+const getPriorityGradient = (priority: string) => {
+  switch (priority) {
+    case 'low': return 'from-green-500 to-green-600';
+    case 'medium': return 'from-yellow-500 to-yellow-600';
+    case 'high': return 'from-orange-500 to-orange-600';
+    case 'urgent': return 'from-red-500 to-red-600';
+    default: return 'from-gray-500 to-gray-600';
+  }
+};
   return (
-    <Layout>
+   <Layout>
       <div className="space-y-8 p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Help & Support</h1>
-            <p className="text-muted-foreground">
-              Get help with your account and submit support requests
-            </p>
+        {/* Modern Header */}
+        <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-blue-200 wark:from-muted/40 wark:to-blue-900/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                <HelpCircle className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-gray-900 wark:text-white">Help & Support</h1>
+                <p className="text-gray-600 wark:text-gray-300">
+                  Get help with your account and submit support requests
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowCreateTicket(true)}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Ticket
+            </Button>
           </div>
-          <Button
-            onClick={() => setShowCreateTicket(true)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Ticket
-          </Button>
+          {/* Decorative element */}
+          <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-blue-500/10 transition-all duration-300 group-hover:scale-110" />
         </div>
 
         {/* Quick Help Resources */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer border-2 hover:border-primary/20">
-            <CardHeader className="pb-3">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-indigo-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-indigo-200 wark:from-muted/40 wark:to-indigo-900/10 cursor-pointer">
+            <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                  <BookOpen className="h-5 w-5 text-blue-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
+                  <BookOpen className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium">Tutorials</CardTitle>
-                  <CardDescription className="text-xs">Find answers quickly</CardDescription>
+                  <h3 className="font-semibold text-gray-900 wark:text-white">Tutorials & FAQs</h3>
+                  <p className="text-sm text-indigo-600 wark:text-indigo-400 font-medium">Find answers quickly</p>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground mb-2">
-                Browse our comprehensive tutorials and FAQs
-              </p>
-              <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
-                <span>Explore tutorials</span>
-                <ExternalLink className="h-3 w-3" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700 wark:bg-indigo-900/30 wark:text-indigo-400">
+                <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                Available
+              </span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
+                <BookOpen className="h-4 w-4" />
+                <span>Comprehensive guides and tutorials</span>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
+                <ExternalLink className="h-4 w-4 text-indigo-500" />
+                <span>Browse our knowledge base</span>
+              </div>
+            </div>
+            {/* Decorative element */}
+            <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-indigo-500/10 transition-all duration-300 group-hover:scale-110" />
+          </div>
 
-          {/* <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer border-2 hover:border-primary/20">
-            <CardHeader className="pb-3">
+          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-orange-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-orange-200 wark:from-muted/40 wark:to-orange-900/10 cursor-pointer">
+            <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 group-hover:bg-green-200 transition-colors">
-                  <MessageCircle className="h-5 w-5 text-green-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+                  <Mail className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium">Live Chat</CardTitle>
-                  <CardDescription className="text-xs">Chat with support</CardDescription>
+                  <h3 className="font-semibold text-gray-900 wark:text-white">Email Support</h3>
+                  <p className="text-sm text-orange-600 wark:text-orange-400 font-medium">Direct contact</p>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground mb-2">
-                Get instant help from our support team
-              </p>
-              <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                <span>Start chat</span>
-                <ArrowRight className="h-3 w-3" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 wark:bg-orange-900/30 wark:text-orange-400">
+                <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                Active
+              </span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
+                <Mail className="h-4 w-4" />
+                <span className="font-mono">support@zapllo.com</span>
               </div>
-            </CardContent>
-          </Card> */}
-
-          {/* <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer border-2 hover:border-primary/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 group-hover:bg-purple-200 transition-colors">
-                  <Phone className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm font-medium">Phone Support</CardTitle>
-                  <CardDescription className="text-xs">Call us directly</CardDescription>
-                </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
+                <Clock className="h-4 w-4 text-orange-500" />
+                <span>24-48 hour response time</span>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground mb-2">
-                Speak with our support team directly
-              </p>
-              <div className="flex items-center gap-1 text-xs text-purple-600 font-medium">
-                <span>+1 (555) 123-4567</span>
-                <Phone className="h-3 w-3" />
-              </div>
-            </CardContent>
-          </Card> */}
-
-          <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer border-2 hover:border-primary/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 group-hover:bg-orange-200 transition-colors">
-                  <Mail className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm font-medium">Email Support</CardTitle>
-                  <CardDescription className="text-xs">Send us an email</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground mb-2">
-                Get detailed help via email
-              </p>
-              <div className="flex items-center gap-1 text-xs text-orange-600 font-medium">
-                <span>support@zapllo.com</span>
-                <Mail className="h-3 w-3" />
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+            {/* Decorative element */}
+            <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-orange-500/10 transition-all duration-300 group-hover:scale-110" />
+          </div>
         </div>
 
         {/* Tickets Overview Stats */}
         <div className="grid gap-4 md:grid-cols-5">
-          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-900">Total Tickets</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <p className="text-xs text-blue-600 mt-1">All time</p>
-            </CardContent>
-          </Card>
+          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-blue-50 to-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-blue-200 wark:from-blue-900/20 wark:to-muted/40">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 wark:bg-blue-900/30">
+                <MessageSquare className="h-4 w-4 text-blue-600 wark:text-blue-400" />
+              </div>
+              <span className="text-sm font-medium text-blue-900 wark:text-blue-100">Total Tickets</span>
+            </div>
+            <div className="text-2xl font-bold text-blue-600 wark:text-blue-400">{stats.total}</div>
+            <p className="text-xs text-blue-600 wark:text-blue-400 mt-1">All time</p>
+          </div>
 
-          <Card className="bg-gradient-to-br from-orange-50 to-white border-orange-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-orange-900">Open</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.open}</div>
-              <p className="text-xs text-orange-600 mt-1">Awaiting response</p>
-            </CardContent>
-          </Card>
+          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-orange-50 to-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-orange-200 wark:from-orange-900/20 wark:to-muted/40">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 wark:bg-orange-900/30">
+                <AlertCircle className="h-4 w-4 text-orange-600 wark:text-orange-400" />
+              </div>
+              <span className="text-sm font-medium text-orange-900 wark:text-orange-100">Open</span>
+            </div>
+            <div className="text-2xl font-bold text-orange-600 wark:text-orange-400">{stats.open}</div>
+            <p className="text-xs text-orange-600 wark:text-orange-400 mt-1">Awaiting response</p>
+          </div>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-amber-900">In Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{stats.inProgress}</div>
-              <p className="text-xs text-amber-600 mt-1">Being worked on</p>
-            </CardContent>
-          </Card>
+          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-amber-200 wark:from-amber-900/20 wark:to-muted/40">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 wark:bg-amber-900/30">
+                <Clock className="h-4 w-4 text-amber-600 wark:text-amber-400" />
+              </div>
+              <span className="text-sm font-medium text-amber-900 wark:text-amber-100">In Progress</span>
+            </div>
+            <div className="text-2xl font-bold text-amber-600 wark:text-amber-400">{stats.inProgress}</div>
+            <p className="text-xs text-amber-600 wark:text-amber-400 mt-1">Being worked on</p>
+          </div>
 
-          <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-900">Resolved</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
-              <p className="text-xs text-green-600 mt-1">Ready to close</p>
-            </CardContent>
-          </Card>
+          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-green-50 to-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-green-200 wark:from-green-900/20 wark:to-muted/40">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 wark:bg-green-900/30">
+                <CheckCircle className="h-4 w-4 text-green-600 wark:text-green-400" />
+              </div>
+              <span className="text-sm font-medium text-green-900 wark:text-green-100">Resolved</span>
+            </div>
+            <div className="text-2xl font-bold text-green-600 wark:text-green-400">{stats.resolved}</div>
+            <p className="text-xs text-green-600 wark:text-green-400 mt-1">Ready to close</p>
+          </div>
 
-          <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-900">Closed</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-600">{stats.closed}</div>
-              <p className="text-xs text-gray-600 mt-1">Completed</p>
-            </CardContent>
-          </Card>
+          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-gray-50 to-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-gray-200 wark:from-gray-900/20 wark:to-muted/40">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 wark:bg-gray-900/30">
+                <XCircle className="h-4 w-4 text-gray-600 wark:text-gray-400" />
+              </div>
+              <span className="text-sm font-medium text-gray-900 wark:text-gray-100">Closed</span>
+            </div>
+            <div className="text-2xl font-bold text-gray-600 wark:text-gray-400">{stats.closed}</div>
+            <p className="text-xs text-gray-600 wark:text-gray-400 mt-1">Completed</p>
+          </div>
         </div>
 
         {/* Filters and Search */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-1 gap-2">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search tickets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+        <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-purple-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-purple-200 wark:from-muted/40 wark:to-purple-900/10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+              <Search className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 wark:text-white">Search & Filter</h3>
+              <p className="text-sm text-gray-600 wark:text-gray-300">Find your tickets quickly</p>
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Status</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-<option value="closed">Closed</option>
-            </select>
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-1 gap-2">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tickets..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 bg-white wark:bg-gray-800 border-gray-300 wark:border-gray-600"
+                />
+              </div>
+            </div>
 
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Categories</option>
-              <option value="technical">Technical</option>
-              <option value="billing">Billing</option>
-              <option value="feature_request">Feature Request</option>
-              <option value="bug_report">Bug Report</option>
-              <option value="general">General</option>
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 wark:border-gray-600 bg-white wark:bg-gray-800 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all">All Status</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
 
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 wark:border-gray-600 bg-white wark:bg-gray-800 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all">All Categories</option>
+                <option value="technical">Technical</option>
+                <option value="billing">Billing</option>
+                <option value="feature_request">Feature Request</option>
+                <option value="bug_report">Bug Report</option>
+                <option value="general">General</option>
+              </select>
+
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 wark:border-gray-600 bg-white wark:bg-gray-800 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all">All Priorities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
           </div>
+
+          {/* Decorative element */}
+          <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-purple-500/10 transition-all duration-300 group-hover:scale-110" />
         </div>
 
         {/* Tickets List */}
         <div className="space-y-4">
           {filteredTickets.length === 0 ? (
-            <Card className="p-12 text-center">
-              <div className="flex flex-col items-center gap-4">
-                <div className="rounded-full bg-muted p-4">
-                  <MessageSquare className="h-8 w-8 text-muted-foreground" />
+            <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-gray-50/30 p-12 shadow-sm transition-all duration-300 hover:shadow-md hover:border-gray-200 wark:from-muted/40 wark:to-gray-900/10">
+              <div className="flex flex-col items-center gap-6">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 wark:from-gray-800 wark:to-gray-700">
+                  <MessageSquare className="h-8 w-8 text-gray-400 wark:text-gray-500" />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold">No tickets found</h3>
-                  <p className="text-sm text-muted-foreground">
+                <div className="space-y-2 text-center">
+                  <h3 className="text-xl font-semibold text-gray-900 wark:text-white">No tickets found</h3>
+                  <p className="text-gray-600 wark:text-gray-300">
                     {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' || priorityFilter !== 'all'
                       ? 'Try adjusting your filters or search term'
                       : 'Create your first support ticket to get started'}
@@ -425,82 +430,84 @@ export default function SupportPage() {
                 {(!searchTerm && statusFilter === 'all' && categoryFilter === 'all' && priorityFilter === 'all') && (
                   <Button
                     onClick={() => setShowCreateTicket(true)}
-                    className="bg-primary hover:bg-primary/90"
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Create Your First Ticket
                   </Button>
                 )}
               </div>
-            </Card>
+              {/* Decorative element */}
+              <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-gray-500/10 transition-all duration-300 group-hover:scale-110" />
+            </div>
           ) : (
             filteredTickets.map((ticket) => (
-              <Card key={ticket.id} className="hover:shadow-md transition-all duration-200 border-2 hover:border-primary/20">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <Link href={`/support/tickets/${ticket.id}`} key={ticket.id} className="cursor-pointer block">
+                <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-gray-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20 wark:from-muted/40 wark:to-gray-900/10">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${getPriorityGradient(ticket.priority)} shadow-lg`}>
                         {getCategoryIcon(ticket.category)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-sm truncate">{ticket.title}</h3>
-                          <Badge variant="outline" className="text-xs font-mono">
-                            {ticket.ticketId}
-                          </Badge>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg text-gray-900 wark:text-white truncate">{ticket.title}</h3>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                            #{ticket.ticketId}
+                          </span>
                         </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
+                        <p className="text-sm text-gray-600 wark:text-gray-300 line-clamp-2">
                           {ticket.description}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge className={`text-xs border ${getPriorityColor(ticket.priority)}`}>
-                        {ticket.priority}
+                        {ticket.priority.toUpperCase()}
                       </Badge>
-                      <Badge className={`text-xs border ${getStatusColor(ticket.status)}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(ticket.status)}`}>
                         {getStatusIcon(ticket.status)}
                         <span className="ml-1 capitalize">{ticket.status.replace('_', ' ')}</span>
-                      </Badge>
+                      </span>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6 text-sm text-gray-600 wark:text-gray-300">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
                         <span>{ticket.user.name}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
                         <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
                         <span>{ticket.messageCount} messages</span>
                       </div>
                       {ticket.attachments.length > 0 && (
-                        <div className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
                           <span>{ticket.attachments.length} files</span>
                         </div>
                       )}
                     </div>
-                    <Link href={`/support/tickets/${ticket.id}`}>
-                      <Button variant="outline" size="sm" className="h-7 text-xs">
-                        View Details
-                        <ArrowRight className="h-3 w-3 ml-1" />
-                      </Button>
-                    </Link>
+                    <Button variant="outline" size="sm" className="bg-white wark:bg-gray-800 hover:bg-gray-50 wark:hover:bg-gray-700">
+                      View Details
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+
+                  {/* Decorative element */}
+                  <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-primary/10 transition-all duration-300 group-hover:scale-110" />
+                </div>
+              </Link>
             ))
           )}
         </div>
 
-        {/* Create Ticket Modal/Form would go here */}
+        {/* Create Ticket Modal */}
         {showCreateTicket && (
           <CreateTicketModal
             onClose={() => setShowCreateTicket(false)}
@@ -561,7 +568,7 @@ function CreateTicketModal({ onClose, onSuccess }: { onClose: () => void; onSucc
     if (selectedFiles.length === 0) return;
 
     setUploadingFiles(true);
-    
+
     try {
       const uploadPromises = selectedFiles.map(async (file) => {
         const formData = new FormData();
@@ -635,7 +642,7 @@ function CreateTicketModal({ onClose, onSuccess }: { onClose: () => void; onSucc
         title: "Success",
         description: `Support ticket ${data.ticket.ticketId} created successfully`,
       });
-      
+
       onSuccess();
     } catch (error) {
       console.error('Error creating ticket:', error);
@@ -660,189 +667,284 @@ function CreateTicketModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="space-y-3">
-          <DialogTitle className="text-xl font-semibold">Create Support Ticket</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Describe your issue and we&apos;ll help you resolve it as quickly as possible
-          </DialogDescription>
+     <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center">
+              <Plus className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold text-slate-900">
+                Create Support Ticket
+              </DialogTitle>
+              <DialogDescription className="text-slate-600">
+                Describe your issue and we&apos;ll help you resolve it as quickly as possible
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Category Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Category *</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    <div className="flex items-center gap-2">
-                      <category.icon className={`h-4 w-4 ${category.color}`} />
-                      <span>{category.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Ticket Classification */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  Ticket Classification
+                </h3>
+              </div>
 
-          {/* Priority Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Priority *</Label>
-            <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select priority level" />
-              </SelectTrigger>
-              <SelectContent>
-                {priorities.map((priority) => (
-                  <SelectItem key={priority.value} value={priority.value}>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full ${priority.color.replace('text-', 'bg-')}`} />
-                        <span className="font-medium">{priority.label}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{priority.description}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
-          {/* Title */}
-          <div className="space-y-3">
-            <Label htmlFor="title" className="text-sm font-medium">Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Brief description of your issue"
-              className="w-full"
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-3">
-            <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Provide detailed information about your issue. Include steps to reproduce, expected behavior, and any error messages..."
-              className="min-h-[120px] resize-none"
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Be as specific as possible to help us resolve your issue quickly
-            </p>
-          </div>
-
-          {/* File Upload */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Attachments (Optional)</Label>
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
-              <input
-                type="file"
-                id="file-upload"
-                multiple
-                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.zip,.mp4,.mov,.avi"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={uploadingFiles}
-              />
-              <label
-                htmlFor="file-upload"
-                className={`cursor-pointer flex flex-col items-center gap-2 ${uploadingFiles ? 'opacity-50' : ''}`}
-              >
-                {uploadingFiles ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                ) : (
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                )}
-                <div className="text-sm">
-                  {uploadingFiles ? (
-                    <span className="text-primary">Uploading files...</span>
-                  ) : (
-                    <>
-                      <span className="font-medium text-primary">Click to upload</span>
-                      <span className="text-muted-foreground"> or drag and drop</span>
-                    </>
-                  )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Category Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Category <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                    <SelectTrigger className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.value} value={category.value}>
+                          <div className="flex items-center gap-2">
+                            <category.icon className={`h-4 w-4 ${category.color}`} />
+                            <span>{category.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">
+                    Choose the category that best describes your issue
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Images, Documents, Videos (max 16MB each)
-                </p>
-              </label>
+
+                {/* Priority Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Priority <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+                    <SelectTrigger className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20">
+                      <SelectValue placeholder="Select priority level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priorities.map((priority) => (
+                        <SelectItem key={priority.value} value={priority.value}>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${priority.color.replace('text-', 'bg-')}`} />
+                              <span className="font-medium">{priority.label}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{priority.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">
+                    Select based on the urgency of your issue
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* File List */}
-            {files.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Uploaded Files:</p>
-                {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
-                        {file.type.startsWith('image/') ? (
-                          <FileText className="h-5 w-5 text-blue-600" />
-                        ) : file.type.startsWith('video/') ? (
-                          <FileText className="h-5 w-5 text-purple-600" />
-                        ) : (
-                          <Paperclip className="h-5 w-5 text-green-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatFileSize(file.size)} • {file.type}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                      className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+            {/* Issue Details */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  Issue Details
+                </h3>
               </div>
-            )}
-          </div>
 
-          <DialogFooter className="gap-3 pt-6">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading || uploadingFiles}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || !isFormValid || uploadingFiles}
-              className="bg-primary hover:bg-primary/90"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Ticket
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+              <div className="space-y-6">
+                {/* Title */}
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-sm font-medium text-slate-700">
+                    Title <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Brief description of your issue"
+                    className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
+                    required
+                  />
+                  <p className="text-xs text-slate-500">
+                    Provide a clear and concise title for your issue
+                  </p>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-sm font-medium text-slate-700">
+                    Description <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Provide detailed information about your issue. Include steps to reproduce, expected behavior, and any error messages..."
+                    rows={4}
+                    className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20 resize-none"
+                    required
+                  />
+                  <p className="text-xs text-slate-500">
+                    Be as specific as possible to help us resolve your issue quickly
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* File Attachments */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  Supporting Files
+                </h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
+                      <Paperclip className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-purple-800">
+                        Attachment Support
+                      </Label>
+                      <p className="text-xs text-purple-600">
+                        Upload files to help us understand your issue better
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-purple-600 font-medium">
+                    Optional
+                  </span>
+                </div>
+
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors bg-slate-50">
+                  <input
+                    type="file"
+                    id="file-upload"
+                    multiple
+                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.zip,.mp4,.mov,.avi"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={uploadingFiles}
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className={`cursor-pointer flex flex-col items-center gap-3 ${uploadingFiles ? 'opacity-50' : ''}`}
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                      {uploadingFiles ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-slate-600" />
+                      ) : (
+                        <Upload className="h-6 w-6 text-slate-600" />
+                      )}
+                    </div>
+                    <div className="text-sm">
+                      {uploadingFiles ? (
+                        <span className="text-slate-600 font-medium">Uploading files...</span>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-slate-700">
+                            <span className="font-medium text-blue-600">Click to upload</span>
+                            <span className="text-slate-500"> or drag and drop</span>
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Images, Documents, Videos (max 16MB each)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                {/* File List */}
+                {files.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-purple-500" />
+                      <span className="text-sm font-medium text-slate-700">
+                        Uploaded Files ({files.length})
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {files.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                              {file.type.startsWith('image/') ? (
+                                <FileText className="h-4 w-4 text-purple-600" />
+                              ) : file.type.startsWith('video/') ? (
+                                <FileText className="h-4 w-4 text-purple-600" />
+                              ) : (
+                                <Paperclip className="h-4 w-4 text-purple-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate">{file.name}</p>
+                              <p className="text-xs text-slate-500">
+                                {formatFileSize(file.size)} • {file.type}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={loading || uploadingFiles}
+            className="hover:bg-slate-50"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !isFormValid || uploadingFiles}
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Ticket
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

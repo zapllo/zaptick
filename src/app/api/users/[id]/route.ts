@@ -26,9 +26,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     // Only allow admins to update users
-    if (currentUser.role !== 'admin') {
-      return NextResponse.json({ success: false, message: 'Insufficient permissions' }, { status: 403 });
-    }
+    // if (currentUser.role !== 'admin') {
+    //   return NextResponse.json({ success: false, message: 'Insufficient permissions' }, { status: 403 });
+    // }
 
     const { name, email, roleId, isActive, role } = await req.json();
 

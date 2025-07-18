@@ -1622,7 +1622,7 @@ function ConversationsPageContent() {
 
     if (replyingTo) {
       // -----  it's a reply  -----
-      await sendReplyMessage(replyingTo.id, messageInput.trim()); 
+      await sendReplyMessage(replyingTo.id, messageInput.trim());
       setReplyingTo(null);          // hide the reply banner
     } else {
       // -----  normal message  ---
@@ -2243,9 +2243,9 @@ function ConversationsPageContent() {
 
   return (
     <Layout>
-      <div className="h-screen flex w-full   flex-col ">
+      <div className="h-screen flex w-full fixed overflow-hidden   flex-col ">
         {/* Top Navigation Bar - Modern Design */}
-        <div className="h-16 border-b border-border/50 bg-gradient-to-r from-background to-background/95 backdrop-blur-md flex items-center justify-between px-4 lg:px-6 shadow-sm">
+        <div className="h-16 w-[96%] border-b border-border/50 bg-gradient-to-r from-background to-background/95 backdrop-blur-md flex items-center justify-between px-4 lg:px-6 shadow-sm">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -2460,7 +2460,7 @@ function ConversationsPageContent() {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
+                {/* <DropdownMenuItem
                   onClick={() => window.location.href = '/settings'}
                   className="cursor-pointer hover:bg-accent/50 transition-colors group"
                 >
@@ -2471,7 +2471,7 @@ function ConversationsPageContent() {
                     <p className="font-medium">Settings</p>
                     <p className="text-xs text-muted-foreground">Configure preferences</p>
                   </div>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -2485,7 +2485,7 @@ function ConversationsPageContent() {
             isMobileMenuOpen && "absolute inset-0 z-50 md:relative"
           )}>
             {/* Enhanced Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-card to-card/95">
+            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-card to-card/95 flex-shrink-0">
               {isBulkSelectMode ? (
                 <div className="flex items-center gap-3 w-full">
                   <Button
@@ -2654,8 +2654,8 @@ function ConversationsPageContent() {
               </div>
             </div>
 
-            {/* Enhanced Search Bar */}
-            <div className="p-4 border-b border-border/50 bg-card/30">
+            {/* Enhanced Search Bar - Fixed */}
+            <div className="p-4 border-b border-border/50 bg-card/30 flex-shrink-0">
               <div className="flex items-center gap-2">
                 {searchQuery.trim().length > 0 && (
                   <Button
@@ -2924,11 +2924,11 @@ function ConversationsPageContent() {
 
 
 
-          {/* Chat Area - Modern & Professional Design */}
+          {/* Chat Area - Fixed height */}
           {(activeConversation || selectedContact) ? (
-            <div className="flex-1 flex flex-col bg-gradient-to-b from-background to-background/95 backdrop-blur-md shadow-sm">
-              {/* Enhanced Chat Header */}
-              <div className="bg-gradient-to-r from-card to-card/95 border-b border-border/50 px-4 py-3 shadow-sm backdrop-blur-md">
+            <div className="flex-1   max-h-screen flex flex-col bg-gradient-to-b from-background to-background/95 backdrop-blur-md shadow-sm min-w-0 overflow-hidden">
+              {/* Enhanced Chat Header - Fixed */}
+              <div className="bg-gradient-to-r from-card to-card/95 border-b border-border/50 px-4 py-3 shadow-sm backdrop-blur-md md:w-[94%] 2xl:w-[95%] flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Button
@@ -3006,7 +3006,7 @@ function ConversationsPageContent() {
                   </div>
 
                   {/* Enhanced Action Buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 -ml-4">
                     {activeConversation?.assignedTo ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -3297,7 +3297,7 @@ function ConversationsPageContent() {
               </div>
 
               {/* Enhanced Messages Area */}
-              <div className="flex-1 flex flex-col overflow-hidden relative">
+              <div className="flex-1 max-h-[95%] md:w-[94%] 2xl:w-[95%] h-fit flex flex-col overflow-y-scroll relative">
                 <div
                   ref={scrollAreaRef}
                   className="flex-1 overflow-y-auto"
@@ -3381,14 +3381,14 @@ function ConversationsPageContent() {
                                     >
                                       {/* 🔥 —‑‑‑‑‑‑‑‑‑ NEW REPLY PREVIEW BLOCK ‑‑‑‑‑‑‑‑‑‑‑‑ */}
                                       {message.replyTo && (
-                                        <div className="mb-1 rounded-lg border-l-2 border-primary/50 bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+                                        <div className="mb-1 rounded border-l-4 border-blue-400 /10 bg-gray-200 px-2 py-2 text-xs text-muted-foreground">
                                           {getOriginalMessageContent(message.replyTo)}
                                         </div>
                                       )}
 
 
                                       {/* Enhanced Message Content */}
-                                      {message.messageType === 'text' && (
+                                      {['text', 'template'].includes(message.messageType) && (
                                         <div className="pb-4">
                                           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                                             {message.content}
@@ -3611,9 +3611,9 @@ function ConversationsPageContent() {
 
                                       {/* Enhanced Template Indicator */}
                                       {message.templateName && (
-                                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                                        <div className="flex items-center gap-2 mt-2 w-fit text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
                                           <FileText className="h-3 w-3" />
-                                          Template: {message.templateName}
+                                          {message.templateName}
                                         </div>
                                       )}
                                     </div>
@@ -3651,16 +3651,15 @@ function ConversationsPageContent() {
 
                 {/* Scroll to bottom button */}
                 {!shouldAutoScroll && (
-                  <div className="absolute bottom-4 right-4 z-10">
+                  <div className="absolute bottom-16 right-4 z-10">
                     <Button
                       onClick={() => {
                         scrollToBottom();
                         setShouldAutoScroll(true);
                       }}
-                      size="sm"
-                      className="rounded-full shadow-lg bg-primary/90 hover:bg-primary text-primary-foreground"
+                      className="rounded-full h-8 w-8 shadow-lg bg-primary/90 hover:bg-primary text-primary-foreground"
                     >
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-6 w-6" />
                     </Button>
                   </div>
                 )}
@@ -3684,22 +3683,24 @@ function ConversationsPageContent() {
                 </div>
               )}
               {/* Enhanced Message Input - Always Visible */}
-              <div className="flex-shrink-0 bg-gradient-to-r from-card/95 to-card/90 border-t border-border/50  shadow-lg px-4 py-4 backdrop-blur-md">
+              <div className="sticky md:w-[94%] 2xl:w-[95%]  bottom-12 bg-gradient-to-r from-card/95 to-card/90 border-t border-border/50  shadow-lg px-4 pb-6 pt-4  backdrop-blur-md">
                 {isWithin24Hours() ? (
-                  <div className="flex items-end gap-3  mx-auto">
+                  <div className="flex items-end gap-3 relative  mx-auto">
                     {/* Enhanced Attachment Button */}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-10 w-10 rounded-full bg-accent/50 hover:bg-accent/80 border-border/50 transition-all duration-200 hover:scale-105"
-                              >
-                                <Paperclip className="h-4 w-4" />
-                              </Button>
+                              <div className='relative w-10'>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-10 w-10 absolute -mt-14 rounded-full bg-accent/50 hover:bg-accent/80 border-border/50 transition-all duration-200 hover:scale-105"
+                                >
+                                  <Paperclip className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-56 p-2 bg-popover/95 backdrop-blur-sm border-border/50">
                               <DropdownMenuItem
@@ -3750,7 +3751,7 @@ function ConversationsPageContent() {
                     </TooltipProvider>
 
                     {/* Enhanced Message Input */}
-                    <div className="flex-1 relative">
+                    <div className="flex-1 relative w-[99%]">
                       <Textarea
                         placeholder="Type a message..."
                         value={messageInput}
@@ -3761,12 +3762,12 @@ function ConversationsPageContent() {
                             handleSend();
                           }
                         }}
-                        className="min-h-[48px] max-h-32 resize-none pr-16 py-3 pl-4 rounded-2xl bg-background/95 backdrop-blur-sm border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 shadow-sm"
+                        className="min-h-[72px] w-[99%] resize-none pr-16 py-3 pl-4 rounded-2xl bg-background/95 backdrop-blur-sm border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 shadow-sm"
                         rows={1}
                       />
 
                       {/* Enhanced Input Actions */}
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
                         <div className="relative">
                           <Button
                             variant="ghost"
@@ -3775,7 +3776,7 @@ function ConversationsPageContent() {
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                           >
                             <Smile className={cn(
-                              "h-4 w-4 transition-colors duration-200",
+                              "h-6 w-6 transition-colors duration-200",
                               showEmojiPicker ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                             )} />
                           </Button>
@@ -3832,23 +3833,24 @@ function ConversationsPageContent() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            onClick={handleSend}
-                            disabled={!messageInput.trim() || isSending}
-                            size="icon"
-                            className={cn(
-                              "h-12 w-12 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50",
-                              !messageInput.trim() || isSending
-                                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                : "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground hover:scale-105"
-                            )}
-                          >
-                            {isSending ? (
-                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent"></div>
-                            ) : (
-                              <Send className="h-5 w-5 ml-0.5" />
-                            )}
-                          </Button>
+                          <div className='relative w-10 '>
+                            <Button
+                              onClick={handleSend}
+                              disabled={!messageInput.trim() || isSending}
+                              size="icon"
+                              className={cn(
+                                "h-12 w-12 rounded-full absolute -ml-4 -mt-14 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50",
+                                !messageInput.trim() || isSending
+                                  ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                  : "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground hover:scale-105"
+                              )}
+                            >
+                              {isSending ? (
+                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent"></div>
+                              ) : (
+                                <Send className="h-5 w-5 ml-0.5" />
+                              )}
+                            </Button></div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-popover/95 backdrop-blur-sm border-border/50">
                           <p>Send message</p>
@@ -4629,312 +4631,366 @@ function ConversationsPageContent() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
           <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
-            <DialogOverlay className="backdrop-blur-xs" />
-            <DialogContent className="backdrop-blur-2xl ">
-              <DialogHeader>
-                <DialogTitle>Filter Conversations</DialogTitle>
-                <DialogDescription>
-                  Set filters to find specific conversations
-                </DialogDescription>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0">
+              <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center">
+                    <Filter className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-slate-900">
+                      Filter Conversations
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-600">
+                      Set filters to find specific conversations
+                    </DialogDescription>
+                  </div>
+                </div>
               </DialogHeader>
-              <Separator className="my-1" />
-              <div className="space-y-4 py-2 max-h-[60vh] -mt-3  overflow-y-auto pr-2">
-                <div className="flex items-center justify-between">
+
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                <div className="space-y-6">
+                  {/* Active Filters Summary */}
                   {getActiveFilterCount() > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={resetFilters}
-                      className="h-7 px-2 text-xs"
-                    >
-                      Reset All
-                    </Button>
-                  )}
-                </div>
-
-                {/* Status Filter */}
-                <div className="space-y-2 -mt-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Status</label>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['active', 'pending', 'resolved', 'closed'].map((status) => (
-                      <div key={status} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`status-${status}`}
-                          checked={filters.status.includes(status)}
-                          onCheckedChange={(checked) => {
-                            setFilters(prev => ({
-                              ...prev,
-                              status: checked
-                                ? [...prev.status, status]
-                                : prev.status.filter(s => s !== status)
-                            }));
-                          }}
-                        />
-                        <label
-                          htmlFor={`status-${status}`}
-                          className="text-sm font-medium capitalize leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                          <span className="text-sm font-medium text-blue-800">
+                            {getActiveFilterCount()} filter{getActiveFilterCount() > 1 ? 's' : ''} active
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={resetFilters}
+                          className="h-7 px-2 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-100"
                         >
-                          {status}
-                        </label>
+                          Clear All
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Assignment Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Assignment</label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="unassigned"
-                        checked={filters.assigned.includes('unassigned')}
-                        onCheckedChange={(checked) => {
-                          setFilters(prev => ({
-                            ...prev,
-                            assigned: checked
-                              ? [...prev.assigned, 'unassigned']
-                              : prev.assigned.filter(a => a !== 'unassigned')
-                          }));
-                        }}
-                      />
-                      <label
-                        htmlFor="unassigned"
-                        className="text-sm font-medium leading-none"
-                      >
-                        Unassigned
-                      </label>
                     </div>
-                    {teamMembers.map((member) => (
-                      <div key={member.id} className="flex items-center space-x-2">
+                  )}
+
+                  {/* Status Filter */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Status
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { id: 'active', label: 'Active', color: 'green' },
+                        { id: 'pending', label: 'Pending', color: 'amber' },
+                        { id: 'resolved', label: 'Resolved', color: 'blue' },
+                        { id: 'closed', label: 'Closed', color: 'slate' }
+                      ].map((status) => (
+                        <div key={status.id} className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <Checkbox
+                            id={`status-${status.id}`}
+                            checked={filters.status.includes(status.id)}
+                            onCheckedChange={(checked) => {
+                              setFilters(prev => ({
+                                ...prev,
+                                status: checked
+                                  ? [...prev.status, status.id]
+                                  : prev.status.filter(s => s !== status.id)
+                              }));
+                            }}
+                          />
+                          <label
+                            htmlFor={`status-${status.id}`}
+                            className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-2 flex-1"
+                          >
+                            <div className={`h-2 w-2 rounded-full bg-${status.color}-500`} />
+                            {status.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Assignment Filter */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Assignment
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                         <Checkbox
-                          id={`member-${member.id}`}
-                          checked={filters.assigned.includes(member.id)}
+                          id="unassigned"
+                          checked={filters.assigned.includes('unassigned')}
                           onCheckedChange={(checked) => {
                             setFilters(prev => ({
                               ...prev,
                               assigned: checked
-                                ? [...prev.assigned, member.id]
-                                : prev.assigned.filter(a => a !== member.id)
+                                ? [...prev.assigned, 'unassigned']
+                                : prev.assigned.filter(a => a !== 'unassigned')
                             }));
                           }}
                         />
                         <label
-                          htmlFor={`member-${member.id}`}
-                          className="text-sm font-medium leading-none"
+                          htmlFor="unassigned"
+                          className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-2 flex-1"
                         >
-                          {member.name}
+                          <UserX className="h-4 w-4 text-slate-500" />
+                          Unassigned
                         </label>
                       </div>
-                    ))}
+                      {teamMembers.map((member) => (
+                        <div key={member.id} className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <Checkbox
+                            id={`member-${member.id}`}
+                            checked={filters.assigned.includes(member.id)}
+                            onCheckedChange={(checked) => {
+                              setFilters(prev => ({
+                                ...prev,
+                                assigned: checked
+                                  ? [...prev.assigned, member.id]
+                                  : prev.assigned.filter(a => a !== member.id)
+                              }));
+                            }}
+                          />
+                          <label
+                            htmlFor={`member-${member.id}`}
+                            className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-2 flex-1"
+                          >
+                            <User className="h-4 w-4 text-slate-500" />
+                            {member.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <Separator />
-
-                {/* Labels Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Labels</label>
-                  <div className="space-y-2">
-                    {labels.map((label) => (
-                      <div key={label.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`label-${label.id}`}
-                          checked={filters.labels.includes(label.id)}
-                          onCheckedChange={(checked) => {
-                            setFilters(prev => ({
-                              ...prev,
-                              labels: checked
-                                ? [...prev.labels, label.id]
-                                : prev.labels.filter(l => l !== label.id)
-                            }));
-                          }}
-                        />
-                        <label
-                          htmlFor={`label-${label.id}`}
-                          className="text-sm font-medium leading-none flex items-center gap-2"
-                        >
-                          <div className={`w-3 h-3 rounded-full bg-${label.color}-500`}></div>
-                          {label.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Message Type Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Last Message Type</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['text', 'image', 'video', 'document', 'audio', 'template'].map((type) => (
-                      <div key={type} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`type-${type}`}
-                          checked={filters.messageType.includes(type)}
-                          onCheckedChange={(checked) => {
-                            setFilters(prev => ({
-                              ...prev,
-                              messageType: checked
-                                ? [...prev.messageType, type]
-                                : prev.messageType.filter(t => t !== type)
-                            }));
-                          }}
-                        />
-                        <label
-                          htmlFor={`type-${type}`}
-                          className="text-sm font-medium capitalize leading-none"
-                        >
-                          {type}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Date Range Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Date Range</label>
-                  <Select
-                    value={filters.dateRange}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value }))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Time</SelectItem>
-                      <SelectItem value="today">Today</SelectItem>
-                      <SelectItem value="yesterday">Yesterday</SelectItem>
-                      <SelectItem value="week">Last 7 Days</SelectItem>
-                      <SelectItem value="month">Last 30 Days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                {/* Sort Options */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Sort By</label>
-                  <div className="flex gap-2">
-                    <Select
-                      value={filters.sortBy}
-                      onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="lastMessageAt">Last Message</SelectItem>
-                        <SelectItem value="name">Contact Name</SelectItem>
-                        <SelectItem value="unreadCount">Unread Count</SelectItem>
-                        <SelectItem value="messageCount">Message Count</SelectItem>
-                        <SelectItem value="createdAt">Created Date</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setFilters(prev => ({
-                        ...prev,
-                        sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc'
-                      }))}
-                    >
-                      {filters.sortOrder === 'asc' ? (
-                        <SortAsc className="h-4 w-4" />
+                  {/* Labels Filter */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Labels
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      {labels.length > 0 ? (
+                        labels.map((label) => (
+                          <div key={label.id} className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <Checkbox
+                              id={`label-${label.id}`}
+                              checked={filters.labels.includes(label.id)}
+                              onCheckedChange={(checked) => {
+                                setFilters(prev => ({
+                                  ...prev,
+                                  labels: checked
+                                    ? [...prev.labels, label.id]
+                                    : prev.labels.filter(l => l !== label.id)
+                                }));
+                              }}
+                            />
+                            <label
+                              htmlFor={`label-${label.id}`}
+                              className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-2 flex-1"
+                            >
+                              <div className={`w-3 h-3 rounded-full bg-${label.color}-500`}></div>
+                              {label.name}
+                            </label>
+                          </div>
+                        ))
                       ) : (
-                        <SortDesc className="h-4 w-4" />
+                        <div className="text-center py-6 text-slate-500">
+                          <Tag className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+                          <p className="text-sm">No labels available</p>
+                        </div>
                       )}
-                    </Button>
+                    </div>
                   </div>
-                </div>
 
-                <Separator />
+                  {/* Message Type Filter */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Message Type
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { id: 'text', icon: MessageCircle, label: 'Text' },
+                        { id: 'image', icon: ImageIcon, label: 'Image' },
+                        { id: 'video', icon: Video, label: 'Video' },
+                        { id: 'document', icon: FileText, label: 'Document' },
+                        { id: 'audio', icon: Phone, label: 'Audio' },
+                        { id: 'template', icon: FileText, label: 'Template' }
+                      ].map((type) => (
+                        <div key={type.id} className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <Checkbox
+                            id={`type-${type.id}`}
+                            checked={filters.messageType.includes(type.id)}
+                            onCheckedChange={(checked) => {
+                              setFilters(prev => ({
+                                ...prev,
+                                messageType: checked
+                                  ? [...prev.messageType, type.id]
+                                  : prev.messageType.filter(t => t !== type.id)
+                              }));
+                            }}
+                          />
+                          <label
+                            htmlFor={`type-${type.id}`}
+                            className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-2 flex-1"
+                          >
+                            <type.icon className="h-4 w-4 text-slate-500" />
+                            {type.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-                {/* Toggle Filters */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Quick Filters</label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="unread-only"
-                        checked={filters.unreadOnly}
-                        onCheckedChange={(checked) => setFilters(prev => ({ ...prev, unreadOnly: checked || false }))}
-                      />
-                      <label
-                        htmlFor="unread-only"
-                        className="text-sm font-medium leading-none flex items-center gap-2"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        Unread Only
-                      </label>
+                  {/* Date Range Filter */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-pink-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Date Range
+                      </h3>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="within-24h"
-                        checked={filters.within24Hours}
-                        onCheckedChange={(checked) => setFilters(prev => ({ ...prev, within24Hours: checked || false }))}
-                      />
-                      <label
-                        htmlFor="within-24h"
-                        className="text-sm font-medium leading-none flex items-center gap-2"
+                    <div className="p-4 bg-pink-50 rounded-lg border border-pink-200">
+                      <Select
+                        value={filters.dateRange}
+                        onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value }))}
                       >
-                        <Zap className="h-4 w-4" />
-                        Within 24 Hours
-                      </label>
+                        <SelectTrigger className="w-full bg-white border-pink-300 focus:border-pink-500 focus:ring-pink-500/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Time</SelectItem>
+                          <SelectItem value="today">Today</SelectItem>
+                          <SelectItem value="yesterday">Yesterday</SelectItem>
+                          <SelectItem value="week">Last 7 Days</SelectItem>
+                          <SelectItem value="month">Last 30 Days</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="has-media"
-                        checked={filters.hasMedia}
-                        onCheckedChange={(checked) => setFilters(prev => ({ ...prev, hasMedia: checked || false }))}
-                      />
-                      <label
-                        htmlFor="has-media"
-                        className="text-sm font-medium leading-none flex items-center gap-2"
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                        Has Media
-                      </label>
+                  </div>
+
+                  {/* Sort Options */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Sort Options
+                      </h3>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="has-notes"
-                        checked={filters.hasNotes}
-                        onCheckedChange={(checked) => setFilters(prev => ({ ...prev, hasNotes: checked || false }))}
-                      />
-                      <label
-                        htmlFor="has-notes"
-                        className="text-sm font-medium leading-none flex items-center gap-2"
-                      >
-                        <FileText className="h-4 w-4" />
-                        Has Notes
-                      </label>
+                    <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
+                      <div className="flex gap-2">
+                        <Select
+                          value={filters.sortBy}
+                          onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}
+                        >
+                          <SelectTrigger className="flex-1 bg-white border-teal-300 focus:border-teal-500 focus:ring-teal-500/20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="lastMessageAt">Last Message</SelectItem>
+                            <SelectItem value="name">Contact Name</SelectItem>
+                            <SelectItem value="unreadCount">Unread Count</SelectItem>
+                            <SelectItem value="messageCount">Message Count</SelectItem>
+                            <SelectItem value="createdAt">Created Date</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setFilters(prev => ({
+                            ...prev,
+                            sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc'
+                          }))}
+                          className="border-teal-300 text-teal-600 hover:bg-teal-100 hover:border-teal-400"
+                        >
+                          {filters.sortOrder === 'asc' ? (
+                            <SortAsc className="h-4 w-4" />
+                          ) : (
+                            <SortDesc className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Filters */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Quick Filters
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      {[
+                        { id: 'unreadOnly', icon: MessageCircle, label: 'Unread Only', checked: filters.unreadOnly },
+                        { id: 'within24Hours', icon: Zap, label: 'Within 24 Hours', checked: filters.within24Hours },
+                        { id: 'hasMedia', icon: ImageIcon, label: 'Has Media', checked: filters.hasMedia },
+                        { id: 'hasNotes', icon: FileText, label: 'Has Notes', checked: filters.hasNotes }
+                      ].map((filter) => (
+                        <div key={filter.id} className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                          <Checkbox
+                            id={filter.id}
+                            checked={filter.checked}
+                            onCheckedChange={(checked) => {
+                              setFilters(prev => ({ ...prev, [filter.id]: checked || false }));
+                            }}
+                          />
+                          <label
+                            htmlFor={filter.id}
+                            className="text-sm font-medium text-slate-700 cursor-pointer flex items-center gap-2 flex-1"
+                          >
+                            <filter.icon className="h-4 w-4 text-slate-500" />
+                            {filter.label}
+                          </label>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <DialogFooter className="flex justify-between mt-4">
-                <Button
-                  variant="outline"
-                  onClick={resetFilters}
-                >
-                  Reset Filters
-                </Button>
-                <Button onClick={() => setShowFilterDialog(false)}>
-                  Apply Filters
-                </Button>
+              <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <Filter className="h-4 w-4" />
+                    <span>
+                      {getActiveFilterCount() > 0
+                        ? `${getActiveFilterCount()} filter${getActiveFilterCount() > 1 ? 's' : ''} applied`
+                        : 'No filters applied'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={resetFilters}
+                      disabled={getActiveFilterCount() === 0}
+                      className="hover:bg-slate-50"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Reset All
+                    </Button>
+                    <Button
+                      onClick={() => setShowFilterDialog(false)}
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Apply Filters
+                    </Button>
+                  </div>
+                </div>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -5249,7 +5305,7 @@ function ConversationsPageContent() {
             <div className="group">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-muted-foreground block mb-1">Phone Number</label>
-                <Button variant="ghost" size="sm" className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" className="h-6 px-2 ">
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
@@ -5267,7 +5323,7 @@ function ConversationsPageContent() {
               <Tag className="h-4 w-4" />
               Tags
             </h4>
-            <Button variant="outline" size="sm" className="h-7 px-2.5 border-dashed border-primary/50 text-primary hover:bg-primary/10">
+            <Button onClick={() => setShowAddTagDialog(true)} variant="outline" size="sm" className="h-7 px-2.5 border-dashed border-primary/50 text-primary hover:bg-primary/10">
               <Plus className="h-3.5 w-3.5 mr-1" />
               Add
             </Button>

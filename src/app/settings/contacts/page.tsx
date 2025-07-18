@@ -314,7 +314,7 @@ export default function ContactCustomFieldsPage() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className=" mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold">Contact Custom Fields</h1>
@@ -452,91 +452,206 @@ export default function ContactCustomFieldsPage() {
 
         {/* Add Custom Field Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Custom Field</DialogTitle>
-              <DialogDescription>
-                Create a new custom field for your contacts
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Field Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g. Company Size, Budget, Referral Source"
-                  value={newField.name}
-                  onChange={(e) => setNewField({ ...newField, name: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  This will be displayed in forms and contact details
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="type">Field Type *</Label>
-                <Select
-                  value={newField.type}
-                  onValueChange={(value) => setNewField({ ...newField, type: value as FieldType })}
-                >
-                  <SelectTrigger id="type">
-                    <SelectValue placeholder="Select field type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Text">Text</SelectItem>
-                    <SelectItem value="Number">Number</SelectItem>
-                    <SelectItem value="Date">Date</SelectItem>
-                    <SelectItem value="Dropdown">Dropdown</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {newField.type === 'Dropdown' && (
-                <div className="space-y-2">
-                  <Label htmlFor="options">Dropdown Options *</Label>
-                  <Input
-                    id="options"
-                    placeholder="Option 1, Option 2, Option 3"
-                    value={newField.options}
-                    onChange={(e) => setNewField({ ...newField, options: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter options separated by commas
-                  </p>
+          <DialogContent className="sm:max-w-[500px] max-h-[95vh] flex flex-col p-0">
+            <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/20 flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-green-600" />
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="defaultValue">Default Value (Optional)</Label>
-                <Input
-                  id="defaultValue"
-                  placeholder="Default value"
-                  value={newField.defaultValue}
-                  onChange={(e) => setNewField({ ...newField, defaultValue: e.target.value })}
-                />
+                <div>
+                  <DialogTitle className="text-xl font-semibold text-slate-900">
+                    Add Custom Field
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-600">
+                    Create a new custom field for your contacts
+                  </DialogDescription>
+                </div>
               </div>
+            </DialogHeader>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="required"
-                  checked={newField.required}
-                  onCheckedChange={(checked) =>
-                    setNewField({ ...newField, required: checked as boolean })
-                  }
-                />
-                <label
-                  htmlFor="required"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  This field is required when creating or updating contacts
-                </label>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="space-y-6">
+                {/* Field Configuration */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                      Field Configuration
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-medium text-slate-700">
+                        Field Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        placeholder="e.g. Company Size, Budget, Referral Source"
+                        value={newField.name}
+                        onChange={(e) => setNewField({ ...newField, name: e.target.value })}
+                        className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20"
+                      />
+                      <p className="text-xs text-slate-500">
+                        This will be displayed in forms and contact details
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="type" className="text-sm font-medium text-slate-700">
+                        Field Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={newField.type}
+                        onValueChange={(value) => setNewField({ ...newField, type: value as FieldType })}
+                      >
+                        <SelectTrigger id="type" className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20">
+                          <SelectValue placeholder="Select field type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Text">
+                            <div className="flex items-center gap-2">
+                              <TextQuote className="h-4 w-4 text-blue-500" />
+                              <span>Text</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Number">
+                            <div className="flex items-center gap-2">
+                              <Hash className="h-4 w-4 text-green-500" />
+                              <span>Number</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Date">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-amber-500" />
+                              <span>Date</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Dropdown">
+                            <div className="flex items-center gap-2">
+                              <List className="h-4 w-4 text-purple-500" />
+                              <span>Dropdown</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {newField.type === 'Dropdown' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="options" className="text-sm font-medium text-slate-700">
+                          Dropdown Options <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="options"
+                          placeholder="Option 1, Option 2, Option 3"
+                          value={newField.options}
+                          onChange={(e) => setNewField({ ...newField, options: e.target.value })}
+                          className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          Enter options separated by commas
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultValue" className="text-sm font-medium text-slate-700">
+                        Default Value (Optional)
+                      </Label>
+                      <Input
+                        id="defaultValue"
+                        placeholder="Default value"
+                        value={newField.defaultValue}
+                        onChange={(e) => setNewField({ ...newField, defaultValue: e.target.value })}
+                        className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20"
+                      />
+                      <p className="text-xs text-slate-500">
+                        Pre-fill this field with a default value
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Field Properties */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                      Field Properties
+                    </h3>
+                  </div>
+
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="required"
+                        checked={newField.required}
+                        onCheckedChange={(checked) =>
+                          setNewField({ ...newField, required: checked as boolean })
+                        }
+                        className="mt-1"
+                      />
+                      <div>
+                        <label
+                          htmlFor="required"
+                          className="text-sm font-medium text-purple-800 cursor-pointer"
+                        >
+                          Required Field
+                        </label>
+                        <p className="text-xs text-purple-600 mt-1">
+                          This field must be filled when creating or updating contacts
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                      Preview
+                    </h3>
+                  </div>
+
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        {getFieldTypeIcon(newField.type)}
+                        <span className="font-medium text-green-800">
+                          {newField.name || 'Field Name'}
+                          {newField.required && <span className="text-red-500 ml-1">*</span>}
+                        </span>
+                      </div>
+                      <div className="text-sm text-green-600">
+                        Type: {newField.type}
+                        {newField.options && newField.type === 'Dropdown' && (
+                          <span className="ml-2">
+                            ({newField.options.split(',').map(o => o.trim()).filter(Boolean).length} options)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+
+            <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+              <Button
+                variant="outline"
+                onClick={() => setIsAddDialogOpen(false)}
+                className="hover:bg-slate-50"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddField}>
+              <Button
+                onClick={handleAddField}
+                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Plus className="h-4 w-4 mr-2" />
                 Add Field
               </Button>
             </DialogFooter>
@@ -545,94 +660,274 @@ export default function ContactCustomFieldsPage() {
 
         {/* Edit Custom Field Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit Custom Field</DialogTitle>
-              <DialogDescription>
-                Update this custom field&apos;s properties
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Field Name *</Label>
-                <Input
-                  id="edit-name"
-                  placeholder="e.g. Company Size, Budget, Referral Source"
-                  value={editField.name}
-                  onChange={(e) => setEditField({ ...editField, name: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-type">Field Type *</Label>
-                <Select
-                  value={editField.type}
-                  onValueChange={(value) => setEditField({ ...editField, type: value as FieldType })}
-                >
-                  <SelectTrigger id="edit-type">
-                    <SelectValue placeholder="Select field type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Text">Text</SelectItem>
-                    <SelectItem value="Number">Number</SelectItem>
-                    <SelectItem value="Date">Date</SelectItem>
-                    <SelectItem value="Dropdown">Dropdown</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {editField.type === 'Dropdown' && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-options">Dropdown Options *</Label>
-                  <Input
-                    id="edit-options"
-                    placeholder="Option 1, Option 2, Option 3"
-                    value={editField.options}
-                    onChange={(e) => setEditField({ ...editField, options: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter options separated by commas
-                  </p>
+          <DialogContent className="sm:max-w-[500px] max-h-[95vh] flex flex-col p-0">
+            <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center">
+                  <Edit className="h-5 w-5 text-blue-600" />
                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-defaultValue">Default Value (Optional)</Label>
-                <Input
-                  id="edit-defaultValue"
-                  placeholder="Default value"
-                  value={editField.defaultValue}
-                  onChange={(e) => setEditField({ ...editField, defaultValue: e.target.value })}
-                />
+                <div>
+                  <DialogTitle className="text-xl font-semibold text-slate-900">
+                    Edit Custom Field
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-600">
+                    Update this custom field&apos;s properties
+                  </DialogDescription>
+                </div>
               </div>
+            </DialogHeader>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="edit-required"
-                  checked={editField.required}
-                  onCheckedChange={(checked) =>
-                    setEditField({ ...editField, required: checked as boolean })
-                  }
-                />
-                <label
-                  htmlFor="edit-required"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  This field is required when creating or updating contacts
-                </label>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="space-y-6">
+                {/* Field Configuration */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                      Field Configuration
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name" className="text-sm font-medium text-slate-700">
+                        Field Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="edit-name"
+                        placeholder="e.g. Company Size, Budget, Referral Source"
+                        value={editField.name}
+                        onChange={(e) => setEditField({ ...editField, name: e.target.value })}
+                        className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-type" className="text-sm font-medium text-slate-700">
+                        Field Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={editField.type}
+                        onValueChange={(value) => setEditField({ ...editField, type: value as FieldType })}
+                      >
+                        <SelectTrigger id="edit-type" className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20">
+                          <SelectValue placeholder="Select field type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Text">
+                            <div className="flex items-center gap-2">
+                              <TextQuote className="h-4 w-4 text-blue-500" />
+                              <span>Text</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Number">
+                            <div className="flex items-center gap-2">
+                              <Hash className="h-4 w-4 text-green-500" />
+                              <span>Number</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Date">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-amber-500" />
+                              <span>Date</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Dropdown">
+                            <div className="flex items-center gap-2">
+                              <List className="h-4 w-4 text-purple-500" />
+                              <span>Dropdown</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {editField.type === 'Dropdown' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-options" className="text-sm font-medium text-slate-700">
+                          Dropdown Options <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="edit-options"
+                          placeholder="Option 1, Option 2, Option 3"
+                          value={editField.options}
+                          onChange={(e) => setEditField({ ...editField, options: e.target.value })}
+                          className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          Enter options separated by commas
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-defaultValue" className="text-sm font-medium text-slate-700">
+                        Default Value (Optional)
+                      </Label>
+                      <Input
+                        id="edit-defaultValue"
+                        placeholder="Default value"
+                        value={editField.defaultValue}
+                        onChange={(e) => setEditField({ ...editField, defaultValue: e.target.value })}
+                        className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Field Properties */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                      Field Properties
+                    </h3>
+                  </div>
+
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="edit-required"
+                        checked={editField.required}
+                        onCheckedChange={(checked) =>
+                          setEditField({ ...editField, required: checked as boolean })
+                        }
+                        className="mt-1"
+                      />
+                      <div>
+                        <label
+                          htmlFor="edit-required"
+                          className="text-sm font-medium text-purple-800 cursor-pointer"
+                        >
+                          Required Field
+                        </label>
+                        <p className="text-xs text-purple-600 mt-1">
+                          This field must be filled when creating or updating contacts
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                      Preview
+                    </h3>
+                  </div>
+
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        {getFieldTypeIcon(editField.type)}
+                        <span className="font-medium text-green-800">
+                          {editField.name || 'Field Name'}
+                          {editField.required && <span className="text-red-500 ml-1">*</span>}
+                        </span>
+                      </div>
+                      <div className="text-sm text-green-600">
+                        Type: {editField.type}
+                        {editField.options && editField.type === 'Dropdown' && (
+                          <span className="ml-2">
+                            ({editField.options.split(',').map(o => o.trim()).filter(Boolean).length} options)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+
+            <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                className="hover:bg-slate-50"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleUpdateField}>
+              <Button
+                onClick={handleUpdateField}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Check className="h-4 w-4 mr-2" />
                 Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[450px] p-0">
+            <DialogHeader className="px-6 py-4 border-b border-slate-300">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/20 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-semibold text-red-600">
+                    Delete Custom Field?
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-600">
+                    This action cannot be undone
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="px-6 py-6">
+              <div className="space-y-4">
+                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                  <p className="text-sm text-red-700">
+                    This field will be removed from your contact forms and filter options.
+                    Existing data in contacts will be preserved but not visible or editable.
+                  </p>
+                </div>
+
+                {selectedField && (
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+                        {getFieldTypeIcon(selectedField.type)}
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">{selectedField.name}</div>
+                        <div className="text-sm text-slate-500 flex items-center gap-2">
+                          <span>Type: {selectedField.type}</span>
+                          {selectedField.required && (
+                            <Badge variant="outline" className="text-xs">Required</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-white">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="hover:bg-slate-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteField}
+                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Field
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent className="sm:max-w-md">

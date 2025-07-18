@@ -35,9 +35,9 @@ export async function GET(req: NextRequest) {
       companyId: user.companyId
     };
 
-    if (status) query.status = status;
-    if (category) query.category = category;
-    if (priority) query.priority = priority;
+    if (status && status !== 'all') query.status = status;
+    if (category && category !== 'all') query.category = category;
+    if (priority && priority !== 'all') query.priority = priority;
 
     const tickets = await SupportTicket.find(query)
       .populate('userId', 'name email')
@@ -103,14 +103,15 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Generate ticket ID
-    const ticketId = `TKT-${Date.now()}-${nanoid(6).toUpperCase()}`;
+    // Generate short ticket ID - TKT-12, TKT-13, etc.
+    const ticketCount = await SupportTicket.countDocuments({});
+    const ticketId = `TKT-${ticketCount + 1}`;
 
     // Create initial message
     const initialMessage = {
       id: nanoid(),
       sender: decoded.id,
-      senderType: 'user',
+      senderType: 'user' as const,
       message: description,
       timestamp: new Date(),
       attachments: attachments || []

@@ -169,7 +169,7 @@ export default function WorkflowsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [complexityFilter, setComplexityFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -392,11 +392,11 @@ export default function WorkflowsPage() {
 
   const filteredWorkflows = workflows.filter(workflow => {
     const matchesSearch = workflow.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (workflow.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+      (workflow.description || "").toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === "all" ||
-                         (statusFilter === "active" && workflow.isActive) ||
-                         (statusFilter === "inactive" && !workflow.isActive);
+      (statusFilter === "active" && workflow.isActive) ||
+      (statusFilter === "inactive" && !workflow.isActive);
 
     const complexity = getComplexityLevel(workflow);
     const matchesComplexity = complexityFilter === "all" || complexity === complexityFilter;
@@ -413,8 +413,8 @@ export default function WorkflowsPage() {
   const totalWorkflows = workflows.length;
   const activeWorkflows = workflows.filter(w => w.isActive).length;
   const totalExecutions = workflows.reduce((sum, w) => sum + w.executionCount, 0);
-  const avgSuccessRate = totalWorkflows > 0 
-    ? Math.round(workflows.reduce((sum, w) => sum + getSuccessRate(w), 0) / totalWorkflows) 
+  const avgSuccessRate = totalWorkflows > 0
+    ? Math.round(workflows.reduce((sum, w) => sum + getSuccessRate(w), 0) / totalWorkflows)
     : 0;
 
   const getStatusIcon = (workflow: Workflow) => {
@@ -428,7 +428,7 @@ export default function WorkflowsPage() {
     <AutomationsLayout>
       <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
-          <div className="max-w-7xl mx-auto p-6 space-y-8">
+          <div className=" mx-auto p-6 space-y-8">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
               <div className="space-y-1">
@@ -446,10 +446,10 @@ export default function WorkflowsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   className="gap-2"
                   onClick={() => {
@@ -462,8 +462,8 @@ export default function WorkflowsPage() {
                   <Lightbulb className="h-4 w-4" />
                   Templates
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   className="gap-2"
                   onClick={() => {
@@ -476,7 +476,7 @@ export default function WorkflowsPage() {
                   <Download className="h-4 w-4" />
                   Export
                 </Button>
-                <Button 
+                <Button
                   onClick={() => setIsCreateDialogOpen(true)}
                   className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
@@ -486,48 +486,9 @@ export default function WorkflowsPage() {
               </div>
             </div>
 
-            {/* WABA Account Selector */}
-            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="waba-select" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      WhatsApp Business Account
-                    </Label>
-                    <Select value={selectedWabaId} onValueChange={setSelectedWabaId}>
-                      <SelectTrigger className="w-full max-w-md bg-white">
-                        <SelectValue placeholder="Select WhatsApp Business Account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {wabaAccounts.map((account) => (
-                          <SelectItem key={account.wabaId} value={account.wabaId}>
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <MessageSquare className="h-4 w-4 text-green-600" />
-                              </div>
-                              <div>
-                                <div className="font-medium">{account.businessName}</div>
-                                {/* <div className="text-sm text-muted-foreground">{account.phoneNumber}</div> */}
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {selectedWabaId && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-green-600 font-medium">Connected</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
 
-          {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Stats Cards */}
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="group relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <CardContent className="relative p-6">
@@ -639,11 +600,11 @@ export default function WorkflowsPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </div> */}
 
             {/* Filters & Controls */}
             <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
+              <CardContent className="p-">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
                     <div className="relative flex-1 max-w-md">
@@ -655,7 +616,7 @@ export default function WorkflowsPage() {
                         className="pl-10 bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
                       />
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-36 bg-white">
@@ -667,7 +628,7 @@ export default function WorkflowsPage() {
                           <SelectItem value="inactive">Inactive</SelectItem>
                         </SelectContent>
                       </Select>
-                      
+
                       <Select value={complexityFilter} onValueChange={setComplexityFilter}>
                         <SelectTrigger className="w-40 bg-white">
                           <SelectValue />
@@ -681,12 +642,12 @@ export default function WorkflowsPage() {
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={fetchWorkflows}
                           className="gap-2"
@@ -697,7 +658,7 @@ export default function WorkflowsPage() {
                       </TooltipTrigger>
                       <TooltipContent>Refresh workflows</TooltipContent>
                     </Tooltip>
-                    
+
                     <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
                       <Button
                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -751,7 +712,7 @@ export default function WorkflowsPage() {
                         <Sparkles className="h-4 w-4 text-white" />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3">
                       <h3 className="text-2xl font-bold text-slate-900">
                         {searchQuery || statusFilter !== "all" || complexityFilter !== "all"
@@ -769,7 +730,7 @@ export default function WorkflowsPage() {
 
                     {!searchQuery && statusFilter === "all" && complexityFilter === "all" && (
                       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Button 
+                        <Button
                           onClick={() => setIsCreateDialogOpen(true)}
                           className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
                           size="lg"
@@ -777,8 +738,8 @@ export default function WorkflowsPage() {
                           <Plus className="h-5 w-5" />
                           Create Your First Workflow
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="lg"
                           className="gap-2"
                           onClick={() => {
@@ -801,8 +762,8 @@ export default function WorkflowsPage() {
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredWorkflows.map((workflow) => (
-                      <Card 
-                        key={workflow._id} 
+                      <Card
+                        key={workflow._id}
                         className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-all duration-200 group"
                       >
                         <CardHeader className="pb-3">
@@ -819,19 +780,19 @@ export default function WorkflowsPage() {
                                 </CardTitle>
                                 <div className="flex items-center gap-2 mt-1">
                                   {getStatusIcon(workflow)}
-                                  <Badge 
+                                  <Badge
                                     variant={workflow.isActive ? "default" : "secondary"}
                                     className={cn(
                                       "text-xs",
-                                      workflow.isActive 
-                                        ? "bg-green-100 text-green-700 border-green-200" 
+                                      workflow.isActive
+                                        ? "bg-green-100 text-green-700 border-green-200"
                                         : "bg-slate-100 text-slate-600 border-slate-200"
                                     )}
                                   >
                                     {workflow.isActive ? "Active" : "Inactive"}
                                   </Badge>
-                               <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className={cn("text-xs capitalize", getComplexityColor(getComplexityLevel(workflow)))}
                                   >
                                     {getComplexityLevel(workflow)}
@@ -841,8 +802,8 @@ export default function WorkflowsPage() {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
@@ -924,11 +885,11 @@ export default function WorkflowsPage() {
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{getSuccessRate(workflow)}%</span>
                                 <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
-                                  <div 
+                                  <div
                                     className={cn(
                                       "h-full transition-all duration-500",
                                       getSuccessRate(workflow) >= 80 ? "bg-green-500" :
-                                      getSuccessRate(workflow) >= 60 ? "bg-yellow-500" : "bg-red-500"
+                                        getSuccessRate(workflow) >= 60 ? "bg-yellow-500" : "bg-red-500"
                                     )}
                                     style={{ width: `${getSuccessRate(workflow)}%` }}
                                   />
@@ -976,12 +937,12 @@ export default function WorkflowsPage() {
                     ))}
                   </div>
                 ) : (
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                  <Card className="border-0 p-0 shadow-sm bg-white/80 backdrop-blur-sm">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
                         <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50/80 hover:bg-slate-50">
+                          <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
+                            <TableRow className="">
                               <TableHead className="font-semibold text-slate-700">Name</TableHead>
                               <TableHead className="font-semibold text-slate-700">Status</TableHead>
                               <TableHead className="font-semibold text-slate-700">Complexity</TableHead>
@@ -998,7 +959,7 @@ export default function WorkflowsPage() {
                               <TableRow key={workflow._id} className="hover:bg-slate-50/50 transition-colors">
                                 <TableCell>
                                   <div className="space-y-1">
-                                    <div 
+                                    <div
                                       className="font-medium text-slate-900 hover:text-blue-600 cursor-pointer transition-colors"
                                       onClick={() => router.push(`/automations/workflows/${workflow._id}/builder`)}
                                     >
@@ -1021,8 +982,8 @@ export default function WorkflowsPage() {
                                       variant={workflow.isActive ? "default" : "secondary"}
                                       className={cn(
                                         "gap-1",
-                                        workflow.isActive 
-                                          ? "bg-green-100 text-green-700 border-green-200" 
+                                        workflow.isActive
+                                          ? "bg-green-100 text-green-700 border-green-200"
                                           : "bg-slate-100 text-slate-600 border-slate-200"
                                       )}
                                     >
@@ -1031,8 +992,8 @@ export default function WorkflowsPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className={cn("capitalize text-xs", getComplexityColor(getComplexityLevel(workflow)))}
                                   >
                                     {getComplexityLevel(workflow)}
@@ -1062,7 +1023,7 @@ export default function WorkflowsPage() {
                                         className={cn(
                                           "h-full transition-all duration-500",
                                           getSuccessRate(workflow) >= 80 ? "bg-green-500" :
-                                          getSuccessRate(workflow) >= 60 ? "bg-yellow-500" : "bg-red-500"
+                                            getSuccessRate(workflow) >= 60 ? "bg-yellow-500" : "bg-red-500"
                                         )}
                                         style={{ width: `${getSuccessRate(workflow)}%` }}
                                       />
@@ -1180,13 +1141,13 @@ export default function WorkflowsPage() {
                     <div className="p-2 bg-gradient-to-br from-blue-500/10 to-blue-600/20 rounded-lg">
                       <Workflow className="h-5 w-5 text-blue-600" />
                     </div>
-                    Create New Workflow 
+                    Create New Workflow
                   </DialogTitle>
                   <DialogDescription>
                     Create a new workflow to automate complex customer interactions and sequences.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-6 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-sm font-medium">Workflow Name *</Label>
@@ -1198,7 +1159,7 @@ export default function WorkflowsPage() {
                       className="bg-white"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="description" className="text-sm font-medium">Description</Label>
                     <Textarea
@@ -1210,7 +1171,7 @@ export default function WorkflowsPage() {
                       className="bg-white"
                     />
                   </div>
-                  
+
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <Lightbulb className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -1234,7 +1195,7 @@ export default function WorkflowsPage() {
                   >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleCreateWorkflow}
                     className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                   >
@@ -1263,15 +1224,15 @@ export default function WorkflowsPage() {
                             <Badge
                               variant={selectedWorkflow.isActive ? "default" : "secondary"}
                               className={cn(
-                                selectedWorkflow.isActive 
-                                  ? "bg-green-100 text-green-700 border-green-200" 
+                                selectedWorkflow.isActive
+                                  ? "bg-green-100 text-green-700 border-green-200"
                                   : "bg-slate-100 text-slate-600 border-slate-200"
                               )}
                             >
                               {selectedWorkflow.isActive ? "Active" : "Inactive"}
                             </Badge>
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={cn("capitalize", getComplexityColor(getComplexityLevel(selectedWorkflow)))}
                             >
                               {getComplexityLevel(selectedWorkflow)}
@@ -1336,7 +1297,7 @@ export default function WorkflowsPage() {
                               <div>
                                 <span className="text-sm font-medium text-slate-600">Last Triggered</span>
                                 <div className="font-medium mt-1">
-                                  {selectedWorkflow.lastTriggered 
+                                  {selectedWorkflow.lastTriggered
                                     ? format(new Date(selectedWorkflow.lastTriggered), "MMM dd, yyyy 'at' HH:mm")
                                     : "Never executed"
                                   }
@@ -1417,7 +1378,7 @@ export default function WorkflowsPage() {
                               <span className="text-2xl font-bold text-amber-900">{getSuccessRate(selectedWorkflow)}%</span>
                             </div>
                             <div className="w-full bg-amber-200/50 rounded-full h-3">
-                              <div 
+                              <div
                                 className="bg-amber-600 h-3 rounded-full transition-all duration-500"
                                 style={{ width: `${getSuccessRate(selectedWorkflow)}%` }}
                               />
@@ -1477,7 +1438,7 @@ export default function WorkflowsPage() {
                     This action cannot be undone. The workflow will be permanently deleted and will stop processing any triggers.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                
+
                 {selectedWorkflow && (
                   <div className="py-4">
                     <div className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 border">
@@ -1492,10 +1453,10 @@ export default function WorkflowsPage() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {selectedWorkflow.isActive && (
                       <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                   <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="font-medium text-amber-800">Warning: This workflow is currently active</p>
                           <p className="text-sm text-amber-700 mt-1">
@@ -1506,7 +1467,7 @@ export default function WorkflowsPage() {
                     )}
                   </div>
                 )}
-                
+
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction

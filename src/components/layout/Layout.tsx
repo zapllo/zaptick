@@ -282,7 +282,7 @@ export default function Layout({ children }: LayoutProps) {
         sidebarCollapsed ? "md:ml-[70px]" : "md:ml-[280px]"
       )}>
         {/* Header */}
-        <header className={`sticky top-0 z-50 flex h-[65px] items-center border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6 ${sidebarCollapsed?"ml-2":""}`}>
+        <header className={`sticky top-0 z-50 flex h-[65px] items-center border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6 ${sidebarCollapsed ? "ml-2" : ""}`}>
           <div className="flex flex-1 items-center gap-4">
             {/* Mobile menu button */}
             <Button
@@ -462,6 +462,9 @@ export default function Layout({ children }: LayoutProps) {
                             </div>
                             <span className="text-xs font-medium text-center">Developer</span>
                           </button>
+                        </PermissionCheck>
+
+                        <PermissionCheck resource="settings" action="manage" fallback={null}>
                           <button
                             className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
                             onClick={() => router.push('/settings/agents')}
@@ -475,7 +478,7 @@ export default function Layout({ children }: LayoutProps) {
 
                         <button
                           className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                          onClick={() => router.push('/settings/contacts')}
+                          onClick={() => router.push('/contacts')}
                         >
                           <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 p-3 rounded-xl group-hover:from-purple-500/30 group-hover:to-purple-600/20 transition-colors">
                             <User className="h-5 w-5 text-purple-600" />
@@ -483,59 +486,39 @@ export default function Layout({ children }: LayoutProps) {
                           <span className="text-xs font-medium text-center">Contacts</span>
                         </button>
 
-                        {user.role === 'admin' && (
-                          <>
-                            <button
-                              className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                              onClick={() => router.push('/settings/agents')}
-                            >
-                              <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 p-3 rounded-xl group-hover:from-orange-500/30 group-hover:to-orange-600/20 transition-colors">
-                                <UserCog className="h-5 w-5 text-orange-600" />
-                              </div>
-                              <span className="text-xs font-medium text-center">Team</span>
-                            </button>
-
-                            <button
-                              className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                              onClick={() => router.push('/settings/roles')}
-                            >
-                              <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-3 rounded-xl group-hover:from-red-500/30 group-hover:to-red-600/20 transition-colors">
-                                <Shield className="h-5 w-5 text-red-600" />
-                              </div>
-                              <span className="text-xs font-medium text-center">Roles</span>
-                            </button>
-
-                            <button
-                              className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                              onClick={() => router.push('/settings/teams')}
-                            >
-                              <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 p-3 rounded-xl group-hover:from-indigo-500/30 group-hover:to-indigo-600/20 transition-colors">
-                                <UsersRound className="h-5 w-5 text-indigo-600" />
-                              </div>
-                              <span className="text-xs font-medium text-center">Teams</span>
-                            </button>
-
-                            <button
-                              className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                              onClick={() => router.push('/wallet/plans')}
-                            >
-                              <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-3 rounded-xl group-hover:from-pink-500/30 group-hover:to-pink-600/20 transition-colors">
-                                <CreditCard className="h-5 w-5 text-pink-600" />
-                              </div>
-                              <span className="text-xs font-medium text-center">Billing</span>
-                            </button>
-                          </>
-                        )}
+                        <PermissionCheck resource="settings" action="manage" fallback={null}>
+                          <button
+                            className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                            onClick={() => router.push('/settings/roles')}
+                          >
+                            <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-3 rounded-xl group-hover:from-red-500/30 group-hover:to-red-600/20 transition-colors">
+                              <Shield className="h-5 w-5 text-red-600" />
+                            </div>
+                            <span className="text-xs font-medium text-center">Roles</span>
+                          </button>
+                        </PermissionCheck>
 
                         <button
                           className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                          onClick={() => router.push('/settings/tags')}
+                          onClick={() => router.push('/settings/contacts')}
                         >
                           <div className="bg-gradient-to-br from-teal-500/20 to-teal-600/10 p-3 rounded-xl group-hover:from-teal-500/30 group-hover:to-teal-600/20 transition-colors">
                             <Tags className="h-5 w-5 text-teal-600" />
                           </div>
                           <span className="text-xs font-medium text-center">Tags</span>
                         </button>
+
+                        <PermissionCheck resource="settings" action="manage" fallback={null}>
+                          <button
+                            className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                            onClick={() => router.push('/wallet/plans')}
+                          >
+                            <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-3 rounded-xl group-hover:from-pink-500/30 group-hover:to-pink-600/20 transition-colors">
+                              <CreditCard className="h-5 w-5 text-pink-600" />
+                            </div>
+                            <span className="text-xs font-medium text-center">Billing</span>
+                          </button>
+                        </PermissionCheck>
                       </div>
                     </div>
                   </DropdownMenuContent>

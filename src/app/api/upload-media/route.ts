@@ -31,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Validate file type
     const allowedTypes = {
-      'IMAGE': ['image/jpeg', 'image/png', 'image/gif'],
+      'IMAGE': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
       'VIDEO': ['video/mp4', 'video/avi', 'video/mov'],
       'DOCUMENT': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     };

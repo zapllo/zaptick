@@ -37,12 +37,32 @@ export async function GET(req: NextRequest) {
     })
     .populate('roleId', 'name permissions')
     .populate('invitedBy', 'name email')
-    .select('-password')
-    .sort({ createdAt: -1 });
+    .select('-password');
+
+    // Sort users by role hierarchy: owner first, then admin, then others
+    const sortedUsers = users.sort((a, b) => {
+      // Define role hierarchy weights
+      const getRoleWeight = (user: any) => {
+        if (user.isOwner || user.role === 'owner') return 3;
+        if (user.role === 'admin') return 2;
+        return 1; // agents and other roles
+      };
+
+      const weightA = getRoleWeight(a);
+      const weightB = getRoleWeight(b);
+
+      // Sort by role weight (descending), then by creation date (newest first)
+      if (weightA !== weightB) {
+        return weightB - weightA;
+      }
+      
+      // If same role weight, sort by creation date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
     return NextResponse.json({
       success: true,
-      users
+      users: sortedUsers
     });
 
   } catch (error) {
@@ -53,7 +73,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;

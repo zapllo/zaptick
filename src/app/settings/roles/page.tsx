@@ -439,7 +439,7 @@ export default function RolesPage() {
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 wark:from-gray-900 wark:via-gray-800 wark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
+        <div className=" mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -478,7 +478,7 @@ export default function RolesPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-white wark:from-purple-900/20 wark:to-gray-800">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -554,7 +554,7 @@ export default function RolesPage() {
               </CardContent>
               <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-orange-500/5" />
             </Card>
-          </div>
+          </div> */}
 
           {isLoading ? (
             <Card className="border-0 shadow-lg">
@@ -739,76 +739,156 @@ export default function RolesPage() {
 
           {/* Add Role Dialog */}
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-primary" />
-                  Create New Role
-                </DialogTitle>
-                <DialogDescription>
-                  Define a new role with specific permissions for your team members
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Role Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder="e.g. Customer Support Agent, Sales Manager"
-                      value={newRole.name}
-                      onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-                      className="border-gray-200 focus:border-primary focus:ring-primary"
-                    />
+            <DialogContent className="sm:max-w-[800px] max-h-[95vh] flex flex-col p-0">
+              <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/20 flex items-center justify-center">
+                    <Plus className="h-5 w-5 text-purple-600" />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description (Optional)</Label>
-                    <Input
-                      id="description"
-                      placeholder="Brief description of this role"
-                      value={newRole.description}
-                      onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                      className="border-gray-200 focus:border-primary focus:ring-primary"
-                    />
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-slate-900">
+                      Create New Role
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-600">
+                      Define a new role with specific permissions for your team members
+                    </DialogDescription>
                   </div>
                 </div>
+              </DialogHeader>
 
-                <PermissionBuilder
-                  permissions={newRole.permissions}
-                  setPermissions={(permissions) => setNewRole({ ...newRole, permissions })}
-                />
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                <div className="space-y-8">
+                  {/* Basic Information */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Basic Information
+                      </h3>
+                    </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 wark:bg-gray-800 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="default"
-                      checked={newRole.isDefault}
-                      onCheckedChange={(checked) =>
-                        setNewRole({ ...newRole, isDefault: checked })
-                      }
-                    />
-                    <label
-                      htmlFor="default"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Set as default role for new team members
-                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-sm font-medium text-slate-700">
+                          Role Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="name"
+                          placeholder="e.g. Customer Support Agent, Sales Manager"
+                          value={newRole.name}
+                          onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                          className="bg-white border-slate-200 focus:border-purple-500/50 focus:ring-purple-500/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          Choose a descriptive name for this role
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="description" className="text-sm font-medium text-slate-700">
+                          Description (Optional)
+                        </Label>
+                        <Input
+                          id="description"
+                          placeholder="Brief description of this role"
+                          value={newRole.description}
+                          onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                          className="bg-white border-slate-200 focus:border-purple-500/50 focus:ring-purple-500/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          Explain what this role is responsible for
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Star className="h-3 w-3" />
-                    Auto-assigned
+
+                  {/* Permissions */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Permissions Configuration
+                      </h3>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                            <Shield className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-green-800">
+                              Permission Builder
+                            </Label>
+                            <p className="text-xs text-green-600">
+                              Select resources and actions for this role
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium text-green-800">
+                          {newRole.permissions.length} resource{newRole.permissions.length !== 1 ? 's' : ''} configured
+                        </div>
+                      </div>
+
+                      <PermissionBuilder
+                        permissions={newRole.permissions}
+                        setPermissions={(permissions) => setNewRole({ ...newRole, permissions })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Role Settings */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Role Settings
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center">
+                          <Star className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <Label htmlFor="default" className="text-sm font-medium text-amber-800">
+                            Default Role
+                          </Label>
+                          <p className="text-xs text-amber-600">
+                            Automatically assign this role to new team members
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="default"
+                          checked={newRole.isDefault}
+                          onCheckedChange={(checked) => setNewRole({ ...newRole, isDefault: checked })}
+                        />
+                        <span className="text-sm font-medium text-amber-800">
+                          {newRole.isDefault ? 'Auto-assigned' : 'Manual assignment'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+
+              <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                  className="hover:bg-slate-50"
+                >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAddRole}
-                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
+                  <Plus className="h-4 w-4 mr-2" />
                   Create Role
                 </Button>
               </DialogFooter>
@@ -817,76 +897,150 @@ export default function RolesPage() {
 
           {/* Edit Role Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Edit className="h-5 w-5 text-primary" />
-                  Edit Role
-                </DialogTitle>
-                <DialogDescription>
-                  Update role permissions and settings
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name">Role Name *</Label>
-                    <Input
-                      id="edit-name"
-                      placeholder="e.g. Customer Support Agent, Sales Manager"
-                      value={editRole.name}
-                      onChange={(e) => setEditRole({ ...editRole, name: e.target.value })}
-                      className="border-gray-200 focus:border-primary focus:ring-primary"
-                    />
+            <DialogContent className="sm:max-w-[800px] max-h-[95vh] flex flex-col p-0">
+              <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/20 flex items-center justify-center">
+                    <Edit className="h-5 w-5 text-green-600" />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-description">Description (Optional)</Label>
-                    <Input
-                      id="edit-description"
-                      placeholder="Brief description of this role"
-                      value={editRole.description}
-                      onChange={(e) => setEditRole({ ...editRole, description: e.target.value })}
-                      className="border-gray-200 focus:border-primary focus:ring-primary"
-                    />
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-slate-900">
+                      Edit Role
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-600">
+                      Update role permissions and settings
+                    </DialogDescription>
                   </div>
                 </div>
+              </DialogHeader>
 
-                <PermissionBuilder
-                  permissions={editRole.permissions}
-                  setPermissions={(permissions) => setEditRole({ ...editRole, permissions })}
-                />
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                <div className="space-y-8">
+                  {/* Basic Information */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Basic Information
+                      </h3>
+                    </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 wark:bg-gray-800 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-default"
-                      checked={editRole.isDefault}
-                      onCheckedChange={(checked) =>
-                        setEditRole({ ...editRole, isDefault: checked })
-                      }
-                    />
-                    <label
-                      htmlFor="edit-default"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Set as default role for new team members
-                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-name" className="text-sm font-medium text-slate-700">
+                          Role Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="edit-name"
+                          placeholder="e.g. Customer Support Agent, Sales Manager"
+                          value={editRole.name}
+                          onChange={(e) => setEditRole({ ...editRole, name: e.target.value })}
+                          className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-description" className="text-sm font-medium text-slate-700">
+                          Description (Optional)
+                        </Label>
+                        <Input
+                          id="edit-description"
+                          placeholder="Brief description of this role"
+                          value={editRole.description}
+                          onChange={(e) => setEditRole({ ...editRole, description: e.target.value })}
+                          className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Star className="h-3 w-3" />
-                    Auto-assigned
+
+                  {/* Permissions */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Permissions Configuration
+                      </h3>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                            <Shield className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-green-800">
+                              Permission Builder
+                            </Label>
+                            <p className="text-xs text-green-600">
+                              Update resources and actions for this role
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-sm font-medium text-green-800">
+                          {editRole.permissions.length} resource{editRole.permissions.length !== 1 ? 's' : ''} configured
+                        </div>
+                      </div>
+
+                      <PermissionBuilder
+                        permissions={editRole.permissions}
+                        setPermissions={(permissions) => setEditRole({ ...editRole, permissions })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Role Settings */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                        Role Settings
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center">
+                          <Star className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-default" className="text-sm font-medium text-amber-800">
+                            Default Role
+                          </Label>
+                          <p className="text-xs text-amber-600">
+                            Automatically assign this role to new team members
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="edit-default"
+                          checked={editRole.isDefault}
+                          onCheckedChange={(checked) => setEditRole({ ...editRole, isDefault: checked })}
+                        />
+                        <span className="text-sm font-medium text-amber-800">
+                          {editRole.isDefault ? 'Auto-assigned' : 'Manual assignment'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+
+              <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                  className="hover:bg-slate-50"
+                >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleUpdateRole}
-                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
+                  <Edit className="h-4 w-4 mr-2" />
                   Save Changes
                 </Button>
               </DialogFooter>
@@ -895,89 +1049,135 @@ export default function RolesPage() {
 
           {/* View Role Dialog */}
           <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent className="sm:max-w-3xl">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Eye className="h-5 w-5 text-primary" />
-                  Role Details
-                </DialogTitle>
+            <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
+              <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500/10 to-indigo-600/20 flex items-center justify-center">
+                    <Eye className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl font-semibold text-slate-900">
+                      Role Details
+                    </DialogTitle>
+                    <DialogDescription className="text-slate-600">
+                      View complete role information and permissions
+                    </DialogDescription>
+                  </div>
+                </div>
               </DialogHeader>
-              {selectedRole && (
-                <div className="space-y-6 py-4">
-                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-white wark:from-gray-800 wark:to-gray-900 rounded-xl border">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
-                      <Shield className="h-8 w-8 text-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-semibold text-gray-900 wark:text-white flex items-center gap-2">
-                        {selectedRole.name}
-                        {selectedRole.isDefault && (
-                          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                            <Crown className="h-3 w-3 mr-1" />
-                            Default
-                          </Badge>
-                        )}
-                      </h3>
-                      {selectedRole.description && (
-                        <p className="text-gray-600 wark:text-gray-400">
-                          {selectedRole.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>Created {format(new Date(selectedRole.createdAt), "MMM dd, yyyy")}</span>
-                        <span>•</span>
-                        <span>{selectedRole.permissions.length} permission{selectedRole.permissions.length !== 1 ? 's' : ''}</span>
+
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                {selectedRole && (
+                  <div className="space-y-8">
+                    {/* Role Profile */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Role Profile
+                        </h3>
+                      </div>
+
+                      <div className="flex items-center gap-6 p-6 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/20">
+                          <Shield className="h-8 w-8 text-primary" />
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xl font-semibold text-slate-900">
+                              {selectedRole.name}
+                            </h3>
+                            {selectedRole.isDefault && (
+                              <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                                <Crown className="h-3 w-3 mr-1" />
+                                Default
+                              </Badge>
+                            )}
+                          </div>
+                          {selectedRole.description && (
+                            <p className="text-slate-600">
+                              {selectedRole.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-4 text-sm text-slate-500">
+                            <span>Created {format(new Date(selectedRole.createdAt), "MMM dd, yyyy")}</span>
+                            <span>•</span>
+                            <span>{selectedRole.permissions.length} permission{selectedRole.permissions.length !== 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-gray-900 wark:text-white">Permissions Overview</h4>
-                    <div className="grid gap-4">
-                      {selectedRole.permissions.map((permission, index) => (
-                        <Card key={index} className="border-0 shadow-sm">
-                          <CardContent className="p-4">
+                    {/* Permissions Overview */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Permissions Overview
+                        </h3>
+                      </div>
+
+                      <div className="grid gap-4">
+                        {selectedRole.permissions.map((permission, index) => (
+                          <div key={index} className="bg-gradient-to-r from-white to-slate-50 p-4 rounded-lg border border-slate-200">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
                                   <span className="text-lg">{getResourceIcon(permission.resource)}</span>
                                 </div>
                                 <div>
-                                  <span className="font-medium capitalize text-gray-900 wark:text-white">
+                                  <span className="font-medium capitalize text-slate-900">
                                     {permission.resource}
                                   </span>
-                                  <p className="text-sm text-gray-500 wark:text-gray-400">
+                                  <p className="text-sm text-slate-500">
                                     {AVAILABLE_RESOURCES.find(r => r.key === permission.resource)?.description}
                                   </p>
                                 </div>
                               </div>
-                              <div className="flex flex-wrap gap-1">
+                              <div className="flex flex-wrap gap-2">
                                 {permission.actions.map((action) => (
-                                 <span key={action} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getActionColor(action)}`}>
+                                  <span key={action} className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getActionColor(action)}`}>
                                     {action}
                                   </span>
                                 ))}
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                          </div>
+                        ))}
+                      </div>
+
+                      {selectedRole.permissions.length === 0 && (
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <Lock className="h-8 w-8 text-slate-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-slate-900 mb-2">No Permissions Assigned</h3>
+                          <p className="text-slate-500">
+                            This role doesn&apos;t have any permissions configured yet.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                )}
+              </div>
+
+              <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsViewDialogOpen(false)}
+                  className="hover:bg-slate-50"
+                >
                   Close
                 </Button>
-                <Button 
+                <Button
                   onClick={() => {
                     setIsViewDialogOpen(false);
                     if (selectedRole) {
                       setTimeout(() => handleEditClick(selectedRole), 100);
                     }
                   }}
-                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                  className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Role
@@ -985,7 +1185,6 @@ export default function RolesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
           {/* Delete Confirmation Dialog */}
           <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <DialogContent className="sm:max-w-md">

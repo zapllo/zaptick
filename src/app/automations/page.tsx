@@ -172,7 +172,7 @@ export default function AutomationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -180,7 +180,7 @@ export default function AutomationsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedAutoReply, setSelectedAutoReply] = useState<AutoReply | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -600,7 +600,7 @@ export default function AutomationsPage() {
     <AutomationsLayout>
       <TooltipProvider>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
-          <div className="max-w-7xl mx-auto p-6 space-y-8">
+          <div className=" mx-auto p-6 space-y-8">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
               <div className="space-y-1">
@@ -618,10 +618,10 @@ export default function AutomationsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   className="gap-2"
                   onClick={() => {
@@ -635,7 +635,7 @@ export default function AutomationsPage() {
                   <Download className="h-4 w-4" />
                   Export
                 </Button>
-                <Button 
+                <Button
                   onClick={() => setIsCreateDialogOpen(true)}
                   className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
@@ -645,48 +645,10 @@ export default function AutomationsPage() {
               </div>
             </div>
 
-            {/* WABA Account Selector */}
-            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="waba-select" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      WhatsApp Business Account
-                    </Label>
-                    <Select value={selectedWabaId} onValueChange={setSelectedWabaId}>
-                      <SelectTrigger className="w-full max-w-md bg-white">
-                        <SelectValue placeholder="Select WhatsApp Business Account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {wabaAccounts.map((account) => (
-                          <SelectItem key={account.wabaId} value={account.wabaId}>
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                <MessageSquare className="h-4 w-4 text-green-600" />
-                              </div>
-                              <div>
-                                <div className="font-medium">{account.businessName}</div>
-                                {/* <div className="text-sm text-muted-foreground">{account.phoneNumber}</div> */}
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {selectedWabaId && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-green-600 font-medium">Connected</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
 
-          {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            {/* Stats Cards */}
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="group  relative overflow-hidden border-0 bg-white/60 backdrop-blur-sm shadow-sm hover:shadow-lg transition-all duration-500 hover:-translate-y-1">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <CardContent className="relative p-6">
@@ -798,10 +760,10 @@ export default function AutomationsPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </div> */}
             {/* Filters & Controls */}
             <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
+              <CardContent className="">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
                     <div className="relative flex-1 max-w-md">
@@ -813,7 +775,7 @@ export default function AutomationsPage() {
                         className="pl-10 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                       />
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-36 bg-white">
@@ -825,7 +787,7 @@ export default function AutomationsPage() {
                           <SelectItem value="inactive">Inactive</SelectItem>
                         </SelectContent>
                       </Select>
-                      
+
                       <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-36 bg-white">
                           <SelectValue />
@@ -839,12 +801,12 @@ export default function AutomationsPage() {
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={fetchAutoReplies}
                           className="gap-2"
@@ -855,7 +817,7 @@ export default function AutomationsPage() {
                       </TooltipTrigger>
                       <TooltipContent>Refresh auto replies</TooltipContent>
                     </Tooltip>
-                    
+
                     <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
                       <Button
                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -879,7 +841,7 @@ export default function AutomationsPage() {
               </CardContent>
             </Card>
 
-          {/* Content */}
+            {/* Content */}
             {isLoading ? (
               <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-12">
@@ -909,7 +871,7 @@ export default function AutomationsPage() {
                         <Sparkles className="h-4 w-4 text-white" />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3">
                       <h3 className="text-2xl font-bold text-slate-900">
                         {searchQuery || statusFilter !== "all" || typeFilter !== "all"
@@ -927,7 +889,7 @@ export default function AutomationsPage() {
 
                     {!searchQuery && statusFilter === "all" && typeFilter === "all" && (
                       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Button 
+                        <Button
                           onClick={() => setIsCreateDialogOpen(true)}
                           className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
                           size="lg"
@@ -935,8 +897,8 @@ export default function AutomationsPage() {
                           <Plus className="h-5 w-5" />
                           Create Your First Auto Reply
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="lg"
                           className="gap-2"
                           onClick={async () => {
@@ -986,8 +948,8 @@ export default function AutomationsPage() {
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredAutoReplies.map((autoReply) => (
-                      <Card 
-                        key={autoReply._id} 
+                      <Card
+                        key={autoReply._id}
                         className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-all duration-200 group"
                       >
                         <CardHeader className="pb-3">
@@ -1006,19 +968,19 @@ export default function AutomationsPage() {
                                   {autoReply.name}
                                 </CardTitle>
                                 <div className="flex items-center gap-2 mt-1">
-                                  <Badge 
+                                  <Badge
                                     variant={autoReply.isActive ? "default" : "secondary"}
                                     className={cn(
                                       "text-xs",
-                                      autoReply.isActive 
-                                        ? "bg-green-100 text-green-700 border-green-200" 
+                                      autoReply.isActive
+                                        ? "bg-green-100 text-green-700 border-green-200"
                                         : "bg-slate-100 text-slate-600 border-slate-200"
                                     )}
                                   >
                                     {autoReply.isActive ? "Active" : "Inactive"}
                                   </Badge>
-                                  <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className={cn("text-xs capitalize", getMatchTypeColor(autoReply.matchType))}
                                   >
                                     {autoReply.matchType.replace('_', ' ')}
@@ -1028,8 +990,8 @@ export default function AutomationsPage() {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
@@ -1089,17 +1051,17 @@ export default function AutomationsPage() {
                             <p className="text-sm font-medium text-slate-700 mb-2">Triggers</p>
                             <div className="flex flex-wrap gap-1">
                               {autoReply.triggers.slice(0, 3).map((trigger, index) => (
-                                <Badge 
-                                  key={index} 
-                                  variant="secondary" 
+                                <Badge
+                                  key={index}
+                                  variant="secondary"
                                   className="text-xs bg-slate-100 text-slate-700 border-slate-200"
                                 >
                                   {trigger}
                                 </Badge>
                               ))}
                               {autoReply.triggers.length > 3 && (
-                                <Badge 
-                                  variant="secondary" 
+                                <Badge
+                                  variant="secondary"
                                   className="text-xs bg-slate-100 text-slate-700 border-slate-200"
                                 >
                                   +{autoReply.triggers.length - 3} more
@@ -1147,12 +1109,12 @@ export default function AutomationsPage() {
                     ))}
                   </div>
                 ) : (
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                  <Card className="border-0 p-0 shadow-sm bg-white/80 backdrop-blur-sm">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
                         <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50/80 hover:bg-slate-50">
+                          <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
+                            <TableRow className="">
                               <TableHead className="font-semibold text-slate-700">Name</TableHead>
                               <TableHead className="font-semibold text-slate-700">Triggers</TableHead>
                               <TableHead className="font-semibold text-slate-700">Type</TableHead>
@@ -1168,7 +1130,7 @@ export default function AutomationsPage() {
                               <TableRow key={autoReply._id} className="hover:bg-slate-50/50 transition-colors">
                                 <TableCell>
                                   <div className="space-y-1">
-                                    <div 
+                                    <div
                                       className="font-medium text-slate-900 hover:text-primary cursor-pointer transition-colors"
                                       onClick={() => {
                                         setSelectedAutoReply(autoReply);
@@ -1185,17 +1147,17 @@ export default function AutomationsPage() {
                                 <TableCell>
                                   <div className="flex flex-wrap gap-1">
                                     {autoReply.triggers.slice(0, 2).map((trigger, index) => (
-                                      <Badge 
-                                        key={index} 
-                                        variant="secondary" 
+                                      <Badge
+                                        key={index}
+                                        variant="secondary"
                                         className="text-xs bg-slate-100 text-slate-700"
                                       >
                                         {trigger}
                                       </Badge>
                                     ))}
                                     {autoReply.triggers.length > 2 && (
-                                      <Badge 
-                                        variant="secondary" 
+                                      <Badge
+                                        variant="secondary"
                                         className="text-xs bg-slate-100 text-slate-700"
                                       >
                                         +{autoReply.triggers.length - 2}
@@ -1210,8 +1172,8 @@ export default function AutomationsPage() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className={cn("capitalize text-xs", getMatchTypeColor(autoReply.matchType))}
                                   >
                                     {autoReply.matchType.replace('_', ' ')}
@@ -1222,8 +1184,8 @@ export default function AutomationsPage() {
                                     variant={autoReply.isActive ? "default" : "secondary"}
                                     className={cn(
                                       "gap-1",
-                                      autoReply.isActive 
-                                        ? "bg-green-100 text-green-700 border-green-200" 
+                                      autoReply.isActive
+                                        ? "bg-green-100 text-green-700 border-green-200"
                                         : "bg-slate-100 text-slate-600 border-slate-200"
                                     )}
                                   >
@@ -1343,312 +1305,404 @@ export default function AutomationsPage() {
                 }
               }}
             >
-              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold">
-                    {isCreateDialogOpen ? "Create Auto Reply" : "Edit Auto Reply"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Set up intelligent automatic responses to specific customer messages or keywords.
-                  </DialogDescription>
+              <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
+                <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center">
+                      <Bot className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-semibold text-slate-900">
+                        {isCreateDialogOpen ? "Create Auto Reply" : "Edit Auto Reply"}
+                      </DialogTitle>
+                      <DialogDescription className="text-slate-600">
+                        Set up intelligent automatic responses to specific customer messages or keywords.
+                      </DialogDescription>
+                    </div>
+                  </div>
                 </DialogHeader>
 
-                <div className="space-y-8 py-6">
-                  {/* Basic Settings */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Settings className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="font-semibold text-slate-900">Basic Settings</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name" className="text-sm font-medium">Auto Reply Name *</Label>
-                        <Input
-                          id="name"
-                          placeholder="e.g., Welcome Message"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="bg-white"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="priority" className="text-sm font-medium">Priority</Label>
-                        <Input
-                          id="priority"
-                          type="number"
-                          placeholder="0"
-                          value={formData.priority}
-                          onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
-                          className="bg-white"
-                        />
-                        <p className="text-xs text-muted-foreground">Higher numbers = higher priority</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <Switch
-                        id="isActive"
-                        checked={formData.isActive}
-                        onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                      />
-                      <Label htmlFor="isActive" className="text-sm font-medium">Active</Label>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Trigger Settings */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Target className="h-4 w-4 text-green-600" />
-                      </div>
-                      <h3 className="font-semibold text-slate-900">Trigger Settings</h3>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-3 block">Trigger Keywords/Phrases *</Label>
-                        <div className="space-y-3">
-                          {formData.triggers.map((trigger, index) => (
-                            <div key={index} className="flex gap-2">
-                              <Input
-                                placeholder={`Trigger ${index + 1} (e.g., hello, hi, start)`}
-                                value={trigger}
-                                onChange={(e) => updateTrigger(index, e.target.value)}
-                                className="bg-white"
-                              />
-                              {formData.triggers.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => removeTrigger(index)}
-                                  className="shrink-0"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={addTrigger}
-                            className="gap-2"
-                          >
-                            <Plus className="h-4 w-4" />
-                            Add Another Trigger
-                          </Button>
-                        </div>
+                <div className="flex-1 overflow-y-auto px-6 py-6">
+                  <div className="space-y-8">
+                    {/* Basic Settings */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Basic Settings
+                        </h3>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label htmlFor="matchType" className="text-sm font-medium">Match Type</Label>
-                          <Select
-                            value={formData.matchType}
-                            onValueChange={(value: any) => setFormData({ ...formData, matchType: value })}
-                          >
-                            <SelectTrigger className="bg-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="contains">Contains</SelectItem>
-                              <SelectItem value="exact">Exact Match</SelectItem>
-                              <SelectItem value="starts_with">Starts With</SelectItem>
-                              <SelectItem value="ends_with">Ends With</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex items-center space-x-3 pt-6">
-                          <Switch
-                            id="caseSensitive"
-                            checked={formData.caseSensitive}
-                            onCheckedChange={(checked) => setFormData({ ...formData, caseSensitive: checked })}
+                          <Label htmlFor="name" className="text-sm font-medium text-slate-700">
+                            Auto Reply Name <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="name"
+                            placeholder="e.g., Welcome Message"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
                           />
-                          <Label htmlFor="caseSensitive" className="text-sm font-medium">Case Sensitive</Label>
+                          <p className="text-xs text-slate-500">
+                            Choose a descriptive name for your auto reply
+                          </p>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Reply Settings */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <Reply className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <h3 className="font-semibold text-slate-900">Reply Settings</h3>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="replyType" className="text-sm font-medium">Reply Type</Label>
-                        <Select
-                          value={formData.replyType}
-                          onValueChange={(value: any) => setFormData({ ...formData, replyType: value })}
-                        >
-                          <SelectTrigger className="bg-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">
-                              <div className="flex items-center gap-2">
-                                <MessageSquare className="h-4 w-4" />
-                                Text Message
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="template">
-                              <div className="flex items-center gap-2">
-                                <Layers className="h-4 w-4" />
-                                Template Message
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="workflow">
-                              <div className="flex items-center gap-2">
-                                <Workflow className="h-4 w-4" />
-                                Workflow
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {formData.replyType === 'text' && (
                         <div className="space-y-2">
-                          <Label htmlFor="replyMessage" className="text-sm font-medium">Reply Message *</Label>
-                          <Textarea
-                            id="replyMessage"
-                            placeholder="Enter your auto reply message..."
-                            value={formData.replyMessage}
-                            onChange={(e) => setFormData({ ...formData, replyMessage: e.target.value })}
-                            rows={4}
-                            className="bg-white"
+                          <Label htmlFor="priority" className="text-sm font-medium text-slate-700">
+                            Priority Level
+                          </Label>
+                          <Input
+                            id="priority"
+                            type="number"
+                            placeholder="0"
+                            value={formData.priority}
+                            onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 0 })}
+                            className="bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20"
                           />
+                          <p className="text-xs text-slate-500">
+                            Higher numbers = higher priority (0-100)
+                          </p>
                         </div>
-                      )}
+                      </div>
 
-                      {formData.replyType === 'template' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="templateName" className="text-sm font-medium">Template Name *</Label>
-                            <Input
-                              id="templateName"
-                              placeholder="Template name"
-                              value={formData.templateName}
-                              onChange={(e) => setFormData({ ...formData, templateName: e.target.value })}
-                              className="bg-white"
-                            />
+                      <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <Power className="h-5 w-5 text-white" />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="templateLanguage" className="text-sm font-medium">Language</Label>
-                            <Select
-                              value={formData.templateLanguage}
-                              onValueChange={(value) => setFormData({ ...formData, templateLanguage: value })}
+                          <div>
+                            <Label htmlFor="isActive" className="text-sm font-medium text-blue-800">
+                              Auto Reply Status
+                            </Label>
+                            <p className="text-xs text-blue-600">
+                              Enable or disable this auto reply
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="isActive"
+                            checked={formData.isActive}
+                            onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                          />
+                          <Label htmlFor="isActive" className="text-sm font-medium text-blue-800">
+                            {formData.isActive ? 'Active' : 'Inactive'}
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Trigger Settings */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Trigger Settings
+                        </h3>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Target className="h-4 w-4 text-green-500" />
+                            <Label className="text-sm font-medium text-slate-700">
+                              Trigger Keywords/Phrases <span className="text-red-500">*</span>
+                            </Label>
+                          </div>
+                          <div className="space-y-3">
+                            {formData.triggers.map((trigger, index) => (
+                              <div key={index} className="flex gap-2">
+                                <Input
+                                  placeholder={`Trigger ${index + 1} (e.g., hello, hi, start)`}
+                                  value={trigger}
+                                  onChange={(e) => updateTrigger(index, e.target.value)}
+                                  className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20"
+                                />
+                                {formData.triggers.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => removeTrigger(index)}
+                                    className="shrink-0 h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={addTrigger}
+                              className="gap-2 hover:bg-green-50 border-green-200 text-green-600"
                             >
-                              <SelectTrigger className="bg-white">
+                              <Plus className="h-4 w-4" />
+                              Add Another Trigger
+                            </Button>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            Add keywords or phrases that will trigger this auto reply
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="matchType" className="text-sm font-medium text-slate-700">
+                              Match Type
+                            </Label>
+                            <Select
+                              value={formData.matchType}
+                              onValueChange={(value: any) => setFormData({ ...formData, matchType: value })}
+                            >
+                              <SelectTrigger className="bg-white border-slate-200 focus:border-green-500/50 focus:ring-green-500/20">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="en">English</SelectItem>
-                                <SelectItem value="es">Spanish</SelectItem>
-                                <SelectItem value="fr">French</SelectItem>
-                                <SelectItem value="de">German</SelectItem>
-                                <SelectItem value="hi">Hindi</SelectItem>
+                                <SelectItem value="contains">Contains</SelectItem>
+                                <SelectItem value="exact">Exact Match</SelectItem>
+                                <SelectItem value="starts_with">Starts With</SelectItem>
+                                <SelectItem value="ends_with">Ends With</SelectItem>
                               </SelectContent>
                             </Select>
+                            <p className="text-xs text-slate-500">
+                              How the trigger should match incoming messages
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-slate-700">
+                              Case Sensitivity
+                            </Label>
+                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                              <div>
+                                <Label htmlFor="caseSensitive" className="text-sm font-medium text-slate-700">
+                                  Case Sensitive Match
+                                </Label>
+                                <p className="text-xs text-slate-500">
+                                  Match exact letter case
+                                </p>
+                              </div>
+                              <Switch
+                                id="caseSensitive"
+                                checked={formData.caseSensitive}
+                                onCheckedChange={(checked) => setFormData({ ...formData, caseSensitive: checked })}
+                              />
+                            </div>
                           </div>
                         </div>
-                      )}
+                      </div>
+                    </div>
 
-                      {formData.replyType === 'workflow' && (
+                    {/* Reply Settings */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Reply Settings
+                        </h3>
+                      </div>
+
+                      <div className="space-y-6">
                         <div className="space-y-2">
-                          <Label htmlFor="workflowId" className="text-sm font-medium">Select Workflow *</Label>
+                          <Label htmlFor="replyType" className="text-sm font-medium text-slate-700">
+                            Reply Type <span className="text-red-500">*</span>
+                          </Label>
                           <Select
-                            value={formData.workflowId}
-                            onValueChange={(value) => setFormData({ ...formData, workflowId: value })}
+                            value={formData.replyType}
+                            onValueChange={(value: any) => setFormData({ ...formData, replyType: value })}
                           >
-                            <SelectTrigger className="bg-white">
-                              <SelectValue placeholder="Choose a workflow to trigger" />
+                            <SelectTrigger className="bg-white border-slate-200 focus:border-purple-500/50 focus:ring-purple-500/20">
+                              <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                          {workflows.length === 0 ? (
-                                <div className="p-4 text-center text-sm text-muted-foreground">
-                                  No workflows available. Create a workflow first.
+                              <SelectItem value="text">
+                                <div className="flex items-center gap-2">
+                                  <MessageSquare className="h-4 w-4" />
+                                  Text Message
                                 </div>
-                              ) : (
-                                workflows.map((workflow) => (
-                                  <SelectItem
-                                    key={workflow._id}
-                                    value={workflow._id}
-                                    disabled={!workflow.isActive}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Workflow className={`h-4 w-4 ${workflow.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                                      <div>
-                                        <div className={`font-medium ${!workflow.isActive ? 'text-muted-foreground' : ''}`}>
-                                          {workflow.name}
-                                          {!workflow.isActive && ' (Inactive)'}
-                                        </div>
-                                        {workflow.description && (
-                                          <div className="text-xs text-muted-foreground">
-                                            {workflow.description}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </SelectItem>
-                                ))
-                              )}
+                              </SelectItem>
+                              <SelectItem value="template">
+                                <div className="flex items-center gap-2">
+                                  <Layers className="h-4 w-4" />
+                                  Template Message
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="workflow">
+                                <div className="flex items-center gap-2">
+                                  <Workflow className="h-4 w-4" />
+                                  Workflow
+                                </div>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
-                          {workflows.length === 0 && (
-                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                              <div className="flex items-start gap-2">
-                                <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5" />
-                                <div>
-                                  <p className="text-sm font-medium text-amber-800">No workflows available</p>
-                                  <p className="text-sm text-amber-700 mt-1">
-                                    You need to create at least one workflow before using this option.{' '}
-                                    <Button
-                                      variant="link"
-                                      className="p-0 h-auto text-sm text-amber-800 underline"
-                                      onClick={() => window.open('/automations/workflows', '_blank')}
-                                    >
-                                      Create a workflow
-                                    </Button>
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          {formData.workflowId && workflows.find(w => w._id === formData.workflowId && !w.isActive) && (
-                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                                <div>
-                                  <p className="text-sm font-medium text-amber-800">Workflow is inactive</p>
-                                  <p className="text-sm text-amber-700 mt-1">
-                                    Selected workflow is inactive. Please activate it before using this auto reply.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                          <p className="text-xs text-slate-500">
+                            Choose how you want to respond to triggers
+                          </p>
                         </div>
-                      )}
+
+                        {formData.replyType === 'text' && (
+                          <div className="space-y-2">
+                            <Label htmlFor="replyMessage" className="text-sm font-medium text-slate-700">
+                              Reply Message <span className="text-red-500">*</span>
+                            </Label>
+                            <Textarea
+                              id="replyMessage"
+                              placeholder="Enter your auto reply message..."
+                              value={formData.replyMessage}
+                              onChange={(e) => setFormData({ ...formData, replyMessage: e.target.value })}
+                              rows={4}
+                              className="bg-white border-slate-200 focus:border-purple-500/50 focus:ring-purple-500/20 resize-none"
+                            />
+                            <p className="text-xs text-slate-500">
+                              This message will be sent automatically when triggers match
+                            </p>
+                          </div>
+                        )}
+
+                        {formData.replyType === 'template' && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="templateName" className="text-sm font-medium text-slate-700">
+                                  Template Name <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                  id="templateName"
+                                  placeholder="Template name"
+                                  value={formData.templateName}
+                                  onChange={(e) => setFormData({ ...formData, templateName: e.target.value })}
+                                  className="bg-white border-slate-200 focus:border-purple-500/50 focus:ring-purple-500/20"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="templateLanguage" className="text-sm font-medium text-slate-700">
+                                  Language
+                                </Label>
+                                <Select
+                                  value={formData.templateLanguage}
+                                  onValueChange={(value) => setFormData({ ...formData, templateLanguage: value })}
+                                >
+                                  <SelectTrigger className="bg-white border-slate-200 focus:border-purple-500/50 focus:ring-purple-500/20">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="en">English</SelectItem>
+                                    <SelectItem value="es">Spanish</SelectItem>
+                                    <SelectItem value="fr">French</SelectItem>
+                                    <SelectItem value="de">German</SelectItem>
+                                    <SelectItem value="hi">Hindi</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                              <div className="flex items-start gap-2">
+                                <Layers className="h-4 w-4 text-purple-600 mt-0.5" />
+                                <div>
+                                  <p className="text-sm font-medium text-purple-800">Template Message</p>
+                                  <p className="text-sm text-purple-700 mt-1">
+                                    Uses approved WhatsApp message templates for business communications
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {formData.replyType === 'workflow' && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="workflowId" className="text-sm font-medium text-slate-700">
+                                Select Workflow <span className="text-red-500">*</span>
+                              </Label>
+                              <Select
+                                value={formData.workflowId}
+                                onValueChange={(value) => setFormData({ ...formData, workflowId: value })}
+                              >
+                                <SelectTrigger className="bg-white border-slate-200 focus:border-purple-500/50 focus:ring-purple-500/20">
+                                  <SelectValue placeholder="Choose a workflow to trigger" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {workflows.length === 0 ? (
+                                    <div className="p-4 text-center text-sm text-muted-foreground">
+                                      No workflows available. Create a workflow first.
+                                    </div>
+                                  ) : (
+                                    workflows.map((workflow) => (
+                                      <SelectItem
+                                        key={workflow._id}
+                                        value={workflow._id}
+                                        disabled={!workflow.isActive}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Workflow className={`h-4 w-4 ${workflow.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                                          <div>
+                                            <div className={`font-medium ${!workflow.isActive ? 'text-muted-foreground' : ''}`}>
+                                              {workflow.name}
+                                              {!workflow.isActive && ' (Inactive)'}
+                                            </div>
+                                            {workflow.description && (
+                                              <div className="text-xs text-muted-foreground">
+                                                {workflow.description}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-slate-500">
+                                Select a workflow to execute when this auto reply is triggered
+                              </p>
+                            </div>
+
+                            {workflows.length === 0 && (
+                              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                  <Lightbulb className="h-4 w-4 text-amber-600 mt-0.5" />
+                                  <div>
+                                    <p className="text-sm font-medium text-amber-800">No workflows available</p>
+                                    <p className="text-sm text-amber-700 mt-1">
+                                      You need to create at least one workflow before using this option.{' '}
+                                      <Button
+                                        variant="link"
+                                        className="p-0 h-auto text-sm text-amber-800 underline"
+                                        onClick={() => window.open('/automations/workflows', '_blank')}
+                                      >
+                                        Create a workflow
+                                      </Button>
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {formData.workflowId && workflows.find(w => w._id === formData.workflowId && !w.isActive) && (
+                              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                                  <div>
+                                    <p className="text-sm font-medium text-amber-800">Workflow is inactive</p>
+                                    <p className="text-sm text-amber-700 mt-1">
+                                      Selected workflow is inactive. Please activate it before using this auto reply.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <DialogFooter className="bg-slate-50 -mx-6 -mb-6 px-6 py-4">
+                <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -1657,14 +1711,25 @@ export default function AutomationsPage() {
                       resetForm();
                       setSelectedAutoReply(null);
                     }}
+                    className="hover:bg-slate-50"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={isCreateDialogOpen ? handleCreateAutoReply : handleUpdateAutoReply}
-                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                   >
-                    {isCreateDialogOpen ? "Create Auto Reply" : "Update Auto Reply"}
+                    {isCreateDialogOpen ? (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Auto Reply
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Update Auto Reply
+                      </>
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1672,24 +1737,24 @@ export default function AutomationsPage() {
 
             {/* View Auto Reply Dialog */}
             <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
                 {selectedAutoReply && (
                   <>
-                    <DialogHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <DialogTitle className="text-xl font-semibold flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-br from-primary/10 to-primary/20 rounded-lg">
-                              {getReplyTypeIcon(selectedAutoReply.replyType)}
-                            </div>
+                    <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                          {getReplyTypeIcon(selectedAutoReply.replyType)}
+                        </div>
+                        <div>
+                          <DialogTitle className="text-xl font-semibold text-slate-900">
                             {selectedAutoReply.name}
                           </DialogTitle>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mt-1">
                             <Badge
                               variant={selectedAutoReply.isActive ? "default" : "secondary"}
                               className={cn(
-                                selectedAutoReply.isActive 
-                                  ? "bg-green-100 text-green-700 border-green-200" 
+                                selectedAutoReply.isActive
+                                  ? "bg-green-100 text-green-700 border-green-200"
                                   : "bg-slate-100 text-slate-600 border-slate-200"
                               )}
                             >
@@ -1698,8 +1763,8 @@ export default function AutomationsPage() {
                             <Badge variant="outline" className="capitalize">
                               {selectedAutoReply.replyType}
                             </Badge>
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={cn("capitalize", getMatchTypeColor(selectedAutoReply.matchType))}
                             >
                               {selectedAutoReply.matchType.replace('_', ' ')}
@@ -1709,173 +1774,173 @@ export default function AutomationsPage() {
                       </div>
                     </DialogHeader>
 
-                    <Tabs defaultValue="settings" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="settings" className="gap-2">
-                          <Settings className="h-4 w-4" />
-                          Settings
-                        </TabsTrigger>
-                        <TabsTrigger value="analytics" className="gap-2">
-                          <BarChart3 className="h-4 w-4" />
-                          Analytics
-                        </TabsTrigger>
-                      </TabsList>
+                    <div className="flex-1 overflow-y-auto px-6 py-6">
+                      <Tabs defaultValue="settings" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 bg-slate-100">
+                          <TabsTrigger value="settings" className="gap-2">
+                            <Settings className="h-4 w-4" />
+                            Settings
+                          </TabsTrigger>
+                          <TabsTrigger value="analytics" className="gap-2">
+                            <BarChart3 className="h-4 w-4" />
+                            Analytics
+                          </TabsTrigger>
+                        </TabsList>
 
-                      <TabsContent value="settings" className="space-y-6 pt-6">
-                        <div className="space-y-6">
-                          <div>
-                            <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
-                              <Target className="h-4 w-4 text-green-600" />
-                              Trigger Keywords
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                              {selectedAutoReply.triggers.map((trigger, index) => (
-                                <Badge 
-                                  key={index} 
-                                  variant="secondary"
-                                  className="bg-slate-100 text-slate-700 border-slate-200"
-                                >
-                                  {trigger}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-
-                          <Separator />
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <TabsContent value="settings" className="space-y-6 pt-6">
+                          <div className="space-y-6">
                             <div className="space-y-4">
-                              <div>
-                                <span className="text-sm font-medium text-slate-600">Match Type</span>
-                                <div className="font-medium capitalize mt-1">
-                                  {selectedAutoReply.matchType.replace('_', ' ')}
-                                </div>
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                <h4 className="font-semibold text-slate-900">Trigger Keywords</h4>
                               </div>
-                              <div>
-                                <span className="text-sm font-medium text-slate-600">Case Sensitive</span>
-                                <div className="font-medium mt-1">
-                                  {selectedAutoReply.caseSensitive ? "Yes" : "No"}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="space-y-4">
-                              <div>
-                                <span className="text-sm font-medium text-slate-600">Priority</span>
-                                <div className="font-medium mt-1">{selectedAutoReply.priority}</div>
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium text-slate-600">Reply Type</span>
-                                <div className="font-medium capitalize mt-1">{selectedAutoReply.replyType}</div>
+                              <div className="flex flex-wrap gap-2">
+                                {selectedAutoReply.triggers.map((trigger, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="secondary"
+                                    className="bg-green-100 text-green-700 border-green-200"
+                                  >
+                                    {trigger}
+                                  </Badge>
+                                ))}
                               </div>
                             </div>
-                          </div>
 
-                          <Separator />
+                            <div className="h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
 
-                          <div>
-                            <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
-                              <Reply className="h-4 w-4 text-purple-600" />
-                              Reply Content
-                            </h4>
-                            {selectedAutoReply.replyType === 'template' ? (
-                              <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-lg border border-purple-200">
-                                <div className="font-medium text-purple-900 mb-1">
-                                  Template: {selectedAutoReply.templateName}
-                                </div>
-                                <div className="text-sm text-purple-700">
-                                  Language: {selectedAutoReply.templateLanguage}
-                                </div>
-                              </div>
-                            ) : selectedAutoReply.replyType === 'workflow' ? (
-                              <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 p-4 rounded-lg border border-blue-200">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Workflow className="h-4 w-4 text-blue-600" />
-                                  <div className="font-medium text-blue-900">Workflow Trigger</div>
-                                </div>
-                                {selectedAutoReply.workflowId && (
-                                  <div className="text-sm text-blue-700 mb-2">
-                                    Workflow: {workflows.find(w => w._id === selectedAutoReply.workflowId)?.name || 'Unknown Workflow'}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <span className="text-sm font-medium text-slate-600">Match Type</span>
+                                  <div className="font-medium capitalize">
+                                    {selectedAutoReply.matchType.replace('_', ' ')}
                                   </div>
-                                )}
-                                <div className="text-xs text-blue-600">
-                                  When triggered, this will start the selected workflow for the customer.
+                                </div>
+                                <div className="space-y-2">
+                                  <span className="text-sm font-medium text-slate-600">Case Sensitive</span>
+                                  <div className="font-medium">
+                                    {selectedAutoReply.caseSensitive ? "Yes" : "No"}
+                                  </div>
                                 </div>
                               </div>
-                            ) : (
-                              <div className="bg-gradient-to-r from-green-50 to-green-100/50 p-4 rounded-lg border border-green-200">
-                                <div className="text-sm text-green-800 whitespace-pre-wrap">
-                                  {selectedAutoReply.replyMessage}
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <span className="text-sm font-medium text-slate-600">Priority</span>
+                                  <div className="font-medium">{selectedAutoReply.priority}</div>
+                                </div>
+                                <div className="space-y-2">
+                                  <span className="text-sm font-medium text-slate-600">Reply Type</span>
+                                  <div className="font-medium capitalize">{selectedAutoReply.replyType}</div>
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      </TabsContent>
+                            </div>
 
-                      <TabsContent value="analytics" className="space-y-6 pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <Card className="border-blue-200 bg-blue-50">
-                            <CardContent className="p-4 text-center">
-                              <div className="text-2xl font-bold text-blue-900">{selectedAutoReply.usageCount || 0}</div>
-                              <div className="text-sm text-blue-700">Total Triggers</div>
-                            </CardContent>
-                          </Card>
-                          <Card className="border-green-200 bg-green-50">
-                            <CardContent className="p-4 text-center">
-                              <div className="text-2xl font-bold text-green-900">
-                                {selectedAutoReply.lastTriggered ?
-                                  format(new Date(selectedAutoReply.lastTriggered), "MMM dd") :
-                                  "Never"
-                                }
+                            <div className="h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                <h4 className="font-semibold text-slate-900">Reply Content</h4>
                               </div>
-                              <div className="text-sm text-green-700">Last Triggered</div>
-                            </CardContent>
-                          </Card>
-                          <Card className="border-purple-200 bg-purple-50">
-                            <CardContent className="p-4 text-center">
-                              <div className="text-2xl font-bold text-purple-900">{selectedAutoReply.priority}</div>
-                              <div className="text-sm text-purple-700">Priority Level</div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        <div className="text-center py-12">
-                          <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <BarChart3 className="h-10 w-10 text-primary" />
+                              {selectedAutoReply.replyType === 'template' ? (
+                                <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-lg border border-purple-200">
+                                  <div className="font-medium text-purple-900 mb-1">
+                                    Template: {selectedAutoReply.templateName}
+                                  </div>
+                                  <div className="text-sm text-purple-700">
+                                    Language: {selectedAutoReply.templateLanguage}
+                                  </div>
+                                </div>
+                              ) : selectedAutoReply.replyType === 'workflow' ? (
+                                <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 p-4 rounded-lg border border-blue-200">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Workflow className="h-4 w-4 text-blue-600" />
+                                    <div className="font-medium text-blue-900">Workflow Trigger</div>
+                                  </div>
+                                  {selectedAutoReply.workflowId && (
+                                    <div className="text-sm text-blue-700 mb-2">
+                                      Workflow: {workflows.find(w => w._id === selectedAutoReply.workflowId)?.name || 'Unknown Workflow'}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-blue-600">
+                                    When triggered, this will start the selected workflow for the customer.
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="bg-gradient-to-r from-green-50 to-green-100/50 p-4 rounded-lg border border-green-200">
+                                  <div className="text-sm text-green-800 whitespace-pre-wrap">
+                                    {selectedAutoReply.replyMessage}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <h3 className="text-xl font-semibold text-slate-900 mb-2">Detailed Analytics Coming Soon</h3>
-                          <p className="text-muted-foreground max-w-md mx-auto">
-                            Advanced analytics with charts, trends, and insights will be available in a future update.
-                          </p>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                        </TabsContent>
 
-                    <DialogFooter className="bg-slate-50 -mx-6 -mb-6 px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsViewDialogOpen(false);
-                            setTimeout(() => openEditDialog(selectedAutoReply), 100);
-                          }}
-                          className="gap-2"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Edit Auto Reply
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => {
-                            setIsViewDialogOpen(false);
-                            setTimeout(() => setIsDeleteDialogOpen(true), 100);
-                          }}
-                          className="gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
-                      </div>
+                        <TabsContent value="analytics" className="space-y-6 pt-6">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 p-4 rounded-lg border border-blue-200">
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-blue-900">{selectedAutoReply.usageCount || 0}</div>
+                                <div className="text-sm text-blue-700">Total Triggers</div>
+                              </div>
+                            </div>
+                            <div className="bg-gradient-to-r from-green-50 to-green-100/50 p-4 rounded-lg border border-green-200">
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-green-900">
+                                  {selectedAutoReply.lastTriggered ?
+                                    format(new Date(selectedAutoReply.lastTriggered), "MMM dd") :
+                                    "Never"
+                                  }
+                                </div>
+                                <div className="text-sm text-green-700">Last Triggered</div>
+                              </div>
+                            </div>
+                            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-lg border border-purple-200">
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-purple-900">{selectedAutoReply.priority}</div>
+                                <div className="text-sm text-purple-700">Priority Level</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-center py-12">
+                            <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                              <BarChart3 className="h-10 w-10 text-primary" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-slate-900 mb-2">Detailed Analytics Coming Soon</h3>
+                            <p className="text-slate-600 max-w-md mx-auto">
+                              Advanced analytics with charts, trends, and insights will be available in a future update.
+                            </p>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+
+                    <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsViewDialogOpen(false);
+                          setTimeout(() => openEditDialog(selectedAutoReply), 100);
+                        }}
+                        className="gap-2 hover:bg-slate-50"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Edit Auto Reply
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          setIsViewDialogOpen(false);
+                          setTimeout(() => setIsDeleteDialogOpen(true), 100);
+                        }}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
                     </DialogFooter>
                   </>
                 )}
@@ -1894,7 +1959,7 @@ export default function AutomationsPage() {
                     This action cannot be undone. The auto reply will be permanently deleted and will stop responding to triggers.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                
+
                 {selectedAutoReply && (
                   <div className="py-4">
                     <div className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 border">
@@ -1909,7 +1974,7 @@ export default function AutomationsPage() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {selectedAutoReply.isActive && (
                       <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                         <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -1923,7 +1988,7 @@ export default function AutomationsPage() {
                     )}
                   </div>
                 )}
-                
+
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
