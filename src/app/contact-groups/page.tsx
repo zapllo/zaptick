@@ -1612,7 +1612,7 @@ const debugFilters = () => {
                                             Delete Contact Group?
                                         </AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This action cannot be undone. The contact group "{selectedGroup?.name}" will be permanently deleted.
+                                            This action cannot be undone. The contact group &quot;{selectedGroup?.name}&quot; will be permanently deleted.
                                             The contacts themselves will not be deleted.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
