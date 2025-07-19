@@ -2,29 +2,50 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITemplate extends Document {
   name: string;
-  category: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY';
+  category: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY' | 'CAROUSEL' | 'CAROUSEL_UTILITY'; // Add CAROUSEL
   language: string;
   components?: {
-    type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+    type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS' | 'CAROUSEL';
     format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
     text?: string;
     example?: {
       header_text?: string[];
       body_text?: string[][];
       button_text?: string[][];
+      header_handle?: string[];
     };
     buttons?: {
-      type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+      type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER' | 'COPY_CODE';
       text: string;
       url?: string;
       phone_number?: string;
+      copy_code?: string;
       example?: string[];
+    }[];
+    // Fix: Update carousel cards structure to match payload
+    cards?: {
+      components?: {
+        type: 'HEADER' | 'BODY' | 'BUTTONS';
+        format?: 'IMAGE' | 'VIDEO' | 'TEXT';
+        text?: string;
+        example?: {
+          header_handle?: string[];
+          body_text?: string[][];
+        };
+        buttons?: {
+          type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+          text: string;
+          url?: string;
+          phone_number?: string;
+          example?: string[];
+        }[];
+      }[];
     }[];
   }[];
   wabaId: string;
   phoneNumberId: string;
   userId: string;
-  status: 'PENDING' | 'APPROVED' |'REJECTED'| 'DISABLED' | 'DELETED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISABLED' | 'DELETED';
   whatsappTemplateId?: string;
   rejectionReason?: string;
   createdAt: Date;
@@ -35,6 +56,7 @@ export interface ITemplate extends Document {
   authSettings?: {
     codeExpirationMinutes: number;
     codeLength: number;
+    addCodeEntryOption?: boolean; // Add missing field
   };
 }
 
@@ -49,7 +71,7 @@ const TemplateSchema = new Schema<ITemplate>(
     category: {
       type: String,
       required: [true, 'Template category is required'],
-      enum: ['AUTHENTICATION', 'MARKETING', 'UTILITY']
+      enum: ['AUTHENTICATION', 'MARKETING', 'UTILITY', 'CAROUSEL','CAROUSEL_UTILITY'] // Add CAROUSEL
     },
     language: {
       type: String,
@@ -60,7 +82,7 @@ const TemplateSchema = new Schema<ITemplate>(
       type: {
         type: String,
         required: true,
-        enum: ['HEADER', 'BODY', 'FOOTER', 'BUTTONS']
+        enum: ['HEADER', 'BODY', 'FOOTER', 'BUTTONS', 'CAROUSEL']
       },
       format: {
         type: String,
@@ -70,17 +92,47 @@ const TemplateSchema = new Schema<ITemplate>(
       example: {
         header_text: [String],
         body_text: [[String]],
-        button_text: [[String]]
+        button_text: [[String]],
+        header_handle: [String]
       },
       buttons: [{
         type: {
           type: String,
-          enum: ['QUICK_REPLY', 'URL', 'PHONE_NUMBER']
+          enum: ['QUICK_REPLY', 'URL', 'PHONE_NUMBER', 'COPY_CODE']
         },
         text: String,
         url: String,
         phone_number: String,
+        copy_code: String,
         example: [String]
+      }],
+      // Fix: Update carousel cards schema to match the actual payload structure
+      cards: [{
+        components: [{
+          type: {
+            type: String,
+            enum: ['HEADER', 'BODY', 'BUTTONS']
+          },
+          format: {
+            type: String,
+            enum: ['IMAGE', 'VIDEO', 'TEXT']
+          },
+          text: String,
+          example: {
+            header_handle: [String],
+            body_text: [[String]]
+          },
+          buttons: [{
+            type: {
+              type: String,
+              enum: ['QUICK_REPLY', 'URL', 'PHONE_NUMBER']
+            },
+            text: String,
+            url: String,
+            phone_number: String,
+            example: [String]
+          }]
+        }]
       }]
     }],
     wabaId: {
@@ -116,6 +168,10 @@ const TemplateSchema = new Schema<ITemplate>(
       codeLength: {
         type: Number,
         default: 6
+      },
+      addCodeEntryOption: { // Add missing field
+        type: Boolean,
+        default: true
       }
     }
   },

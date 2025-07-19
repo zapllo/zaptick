@@ -3,6 +3,75 @@ import { verifyToken } from "@/lib/jwt";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Campaign from "@/models/Campaign";
+import { sendCampaignCreationNotification } from "@/lib/notifications";
+import Contact from "@/models/Contact";
+
+
+// Helper function to build MongoDB query from audience filters
+function buildAudienceQuery(filters: any) {
+  const query: any = {};
+
+  // Example implementation - this would need to be customized based on your filter structure
+  if (filters.tags && filters.tags.length > 0) {
+    query.tags = { $in: filters.tags };
+  }
+
+  if (filters.whatsappOptedIn !== undefined) {
+    query.whatsappOptIn = filters.whatsappOptedIn;
+  }
+
+  // Handle conditions with AND/OR operators
+  if (filters.conditions && filters.conditions.length > 0) {
+    const conditionsQuery = filters.conditions.map((condition: any) => {
+      let fieldQuery: any = {};
+
+      // Handle custom fields
+      let field = condition.field;
+      if (field.startsWith('customField.')) {
+        field = field.replace('customField.', '');
+        field = `customFields.${field}`;
+      }
+
+      switch (condition.operator) {
+        case "equals":
+          fieldQuery[field] = condition.value;
+          break;
+        case "not_equals":
+          fieldQuery[field] = { $ne: condition.value };
+          break;
+        case "contains":
+          fieldQuery[field] = { $regex: condition.value, $options: 'i' };
+          break;
+        case "not_contains":
+          fieldQuery[field] = { $not: { $regex: condition.value, $options: 'i' } };
+          break;
+        case "starts_with":
+          fieldQuery[field] = { $regex: `^${condition.value}`, $options: 'i' };
+          break;
+        case "ends_with":
+          fieldQuery[field] = { $regex: `${condition.value}$`, $options: 'i' };
+          break;
+        case "greater_than":
+          fieldQuery[field] = { $gt: condition.value };
+          break;
+        case "less_than":
+          fieldQuery[field] = { $lt: condition.value };
+          break;
+      }
+
+      return fieldQuery;
+    });
+
+    if (filters.operator === "AND") {
+      query.$and = conditionsQuery;
+    } else {
+      query.$or = conditionsQuery;
+    }
+  }
+
+  return query;
+}
+
 
 // Create a new campaign
 export async function POST(req: NextRequest) {
@@ -34,6 +103,18 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    // Calculate audience count for notification
+    let audienceCount = 0;
+    if (campaignData.audience?.selectedContacts && campaignData.audience.selectedContacts.length > 0) {
+      audienceCount = campaignData.audience.selectedContacts.length;
+    } else if (campaignData.audience?.filters) {
+      // Build query based on audience filters
+      const audienceQuery = buildAudienceQuery(campaignData.audience.filters);
+      audienceCount = await Contact.countDocuments({
+        userId: decoded.id,
+        ...audienceQuery,
+      });
+    }
 
     // Create new campaign
     const campaign = new Campaign({
@@ -50,6 +131,15 @@ export async function POST(req: NextRequest) {
     });
 
     await campaign.save();
+
+    // Send email notifications (async, don't wait for it)
+    sendCampaignCreationNotification(decoded.id, {
+      name: campaign.name,
+      type: campaign.type,
+      audienceCount: audienceCount
+    }).catch(error => {
+      console.error('Email notification failed:', error);
+    });
 
     return NextResponse.json({
       success: true,
@@ -72,6 +162,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 
 // Get all campaigns
 export async function GET(req: NextRequest) {

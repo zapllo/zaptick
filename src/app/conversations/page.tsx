@@ -1320,6 +1320,37 @@ function ConversationsPageContent() {
     }
   };
 
+  // Add this function inside the ConversationsPageContent component
+  const markConversationAsRead = async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/mark-read`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        // Update the local conversation state
+        setConversations(prevConversations =>
+          prevConversations.map(conv =>
+            conv.id === conversationId
+              ? { ...conv, unreadCount: 0 }
+              : conv
+          )
+        );
+
+        // Update filtered conversations as well
+        setFilteredConversations(prevFiltered =>
+          prevFiltered.map(conv =>
+            conv.id === conversationId
+              ? { ...conv, unreadCount: 0 }
+              : conv
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
+    }
+  };
+
   const fetchTemplates = async () => {
     try {
       const params = new URLSearchParams();
@@ -2746,6 +2777,11 @@ function ConversationsPageContent() {
                       setActiveConversation(conversation);
                       setSelectedContact(null);
                       setIsMobileMenuOpen(false);
+
+                      // Mark conversation as read if it has unread messages
+                      if (conversation.unreadCount > 0) {
+                        markConversationAsRead(conversation.id);
+                      }
                     }
                   }}
                 >

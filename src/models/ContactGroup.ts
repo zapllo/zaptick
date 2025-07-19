@@ -1,79 +1,55 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IContactGroup extends Document {
-  company: mongoose.Types.ObjectId;
   name: string;
   description?: string;
-  type: 'static' | 'dynamic';
+  companyId: mongoose.Types.ObjectId;
+  userId: string;
   contacts: mongoose.Types.ObjectId[];
-  dynamicFilter?: any;
-  contactCount: number;
-  lastUpdated: Date;
-  tags: string[];
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
+  color?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const ContactGroupSchema: Schema = new Schema({
-  company: {
+const ContactGroupSchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  companyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Company',
     required: true
   },
-  name: {
-    type: String,
-    required: [true, 'Group name is required'],
-    trim: true
-  },
-  description: String,
-  type: {
-    type: String,
-    enum: ['static', 'dynamic'],
-    default: 'static'
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   contacts: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Contact'
   }],
-  dynamicFilter: mongoose.Schema.Types.Mixed,
-  contactCount: {
-    type: Number,
-    default: 0
-  },
-  lastUpdated: {
-    type: Date,
-    default: Date.now
-  },
-  tags: [String],
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  updatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  color: {
+    type: String,
+    default: '#3B82F6' // Default blue color
   },
   isActive: {
     type: Boolean,
     default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true
 });
 
-// Create compound index for company and name
-ContactGroupSchema.index({ company: 1, name: 1 }, { unique: true });
+// Create compound index for efficient queries
+ContactGroupSchema.index({ userId: 1, companyId: 1 });
+ContactGroupSchema.index({ name: 1, companyId: 1 }, { unique: true });
 
 export default mongoose.models.ContactGroup || mongoose.model<IContactGroup>('ContactGroup', ContactGroupSchema);

@@ -8,6 +8,7 @@ import Template from "@/models/Template";
 import Contact from "@/models/Contact";
 import WalletTransaction from "@/models/WalletTransaction";
 import { calculateMessagePrice } from "@/lib/pricing";
+import { sendCampaignLaunchNotification } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -197,6 +198,18 @@ export async function POST(req: NextRequest) {
       }
     });
     await transaction.save();
+
+// SEND MESSAGE ROUTE HERE FOR THE CRON JOB
+
+    // Send email notifications (async, don't wait for it)
+    sendCampaignLaunchNotification(decoded.id, {
+      name: campaign.name,
+      audienceCount: audienceCount,
+      totalCost: totalCost,
+      currency: company.currency || "INR"
+    }).catch(error => {
+      console.error('Email notification failed:', error);
+    });
 
 // SEND MESSAGE ROUTE HERE FOR THE CRON JOB
 

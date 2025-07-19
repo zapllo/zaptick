@@ -46,7 +46,8 @@ import {
   ShoppingCart,
   AlignLeft,
   Brackets,
-  LayoutIcon
+  LayoutIcon,
+  Strikethrough
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
-// Interfaces remain the same
+// Interfaces
 interface ButtonOption {
   type: 'URL' | 'PHONE_NUMBER' | 'QUICK_REPLY' | 'COPY_CODE';
   text: string;
@@ -102,6 +103,18 @@ interface ButtonOption {
 interface Variable {
   name: string;
   example: string;
+}
+
+interface CarouselCard {
+  header?: {
+    format: 'IMAGE' | 'VIDEO';
+    mediaHandle?: string;
+    mediaUrl?: string;
+  };
+  body: {
+    text: string;
+  };
+  buttons?: ButtonOption[];
 }
 
 interface CreateTemplateForm {
@@ -120,6 +133,7 @@ interface CreateTemplateForm {
   includeButtons: boolean;
   buttonType: 'NONE' | 'MULTIPLE';
   buttons: ButtonOption[];
+  carouselCards: CarouselCard[];
 }
 
 interface WabaAccount {
@@ -130,7 +144,7 @@ interface WabaAccount {
   status: string;
 }
 
-// Language options remain the same
+// Language options
 const languageOptions = [
   { value: 'en', label: 'English' },
   { value: 'es', label: 'Spanish' },
@@ -147,7 +161,7 @@ const languageOptions = [
   { value: 'ru', label: 'Russian' },
 ];
 
-// Category options
+// Category options - Updated to include carousel
 const categoryOptions = [
   {
     id: 'UTILITY',
@@ -166,12 +180,24 @@ const categoryOptions = [
     name: 'Authentication',
     description: 'Send one-time passwords or authentication codes for verification',
     icon: <ShieldCheck className="w-5 h-5" />
+  },
+  {
+    id: 'CAROUSEL',
+    name: 'Carousel',
+    description: 'Send multiple cards with images, text, and buttons in a carousel format',
+    icon: <LayoutIcon className="w-5 h-5" />
+  },
+  {
+    id: 'CAROUSEL_UTILITY',
+    name: 'Utility Carousel',
+    description: 'Send multiple informational cards about orders, accounts, or services in a carousel format',
+    icon: <LayoutIcon className="w-5 h-5" />
   }
 ];
 
 type DeviceType = 'iphone' | 'android';
 
-// WhatsApp Preview Component (keep as is)
+// Helper functions
 const getMediaTypeIcon = (mediaType: string) => {
   switch (mediaType) {
     case 'IMAGE':
@@ -185,7 +211,37 @@ const getMediaTypeIcon = (mediaType: string) => {
   }
 };
 
-const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form: CreateTemplateForm, deviceType: DeviceType, footerText: string, authSettings: any }) => {
+// WhatsApp Preview Component - Updated to handle carousel
+const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
+  form: CreateTemplateForm,
+  deviceType: DeviceType,
+  footerText: string,
+  authSettings: any
+}) => {
+
+    // Helper function to format text with proper line breaks and formatting
+    const formatWhatsAppText = (text: string) => {
+      if (!text) return '';
+      
+      // First, handle variables
+      let formattedText = text
+        .replace(/\{\{1\}\}/g, form.variables[0]?.example || "John")
+        .replace(/\{\{2\}\}/g, form.variables[1]?.example || "SAVE20")
+        .replace(/\{\{3\}\}/g, form.variables[2]?.example || "June 30, 2024")
+        .replace(/\{\{4\}\}/g, form.variables[3]?.example || "Sample Value")
+        .replace(/\{\{5\}\}/g, form.variables[4]?.example || "Example");
+
+      // Handle WhatsApp formatting
+      formattedText = formattedText
+        .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+        .replace(/_(.*?)_/g, '<em>$1</em>')
+        .replace(/~(.*?)~/g, '<span style="text-decoration: line-through;">$1</span>');
+
+      // Handle line breaks - convert \n to <br>
+      formattedText = formattedText.replace(/\n/g, '<br>');
+
+      return formattedText;
+    };
   // For authentication templates, show a different preview
   if (form.category === 'AUTHENTICATION') {
     const sampleCode = authSettings.codeLength === 8
@@ -224,7 +280,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                   )}
                   {deviceType !== 'iphone' && (
                     <div
-                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] wark:border-r-[#202c33]"
+                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff]"
                       style={{ transform: 'translateY(6px)' }}
                     ></div>
                   )}
@@ -275,7 +331,142 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
     );
   }
 
-  // Regular template preview
+  // For carousel templates, show carousel preview
+  if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
+    // Format body content with variables
+    const previewContent = form.content
+      .replace(/\{\{1\}\}/g, form.variables[0]?.example || "John")
+      .replace(/\{\{2\}\}/g, form.variables[1]?.example || "SAVE20")
+      .replace(/\{\{3\}\}/g, form.variables[2]?.example || "June 30, 2024")
+      .replace(/\{\{4\}\}/g, form.variables[3]?.example || "Sample Value")
+      .replace(/\{\{5\}\}/g, form.variables[4]?.example || "Example");
+
+     const formattedContent = formatWhatsAppText(form.content);
+
+    return (
+      <div className="device-mockup mx-auto max-w-[320px]">
+        <div
+          className={` relative ${deviceType === 'iphone' ? 'pt-12 pb-[40px]' : 'pt-[40px] pb-[30px]'}`}
+          style={{
+            backgroundImage: `url(${deviceType === 'iphone'
+              ? '/layout/iphone-view-layout.png'
+              : '/layout/android-view-layout.png'})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            height: '650px',
+            width: '100%'
+          }}
+        >
+          <div className="app-content flex flex-col h-[520px] mx-auto overflow-hidden rounded-2xl"
+            style={{ width: '94%' }}>
+            <div className="flex-1 p-4 overflow-y-auto">
+              <div className="flex mb-3 mt-2">
+                <div className="relative w-full max-w-[85%]">
+                  {/* Bubble tail */}
+                 
+                  {deviceType !== 'iphone' && (
+                    <div
+                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff]"
+                      style={{ transform: 'translateY(6px)' }}
+                    ></div>
+                  )}
+
+                  <div className="bg-white mt-12 p-3 rounded-lg ml-1 shadow-sm">
+                    {/* Carousel preview */}
+                    <div className="text-[12px] max-w-[100%]">
+                      {/* Body text before carousel */}
+                      {form.content && (
+                        <div className="mb-3">
+                          <div dangerouslySetInnerHTML={{ __html: formattedContent || "" }} />
+                        </div>
+                      )}
+
+                      <div className="mb-2">
+
+                      </div>
+                      {/* Footer */}
+                      {/* No footer for carousel templates */}
+
+                      <div className="flex justify-end items-center gap-1 pt-2 text-[10px] opacity-70">
+                        <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  </div>
+                   <div className=" mt-1  rounded-lg ml-1 ">
+                    {/* Carousel preview */}
+                    <div className="text-[12px] max-w-[100%]">
+                   
+                      {/* Carousel cards container */}
+                      <div className="flex gap-2 overflow-x-auto scrollbar-hide w-[270px] pb-2">
+                        {form.carouselCards.length > 0 ? form.carouselCards.map((card, index) => (
+                          <div key={index} className="flex-shrink-0 w-[180px] border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                            {/* Card header media */}
+                            {card.header && card.header.mediaUrl && (
+                              <div className="h-32 bg-gray-200 overflow-hidden">
+                                {card.header.format === 'IMAGE' ? (
+                                  <img
+                                    src={card.header.mediaUrl}
+                                    alt={`Card ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                                    <Play className="h-6 w-6 text-gray-500" />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Card body */}
+                            <div className="p-2">
+                              <p className="text-[10px] mb-2">
+                                {card.body.text || `Card ${index + 1} content`}
+                              </p>
+
+                              {/* Card buttons */}
+                              {card.buttons && card.buttons.length > 0 && (
+                                <div className="space-y-1">
+                                  {card.buttons.map((button, buttonIndex) => (
+                                    <button
+                                      key={buttonIndex}
+                                      className="w-full text-left text-[10px] text-[#0097DF] font-medium flex justify-center items-center gap-1 py-1"
+                                    >
+                                      {button.type === 'URL' && <ExternalLink className="h-3 w-3" />}
+                                      {button.type === 'PHONE_NUMBER' && <Phone className="h-3 w-3" />}
+                                      {button.text || `Button ${buttonIndex + 1}`}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="flex-shrink-0 w-[200px] border border-gray-200 rounded-lg overflow-hidden bg-gray-100">
+                            <div className="h-20 bg-gray-200 flex items-center justify-center">
+                              <LayoutIcon className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <div className="p-2">
+                              <p className="text-[10px] text-gray-500">No cards added yet</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      {/* No footer for carousel templates */}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular template preview (existing code)
   const previewContent = form.content
     .replace(/\{\{1\}\}/g, form.variables[0]?.example || "John")
     .replace(/\{\{2\}\}/g, form.variables[1]?.example || "SAVE20")
@@ -288,17 +479,9 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
   const showSeeAllOptions = form.buttons.length > 3;
 
   // Format message content with proper styling for bold, italic, and strikethrough
-  const formattedContent = previewContent
-    .replace(/\*(.*?)\*/g, '<span class="font-bold">$1</span>')
-    .replace(/_(.*?)_/g, '<span class="italic">$1</span>')
-    .replace(/~(.*?)~/g, '<span class="line-through">$1</span>');
-
+  const formattedContent = formatWhatsAppText(form.content);
   return (
     <div className="device-mockup mx-auto max-w-[320px]">
-      <div className="flex items-center justify-between mb-2">
-
-      </div>
-
       <div
         className={`relative ${deviceType === 'iphone' ? 'pt-12 pb-[40px]' : 'pt-[40px] pb-[30px]'}`}
         style={{
@@ -314,11 +497,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
       >
         <div className="app-content flex flex-col h-[520px] mx-auto overflow-hidden rounded-2xl"
           style={{ width: '94%' }}>
-          {/* WhatsApp header */}
-
-          <div className="flex-1  p-4 overflow-y-auto">
-            {/* Date bubble */}
-
+          <div className="flex-1 p-4 overflow-y-auto">
             {previewContent && (
               <div className="flex mb-3 mt-2">
                 <div className="relative w-full max-w-[85%]">
@@ -335,7 +514,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                   )}
                   {deviceType !== 'iphone' && (
                     <div
-                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff] wark:border-r-[#202c33]"
+                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff]"
                       style={{ transform: 'translateY(6px)' }}
                     ></div>
                   )}
@@ -347,14 +526,13 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                         {form.headerText && (
                           <div className="text-xs font-medium mb-2">{form.headerText}</div>
                         )}
-                        <div className="bg-gray-200 wark:bg-gray-700 rounded overflow-hidden">
+                        <div className="bg-gray-200 rounded overflow-hidden">
                           {form.headerType === 'image' && (
                             <img
                               src={form.mediaUrl}
                               alt="Header image"
                               className="w-full h-32 object-cover"
                               onError={(e) => {
-                                // Fallback to placeholder if image fails to load
                                 const img = e.target as HTMLImageElement;
                                 if (img && img.style) {
                                   img.style.display = 'none';
@@ -417,14 +595,13 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
 
                     {/* Footer */}
                     {footerText && (
-                      <div className="text-[10px] text-gray-500  border-gray-200 wark:border-gray-600 pt-2 ">
+                      <div className="text-[10px] text-gray-500 border-gray-200 pt-2">
                         {footerText}
                       </div>
                     )}
 
                     <div className="flex justify-end items-center gap-1 pt-2 text-[10px] opacity-70">
                       <span>{currentTime}</span>
-                      {/* <Check className="h-3 w-3 text-blue-500" /> */}
                     </div>
 
                     {/* Buttons section */}
@@ -434,21 +611,16 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                           {displayButtons.map((button, index) => (
                             <button
                               key={index}
-                              className={`w-full text-left gap-2  text-[12px] text-[#0097DF] -500 font-medium flex justify-center items-center ${index < displayButtons.length - 1 ? 'border-b border-gray-200 ' : ''
-                                }`}
+                              className={`w-full text-left gap-2 text-[12px] text-[#0097DF] font-medium flex justify-center items-center ${index < displayButtons.length - 1 ? 'border-b border-gray-200' : ''}`}
                             >
                               {button.type === 'URL' && <svg width="13px" height="13px" viewBox="0 0 24 24" fill="#0096DE" xmlns="http://www.w3.org/2000/svg"><path d="M13 3L16.293 6.293L9.29297 13.293L10.707 14.707L17.707 7.707L21 11V3H13Z"></path><path d="M19 19H5V5H12L10 3H5C3.897 3 3 3.897 3 5V19C3 20.103 3.897 21 5 21H19C20.103 21 21 20.103 21 19V14L19 12V19Z"></path></svg>}
-
-
-
                               {button.type === 'PHONE_NUMBER' && <svg xmlns="http://www.w3.org/2000/svg" width="13px" height="13px" fill="#0096DE" viewBox="0 0 18 18"><path d="M17.01 12.38C15.78 12.38 14.59 12.18 13.48 11.82C13.3061 11.7611 13.1191 11.7523 12.9405 11.7948C12.7618 11.8372 12.5988 11.9291 12.47 12.06L10.9 14.03C8.07 12.68 5.42 10.13 4.01 7.2L5.96 5.54C6.23 5.26 6.31 4.87 6.2 4.52C5.83 3.41 5.64 2.22 5.64 0.99C5.64 0.45 5.19 0 4.65 0H1.19C0.65 0 0 0.24 0 0.99C0 10.28 7.73 18 17.01 18C17.72 18 18 17.37 18 16.82V13.37C18 12.83 17.55 12.38 17.01 12.38Z"></path></svg>}
-                              {button.type === 'COPY_CODE' && <svg width="13px" height="13px" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_38_32111)"><path d="M6.66699 8.33268C6.66699 7.89065 6.84259 7.46673 7.15515 7.15417C7.46771 6.84161 7.89163 6.66602 8.33366 6.66602H15.0003C15.4424 6.66602 15.8663 6.84161 16.1788 7.15417C16.4914 7.46673 16.667 7.89065 16.667 8.33268V14.9993C16.667 15.4414 16.4914 15.8653 16.1788 16.1779C15.8663 16.4904 15.4424 16.666 15.0003 16.666H8.33366C7.89163 16.666 7.46771 16.4904 7.15515 16.1779C6.84259 15.8653 6.66699 15.4414 6.66699 14.9993V8.33268Z" stroke="#0096DE" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"></path><path d="M13.333 6.66732V5.00065C13.333 4.55862 13.1574 4.1347 12.8449 3.82214C12.5323 3.50958 12.1084 3.33398 11.6663 3.33398H4.99967C4.55765 3.33398 4.13372 3.50958 3.82116 3.82214C3.5086 4.1347 3.33301 4.55862 3.33301 5.00065V11.6673C3.33301 12.1093 3.5086 12.5333 3.82116 12.8458C4.13372 13.1584 4.55765 13.334 4.99967 13.334H6.66634" stroke="#0096DE" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"></path></g><defs><clipPath id="clip0_38_32111"><rect width="20" height="20" fill="white"></rect></clipPath></defs></svg>}
-                              {button.type === 'QUICK_REPLY'}
+                              {button.type === 'COPY_CODE' && <svg width="13px" height="13px" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><g clipPath="url(#clip0_38_32111)"><path d="M6.66699 8.33268C6.66699 7.89065 6.84259 7.46673 7.15515 7.15417C7.46771 6.84161 7.89163 6.66602 8.33366 6.66602H15.0003C15.4424 6.66602 15.8663 6.84161 16.1788 7.15417C16.4914 7.46673 16.667 7.89065 16.667 8.33268V14.9993C16.667 15.4414 16.4914 15.8653 16.1788 16.1779C15.8663 16.4904 15.4424 16.666 15.0003 16.666H8.33366C7.89163 16.666 7.46771 16.4904 7.15515 16.1779C6.84259 15.8653 6.66699 15.4414 6.66699 14.9993V8.33268Z" stroke="#0096DE" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"></path><path d="M13.333 6.66732V5.00065C13.333 4.55862 13.1574 4.1347 12.8449 3.82214C12.5323 3.50958 12.1084 3.33398 11.6663 3.33398H4.99967C4.55765 3.33398 4.13372 3.50958 3.82116 3.82214C3.5086 4.1347 3.33301 4.55862 3.33301 5.00065V11.6673C3.33301 12.1093 3.5086 12.5333 3.82116 12.8458C4.13372 13.1584 4.55765 13.334 4.99967 13.334H6.66634" stroke="#0096DE" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"></path></g><defs><clipPath id="clip0_38_32111"><rect width="20" height="20" fill="white"></rect></clipPath></defs></svg>}
                               {button.text || `Button ${index + 1}`}
                             </button>
                           ))}
                           {showSeeAllOptions && (
-                            <button className="w-full text-left pt-2 justify-center text-[12px] text-[#0097DF] -500 font-medium flex gap-2 border-t items-center">
+                            <button className="w-full text-left pt-2 justify-center text-[12px] text-[#0097DF] font-medium flex gap-2 border-t items-center">
                               <svg width="13px" height="13px" viewBox="0 0 19 16" fill="#0096DE" xmlns="http://www.w3.org/2000/svg"><path d="M2 6.5C1.17 6.5 0.5 7.17 0.5 8C0.5 8.83 1.17 9.5 2 9.5C2.83 9.5 3.5 8.83 3.5 8C3.5 7.17 2.83 6.5 2 6.5ZM2 0.5C1.17 0.5 0.5 1.17 0.5 2C0.5 2.83 1.17 3.5 2 3.5C2.83 3.5 3.5 2.83 3.5 2C3.5 1.17 2.83 0.5 2 0.5ZM2 12.5C1.17 12.5 0.5 13.18 0.5 14C0.5 14.82 1.18 15.5 2 15.5C2.82 15.5 3.5 14.82 3.5 14C3.5 13.18 2.83 12.5 2 12.5ZM5 15H19V13H5V15ZM5 9H19V7H5V9ZM5 1V3H19V1H5Z"></path></svg>
                               See all options
                             </button>
@@ -460,9 +632,6 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: { form:
                 </div>
               </div>
             )}
-
-            {/* WhatsApp message input */}
-
           </div>
         </div>
       </div>
@@ -488,7 +657,8 @@ export default function CreateTemplatePage() {
     mediaHandle: '',
     includeButtons: false,
     buttonType: 'NONE',
-    buttons: []
+    buttons: [],
+    carouselCards: []
   });
 
   const [wabaAccounts, setWabaAccounts] = useState<WabaAccount[]>([]);
@@ -507,7 +677,7 @@ export default function CreateTemplatePage() {
   // Steps configuration
   const steps = [
     { number: 1, title: 'Basic Info', completed: false },
-    { number: 2, title: 'Content', completed: false },
+    { number: 2, title: form.category === 'CAROUSEL' ? 'Carousel Cards' : 'Content', completed: false },
     { number: 3, title: 'Buttons', completed: false },
     { number: 4, title: 'Variables', completed: false }
   ];
@@ -536,6 +706,20 @@ export default function CreateTemplatePage() {
       return Math.round((filledFields / totalFields) * 100);
     }
 
+    // For carousel templates
+    if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
+      let filledFields = 0;
+      let totalFields = 5; // name, category, language, wabaId, cards
+
+      if (form.name) filledFields++;
+      if (form.category) filledFields++;
+      if (form.language) filledFields++;
+      if (form.wabaId) filledFields++;
+      if (form.carouselCards.length > 0 && form.carouselCards.every(card => card.body.text)) filledFields++;
+
+      return Math.round((filledFields / totalFields) * 100);
+    }
+
     // For other templates, use the original calculation
     let filledFields = 0;
     let totalFields = 0;
@@ -546,7 +730,6 @@ export default function CreateTemplatePage() {
     if (form.language) filledFields++;
     if (form.wabaId) filledFields++;
     totalFields += 4;
-
     // Step 2 fields
     if (form.content) filledFields++;
     totalFields += 1;
@@ -617,6 +800,185 @@ export default function CreateTemplatePage() {
     } catch (error) {
       console.error('Failed to fetch user data:', error);
       toast.error('Failed to fetch user data');
+    }
+  };
+
+  // Carousel helper functions
+  const addCarouselCard = () => {
+    if (form.carouselCards.length >= 10) {
+      toast.error('Maximum of 10 carousel cards allowed');
+      return;
+    }
+
+    const newCard: CarouselCard = {
+      body: { text: '' },
+      buttons: []
+    };
+
+    setForm(prev => ({
+      ...prev,
+      carouselCards: [...prev.carouselCards, newCard]
+    }));
+  };
+
+  const updateCarouselCard = (cardIndex: number, field: string, value: any) => {
+    setForm(prev => ({
+      ...prev,
+      carouselCards: prev.carouselCards.map((card, index) => {
+        if (index === cardIndex) {
+          if (field.includes('.')) {
+            const [parentField, childField] = field.split('.');
+            return {
+              ...card,
+              [parentField]: {
+                ...card[parentField as keyof CarouselCard],
+                [childField]: value
+              }
+            };
+          }
+          return { ...card, [field]: value };
+        }
+        return card;
+      })
+    }));
+  };
+
+  const removeCarouselCard = (cardIndex: number) => {
+    setForm(prev => ({
+      ...prev,
+      carouselCards: prev.carouselCards.filter((_, index) => index !== cardIndex)
+    }));
+  };
+
+  const addButtonToCarouselCard = (cardIndex: number) => {
+    const currentCard = form.carouselCards[cardIndex];
+    if (currentCard.buttons && currentCard.buttons.length >= 2) {
+      toast.error('Maximum of 2 buttons per card allowed');
+      return;
+    }
+
+    const newButton: ButtonOption = {
+      type: 'QUICK_REPLY', // Default to QUICK_REPLY for carousel cards
+      text: ''
+    };
+
+    setForm(prev => ({
+      ...prev,
+      carouselCards: prev.carouselCards.map((card, index) => {
+        if (index === cardIndex) {
+          return {
+            ...card,
+            buttons: [...(card.buttons || []), newButton]
+          };
+        }
+        return card;
+      })
+    }));
+  };
+
+
+  const updateCarouselCardButton = (cardIndex: number, buttonIndex: number, field: string, value: string) => {
+    setForm(prev => ({
+      ...prev,
+      carouselCards: prev.carouselCards.map((card, index) => {
+        if (index === cardIndex) {
+          return {
+            ...card,
+            buttons: card.buttons?.map((button, bIndex) => {
+              if (bIndex === buttonIndex) {
+                // If changing button type, reset type-specific fields
+                if (field === 'type') {
+                  const newButton = { type: value as ButtonOption['type'], text: button.text };
+                  if (value === 'URL') {
+                    (newButton as any).url = '';
+                    (newButton as any).urlType = 'static';
+                  }
+                  return newButton;
+                }
+                return { ...button, [field]: value };
+              }
+              return button;
+            }) || []
+          };
+        }
+        return card;
+      })
+    }));
+  };
+
+
+  const removeCarouselCardButton = (cardIndex: number, buttonIndex: number) => {
+    setForm(prev => ({
+      ...prev,
+      carouselCards: prev.carouselCards.map((card, index) => {
+        if (index === cardIndex) {
+          return {
+            ...card,
+            buttons: card.buttons?.filter((_, bIndex) => bIndex !== buttonIndex) || []
+          };
+        }
+        return card;
+      })
+    }));
+  };
+
+  const handleCarouselFileUpload = async (file: File, cardIndex: number) => {
+    if (!file) return;
+
+    const maxSize = 16 * 1024 * 1024; // 16MB
+    if (file.size > maxSize) {
+      toast.error('File size must be less than 16MB');
+      return;
+    }
+
+    const allowedTypes = {
+      'IMAGE': ['image/jpeg', 'image/png', 'image/gif'],
+      'VIDEO': ['video/mp4', 'video/avi', 'video/mov']
+    };
+
+    let detectedMediaType: 'IMAGE' | 'VIDEO' | null = null;
+    for (const [type, mimeTypes] of Object.entries(allowedTypes)) {
+      if (mimeTypes.includes(file.type)) {
+        detectedMediaType = type as 'IMAGE' | 'VIDEO';
+        break;
+      }
+    }
+
+    if (!detectedMediaType) {
+      toast.error('Unsupported file type. Only images and videos are allowed for carousel.');
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('messaging_product', 'whatsapp');
+      formData.append('type', file.type);
+
+      const response = await fetch('/api/media-handle', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        updateCarouselCard(cardIndex, 'header', {
+          format: detectedMediaType,
+          mediaHandle: data.h,
+          mediaUrl: data.url || URL.createObjectURL(file)
+        });
+        toast.success('File uploaded successfully');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to upload file');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -845,7 +1207,128 @@ export default function CreateTemplatePage() {
         return;
       }
 
-      // For non-authentication templates, validate content
+      // Update the carousel creation part in handleCreateTemplate
+      if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
+        if (!form.content) {
+          toast.error('Please add body text for your carousel message');
+          return;
+        }
+
+        if (form.carouselCards.length === 0) {
+          toast.error('Please add at least one carousel card');
+          return;
+        }
+
+        if (form.carouselCards.some(card => !card.body.text)) {
+          toast.error('Please add content to all carousel cards');
+          return;
+        }
+        // Validate that all cards have the same number of buttons
+        const buttonCounts = form.carouselCards.map(card => card.buttons?.length || 0);
+        const firstButtonCount = buttonCounts[0];
+        const allSameButtonCount = buttonCounts.every(count => count === firstButtonCount);
+
+        if (!allSameButtonCount) {
+          toast.error('All carousel cards must have the same number of buttons');
+          return;
+        }
+
+        // Build carousel components
+        const components = [];
+
+        // Add body component (required for carousel)
+        const bodyComponent: any = {
+          type: 'BODY',
+          text: form.content
+        };
+
+        // Add examples for body variables if any
+        if (form.variables.length > 0) {
+          bodyComponent.example = {
+            body_text: [form.variables.map(v => v.example || 'Sample')]
+          };
+        }
+
+        components.push(bodyComponent);
+
+        // Add carousel component with correct structure
+        const carouselComponent: any = {
+          type: 'CAROUSEL',
+          cards: form.carouselCards.map(card => {
+            const cardData: any = {
+              body: {
+                text: card.body.text
+              }
+            };
+
+            // Add header if present
+            if (card.header && card.header.mediaHandle) {
+              cardData.header = {
+                format: card.header.format,
+                example: {
+                  header_handle: [card.header.mediaHandle]
+                }
+              };
+            }
+
+            // Add buttons if present
+            if (card.buttons && card.buttons.length > 0) {
+              cardData.buttons = card.buttons.map(button => {
+                const buttonObj: any = {
+                  type: button.type,
+                  text: button.text
+                };
+
+                if (button.type === 'URL') {
+                  buttonObj.url = button.url;
+                } else if (button.type === 'PHONE_NUMBER') {
+                  buttonObj.phone_number = button.phone_number;
+                }
+
+                return buttonObj;
+              });
+            }
+
+            return cardData;
+          })
+        };
+
+        components.push(carouselComponent);
+
+        // Add footer if present
+        if (footerText) {
+          components.push({
+            type: 'FOOTER',
+            text: footerText
+          });
+        }
+
+        const response = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: form.name,
+            category: form.category,
+            language: form.language,
+            wabaId: form.wabaId,
+            components: components
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          toast.success('Carousel template created successfully! It will be reviewed by WhatsApp.');
+          router.push('/templates');
+        } else {
+          toast.error(data.error || 'Failed to create carousel template');
+          console.error('API error details:', data.details);
+        }
+
+        setCreating(false);
+        return;
+      }
+      // For non-authentication and non-carousel templates, validate content
       if (!form.content) {
         toast.error('Please enter message content');
         return;
@@ -950,6 +1433,7 @@ export default function CreateTemplatePage() {
       setCreating(false);
     }
   };
+
   const handleNext = () => {
     // Validation for each step
     if (currentStep === 1) {
@@ -963,17 +1447,57 @@ export default function CreateTemplatePage() {
         return;
       }
 
-      // For authentication templates, skip content, variables, and buttons steps
+      // For authentication templates, skip to creation
       if (form.category === 'AUTHENTICATION') {
         handleCreateTemplate();
         return;
       }
+
+      // For carousel templates, go to carousel cards step
+      if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
+        setCurrentStep(2);
+        return;
+      }
     }
 
-    if (currentStep === 2 && form.category !== 'AUTHENTICATION') {
-      if (!form.content) {
-        toast.error('Please enter message content');
+    if (currentStep === 2) {
+      if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
+        // Validate body content
+        if (!form.content) {
+          toast.error('Please add body text for your carousel message');
+          return;
+        }
+
+        // Validate carousel cards
+        if (form.carouselCards.length === 0) {
+          toast.error('Please add at least one carousel card');
+          return;
+        }
+
+        if (form.carouselCards.some(card => !card.body.text)) {
+          toast.error('Please add content to all carousel cards');
+          return;
+        }
+        // Validate that all cards have the same number of buttons
+        const buttonCounts = form.carouselCards.map(card => card.buttons?.length || 0);
+        const firstButtonCount = buttonCounts[0];
+        const allSameButtonCount = buttonCounts.every(count => count === firstButtonCount);
+
+        if (!allSameButtonCount) {
+          toast.error('All carousel cards must have the same number of buttons');
+          return;
+        }
+
+        // For carousel, skip to creation since no individual buttons/variables
+
+        handleCreateTemplate();
         return;
+      } else {
+        // Regular template content validation
+        if (!form.content) {
+          toast.error('Please enter message content');
+          return;
+        }
       }
     }
 
@@ -1079,21 +1603,26 @@ export default function CreateTemplatePage() {
     }));
   };
 
-  const insertFormatting = (startTag: string, endTag: string, placeholder: string = '') => {
-    const textarea = document.getElementById('content') as HTMLTextAreaElement;
+  const insertFormatting = (startTag: string, endTag: string, placeholder: string = '', textareaId: string = 'content') => {
+    const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selectedText = form.content.substring(start, end);
+    const selectedText = textarea.value.substring(start, end);
     const textToInsert = selectedText || placeholder;
 
-    const beforeText = form.content.substring(0, start);
-    const afterText = form.content.substring(end);
+    const beforeText = textarea.value.substring(0, start);
+    const afterText = textarea.value.substring(end);
 
     const newText = beforeText + startTag + textToInsert + endTag + afterText;
 
-    setForm(prev => ({ ...prev, content: newText }));
+    // Update the form content based on which textarea we're working with
+    if (textareaId === 'carousel-content') {
+      setForm(prev => ({ ...prev, content: newText }));
+    } else {
+      setForm(prev => ({ ...prev, content: newText }));
+    }
 
     setTimeout(() => {
       const newCursorPos = start + startTag.length + textToInsert.length;
@@ -1102,7 +1631,8 @@ export default function CreateTemplatePage() {
     }, 0);
   };
 
-  // Helper function to get category name
+
+
   const getCategoryName = (categoryId: string) => {
     const category = categoryOptions.find(c => c.id === categoryId);
     return category ? category.name : categoryId;
@@ -1151,6 +1681,58 @@ export default function CreateTemplatePage() {
                     <Check className="w-3 h-3" />
                   </div>
                   <span className="font-medium text-white">Authentication Template</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      );
+    }
+
+    // For carousel templates, show different steps
+    if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
+      return (
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-medium">Template Setup Progress</h2>
+            <span className="text-sm font-medium">{progress}% complete</span>
+          </div>
+
+          <Progress value={progress} className="h-2 mb-4" />
+
+          <Tabs
+            value={currentStep.toString()}
+            onValueChange={(value) => setCurrentStep(parseInt(value))}
+            className="w-full"
+          >
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger
+                value="1"
+                className="data-[state=active]:bg-primary data-[state=active]:text-white gap-2">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                    currentStep >= 1 ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
+                  )}>
+                    {currentStep > 1 ? <Check className="w-3 h-3" /> : "1"}
+                  </div>
+                  <span className="hidden md:inline">Basic Info</span>
+                </div>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="2"
+                disabled={currentStep < 2}
+                className="data-[state=active]:bg-primary data-[state=active]:text-white gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                    currentStep >= 2 ? "bg-green-600 text-white" : "bg-gray-200 text-gray-600"
+                  )}>
+                    {currentStep > 2 ? <Check className="w-3 h-3" /> : "2"}
+                  </div>
+                  <span className="hidden md:inline">Carousel Cards</span>
                 </div>
               </TabsTrigger>
             </TabsList>
@@ -1220,104 +1802,162 @@ export default function CreateTemplatePage() {
     );
   };
 
+  // Helper function to render the basic info step
+  const renderBasicInfoStep = () => (
+    <div className="space-y-8">
+      {/* Template Name */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="bg-primary/10 rounded-full p-2">
+            <Type className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="text-lg font-medium">Template Details</h3>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <Label className="text-base font-medium mb-2 flex items-center">
+              Template name
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="inline w-4 h-4 ml-1 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-sm">
+                    <p>Only lowercase letters, numbers, and underscores are allowed</p>
+                    <p className="mt-1 text-xs">Example: {form.category === 'CAROUSEL' ? 'product_carousel_2024' : 'summer_sale_2024'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <Input
+              placeholder={`Enter template name (e.g., ${form.category === 'CAROUSEL' ? 'product_showcase' : 'summer_sale_2024'})`}
+              value={form.name}
+              onChange={handleNameChange}
+              className={cn("mb-2", nameError && "border-red-500 focus-visible:ring-red-500")}
+            />
+            <div className="flex items-start gap-2">
+              {nameError ? (
+                <div className="flex items-center text-xs text-red-500">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  {nameError}
+                </div>
+              ) : (
+                <div className="flex items-center text-xs text-gray-500">
+                  <Check className="h-3 w-3 mr-1 text-green-500" />
+                  Only lowercase letters(a), numbers(0) and underscore (_) allowed
+                </div>
+              )}
+              <div className="flex-1 text-right text-xs text-gray-500">{form.name.length}/512</div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Category selection */}
+          <div>
+            <Label className="text-base font-medium mb-2">Category</Label>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose a category that describes your message template.
+              <a href="#" className="text-primary ml-1 hover:underline">Learn more about categories</a>
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+              {categoryOptions.map((category) => (
+                <div
+                  key={category.id}
+                  className={cn(
+                    "relative p-2 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md",
+                    form.category === category.id
+                      ? "border-primary bg-primary/5"
+                      : "border-gray-200 hover:border-gray-300"
+                  )}
+                  onClick={() => setForm(prev => ({
+                    ...prev,
+                    category: category.id,
+                    // Reset carousel cards when switching categories
+                    carouselCards: category.id === 'CAROUSEL' ? [] : prev.carouselCards
+                  }))}
+                >
+                  {form.category === category.id && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="h-5 w-5 text-primary" />
+                    </div>
+                  )}
+                  <div className="flex  items-center  gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      {category.icon}
+                    </div>
+                    <div>
+                      <h4 className="font-medium">{category.name}</h4>
+                      {/* <p className="text-sm text-gray-500 mt-1">{category.description}</p> */}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Language and Business */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="bg-primary/10 rounded-full p-2">
+            <Globe className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="text-lg font-medium">Configuration</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <Label className="text-base font-medium mb-2">Language</Label>
+            <p className="text-sm text-gray-500 mb-3">Choose language for this template</p>
+            <Select value={form.language} onValueChange={(value) => setForm(prev => ({ ...prev, language: value }))}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a language" />
+              </SelectTrigger>
+              <SelectContent>
+                {languageOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-base font-medium mb-2">Business</Label>
+            <p className="text-sm text-gray-500 mb-3">Choose business to apply this template</p>
+            <Select value={form.wabaId} onValueChange={(value) => setForm(prev => ({ ...prev, wabaId: value }))}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a business" />
+              </SelectTrigger>
+              <SelectContent>
+                {wabaAccounts.map(account => (
+                  <SelectItem key={account.wabaId} value={account.wabaId}>
+                    {account.businessName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   // Render step content
   const renderStepContent = () => {
     // For authentication templates, only show the first step with auth settings
     if (form.category === 'AUTHENTICATION') {
       return (
         <div className="space-y-8">
-          {/* Template Name */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-primary/10 rounded-full p-2">
-                <Type className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium">Template Details</h3>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label className="text-base font-medium mb-2 flex items-center">
-                  Template name
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="inline w-4 h-4 ml-1 text-gray-400 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-sm">
-                        <p>Only lowercase letters, numbers, and underscores are allowed</p>
-                        <p className="mt-1 text-xs">Example: verify_otp_code</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <Input
-                  placeholder="Enter template name (e.g., verify_otp_code)"
-                  value={form.name}
-                  onChange={handleNameChange}
-                  className={cn("mb-2", nameError && "border-red-500 focus-visible:ring-red-500")}
-                />
-                <div className="flex items-start gap-2">
-                  {nameError ? (
-                    <div className="flex items-center text-xs text-red-500">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      {nameError}
-                    </div>
-                  ) : (
-                    <div className="flex items-center text-xs text-gray-500">
-                      <Check className="h-3 w-3 mr-1 text-green-500" />
-                      Only lowercase letters(a), numbers(0) and underscore (_) allowed
-                    </div>
-                  )}
-                  <div className="flex-1 text-right text-xs text-gray-500">{form.name.length}/512</div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Language and Business */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <Label className="text-base font-medium mb-2">Language</Label>
-                  <p className="text-sm text-gray-500 mb-3">Choose language for this template</p>
-                  <Select value={form.language} onValueChange={(value) => setForm(prev => ({ ...prev, language: value }))}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languageOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-base font-medium mb-2">Business</Label>
-                  <p className="text-sm text-gray-500 mb-3">Choose business to apply this template</p>
-                  <Select value={form.wabaId} onValueChange={(value) => setForm(prev => ({ ...prev, wabaId: value }))}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a business" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wabaAccounts.map(account => (
-                        <SelectItem key={account.wabaId} value={account.wabaId}>
-                          {account.businessName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Authentication Settings */}
+          {renderBasicInfoStep()}
           {renderAuthenticationSettings()}
 
-          {/* Ready to Submit Section */}
+          {/* Ready to Submit Section for Authentication */}
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4">
               <div className="bg-green-100 rounded-full p-2">
@@ -1365,148 +2005,448 @@ export default function CreateTemplatePage() {
       );
     }
 
-    // Standard template steps
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-8">
-            {/* Template Name */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="bg-primary/10 rounded-full p-2">
-                  <Type className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium">Template Details</h3>
-              </div>
+    // For carousel templates
+    if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
+      switch (currentStep) {
+        case 1:
+          return renderBasicInfoStep();
 
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-base font-medium mb-2 flex items-center">
-                    Template name
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="inline w-4 h-4 ml-1 text-gray-400 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-sm">
-                          <p>Only lowercase letters, numbers, and underscores are allowed</p>
-                          <p className="mt-1 text-xs">Example: stock1_clearance_sale</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </Label>
-                  <Input
-                    placeholder="Enter template name (e.g., summer_sale_2024)"
-                    value={form.name}
-                    onChange={handleNameChange}
-                    className={cn("mb-2", nameError && "border-red-500 focus-visible:ring-red-500")}
+        case 2:
+          return (
+            <div className="space-y-8">
+              {/* Body Section for Carousel */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-primary/10 rounded-full p-2">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium">Message Body</h3>
+                  <Badge variant="default" className="ml-auto">Required</Badge>
+                </div>
+
+                <p className="text-sm text-gray-500 mb-4">
+                  Add introductory text that will appear before your carousel cards. This helps provide context for your carousel.
+                </p>
+                {form.category === 'CAROUSEL_UTILITY' && ' For utility carousels, focus on informational content about orders, accounts, or services.'}
+                <div className="relative">
+                  <Textarea
+                    id="carousel-content"
+                    placeholder="Type your message content here... This will appear before the carousel cards."
+                    rows={4}
+                    value={form.content}
+                    onChange={(e) => setForm(prev => ({ ...prev, content: e.target.value }))}
+                    className="resize-none font-medium"
+                    maxLength={1024}
                   />
-                  <div className="flex items-start gap-2">
-                    {nameError ? (
-                      <div className="flex items-center text-xs text-red-500">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        {nameError}
+
+                  <div className="absolute bottom-2 right-2 bg-white rounded-md shadow-sm border">
+                    <TooltipProvider>
+                      <div className="flex">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => insertFormatting('*', '*', 'bold', 'carousel-content')}
+                              className="px-2 h-8"
+                            >
+                              <Bold className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Bold text</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => insertFormatting('_', '_', 'italic', 'carousel-content')}
+                            className="px-2 h-8"
+                          >
+                            <Italic className="w-4 h-4" />
+                          </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Italic text</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                           <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => insertFormatting('~', '~', 'strikethrough', 'carousel-content')}
+                            className="px-2 h-8"
+                          >
+                            <Strikethrough className="w-4 w-4" />
+                          </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Strikethrough text</TooltipContent>
+                        </Tooltip>
                       </div>
-                    ) : (
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Check className="h-3 w-3 mr-1 text-green-500" />
-                        Only lowercase letters(a), numbers(0) and underscore (_) allowed
-                      </div>
-                    )}
-                    <div className="flex-1 text-right text-xs text-gray-500">{form.name.length}/512</div>
+                    </TooltipProvider>
                   </div>
                 </div>
 
-                <Separator />
+                <div className="flex justify-between items-center mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addVariable}
+                    className="text-primary border-primary/30"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add variable
+                  </Button>
 
-                {/* Category selection */}
-                <div>
-                  <Label className="text-base font-medium mb-2">Category</Label>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Choose a category that describes your message template.
-                    <a href="#" className="text-primary ml-1 hover:underline">Learn more about categories</a>
-                  </p>
+                  <div className="flex items-center text-xs">
+                    <div className={cn(
+                      "text-gray-500",
+                      form.content.length > 1000 ? "text-red-500" : form.content.length > 800 ? "text-amber-500" : ""
+                    )}>
+                      {form.content.length}/1024 characters
+                    </div>
+                  </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {categoryOptions.map((category) => (
-                      <div
-                        key={category.id}
-                        className={cn(
-                          "relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md",
-                          form.category === category.id
-                            ? "border-primary bg-primary/5"
-                            : "border-gray-200 hover:border-gray-300"
-                        )}
-                        onClick={() => setForm(prev => ({ ...prev, category: category.id }))}
-                      >
-                        {form.category === category.id && (
-                          <div className="absolute top-2 right-2">
-                            <CheckCircle className="h-5 w-5 text-primary" />
-                          </div>
-                        )}
-                        <div className="flex flex-col items-start gap-3">
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                            {category.icon}
-                          </div>
+                {/* Show variables if any */}
+                {form.variables.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Variables in your message:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {form.variables.map((variable, index) => (
+                        <Badge key={index} variant="outline" className="text-blue-700 border-blue-300">
+                          {`{{${index + 1}}}`} → {variable.example || 'No example set'}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Carousel Cards Section */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-primary/10 rounded-full p-2">
+                    <LayoutIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium">Carousel Cards</h3>
+                  <Badge variant="default" className="ml-auto">Required</Badge>
+                </div>
+
+
+                <p className="text-sm text-gray-500 mb-6">
+                  Create multiple cards that users can swipe through. Each card can have an image/video, text, and up to 2 buttons.
+                  Minimum 1 card required, maximum 10 cards allowed.
+                </p>
+                {/* Show button count validation warning if cards have different button counts */}
+                {form.carouselCards.length > 1 && (() => {
+                  const buttonCounts = form.carouselCards.map(card => card.buttons?.length || 0);
+                  const firstButtonCount = buttonCounts[0];
+                  const allSameButtonCount = buttonCounts.every(count => count === firstButtonCount);
+
+                  if (!allSameButtonCount) {
+                    return (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                           <div>
-                            <h4 className="font-medium">{category.name}</h4>
-                            <p className="text-sm text-gray-500 mt-1">{category.description}</p>
+                            <h4 className="font-medium text-red-800 mb-1">Button Count Mismatch</h4>
+                            <p className="text-sm text-red-700">
+                              All carousel cards must have the same number of buttons. Currently you have cards with {buttonCounts.join(', ')} buttons respectively.
+                            </p>
                           </div>
                         </div>
                       </div>
+                    );
+                  }
+                  return null;
+                })()}
+                {/* Rest of the carousel cards implementation stays the same */}
+                {form.carouselCards.length === 0 ? (
+                  <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                    <div className="bg-gray-100 rounded-full p-3 w-16 h-16 mx-auto flex items-center justify-center mb-3">
+                      <LayoutIcon className="h-6 w-6 text-gray-500" />
+                    </div>
+                    <h4 className="text-lg font-medium mb-1">No cards added</h4>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Add your first carousel card to get started
+                    </p>
+                    <Button onClick={addCarouselCard} className="bg-primary hover:bg-primary/90">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add your first card
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {form.carouselCards.map((card, cardIndex) => (
+                      <div key={cardIndex} className="border rounded-lg p-6 relative bg-gray-50">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-medium">
+                              {cardIndex + 1}
+                            </div>
+                            Card {cardIndex + 1}
+                          </h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-500 hover:text-red-500 hover:bg-red-50"
+                            onClick={() => removeCarouselCard(cardIndex)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        {/* Card Media */}
+                        <div className="mb-6">
+                          <Label className="text-sm font-medium mb-2 block">Card Media (Optional)</Label>
+                          <p className="text-xs text-gray-500 mb-3">Add an image or video to make your card more engaging</p>
+
+                          <div className="flex flex-col sm:flex-row gap-4 items-start">
+                            <div className="w-full sm:w-auto">
+                              <Input
+                                type="file"
+                                accept="image/*,video/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleCarouselFileUpload(file, cardIndex);
+                                }}
+                                disabled={uploading}
+                                className="hidden"
+                                id={`card-media-${cardIndex}`}
+                              />
+                              <Label
+                                htmlFor={`card-media-${cardIndex}`}
+                                className={cn(
+                                  "cursor-pointer w-full sm:w-auto inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                                  "bg-primary text-white hover:bg-primary/90"
+                                )}
+                              >
+                                {uploading ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload media
+                                  </>
+                                )}
+                              </Label>
+                            </div>
+
+                            {card.header?.mediaHandle && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                <div>
+                                  <span className="text-sm text-green-700">Media uploaded successfully</span>
+                                  <p className="text-xs text-green-600">Ready to use in carousel</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Content */}
+                        <div className="mb-6">
+                          <Label className="text-sm font-medium mb-2 block">Card Content *</Label>
+                          <Textarea
+                            placeholder="Enter content for this card..."
+                            rows={3}
+                            value={card.body.text}
+                            onChange={(e) => updateCarouselCard(cardIndex, 'body.text', e.target.value)}
+                            className="resize-none"
+                            maxLength={160}
+                          />
+                          <div className="flex justify-end text-xs text-gray-500 mt-1">
+                            {card.body.text.length}/160 characters
+                          </div>
+                        </div>
+
+                        {/* Card Buttons */}
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <Label className="text-sm font-medium">Card Buttons (Optional)</Label>
+                            <Badge variant="outline" className="text-xs">Max 2 per card</Badge>
+                          </div>
+
+                          {card.buttons && card.buttons.length > 0 ? (
+                            <div className="space-y-4">
+                              {card.buttons.map((button, buttonIndex) => (
+                                <div key={buttonIndex} className="border rounded-lg p-4 bg-white">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <span className="text-sm font-medium">Button {buttonIndex + 1}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-500"
+                                      onClick={() => removeCarouselCardButton(cardIndex, buttonIndex)}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <Label className="text-xs mb-1 block">Button type</Label>
+                                      <Select
+                                        value={button.type}
+                                        onValueChange={(value) => updateCarouselCardButton(cardIndex, buttonIndex, 'type', value)}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="QUICK_REPLY">
+                                            <div className="flex items-center">
+                                              <MessageSquare className="h-4 w-4 mr-2 text-purple-500" />
+                                              Quick reply
+                                            </div>
+                                          </SelectItem>
+                                          <SelectItem value="URL">
+                                            <div className="flex items-center">
+                                              <ExternalLink className="h-4 w-4 mr-2 text-blue-500" />
+                                              Call-to-Action (URL)
+                                            </div>
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    <div>
+                                      <Label className="text-xs mb-1 block">Button text</Label>
+                                      <div className="relative">
+                                        <Input
+                                          value={button.text}
+                                          onChange={(e) => updateCarouselCardButton(cardIndex, buttonIndex, 'text', e.target.value)}
+                                          maxLength={20}
+                                          placeholder={button.type === 'URL' ? 'Visit Website' : 'Reply'}
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                          {button.text.length}/20
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {button.type === 'URL' && (
+                                    <div className="mt-3">
+                                      <Label className="text-xs mb-1 block">Website URL</Label>
+                                      <Input
+                                        value={button.url || ''}
+                                        onChange={(e) => updateCarouselCardButton(cardIndex, buttonIndex, 'url', e.target.value)}
+                                        placeholder="https://example.com"
+                                      />
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        Enter the full URL where users will be directed when they tap this button
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {button.type === 'QUICK_REPLY' && (
+                                    <div className="mt-3 p-3 bg-purple-50 rounded-lg">
+                                      <p className="text-xs text-purple-700">
+                                        <Info className="inline h-3 w-3 mr-1" />
+                                        Quick reply buttons send the button text back as a message when tapped
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
+
+                          {(!card.buttons || card.buttons.length < 2) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addButtonToCarouselCard(cardIndex)}
+                              className="w-full border-dashed"
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Add button to card
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     ))}
+
+
+                    <Button
+                      variant="outline"
+                      onClick={addCarouselCard}
+                      className="w-full py-6 border-dashed"
+                      disabled={form.carouselCards.length >= 10}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {form.carouselCards.length >= 10 ?
+                        "Maximum cards reached (10)" :
+                        `Add another card (${form.carouselCards.length}/10)`}
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-amber-800 mb-1">Important Carousel Requirements</h4>
+                    <ul className="text-sm text-amber-700 space-y-1">
+                      <li>• All cards must have the same number of buttons</li>
+                      <li>• Maximum 10 cards, minimum 1 card required</li>
+                      <li>• Each card can have up to 2 buttons</li>
+                      <li>• Only Quick Reply and Call-to-Action (URL) buttons allowed</li>
+                      <li>• Carousel templates do not support footer text</li>
+                    </ul>
                   </div>
                 </div>
               </div>
+
+              {/* Footer Section for Carousel */}
+              {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <AlignLeft className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium">Footer</h3>
+                  </div>
+                  <Badge variant="outline" className="text-gray-500">Optional</Badge>
+                </div>
+
+                <p className="text-sm text-gray-500 mb-4">
+                  Add footer text that will appear at the bottom of your carousel message.
+                </p>
+
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Enter footer text (e.g., Thank you for your business)"
+                    value={footerText}
+                    onChange={(e) => setFooterText(e.target.value)}
+                    maxLength={60}
+                  />
+                  <div className="flex justify-end text-xs text-gray-500">
+                    {footerText.length}/60 characters
+                  </div>
+                </div>
+              </div> */}
             </div>
+          );
 
-            {/* Language and Business */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="bg-primary/10 rounded-full p-2">
-                  <Globe className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium">Configuration</h3>
-              </div>
+        default:
+          return null;
+      }
+    }
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <Label className="text-base font-medium mb-2">Language</Label>
-                  <p className="text-sm text-gray-500 mb-3">Choose language for this template</p>
-                  <Select value={form.language} onValueChange={(value) => setForm(prev => ({ ...prev, language: value }))}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languageOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-base font-medium mb-2">Business</Label>
-                  <p className="text-sm text-gray-500 mb-3">Choose business to apply this template</p>
-                  <Select value={form.wabaId} onValueChange={(value) => setForm(prev => ({ ...prev, wabaId: value }))}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a business" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wabaAccounts.map(account => (
-                        <SelectItem key={account.wabaId} value={account.wabaId}>
-                          {account.businessName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+    // Standard template steps (existing implementation for other template types)
+    switch (currentStep) {
+      case 1:
+        return renderBasicInfoStep();
 
       case 2:
         return (
@@ -1715,7 +2655,7 @@ export default function CreateTemplatePage() {
                             onClick={() => insertFormatting('~', '~', 'strikethrough')}
                             className="px-2 h-8"
                           >
-                            <Underline className="w-4 h-4" />
+                            <Strikethrough className="w-4 h-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Strikethrough text</TooltipContent>
@@ -2178,8 +3118,12 @@ export default function CreateTemplatePage() {
             </div>
           </div>
         );
+
+      default:
+        return null;
     }
-  }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50">
@@ -2217,7 +3161,7 @@ export default function CreateTemplatePage() {
 
               {/* Navigation Buttons */}
               <div className="flex justify-between mt-6">
-                {currentStep > 1 && form.category !== 'AUTHENTICATION' && (
+                {currentStep > 1 && form.category !== 'AUTHENTICATION' && form.category !== 'CAROUSEL' && (
                   <Button variant="outline" onClick={handleBack}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
@@ -2237,14 +3181,19 @@ export default function CreateTemplatePage() {
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Creating...
                     </>
-                  ) : (form.category === 'AUTHENTICATION' || currentStep === 4) ? (
-                    'Submit Template'
                   ) : (
-                    <>
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
+                    (form.category === 'AUTHENTICATION' || currentStep === 4 ||
+                      ((form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') && currentStep === 2)
+                    ) ? (
+                      'Submit Template'
+                    ) : (
+                      <>
+                        Next
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )
                   )}
+
                 </Button>
               </div>
             </div>

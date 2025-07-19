@@ -1,10 +1,9 @@
-// src/app/api/templates/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Template from '@/models/Template';
+import { sendTemplateCreationNotification } from '@/lib/notifications';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -92,28 +91,149 @@ export async function POST(req: NextRequest) {
           ]
         });
       }
-    } else {
-      // For other templates, include components
-      if (!components || !Array.isArray(components) || components.length === 0) {
-        return NextResponse.json({
-          error: 'Components must be a non-empty array for non-authentication templates'
-        }, { status: 400 });
-      }
-
-      interaktPayload.components = components.map(component => {
-        // Handle media header components
-        if (component.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
-          return {
-            type: 'HEADER',
-            format: component.format,
-            example: {
-              header_handle: [component.mediaHandle || component.example?.header_handle?.[0]]
-            }
-          };
+    } else // For carousel templates - match the exact working example structure
+      if (category === 'CAROUSEL' || category === 'CAROUSEL_UTILITY') {
+        // Use appropriate category based on selection
+        if (category === 'CAROUSEL') {
+          interaktPayload.category = 'MARKETING';
+        } else if (category === 'CAROUSEL_UTILITY') {
+          interaktPayload.category = 'UTILITY';
         }
-        return component;
-      });
-    }
+
+        if (!components || !Array.isArray(components) || components.length === 0) {
+          return NextResponse.json({
+            error: 'Components must be a non-empty array for carousel templates'
+          }, { status: 400 });
+        }
+
+        const finalComponents = [];
+
+        components.forEach(component => {
+          if (component.type === 'BODY') {
+            finalComponents.push({
+              type: 'BODY',
+              text: component.text,
+              ...(component.example && { example: component.example })
+            });
+          } else if (component.type === 'CAROUSEL') {
+            // Build carousel with exact structure from working example
+            const carouselComponent = {
+              type: 'CAROUSEL',
+              cards: []
+            };
+
+            // Process each card to match exactly
+            component.cards.forEach((card: any, cardIndex: number) => {
+              const cardData = {
+                components: []
+              };
+
+              // Add header component if present
+              if (card.header && card.header.example && card.header.example.header_handle) {
+                cardData.components.push({
+                  type: 'HEADER',
+                  format: card.header.format,
+                  example: {
+                    header_handle: card.header.example.header_handle
+                  }
+                });
+              }
+
+              // Add body component - only add what's actually provided
+              const bodyComponent: any = {
+                type: 'BODY',
+                text: card.body.text
+              };
+
+              // Only add examples if there are actual variables in the text
+              const variableMatches = card.body.text.match(/\{\{(\d+)\}\}/g);
+              if (variableMatches && variableMatches.length > 0) {
+                // Use the parent body examples if they exist
+                const parentBodyComponent = components.find(c => c.type === 'BODY');
+                if (parentBodyComponent && parentBodyComponent.example && parentBodyComponent.example.body_text) {
+                  bodyComponent.example = {
+                    body_text: parentBodyComponent.example.body_text
+                  };
+                }
+                // If no parent examples but variables exist, we might need examples
+                // But only add if we have actual example data from the UI
+              }
+              // Don't add default variables or examples if none exist
+
+              cardData.components.push(bodyComponent);
+
+              // Add buttons - Only if buttons are actually provided by the user
+              if (card.buttons && card.buttons.length > 0) {
+                const buttonsComponent = {
+                  type: 'BUTTONS',
+                  buttons: card.buttons.map((button: any) => {
+                    if (button.type === 'URL') {
+                      return {
+                        type: 'URL',
+                        text: button.text,
+                        url: button.url
+                      };
+                    } else {
+                      return {
+                        type: 'QUICK_REPLY',
+                        text: button.text
+                      };
+                    }
+                  })
+                };
+                cardData.components.push(buttonsComponent);
+              }
+
+              carouselComponent.cards.push(cardData);
+            });
+
+            finalComponents.push(carouselComponent);
+          } else if (component.type === 'FOOTER') {
+            // Only add footer if text is provided
+            if (component.text) {
+              finalComponents.push({
+                type: 'FOOTER',
+                text: component.text
+              });
+            }
+          } else {
+            // For other component types, add them as-is but clean up empty fields
+            const cleanComponent = { ...component };
+
+            // Remove empty or undefined fields
+            Object.keys(cleanComponent).forEach(key => {
+              if (cleanComponent[key] === undefined || cleanComponent[key] === null || cleanComponent[key] === '') {
+                delete cleanComponent[key];
+              }
+            });
+
+            finalComponents.push(cleanComponent);
+          }
+        });
+
+        interaktPayload.components = finalComponents;
+      } else {
+        // For other templates, include components
+        if (!components || !Array.isArray(components) || components.length === 0) {
+          return NextResponse.json({
+            error: 'Components must be a non-empty array for non-authentication templates'
+          }, { status: 400 });
+        }
+
+        interaktPayload.components = components.map(component => {
+          // Handle media header components
+          if (component.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
+            return {
+              type: 'HEADER',
+              format: component.format,
+              example: {
+                header_handle: [component.mediaHandle || component.example?.header_handle?.[0]]
+              }
+            };
+          }
+          return component;
+        });
+      }
 
     console.log('Sending payload to Interakt:', JSON.stringify(interaktPayload, null, 2));
     console.log('Using WABA ID:', wabaId);
@@ -190,6 +310,17 @@ export async function POST(req: NextRequest) {
     wabaAccount.templateCount = (wabaAccount.templateCount || 0) + 1;
     await user.save();
 
+    // Send email notifications (async, don't wait for it)
+    sendTemplateCreationNotification(decoded.id, {
+      name: template.name,
+      category: template.category,
+      language: template.language,
+      status: template.status,
+      wabaId: template.wabaId
+    }).catch(error => {
+      console.error('Email notification failed:', error);
+    });
+
     return NextResponse.json({
       success: true,
       template: {
@@ -221,7 +352,6 @@ export async function GET(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-
 
     const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
@@ -355,32 +485,36 @@ export async function GET(req: NextRequest) {
       );
     }
     console.log(`Found ${filteredTemplates.length} templates after filtering`);
+
     return NextResponse.json({
       success: true,
       templates: filteredTemplates.map(template => {
         const hasMediaHeader = template.components.some((c: any) => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format));
+        const isCarousel = template.category === 'CAROUSEL';
+
         return {
           id: template._id,
           name: template.name,
           category: template.category.toLowerCase(),
           language: template.language,
           status: template.status.toLowerCase(),
-          content: template.components.find((c: any) => c.type === 'BODY')?.text || '',
-          variables: template.components.find((c: any) => c.type === 'BODY')?.text?.match(/\{\{(\d+)\}\}/g)?.length || 0,
+          content: isCarousel
+            ? `${template.components.find((c: any) => c.type === 'CAROUSEL')?.cards?.length || 0} cards`
+            : template.components.find((c: any) => c.type === 'BODY')?.text || '',
+          variables: isCarousel
+            ? 0
+            : template.components.find((c: any) => c.type === 'BODY')?.text?.match(/\{\{(\d+)\}\}/g)?.length || 0,
           createdAt: template.createdAt,
           updatedAt: template.updatedAt,
           approvedAt: template.approvedAt,
           lastUsed: template.lastUsed,
           useCount: template.useCount,
           rejectionReason: template.rejectionReason,
-          type: hasMediaHeader ? 'media' : 'text',
+          type: isCarousel ? 'carousel' : hasMediaHeader ? 'media' : 'text',
           mediaType: hasMediaHeader ? template.components.find((c: any) => c.type === 'HEADER')?.format : null,
           createdBy: template.createdBy || "Unknown",
-
-          // 👇 ADD THIS LINE
           components: template.components
         };
-
       })
     });
 

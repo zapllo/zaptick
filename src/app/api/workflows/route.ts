@@ -3,6 +3,7 @@ import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
 import Workflow from '@/models/Workflow';
 import User from '@/models/User';
+import { sendWorkflowCreationNotification } from '@/lib/notifications';
 
 export async function GET(req: NextRequest) {
   try {
@@ -97,6 +98,16 @@ export async function POST(req: NextRequest) {
       viewport: viewport || { x: 0, y: 0, zoom: 1 },
       isActive: false
     });
+
+    // Send email notifications (async, don't wait for it)
+    sendWorkflowCreationNotification(decoded.id, {
+      name,
+      description,
+      wabaId
+    }).catch(error => {
+      console.error('Email notification failed:', error);
+    });
+
 
     return NextResponse.json({
       success: true,

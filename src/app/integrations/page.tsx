@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface Integration {
   id: string;
@@ -45,10 +46,10 @@ const integrations: Integration[] = [
     category: 'Payment Provider',
     description: 'Create a frictionless payment experience on WhatsApp to improve conversions',
     pricing: 'free',
-    logo: '/integrations/whatsapp-pay.png',
+    logo: '/integrations/whatsapp.webp',
     status: 'available',
     hasVideo: true,
-    videoUrl: 'https://example.com/whatsapp-pay-video',
+    videoUrl: '',
     setupTime: '5 minutes',
     rating: 4.8,
     usersCount: '10K+',
@@ -121,7 +122,7 @@ const integrations: Integration[] = [
     category: 'Data Storage',
     description: 'Send automatic WhatsApp notifications whenever a new row is added in a sheet',
     pricing: 'free',
-    logo: '/integrations/google-sheets.png',
+    logo: '/integrations/sheets.png',
     status: 'available',
     hasInfo: true,
     infoUrl: 'https://developers.google.com/sheets',
@@ -140,7 +141,7 @@ const integrations: Integration[] = [
     category: 'Product Review Platform',
     description: 'Create/Update a Review on Judge.me when a customer completes a Feedback workflow on Interakt',
     pricing: 'paid',
-    logo: '/integrations/judgeme.png',
+    logo: '/integrations/judge.webp',
     status: 'restricted',
     restrictionReason: 'The Judge.me integration is available only on our Advanced paid plan. Please upgrade your plan to access this feature.',
     hasInfo: true,
@@ -224,12 +225,12 @@ export default function IntegrationsPage() {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       toast({
         title: "Success",
         description: `Successfully connected to ${integration.name}`,
       });
-      
+
       setIsDialogOpen(false);
     } catch (error) {
       toast({
@@ -295,7 +296,7 @@ export default function IntegrationsPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {stats.map((stat, index) => (
                 <Card key={index} className="border-0 shadow-sm bg-gradient-to-br from-white to-gray-50/50 wark:from-gray-900/50 wark:to-gray-800/50">
                   <CardContent className="p-4">
@@ -313,7 +314,7 @@ export default function IntegrationsPage() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+            </div> */}
           </div>
 
           {/* Navigation and Filters */}
@@ -367,8 +368,8 @@ export default function IntegrationsPage() {
           {/* Integrations Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredIntegrations.map((integration) => (
-              <Card 
-                key={integration.id} 
+              <Card
+                key={integration.id}
                 className="group cursor-pointer border-0 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-white wark:bg-gray-900/50 overflow-hidden"
                 onClick={() => handleCardClick(integration)}
               >
@@ -376,8 +377,8 @@ export default function IntegrationsPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <div className="w-14 h-14 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl flex items-center justify-center group-hover:from-primary/20 group-hover:to-primary/10 transition-all duration-300">
-                          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg"></div>
+                        <div className="w-14 h-14  rounded-xl flex items-center justify-center group-hover:from-primary/20 group-hover:to-primary/10 transition-all duration-300">
+                          <img src={integration.logo} className='object-cover rounded-xl' />
                         </div>
                         {integration.status === 'connected' && (
                           <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
@@ -404,12 +405,12 @@ export default function IntegrationsPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge 
+                          <Badge
                             variant={integration.pricing === 'free' ? 'default' : 'secondary'}
-                            className={`${integration.pricing === 'free' 
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                            className={`${integration.pricing === 'free'
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
                               : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            } transition-colors duration-200`}
+                              } transition-colors duration-200`}
                           >
                             {integration.pricing}
                           </Badge>
@@ -435,7 +436,7 @@ export default function IntegrationsPage() {
                     </span>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="pt-0">
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-gray-600 wark:text-gray-400 mb-2">
@@ -444,7 +445,7 @@ export default function IntegrationsPage() {
                     <CardDescription className="text-sm leading-relaxed line-clamp-2">
                       {integration.description}
                     </CardDescription>
-                    
+
                     {integration.features && (
                       <div className="flex flex-wrap gap-1 mt-3">
                         {integration.features.slice(0, 2).map((feature, index) => (
@@ -476,8 +477,8 @@ export default function IntegrationsPage() {
                   <DialogHeader>
                     <div className="flex items-start gap-4">
                       <div className="relative">
-                        <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl flex items-center justify-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-lg"></div>
+                        <div className="w-14 h-14  rounded-xl flex items-center justify-center group-hover:from-primary/20 group-hover:to-primary/10 transition-all duration-300">
+                          <img src={selectedIntegration.logo} className='object-cover rounded-xl' />
                         </div>
                         {selectedIntegration.status === 'connected' && (
                           <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
@@ -490,10 +491,10 @@ export default function IntegrationsPage() {
                           {selectedIntegration.name}
                         </DialogTitle>
                         <div className="flex items-center gap-3 mb-3">
-                          <Badge 
+                          <Badge
                             variant={selectedIntegration.pricing === 'free' ? 'default' : 'secondary'}
-                            className={selectedIntegration.pricing === 'free' 
-                              ? 'bg-green-100 text-green-700' 
+                            className={selectedIntegration.pricing === 'free'
+                              ? 'bg-green-100 text-green-700'
                               : 'bg-blue-100 text-blue-700'
                             }
                           >
@@ -635,14 +636,16 @@ export default function IntegrationsPage() {
                 <div>
                   <h3 className="font-semibold text-lg mb-1">Can&apos;t find what you&apos;re looking for?</h3>
                   <p className="text-sm text-muted-foreground">
-                 Let us know what integration you need and we&apos;ll consider adding it to our marketplace.
+                    Let us know what integration you need and we&apos;ll consider adding it to our marketplace.
                   </p>
                 </div>
               </div>
-              <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 hover:shadow-lg transition-all duration-200">
-                <ArrowRight className="h-4 w-4 mr-2" />
-                Request Integration
-              </Button>
+              <Link href='/support'>
+                <Button className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 hover:shadow-lg transition-all duration-200">
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Request Integration
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -658,8 +661,8 @@ export default function IntegrationsPage() {
                   We couldn&apos;t find any integrations matching your search criteria. Try adjusting your filters or search terms.
                 </p>
                 <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setSearchQuery('');
                       setSelectedCategory('All Categories');
@@ -679,7 +682,7 @@ export default function IntegrationsPage() {
           )}
 
           {/* Popular Categories */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Popular Categories</h2>
               <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
@@ -687,13 +690,13 @@ export default function IntegrationsPage() {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {categories.slice(1, 5).map((category) => {
                 const count = integrations.filter(i => i.category === category).length;
                 return (
-                  <Card 
-                    key={category} 
+                  <Card
+                    key={category}
                     className="group cursor-pointer border-0 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
                     onClick={() => setSelectedCategory(category)}
                   >
@@ -712,10 +715,10 @@ export default function IntegrationsPage() {
                 );
               })}
             </div>
-          </div>
+          </div> */}
 
           {/* Recent Updates */}
-          <Card className="border-0 shadow-sm">
+          {/* <Card className="border-0 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -753,10 +756,9 @@ export default function IntegrationsPage() {
                   }
                 ].map((update, index) => (
                   <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 wark:hover:bg-gray-800/50 transition-colors">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${
-                      update.type === 'new' ? 'bg-green-500' : 
-                      update.type === 'update' ? 'bg-blue-500' : 'bg-amber-500'
-                    }`} />
+                    <div className={`w-2 h-2 rounded-full mt-2 ${update.type === 'new' ? 'bg-green-500' :
+                        update.type === 'update' ? 'bg-blue-500' : 'bg-amber-500'
+                      }`} />
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm">{update.title}</h4>
@@ -775,7 +777,7 @@ export default function IntegrationsPage() {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </Layout>

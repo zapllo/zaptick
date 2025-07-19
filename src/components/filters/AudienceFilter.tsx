@@ -13,7 +13,8 @@ import {
   Copy,
   Trash2,
   Move,
-  GripVertical
+  GripVertical,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -109,32 +110,43 @@ interface Filter {
   groupId?: string; // Which group this condition belongs to
 }
 
-// Props definition
+// Add this to the existing AudienceFilter component props
 interface AudienceFilterProps {
   tags: string[];
   traitFields: { label: string; key: string; type: "text" | "number" | "date" | "select"; options?: string[] }[];
   eventFields: { label: string; key: string; type: "text" | "number" | "date" | "select"; options?: string[] }[];
+  contactGroups?: { id: string; name: string; contactCount: number; color: string }[]; // Add this
   onApplyFilters: (filters: {
     tags: string[];
     conditionGroups: ConditionGroup[];
-    groupOperator: LogicalOperator; // AND/OR between groups
+    groupOperator: LogicalOperator;
     whatsappOptedIn: boolean;
+    contactGroups?: string[]; // Add this
   }) => void;
   initialFilters?: {
     tags: string[];
     conditionGroups: ConditionGroup[];
     groupOperator: LogicalOperator;
     whatsappOptedIn: boolean;
+    contactGroups?: string[]; // Add this
   };
-}
+};
 
+
+// Update the AudienceFilter component
 const AudienceFilter = ({
   tags = [],
   traitFields = [],
   eventFields = [],
+  contactGroups = [], // Add this
   onApplyFilters,
   initialFilters
 }: AudienceFilterProps) => {
+  // Add state for selected contact groups
+  const [selectedContactGroups, setSelectedContactGroups] = useState<string[]>(
+    initialFilters?.contactGroups || []
+  );
+
   // State for selected tags
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilters?.tags || []);
 
@@ -159,15 +171,29 @@ const AudienceFilter = ({
   // State for controlling the collapse
   const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
 
-  // Check if any filters are active
-  const hasActiveFilters = selectedTags.length > 0 || conditionGroups.length > 0 || whatsappOptedIn;
-
+  // Update the hasActiveFilters check
+  const hasActiveFilters = selectedTags.length > 0 ||
+    conditionGroups.length > 0 ||
+    whatsappOptedIn ||
+    selectedContactGroups.length > 0;
   // Function to toggle a tag
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
       prev.includes(tag)
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
+    );
+  };
+  const handleExpandFilters = () => {
+    setIsFiltersCollapsed(false);
+  };
+
+  // Add function to toggle contact group
+  const toggleContactGroup = (groupId: string) => {
+    setSelectedContactGroups(prev =>
+      prev.includes(groupId)
+        ? prev.filter(id => id !== groupId)
+        : [...prev, groupId]
     );
   };
 
@@ -231,11 +257,11 @@ const AudienceFilter = ({
       groups.map(group =>
         group.id === groupId
           ? {
-              ...group,
-              conditions: group.conditions.map(condition =>
-                condition.id === conditionId ? { ...condition, ...updates } : condition
-              )
-            }
+            ...group,
+            conditions: group.conditions.map(condition =>
+              condition.id === conditionId ? { ...condition, ...updates } : condition
+            )
+          }
           : group
       )
     );
@@ -245,13 +271,13 @@ const AudienceFilter = ({
   const duplicateCondition = (groupId: string, conditionId: string) => {
     const group = conditionGroups.find(g => g.id === groupId);
     const condition = group?.conditions.find(c => c.id === conditionId);
-    
+
     if (condition) {
       const duplicatedCondition: Condition = {
         ...condition,
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       };
-      
+
       setConditionGroups(groups =>
         groups.map(group =>
           group.id === groupId
@@ -266,7 +292,7 @@ const AudienceFilter = ({
   const moveConditionToGroup = (fromGroupId: string, toGroupId: string, conditionId: string) => {
     const fromGroup = conditionGroups.find(g => g.id === fromGroupId);
     const condition = fromGroup?.conditions.find(c => c.id === conditionId);
-    
+
     if (condition) {
       // Remove from source group
       setConditionGroups(groups =>
@@ -283,16 +309,15 @@ const AudienceFilter = ({
     }
   };
 
-  // Function to handle Apply Filters click
+  // Update the handleApplyFilters function
   const handleApplyFilters = () => {
-    // Filter out empty groups and invalid conditions
     const validGroups = conditionGroups
       .map(group => ({
         ...group,
-        conditions: group.conditions.filter(c => 
+        conditions: group.conditions.filter(c =>
           c.field && c.operator && (
-            c.operator === 'is_unknown' || 
-            c.operator === 'has_any_value' || 
+            c.operator === 'is_unknown' ||
+            c.operator === 'has_any_value' ||
             (c.value !== undefined && c.value !== null && c.value !== '')
           )
         )
@@ -303,38 +328,33 @@ const AudienceFilter = ({
       tags: selectedTags,
       conditionGroups: validGroups,
       groupOperator,
-      whatsappOptedIn
+      whatsappOptedIn,
+      contactGroups: selectedContactGroups // Add this
     };
-    
+
     console.log('AudienceFilter - Applying filters:', JSON.stringify(filtersToApply, null, 2));
-    
+
     onApplyFilters(filtersToApply);
-    
-    // Always collapse the filters after applying
     setIsFiltersCollapsed(true);
   };
 
-  // Function to expand filters again
-  const handleExpandFilters = () => {
-    setIsFiltersCollapsed(false);
-  };
 
-  // Function to clear all filters
+  // Update the handleClearAllFilters function
   const handleClearAllFilters = () => {
     setSelectedTags([]);
     setConditionGroups([]);
     setWhatsappOptedIn(false);
+    setSelectedContactGroups([]); // Add this
     setIsFiltersCollapsed(false);
-    
-    // Also call onApplyFilters to update the parent component
+
     onApplyFilters({
       tags: [],
       conditionGroups: [],
       groupOperator,
-      whatsappOptedIn: false
+      whatsappOptedIn: false,
+      contactGroups: [] // Add this
     });
   };
-
   // Get field options based on condition type
   const getFieldOptions = (type: FilterType) => {
     return type === 'trait' ? traitFields : eventFields;
@@ -367,7 +387,7 @@ const AudienceFilter = ({
   // Render value input based on field type and operator
   const renderValueInput = (groupId: string, condition: Condition) => {
     const fieldType = getFieldType(condition.type, condition.field);
-    
+
     if (condition.operator === 'is_unknown' || condition.operator === 'has_any_value') {
       return (
         <div className="text-sm text-muted-foreground py-2">
@@ -387,8 +407,8 @@ const AudienceFilter = ({
               placeholder="Enter days"
               value={condition.value || ''}
               onChange={(e) =>
-                updateConditionInGroup(groupId, condition.id, { 
-                  value: e.target.value ? parseInt(e.target.value) : '' 
+                updateConditionInGroup(groupId, condition.id, {
+                  value: e.target.value ? parseInt(e.target.value) : ''
                 })
               }
               className="w-full"
@@ -399,7 +419,7 @@ const AudienceFilter = ({
           </div>
         );
       }
-      
+
       // For absolute date operators, show date picker
       return (
         <Popover>
@@ -490,7 +510,7 @@ const AudienceFilter = ({
               <div className="flex items-center space-x-2">
                 <FilterIcon className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">
-                  {hasActiveFilters 
+                  {hasActiveFilters
                     ? `${selectedTags.length + conditionGroups.reduce((acc, group) => acc + group.conditions.length, 0) + (whatsappOptedIn ? 1 : 0)} filters applied`
                     : 'No filters applied'
                   }
@@ -602,7 +622,89 @@ const AudienceFilter = ({
                 )}
               </div>
             </div>
+            {/* Contact Groups Section - Add this after Tags Section */}
+            {contactGroups.length > 0 && (
+              <>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Filter by Contact Groups</Label>
+                    {selectedContactGroups.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedContactGroups([])}
+                        className="h-8 px-2 text-xs"
+                      >
+                        Clear All
+                      </Button>
+                    )}
+                  </div>
 
+                  <div className="flex flex-wrap gap-2">
+                    {contactGroups.slice(0, 4).map((group) => (
+                      <Badge
+                        key={group.id}
+                        variant={selectedContactGroups.includes(group.id) ? "default" : "outline"}
+                        className="cursor-pointer h-10 hover:bg-primary/90 hover:text-white transition-colors"
+                        onClick={() => toggleContactGroup(group.id)}
+                        style={{
+                          backgroundColor: selectedContactGroups.includes(group.id) ? group.color : 'transparent',
+                          borderColor: group.color,
+                          color: selectedContactGroups.includes(group.id) ? 'white' : group.color
+                        }}
+                      >
+                        {selectedContactGroups.includes(group.id) && (
+                          <CheckCheck className="h-3 w-3 mr-1" />
+                        )}
+                        <Users className="h-3 w-3 mr-1" />
+                        {group.name} ({group.contactCount})
+                      </Badge>
+                    ))}
+
+                    {contactGroups.length > 4 && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-10">
+                            More Groups
+                            <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="start">
+                          <ScrollArea className="h-80">
+                            <div className="p-4 space-y-2">
+                              <div className="font-medium text-sm mb-2">Select Contact Groups</div>
+                              <div className="space-y-2">
+                                {contactGroups.slice(4).map((group) => (
+                                  <div key={group.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`group-${group.id}`}
+                                      checked={selectedContactGroups.includes(group.id)}
+                                      onCheckedChange={() => toggleContactGroup(group.id)}
+                                    />
+                                    <div
+                                      className="w-3 h-3 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: group.color }}
+                                    />
+                                    <label
+                                      htmlFor={`group-${group.id}`}
+                                      className="flex-1 text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                    >
+                                      {group.name} ({group.contactCount})
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </ScrollArea>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+              </>
+            )}
             <Separator />
 
             {/* Condition Groups Section */}
@@ -647,7 +749,7 @@ const AudienceFilter = ({
                           {groupOperator}
                         </div>
                       )}
-                      
+
                       <Card className="border-2 border-dashed border-gray-200 hover:border-gray-300 transition-colors">
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
@@ -840,7 +942,7 @@ const AudienceFilter = ({
                                             <div
                                               key={`trait-${field.key}`}
                                               className="flex items-center space-x-2 px-2 py-1 hover:bg-muted/50 rounded-md cursor-pointer"
-                                             onClick={() => {
+                                              onClick={() => {
                                                 addConditionToGroup(group.id, 'trait', field.key);
                                                 setSearchQuery('');
                                               }}
@@ -999,8 +1101,8 @@ const AudienceFilter = ({
                                         {' '}
                                         {condition.operator !== 'is_unknown' && condition.operator !== 'has_any_value' &&
                                           (getFieldType(condition.type, condition.field) === 'date' && condition.value ?
-                                            (typeof condition.value === 'number' ? 
-                                              `${condition.value} days ago` : 
+                                            (typeof condition.value === 'number' ?
+                                              `${condition.value} days ago` :
                                               format(new Date(condition.value), 'PPP')
                                             ) :
                                             condition.value)

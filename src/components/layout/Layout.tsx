@@ -18,7 +18,10 @@ import {
   Plus,
   LayoutDashboard,
   Users,
-  File
+  File,
+  ImageIcon,
+  Video,
+  FileText
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,6 +53,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { FaWhatsapp } from "react-icons/fa";
+import { format } from "date-fns";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -72,6 +76,18 @@ interface UserPermissions {
   }[];
 }
 
+
+interface UnreadMessage {
+  id: string;
+  conversationId: string;
+  contactName: string;
+  content: string;
+  timestamp: string;
+  messageType: string;
+  contactId: string;
+}
+
+
 export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -83,6 +99,9 @@ export default function Layout({ children }: LayoutProps) {
 
   const pathname = usePathname();
   const router = useRouter();
+
+  const [unreadMessages, setUnreadMessages] = useState<UnreadMessage[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [walletData, setWalletData] = useState({
     balance: 0,
@@ -111,6 +130,56 @@ export default function Layout({ children }: LayoutProps) {
       fetchUserPermissions();
     }
   }, [user]);
+
+
+  // Add function to fetch unread messages
+  const fetchUnreadMessages = async () => {
+    try {
+      const response = await fetch('/api/messages/unread');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUnreadMessages(data.messages);
+          setUnreadCount(data.totalCount);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching unread messages:', error);
+    }
+  };
+
+  // Fetch unread messages when user is loaded
+  useEffect(() => {
+    if (user) {
+      fetchUnreadMessages();
+      // Set up polling for real-time updates
+      const interval = setInterval(fetchUnreadMessages, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Function to mark message as read
+  const markMessageAsRead = async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/mark-read`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        // Remove read messages from unread list
+        setUnreadMessages(prev => prev.filter(msg => msg.conversationId !== conversationId));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  };
+
+  // Function to navigate to conversation
+  const goToConversation = (conversationId: string, contactId: string) => {
+    markMessageAsRead(conversationId);
+    router.push(`/conversations?contactId=${contactId}`);
+  };
 
   // Add this useEffect to fetch wallet balance
   useEffect(() => {
@@ -395,29 +464,119 @@ export default function Layout({ children }: LayoutProps) {
               </PermissionCheck> */}
 
 
-              {/* Notifications */}
+              {/* Updated Notifications Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl hover:bg-muted/50 transition-colors">
                     <Bell className="h-5 w-5" />
-                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-[11px] text-white flex items-center justify-center font-semibold">4</span>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-r from-orange-500 to-red-500 text-[11px] text-white flex items-center justify-center font-semibold">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-80 p-0 border-0 shadow-lg">
                   <div className="p-4 border-b bg-muted/30">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-base">Notifications</h3>
-                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2 hover:bg-background">
-                        Mark all read
-                      </Button>
+                      {unreadCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7 px-2 hover:bg-background"
+                          onClick={() => {
+                            // Mark all as read
+                            setUnreadMessages([]);
+                            setUnreadCount(0);
+                            // You might want to call an API endpoint to mark all as read
+                          }}
+                        >
+                          Mark all read
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    <h1 className="flex justify-center p-4">Notifications Coming Soon</h1>
+                    {unreadMessages.length > 0 ? (
+                      <div className="divide-y divide-border/30">
+                        {unreadMessages.slice(0, 10).map((message) => (
+                          <div
+                            key={message.id}
+                            className="p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
+                            onClick={() => goToConversation(message.conversationId, message.contactId)}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                                  {message.messageType === 'text' ? (
+                                    <MessageSquare className="h-5 w-5 text-primary" />
+                                  ) : message.messageType === 'image' ? (
+                                    <ImageIcon className="h-5 w-5 text-blue-600" />
+                                  ) : message.messageType === 'video' ? (
+                                    <Video className="h-5 w-5 text-purple-600" />
+                                  ) : message.messageType === 'document' ? (
+                                    <FileText className="h-5 w-5 text-orange-600" />
+                                  ) : (
+                                    <MessageSquare className="h-5 w-5 text-primary" />
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="font-medium text-sm text-foreground truncate">
+                                    {message.contactName}
+                                  </p>
+                                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                                    {format(new Date(message.timestamp), "h:mm a")}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {message.messageType === 'text' ? message.content :
+                                    message.messageType === 'image' ? '📷 Photo' :
+                                      message.messageType === 'video' ? '🎥 Video' :
+                                        message.messageType === 'document' ? '📄 Document' :
+                                          message.messageType === 'audio' ? '🎵 Audio' :
+                                            message.content}
+                                </p>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <div className="w-2 h-2 rounded-full bg-primary group-hover:bg-primary/80 transition-colors"></div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {unreadMessages.length > 10 && (
+                          <div className="p-3 text-center border-t bg-muted/30">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-sm font-medium hover:bg-background"
+                              onClick={() => router.push('/conversations')}
+                            >
+                              View {unreadMessages.length - 10} more messages
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                          <Bell className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">All caught up!</p>
+                        <p className="text-xs text-muted-foreground">No new messages</p>
+                      </div>
+                    )}
                   </div>
                   <div className="p-3 border-t bg-muted/30">
-                    <Button variant="ghost" size="sm" className="w-full h-8 text-sm font-medium hover:bg-background">
-                      View all notifications
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full h-8 text-sm font-medium hover:bg-background"
+                      onClick={() => router.push('/conversations')}
+                    >
+                      View all conversations
                     </Button>
                   </div>
                 </DropdownMenuContent>
