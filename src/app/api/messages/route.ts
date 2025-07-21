@@ -12,21 +12,27 @@ const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
 // Helper function to build template components from template structure
 function buildTemplateComponents(template: any, variables: any = {}) {
+  console.log('🔧 buildTemplateComponents called with variables:', variables);
+  console.log('🔧 Template components:', JSON.stringify(template.components, null, 2));
+  
   const components = [];
 
   if (!template.components) return components;
 
   for (const component of template.components) {
+    console.log('🔧 Processing component:', component.type, component.format);
+
     if (component.type === 'HEADER') {
       if (component.format === 'TEXT' && component.text?.includes('{{')) {
-        // Extract variables from header text
+        // Handle TEXT headers with variables
         const headerParams = [];
         const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
-        matches.forEach((match: string) => {
+        matches.forEach((match: string, index: number) => {
           const varName = match.replace(/\{\{|\}\}/g, '').trim();
+          const paramIndex = (index + 1).toString();
           headerParams.push({
             type: 'text',
-            text: variables[varName] || `[${varName}]`
+            text: variables[paramIndex] || variables[varName] || `[${varName}]`
           });
         });
         
@@ -37,18 +43,57 @@ function buildTemplateComponents(template: any, variables: any = {}) {
           });
         }
       } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
-        // Handle media headers if needed
-        // This would require media URLs to be provided
+        // Handle media headers - use mediaUrl from template
+        console.log('🔧 Found media header:', component.format, 'mediaUrl:', component.mediaUrl);
+        
+        if (component.mediaUrl) {
+          let mediaParam;
+          
+          if (component.format === 'IMAGE') {
+            mediaParam = {
+              type: 'image',
+              image: { 
+                link: component.mediaUrl 
+              }
+            };
+          } else if (component.format === 'VIDEO') {
+            mediaParam = {
+              type: 'video',
+              video: { 
+                link: component.mediaUrl 
+              }
+            };
+          } else if (component.format === 'DOCUMENT') {
+            mediaParam = {
+              type: 'document',
+              document: { 
+                link: component.mediaUrl,
+                filename: component.text || 'document.pdf'
+              }
+            };
+          }
+          
+          if (mediaParam) {
+            console.log('🔧 Adding media parameter:', JSON.stringify(mediaParam, null, 2));
+            components.push({
+              type: 'header',
+              parameters: [mediaParam]
+            });
+          }
+        } else {
+          console.log('⚠️ Media header found but no mediaUrl available');
+        }
       }
     } else if (component.type === 'BODY' && component.text?.includes('{{')) {
-      // Extract variables from body text
+      // Handle BODY with variables
       const bodyParams = [];
       const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
-      matches.forEach((match: string) => {
+      matches.forEach((match: string, index: number) => {
         const varName = match.replace(/\{\{|\}\}/g, '').trim();
+        const paramIndex = (index + 1).toString();
         bodyParams.push({
           type: 'text',
-          text: variables[varName] || `[${varName}]`
+          text: variables[paramIndex] || variables[varName] || `[${varName}]`
         });
       });
       
@@ -58,9 +103,43 @@ function buildTemplateComponents(template: any, variables: any = {}) {
           parameters: bodyParams
         });
       }
+    } else if (component.type === 'BUTTONS' && component.buttons) {
+      // Handle BUTTONS with URL variables
+      const buttonComponents = [];
+      
+      component.buttons.forEach((button: any, buttonIndex: number) => {
+        if (button.type === 'URL' && button.url?.includes('{{')) {
+          const matches = button.url.match(/\{\{[^}]+\}\}/g) || [];
+          const buttonParams: any[] = [];
+          
+          matches.forEach((match: string, index: number) => {
+            const varName = match.replace(/\{\{|\}\}/g, '').trim();
+            const paramIndex = (index + 1).toString();
+            buttonParams.push({
+              type: 'text',
+              text: variables[paramIndex] || variables[varName] || `[${varName}]`
+            });
+          });
+          
+          if (buttonParams.length > 0) {
+            buttonComponents.push({
+              type: 'button',
+              sub_type: 'url',
+              index: buttonIndex,
+              parameters: buttonParams
+            });
+          }
+        }
+      });
+      
+      // Add all button components
+      buttonComponents.forEach(buttonComp => {
+        components.push(buttonComp);
+      });
     }
   }
 
+  console.log('🔧 buildTemplateComponents returning:', JSON.stringify(components, null, 2));
   return components;
 }
 
@@ -94,10 +173,11 @@ export async function POST(req: NextRequest) {
       language = 'en',
       templateComponents,
       templateData,
-      variables = {} // Add variables from frontend
+      variables = {} // Extract variables from request
     } = requestData;
 
-    console.log('Request data:', JSON.stringify(requestData, null, 2));
+    console.log('🔍 Request data received:', JSON.stringify(requestData, null, 2));
+    console.log('🔍 Variables received:', JSON.stringify(variables, null, 2));
 
     if (!contactId) {
       return NextResponse.json({
@@ -129,6 +209,7 @@ export async function POST(req: NextRequest) {
       if (!template) {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
+      console.log('🔍 Template found:', template.name, 'with components:', template.components.length);
     }
 
     const wabaAccounts = user.wabaAccounts || [];
@@ -143,13 +224,18 @@ export async function POST(req: NextRequest) {
     }
 
     let whatsappPayload;
-    // --- render template locally so the chat can show it later ------------
+    // Render template locally so the chat can show it later
     let renderedBody = message;
     let headerMedia = {};
  
     if (messageType === 'template' && template) {
-      // Build template components automatically or use provided ones
+      console.log('🔧 Building template components with variables:', variables);
+      
+      // Build template components automatically with variables
+      // This now properly uses mediaUrl from the template itself
       const finalComponents = templateComponents || buildTemplateComponents(template, variables);
+      
+      console.log('🔧 Final components built:', JSON.stringify(finalComponents, null, 2));
       
       // Basic template structure
       whatsappPayload = {
@@ -170,7 +256,7 @@ export async function POST(req: NextRequest) {
         whatsappPayload.template.components = finalComponents;
       }
 
-      console.log('Built template components:', JSON.stringify(finalComponents, null, 2));
+      console.log('🔧 Final WhatsApp payload:', JSON.stringify(whatsappPayload, null, 2));
     } else {
       // Regular text message
       whatsappPayload = {
@@ -186,7 +272,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (messageType === 'template' && template) {
-      renderedBody = renderTemplateBody(template, whatsappPayload.template.components);
+      // Pass variables to renderTemplateBody for local rendering
+      renderedBody = renderTemplateBody(template, whatsappPayload.template.components, variables);
       headerMedia = extractHeaderMedia(template, whatsappPayload.template.components);
     }
 

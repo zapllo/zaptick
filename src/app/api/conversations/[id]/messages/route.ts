@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
 import Conversation from '@/models/Conversation';
+import Template from '@/models/Template'; // Add this import
 
 export async function GET(
   req: NextRequest,
@@ -18,7 +19,7 @@ export async function GET(
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-    // Await params before using its properties
+    
     const { id } = await params;
     await dbConnect();
 
@@ -31,6 +32,57 @@ export async function GET(
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
+    // Enhanced message processing to include template data
+    const enhancedMessages = await Promise.all(
+      conversation.messages.map(async (message: any) => {
+        if (message.messageType === 'template' && message.templateName) {
+          try {
+            console.log('Processing template message with templateName:', message.templateName);
+            
+            // Find template by name and user ID
+            const template = await Template.findOne({ 
+              name: message.templateName,
+              userId: decoded.id 
+            });
+            
+            if (template && template.components) {
+              console.log('Template found:', template.name);
+              console.log('Template components:', template.components.length);
+              
+              // Extract mediaUrl from HEADER component with IMAGE format
+              const headerComponent = template.components.find(
+                (comp: any) => comp.type === 'HEADER' && comp.format === 'IMAGE'
+              );
+              
+              // Extract buttons from BUTTONS component
+              const buttonsComponent = template.components.find(
+                (comp: any) => comp.type === 'BUTTONS'
+              );
+
+              console.log('Header component found:', !!headerComponent);
+              console.log('MediaUrl:', headerComponent?.mediaUrl);
+              console.log('Buttons component found:', !!buttonsComponent);
+              console.log('Buttons count:', buttonsComponent?.buttons?.length || 0);
+
+              // Return enhanced message with template data
+              return {
+                ...message.toObject(),
+                mediaUrl: headerComponent?.mediaUrl || null,
+                templateButtons: buttonsComponent?.buttons || [],
+                templateComponents: template.components
+              };
+            } else {
+              console.log('Template not found for name:', message.templateName);
+            }
+          } catch (error) {
+            console.error('Error fetching template data for message:', message._id, error);
+          }
+        }
+        
+        return message.toObject();
+      })
+    );
+
     // Mark as read and reset unread count
     if (conversation.unreadCount > 0) {
       conversation.unreadCount = 0;
@@ -42,7 +94,7 @@ export async function GET(
       conversation: {
         id: conversation._id,
         contact: conversation.contactId,
-        messages: conversation.messages,
+        messages: enhancedMessages,
         status: conversation.status,
         assignedTo: conversation.assignedTo,
         tags: conversation.tags,
