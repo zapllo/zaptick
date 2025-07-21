@@ -5338,7 +5338,7 @@ const TemplateVariablesDialog = ({
         <DialogHeader>
           <DialogTitle>Template Variables & Media</DialogTitle>
           <DialogDescription>
-            Fill in the required values for "{selectedTemplate.name}"
+            Fill in the required values for &apos;{selectedTemplate.name}&apos;
           </DialogDescription>
         </DialogHeader>
 

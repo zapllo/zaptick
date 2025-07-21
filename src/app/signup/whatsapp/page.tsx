@@ -593,7 +593,7 @@ export default function WhatsAppOnboardingPage() {
                                                 <ul className="space-y-2 text-sm text-gray-600">
                                                     <li className="flex gap-2">
                                                         <div className="h-1.5 w-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
-                                                        We recommend using a new number which isn't being used in the WhatsApp Personal / Business Apps.
+                                                        We recommend using a new number which isn&apos;t being used in the WhatsApp Personal / Business Apps.
                                                     </li>
                                                     <li className="flex gap-2">
                                                         <div className="h-1.5 w-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
@@ -617,7 +617,7 @@ export default function WhatsAppOnboardingPage() {
                                                 <Facebook className="h-5 w-5 text-blue-600" />
                                             </div>
                                             <div>
-                                                <h4 className="font-medium mb-2">Access to your company's Facebook Business Manager</h4>
+                                                <h4 className="font-medium mb-2">Access to your company&apos;s Facebook Business Manager</h4>
                                                 <ul className="space-y-2 text-sm text-gray-600">
                                                     <li className="flex gap-2">
                                                         <div className="h-1.5 w-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
@@ -625,7 +625,7 @@ export default function WhatsAppOnboardingPage() {
                                                     </li>
                                                     <li className="flex gap-2">
                                                         <div className="h-1.5 w-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
-                                                        If your company doesn't have a Business Manager Account yet, you'll get the option to create one in the next step.
+                                                        If your company doesn&apos;t have a Business Manager Account yet, you&apos;ll get the option to create one in the next step.
                                                     </li>
                                                     <li className="flex gap-2">
                                                         <div className="h-1.5 w-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0" />

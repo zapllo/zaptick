@@ -3389,8 +3389,8 @@ export default function CreateTemplatePage() {
                     <div>
                       <h4 className="font-medium text-red-800">Limited Time Offer Tips</h4>
                       <ul className="text-sm text-red-700 mt-2 space-y-1 list-disc pl-4">
-                        <li>Use "Copy Code" buttons to make it easy for customers to use discount codes</li>
-                        <li>Include a "Shop Now" URL button to drive traffic to your sale page</li>
+                        <li>Use &quot;Copy Code&quot; buttons to make it easy for customers to use discount codes</li>
+                        <li>Include a &quot;Shop Now&quot; URL button to drive traffic to your sale page</li>
                         <li>Keep button text short and action-oriented</li>
                         <li>The countdown timer will create urgency automatically</li>
                       </ul>
