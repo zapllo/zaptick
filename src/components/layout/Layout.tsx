@@ -696,11 +696,11 @@ export default function Layout({ children }: LayoutProps) {
                     </Avatar>
                     <div className="hidden md:block text-left">
                       <p className="text-sm font-semibold leading-none">{user.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      {/* <div className="flex items-center gap-2 mt-1">
                         <Badge variant="secondary" className="text-xs px-2 py-0 h-5">
                           {user.role === 'owner' ? 'Owner' : user.role === 'admin' ? 'Admin' : 'Agent'}
                         </Badge>
-                      </div>
+                      </div> */}
                     </div>
                     <ChevronDown className="hidden md:block h-4 w-4 text-muted-foreground" />
                   </Button>

@@ -5,7 +5,7 @@ import Template from '@/models/Template';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -14,7 +14,6 @@ export async function GET(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-
     const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
@@ -22,8 +21,11 @@ export async function GET(
 
     await dbConnect();
 
+    // Await params before using
+    const { id } = await params;
+
     const template = await Template.findOne({
-      _id: params.id,
+      _id: id,
       userId: decoded.id
     }).lean();
 
@@ -109,8 +111,9 @@ export async function GET(
       }
     }
 
-    // Transform the template data
+    // Transform the template data and include S3 media URLs
     const hasMediaHeader = updatedTemplate.components?.some((c: any) => c.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(c.format)) || false;
+    const isCarousel = updatedTemplate.category === 'CAROUSEL' || updatedTemplate.category === 'CAROUSEL_UTILITY';
 
     return NextResponse.json({
       success: true,
@@ -120,7 +123,9 @@ export async function GET(
         category: updatedTemplate.category.toLowerCase(),
         language: updatedTemplate.language,
         status: updatedTemplate.status.toLowerCase(),
-        content: updatedTemplate.components?.find((c: any) => c.type === 'BODY')?.text || '',
+        content: isCarousel
+          ? updatedTemplate.components?.find((c: any) => c.type === 'BODY')?.text || ''
+          : updatedTemplate.components?.find((c: any) => c.type === 'BODY')?.text || '',
         variables: updatedTemplate.components
           ?.find((c: any) => c.type === 'BODY')?.text
           ?.match(/\{\{(\d+)\}\}/g)?.length || 0,
@@ -130,11 +135,13 @@ export async function GET(
         lastUsed: updatedTemplate.lastUsed,
         useCount: updatedTemplate.useCount || 0,
         rejectionReason: updatedTemplate.rejectionReason,
-        type: hasMediaHeader ? 'media' : 'text',
+        type: isCarousel ? 'carousel' : hasMediaHeader ? 'media' : 'text',
         mediaType: hasMediaHeader ? updatedTemplate.components?.find((c: any) => c.type === 'HEADER')?.format : null,
-        components: updatedTemplate.components,
+        components: updatedTemplate.components, // Include full components with S3 URLs
         whatsappTemplateId: updatedTemplate.whatsappTemplateId,
-        wabaId: updatedTemplate.wabaId
+        wabaId: updatedTemplate.wabaId,
+        authSettings: updatedTemplate.authSettings,
+        offerSettings: updatedTemplate.offerSettings
       }
     });
 
@@ -148,7 +155,7 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -157,7 +164,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-
     const decoded = verifyToken(token) as { id: string };
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
@@ -165,8 +171,11 @@ export async function DELETE(
 
     await dbConnect();
 
+    // Await params before using
+    const { id } = await params;
+
     const template = await Template.findOne({
-      _id: params.id,
+      _id: id,
       userId: decoded.id
     });
 

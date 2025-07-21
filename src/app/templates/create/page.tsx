@@ -134,6 +134,10 @@ interface CreateTemplateForm {
   buttonType: 'NONE' | 'MULTIPLE';
   buttons: ButtonOption[];
   carouselCards: CarouselCard[];
+  // Add limited time offer specific fields
+  offerExpirationDate: string;
+  offerExpirationTime: string;
+  couponCode: string;
 }
 
 interface WabaAccount {
@@ -161,7 +165,7 @@ const languageOptions = [
   { value: 'ru', label: 'Russian' },
 ];
 
-// Category options - Updated to include carousel
+// Category options - Updated to include limited time offer
 const categoryOptions = [
   {
     id: 'UTILITY',
@@ -192,7 +196,13 @@ const categoryOptions = [
     name: 'Utility Carousel',
     description: 'Send multiple informational cards about orders, accounts, or services in a carousel format',
     icon: <LayoutIcon className="w-5 h-5" />
-  }
+  },
+  // {
+  //   id: 'LIMITED_TIME_OFFER',
+  //   name: 'Limited Time Offer',
+  //   description: 'Send promotional messages with expiration countdown and coupon codes',
+  //   icon: <Calendar className="w-5 h-5" />
+  // }
 ];
 
 type DeviceType = 'iphone' | 'android';
@@ -219,29 +229,29 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
   authSettings: any
 }) => {
 
-    // Helper function to format text with proper line breaks and formatting
-    const formatWhatsAppText = (text: string) => {
-      if (!text) return '';
-      
-      // First, handle variables
-      let formattedText = text
-        .replace(/\{\{1\}\}/g, form.variables[0]?.example || "John")
-        .replace(/\{\{2\}\}/g, form.variables[1]?.example || "SAVE20")
-        .replace(/\{\{3\}\}/g, form.variables[2]?.example || "June 30, 2024")
-        .replace(/\{\{4\}\}/g, form.variables[3]?.example || "Sample Value")
-        .replace(/\{\{5\}\}/g, form.variables[4]?.example || "Example");
+  // Helper function to format text with proper line breaks and formatting
+  const formatWhatsAppText = (text: string) => {
+    if (!text) return '';
 
-      // Handle WhatsApp formatting
-      formattedText = formattedText
-        .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
-        .replace(/_(.*?)_/g, '<em>$1</em>')
-        .replace(/~(.*?)~/g, '<span style="text-decoration: line-through;">$1</span>');
+    // First, handle variables
+    let formattedText = text
+      .replace(/\{\{1\}\}/g, form.variables[0]?.example || "John")
+      .replace(/\{\{2\}\}/g, form.variables[1]?.example || "SAVE20")
+      .replace(/\{\{3\}\}/g, form.variables[2]?.example || "June 30, 2024")
+      .replace(/\{\{4\}\}/g, form.variables[3]?.example || "Sample Value")
+      .replace(/\{\{5\}\}/g, form.variables[4]?.example || "Example");
 
-      // Handle line breaks - convert \n to <br>
-      formattedText = formattedText.replace(/\n/g, '<br>');
+    // Handle WhatsApp formatting
+    formattedText = formattedText
+      .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+      .replace(/_(.*?)_/g, '<em>$1</em>')
+      .replace(/~(.*?)~/g, '<span style="text-decoration: line-through;">$1</span>');
 
-      return formattedText;
-    };
+    // Handle line breaks - convert \n to <br>
+    formattedText = formattedText.replace(/\n/g, '<br>');
+
+    return formattedText;
+  };
   // For authentication templates, show a different preview
   if (form.category === 'AUTHENTICATION') {
     const sampleCode = authSettings.codeLength === 8
@@ -331,6 +341,129 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
     );
   }
 
+  // For limited time offer templates, show special preview
+  // if (form.category === 'LIMITED_TIME_OFFER') {
+  //   const formattedContent = formatWhatsAppText(form.content);
+  //   const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  //   // Calculate expiration time display
+  //   const getExpirationDisplay = () => {
+  //     if (form.offerExpirationDate && form.offerExpirationTime) {
+  //       const expirationDateTime = new Date(`${form.offerExpirationDate}T${form.offerExpirationTime}`);
+  //       const now = new Date();
+  //       const diffMs = expirationDateTime.getTime() - now.getTime();
+
+  //       if (diffMs > 0) {
+  //         const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  //         const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  //         return `${hours}h ${minutes}m`;
+  //       }
+  //     }
+  //     return '2h 30m'; // Default display
+  //   };
+
+  //   return (
+  //     <div className="device-mockup mx-auto max-w-[320px]">
+  //       <div
+  //         className={`relative ${deviceType === 'iphone' ? 'pt-12 pb-[40px]' : 'pt-[40px] pb-[30px]'}`}
+  //         style={{
+  //           backgroundImage: `url(${deviceType === 'iphone'
+  //             ? '/layout/iphone-view-layout.png'
+  //             : '/layout/android-view-layout.png'})`,
+  //           backgroundSize: 'contain',
+  //           backgroundRepeat: 'no-repeat',
+  //           backgroundPosition: 'center',
+  //           height: '650px',
+  //           width: '100%'
+  //         }}
+  //       >
+  //         <div className="app-content flex flex-col h-[520px] mx-auto overflow-hidden rounded-2xl"
+  //           style={{ width: '94%' }}>
+  //           <div className="flex-1 p-4 overflow-y-auto">
+  //             <div className="flex mb-3 mt-2">
+  //               <div className="relative w-full max-w-[85%]">
+  //                 {deviceType !== 'iphone' && (
+  //                   <div
+  //                     className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff]"
+  //                     style={{ transform: 'translateY(6px)' }}
+  //                   ></div>
+  //                 )}
+
+  //                 <div className="bg-white mt-12 p-3 rounded-lg ml-1 shadow-sm">
+  //                   {/* Header Media */}
+  //                   {form.headerType === 'image' && form.mediaUrl && (
+  //                     <div className="mb-2">
+  //                       <img
+  //                         src={form.mediaUrl}
+  //                         alt="Offer header"
+  //                         className="w-full h-32 object-cover rounded"
+  //                       />
+  //                     </div>
+  //                   )}
+
+  //                   {/* Text Header */}
+  //                   {form.headerType === 'text' && form.headerText && (
+  //                     <div className="font-bold mb-2 text-[12px]">{form.headerText}</div>
+  //                   )}
+
+  //                   {/* Message Content */}
+  //                   <div className="text-[12px] max-w-[100%] whitespace-pre-wrap">
+  //                     <div dangerouslySetInnerHTML={{ __html: formattedContent || "" }} />
+  //                   </div>
+
+  //                   {/* Limited Time Offer Display */}
+  //                   <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+  //                     <div className="flex items-center justify-between">
+  //                       <div className="flex items-center gap-1">
+  //                         <Calendar className="h-3 w-3 text-red-600" />
+  //                         <span className="text-[10px] font-medium text-red-800">Limited Time Offer</span>
+  //                       </div>
+  //                       <span className="text-[10px] font-bold text-red-600">
+  //                         {getExpirationDisplay()} left
+  //                       </span>
+  //                     </div>
+  //                   </div>
+
+  //                   {/* Footer */}
+  //                   {/* {footerText && (
+  //                     <div className="text-[10px] text-gray-500 border-gray-200 pt-2">
+  //                       {footerText}
+  //                     </div>
+  //                   )} */}
+
+  //                   <div className="flex justify-end items-center gap-1 pt-2 text-[10px] opacity-70">
+  //                     <span>{currentTime}</span>
+  //                   </div>
+
+  //                   {/* Buttons section */}
+  //                   {form.buttons.length > 0 && (
+  //                     <div className="mt-1 pt-2 border-t border-gray-200">
+  //                       <div className="space-y-1.5">
+  //                         {form.buttons.slice(0, 2).map((button, index) => (
+  //                           <button
+  //                             key={index}
+  //                             className="w-full text-left gap-2 text-[12px] text-[#0097DF] font-medium flex justify-center items-center"
+  //                           >
+  //                             {button.type === 'COPY_CODE' && <Copy className="h-3 w-3" />}
+  //                             {button.type === 'URL' && <ExternalLink className="h-3 w-3" />}
+  //                             {button.text || `Button ${index + 1}`}
+  //                           </button>
+  //                         ))}
+  //                       </div>
+  //                     </div>
+  //                   )}
+  //                 </div>
+  //               </div>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
+
+
   // For carousel templates, show carousel preview
   if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
     // Format body content with variables
@@ -341,7 +474,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
       .replace(/\{\{4\}\}/g, form.variables[3]?.example || "Sample Value")
       .replace(/\{\{5\}\}/g, form.variables[4]?.example || "Example");
 
-     const formattedContent = formatWhatsAppText(form.content);
+    const formattedContent = formatWhatsAppText(form.content);
 
     return (
       <div className="device-mockup mx-auto max-w-[320px]">
@@ -364,7 +497,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
               <div className="flex mb-3 mt-2">
                 <div className="relative w-full max-w-[85%]">
                   {/* Bubble tail */}
-                 
+
                   {deviceType !== 'iphone' && (
                     <div
                       className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff]"
@@ -393,10 +526,10 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                       </div>
                     </div>
                   </div>
-                   <div className=" mt-1  rounded-lg ml-1 ">
+                  <div className=" mt-1  rounded-lg ml-1 ">
                     {/* Carousel preview */}
                     <div className="text-[12px] max-w-[100%]">
-                   
+
                       {/* Carousel cards container */}
                       <div className="flex gap-2 overflow-x-auto scrollbar-hide w-[270px] pb-2">
                         {form.carouselCards.length > 0 ? form.carouselCards.map((card, index) => (
@@ -658,7 +791,11 @@ export default function CreateTemplatePage() {
     includeButtons: false,
     buttonType: 'NONE',
     buttons: [],
-    carouselCards: []
+    carouselCards: [],
+    // Add limited time offer fields
+    offerExpirationDate: '',
+    offerExpirationTime: '',
+    couponCode: ''
   });
 
   const [wabaAccounts, setWabaAccounts] = useState<WabaAccount[]>([]);
@@ -673,7 +810,11 @@ export default function CreateTemplatePage() {
     codeLength: 6,
     addCodeEntryOption: true
   });
-
+  // Add offer settings state
+  const [offerSettings, setOfferSettings] = useState({
+    expirationTimeMs: 0,
+    couponCode: ''
+  });
   // Steps configuration
   const steps = [
     { number: 1, title: 'Basic Info', completed: false },
@@ -922,65 +1063,7 @@ export default function CreateTemplatePage() {
     }));
   };
 
-  const handleCarouselFileUpload = async (file: File, cardIndex: number) => {
-    if (!file) return;
 
-    const maxSize = 16 * 1024 * 1024; // 16MB
-    if (file.size > maxSize) {
-      toast.error('File size must be less than 16MB');
-      return;
-    }
-
-    const allowedTypes = {
-      'IMAGE': ['image/jpeg', 'image/png', 'image/gif'],
-      'VIDEO': ['video/mp4', 'video/avi', 'video/mov']
-    };
-
-    let detectedMediaType: 'IMAGE' | 'VIDEO' | null = null;
-    for (const [type, mimeTypes] of Object.entries(allowedTypes)) {
-      if (mimeTypes.includes(file.type)) {
-        detectedMediaType = type as 'IMAGE' | 'VIDEO';
-        break;
-      }
-    }
-
-    if (!detectedMediaType) {
-      toast.error('Unsupported file type. Only images and videos are allowed for carousel.');
-      return;
-    }
-
-    try {
-      setUploading(true);
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('messaging_product', 'whatsapp');
-      formData.append('type', file.type);
-
-      const response = await fetch('/api/media-handle', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        updateCarouselCard(cardIndex, 'header', {
-          format: detectedMediaType,
-          mediaHandle: data.h,
-          mediaUrl: data.url || URL.createObjectURL(file)
-        });
-        toast.success('File uploaded successfully');
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to upload file');
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload file');
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -992,7 +1075,7 @@ export default function CreateTemplatePage() {
     }
 
     const allowedTypes = {
-      'IMAGE': ['image/jpeg', 'image/png', 'image/gif'],
+      'IMAGE': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
       'VIDEO': ['video/mp4', 'video/avi', 'video/mov'],
       'DOCUMENT': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     };
@@ -1013,13 +1096,12 @@ export default function CreateTemplatePage() {
     try {
       setUploading(true);
 
-      // Create FormData with the required fields according to WhatsApp API
+      // First, upload to existing media-handle endpoint (keep existing functionality)
       const formData = new FormData();
       formData.append('file', file);
       formData.append('messaging_product', 'whatsapp');
       formData.append('type', file.type);
 
-      // Call your API endpoint to handle media upload
       const response = await fetch('/api/media-handle', {
         method: 'POST',
         body: formData
@@ -1027,13 +1109,126 @@ export default function CreateTemplatePage() {
 
       if (response.ok) {
         const data = await response.json();
+
+        // Also upload to S3 for persistent storage
+        const s3FormData = new FormData();
+        s3FormData.append('file', file);
+        s3FormData.append('type', detectedMediaType);
+
+        const s3Response = await fetch('/api/upload-media', {
+          method: 'POST',
+          body: s3FormData
+        });
+
+        let s3Url = null;
+        let s3Handle = null;
+
+        if (s3Response.ok) {
+          const s3Data = await s3Response.json();
+          s3Url = s3Data.url;
+          s3Handle = s3Data.handle;
+          console.log('Media stored in S3:', s3Data);
+        } else {
+          console.warn('S3 upload failed, continuing with existing system');
+        }
+
+        // Set form data with both existing and S3 URLs
         setForm(prev => ({
           ...prev,
           headerType: detectedMediaType.toLowerCase() as 'image' | 'video' | 'document',
           mediaType: detectedMediaType as 'IMAGE' | 'VIDEO' | 'DOCUMENT',
-          mediaHandle: data.h, // Using the 'h' property from the media_handle response
-          mediaUrl: data.url || URL.createObjectURL(file) // Use URL for preview or the returned URL
+          mediaHandle: data.h, // WhatsApp media handle
+          mediaUrl: data.url || URL.createObjectURL(file), // Preview URL
+          s3Url: s3Url, // S3 URL for database storage
+          s3Handle: s3Handle // S3 handle
         }));
+
+        toast.success('File uploaded successfully');
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to upload file');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCarouselFileUpload = async (file: File, cardIndex: number) => {
+    if (!file) return;
+
+    const maxSize = 16 * 1024 * 1024; // 16MB
+    if (file.size > maxSize) {
+      toast.error('File size must be less than 16MB');
+      return;
+    }
+
+    const allowedTypes = {
+      'IMAGE': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      'VIDEO': ['video/mp4', 'video/avi', 'video/mov']
+    };
+
+    let detectedMediaType: 'IMAGE' | 'VIDEO' | null = null;
+    for (const [type, mimeTypes] of Object.entries(allowedTypes)) {
+      if (mimeTypes.includes(file.type)) {
+        detectedMediaType = type as 'IMAGE' | 'VIDEO';
+        break;
+      }
+    }
+
+    if (!detectedMediaType) {
+      toast.error('Unsupported file type. Only images and videos are allowed for carousel.');
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      // First, upload to existing media-handle endpoint
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('messaging_product', 'whatsapp');
+      formData.append('type', file.type);
+
+      const response = await fetch('/api/media-handle', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Also upload to S3 for persistent storage
+        const s3FormData = new FormData();
+        s3FormData.append('file', file);
+        s3FormData.append('type', detectedMediaType);
+
+        const s3Response = await fetch('/api/upload-media', {
+          method: 'POST',
+          body: s3FormData
+        });
+
+        let s3Url = null;
+        let s3Handle = null;
+
+        if (s3Response.ok) {
+          const s3Data = await s3Response.json();
+          s3Url = s3Data.url;
+          s3Handle = s3Data.handle;
+          console.log('Carousel media stored in S3:', s3Data);
+        }
+
+        // Update carousel card with both URLs
+        updateCarouselCard(cardIndex, 'header', {
+          format: detectedMediaType,
+          mediaHandle: data.h, // WhatsApp media handle
+          mediaUrl: data.url || URL.createObjectURL(file), // Preview URL
+          s3Url: s3Url, // S3 URL for database storage
+          s3Handle: s3Handle // S3 handle
+        });
+
         toast.success('File uploaded successfully');
       } else {
         const errorData = await response.json();
@@ -1158,6 +1353,107 @@ export default function CreateTemplatePage() {
     );
   };
 
+  // Component to render limited time offer settings
+  const renderLimitedTimeOfferSettings = () => {
+    if (form.category !== 'LIMITED_TIME_OFFER') return null;
+
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="bg-primary/10 rounded-full p-2">
+            <Calendar className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="text-lg font-medium">Limited Time Offer Settings</h3>
+          <Badge className="ml-auto" variant="default">Required</Badge>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-5 mb-6">
+          <div className="flex items-start gap-3">
+            <Calendar className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h4 className="font-medium text-red-800 mb-2">Limited Time Offer Template</h4>
+              <p className="text-sm text-red-700">
+                This template creates urgency with a countdown timer and allows users to copy coupon codes.
+                Perfect for flash sales, limited-time promotions, and exclusive offers.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Offer expiration date</Label>
+            <Input
+              type="date"
+              value={form.offerExpirationDate}
+              onChange={(e) => {
+                setForm(prev => ({ ...prev, offerExpirationDate: e.target.value }));
+                updateOfferExpiration(e.target.value, form.offerExpirationTime);
+              }}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Offer expiration time</Label>
+            <Input
+              type="time"
+              value={form.offerExpirationTime}
+              onChange={(e) => {
+                setForm(prev => ({ ...prev, offerExpirationTime: e.target.value }));
+                updateOfferExpiration(form.offerExpirationDate, e.target.value);
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <Label className="text-sm font-medium">Coupon code (optional)</Label>
+          <Input
+            value={form.couponCode}
+            onChange={(e) => {
+              const value = e.target.value.toUpperCase();
+              setForm(prev => ({ ...prev, couponCode: value }));
+              setOfferSettings(prev => ({ ...prev, couponCode: value }));
+            }}
+            placeholder="e.g., FLASH25, SAVE50"
+            maxLength={20}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            If provided, users can copy this code using a button. Leave empty if not needed.
+          </p>
+        </div>
+
+        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-800">Important Notes</h4>
+              <ul className="text-sm text-amber-700 mt-2 space-y-1 list-disc pl-4">
+                <li>Limited time offers create urgency with countdown timers</li>
+                <li>The offer will expire at the specified date and time</li>
+                <li>Consider timezone differences for your audience</li>
+                <li>You can include both URL and copy code buttons</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Helper function to update offer expiration
+  const updateOfferExpiration = (date: string, time: string) => {
+    if (date && time) {
+      const expirationDate = new Date(`${date}T${time}`);
+      const expirationTimeMs = expirationDate.getTime();
+      setOfferSettings(prev => ({ ...prev, expirationTimeMs }));
+    }
+  };
+
+
+  // ... existing code ...
+
   const handleCreateTemplate = async () => {
     if (!form.name || !form.category || !form.wabaId || !form.language) {
       toast.error('Please fill in all required fields');
@@ -1223,6 +1519,7 @@ export default function CreateTemplatePage() {
           toast.error('Please add content to all carousel cards');
           return;
         }
+
         // Validate that all cards have the same number of buttons
         const buttonCounts = form.carouselCards.map(card => card.buttons?.length || 0);
         const firstButtonCount = buttonCounts[0];
@@ -1311,7 +1608,11 @@ export default function CreateTemplatePage() {
             category: form.category,
             language: form.language,
             wabaId: form.wabaId,
-            components: components
+            components: components,
+            carouselCards: form.carouselCards, // Send carousel cards with S3 data
+            content: form.content,
+            variables: form.variables,
+            footerText: footerText
           })
         });
 
@@ -1328,81 +1629,138 @@ export default function CreateTemplatePage() {
         setCreating(false);
         return;
       }
-      // For non-authentication and non-carousel templates, validate content
-      if (!form.content) {
-        toast.error('Please enter message content');
+
+      // For limited time offer templates
+      if (form.category === 'LIMITED_TIME_OFFER') {
+        // Validate limited time offer content
+        if (!form.content) {
+          toast.error('Please add message content for your limited time offer');
+          return;
+        }
+
+        if (!form.offerExpirationDate || !form.offerExpirationTime) {
+          toast.error('Please set the offer expiration date and time');
+          return;
+        }
+
+        // Build components array
+        const components = [];
+
+        // Add header component if present
+        if (form.headerType === 'text' && form.headerText) {
+          components.push({
+            type: 'HEADER',
+            format: 'TEXT',
+            text: form.headerText
+          });
+        } else if (['image', 'video', 'document'].includes(form.headerType) && form.mediaHandle) {
+          components.push({
+            type: 'HEADER',
+            format: form.mediaType,
+            example: {
+              header_handle: [form.mediaHandle]
+            }
+          });
+        }
+
+        // Add body component (required)
+        const bodyComponent: any = {
+          type: 'BODY',
+          text: form.content
+        };
+
+        // Add examples for body variables if any
+        if (form.variables.length > 0) {
+          bodyComponent.example = {
+            body_text: [form.variables.map(v => v.example)]
+          };
+        }
+
+        components.push(bodyComponent);
+
+        // Add limited time offer component
+        components.push({
+          type: 'LIMITED_TIME_OFFER'
+        });
+
+        // Add footer component if present
+        if (footerText) {
+          components.push({
+            type: 'FOOTER',
+            text: footerText
+          });
+        }
+
+        // Add buttons component if present
+        if (form.buttons.length > 0) {
+          const buttonsComponent: any = {
+            type: 'BUTTONS',
+            buttons: form.buttons.map(button => {
+              const buttonObj: any = {
+                type: button.type,
+                text: button.text
+              };
+
+              if (button.type === 'URL') {
+                buttonObj.url = button.url;
+                if (button.urlType === 'dynamic') {
+                  buttonObj.example = [button.urlExample || button.url];
+                }
+              } else if (button.type === 'PHONE_NUMBER') {
+                buttonObj.phone_number = button.phone_number;
+              } else if (button.type === 'COPY_CODE') {
+                buttonObj.copy_code = button.copy_code;
+              }
+
+              return buttonObj;
+            })
+          };
+
+          components.push(buttonsComponent);
+        }
+
+        const response = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: form.name,
+            category: form.category,
+            language: form.language,
+            wabaId: form.wabaId,
+            components: components,
+            // Send all form data including S3 URLs
+            headerType: form.headerType,
+            headerText: form.headerText,
+            mediaType: form.mediaType,
+            mediaHandle: form.mediaHandle,
+            s3Url: form.s3Url,
+            s3Handle: form.s3Handle,
+            content: form.content,
+            variables: form.variables,
+            buttons: form.buttons,
+            footerText: footerText,
+            offerSettings: offerSettings
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          toast.success('Limited time offer template created successfully! It will be reviewed by WhatsApp.');
+          router.push('/templates');
+        } else {
+          toast.error(data.error || 'Failed to create limited time offer template');
+          console.error('API error details:', data.details);
+        }
+
+        setCreating(false);
         return;
       }
 
-      // Build components array for non-authentication templates
-      const components = [];
-
-      // Add header component if present
-      if (form.headerType === 'text' && form.headerText) {
-        components.push({
-          type: 'HEADER',
-          format: 'TEXT',
-          text: form.headerText
-        });
-      } else if (['image', 'video', 'document'].includes(form.headerType) && form.mediaHandle) {
-        components.push({
-          type: 'HEADER',
-          format: form.mediaType,
-          example: {
-            header_handle: [form.mediaHandle]
-          }
-        });
-      }
-
-      // Add body component (required)
-      const bodyComponent: any = {
-        type: 'BODY',
-        text: form.content
-      };
-
-      // Add examples for body variables if any
-      if (form.variables.length > 0) {
-        bodyComponent.example = {
-          body_text: [form.variables.map(v => v.example)]
-        };
-      }
-
-      components.push(bodyComponent);
-
-      // Add footer component if present
-      if (footerText) {
-        components.push({
-          type: 'FOOTER',
-          text: footerText
-        });
-      }
-
-      // Add buttons component if present
-      if (form.buttons.length > 0) {
-        const buttonsComponent: any = {
-          type: 'BUTTONS',
-          buttons: form.buttons.map(button => {
-            const buttonObj: any = {
-              type: button.type,
-              text: button.text
-            };
-
-            if (button.type === 'URL') {
-              buttonObj.url = button.url;
-              if (button.urlType === 'dynamic') {
-                buttonObj.example = [button.urlExample || button.url];
-              }
-            } else if (button.type === 'PHONE_NUMBER') {
-              buttonObj.phone_number = button.phone_number;
-            } else if (button.type === 'COPY_CODE') {
-              buttonObj.copy_code = button.copy_code;
-            }
-
-            return buttonObj;
-          })
-        };
-
-        components.push(buttonsComponent);
+      // For non-authentication, non-carousel, and non-limited time offer templates, validate content
+      if (!form.content) {
+        toast.error('Please enter message content');
+        return;
       }
 
       const response = await fetch('/api/templates', {
@@ -1413,7 +1771,18 @@ export default function CreateTemplatePage() {
           category: form.category,
           language: form.language,
           wabaId: form.wabaId,
-          components: components
+          // Send all form data for processing including S3 URLs
+          headerType: form.headerType,
+          headerText: form.headerText,
+          mediaType: form.mediaType,
+          mediaHandle: form.mediaHandle,
+          s3Url: form.s3Url, // Include S3 URL
+          s3Handle: form.s3Handle, // Include S3 handle
+          content: form.content,
+          variables: form.variables,
+          buttons: form.buttons,
+          footerText: footerText,
+          carouselCards: form.carouselCards // Include in case there are carousel cards with S3 data
         })
       });
 
@@ -1433,7 +1802,7 @@ export default function CreateTemplatePage() {
       setCreating(false);
     }
   };
-
+  
   const handleNext = () => {
     // Validation for each step
     if (currentStep === 1) {
@@ -1452,7 +1821,11 @@ export default function CreateTemplatePage() {
         handleCreateTemplate();
         return;
       }
-
+      // For limited time offer templates, go to content step
+      if (form.category === 'LIMITED_TIME_OFFER') {
+        setCurrentStep(2);
+        return;
+      }
       // For carousel templates, go to carousel cards step
       if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
         setCurrentStep(2);
@@ -1461,6 +1834,22 @@ export default function CreateTemplatePage() {
     }
 
     if (currentStep === 2) {
+      if (form.category === 'LIMITED_TIME_OFFER') {
+        // Validate limited time offer content
+        if (!form.content) {
+          toast.error('Please add message content for your limited time offer');
+          return;
+        }
+
+        if (!form.offerExpirationDate || !form.offerExpirationTime) {
+          toast.error('Please set the offer expiration date and time');
+          return;
+        }
+
+        // Go to buttons step
+        setCurrentStep(3);
+        return;
+      }
       if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
         // Validate body content
         if (!form.content) {
@@ -1500,7 +1889,17 @@ export default function CreateTemplatePage() {
         }
       }
     }
-
+    if (currentStep === 3) {
+      if (form.category === 'LIMITED_TIME_OFFER') {
+        // Go to variables step or create template if no variables
+        if (form.variables.length > 0) {
+          setCurrentStep(4);
+        } else {
+          handleCreateTemplate();
+        }
+        return;
+      }
+    }
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -1735,6 +2134,62 @@ export default function CreateTemplatePage() {
                   <span className="hidden md:inline">Carousel Cards</span>
                 </div>
               </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      );
+    }
+    // For limited time offer templates, show specific steps
+    if (form.category === 'LIMITED_TIME_OFFER') {
+      const ltoSteps = [
+        { number: 1, title: 'Basic Info' },
+        { number: 2, title: 'Content & Offer' },
+        { number: 3, title: 'Buttons' },
+        { number: 4, title: 'Variables' }
+      ];
+
+      return (
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-medium">Limited Time Offer Setup</h2>
+            <span className="text-sm font-medium">{progress}% complete</span>
+          </div>
+
+          <Progress value={progress} className="h-2 mb-4" />
+
+          <Tabs
+            value={currentStep.toString()}
+            onValueChange={(value) => setCurrentStep(parseInt(value))}
+            className="w-full"
+          >
+            <TabsList className="grid grid-cols-4 w-full">
+              {ltoSteps.map((step) => (
+                <TabsTrigger
+                  key={step.number}
+                  value={step.number.toString()}
+                  disabled={step.number > currentStep}
+                  className={cn(
+                    "data-[state=active]:bg-primary data-[state=active]:text-white",
+                    "gap-2 relative"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
+                      currentStep === step.number
+                        ? "bg-red-600 text-white"
+                        : currentStep > step.number
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-200 text-gray-600"
+                    )}>
+                      {currentStep > step.number ? <Check className="w-3 h-3" /> : step.number}
+                    </div>
+                    <span className="hidden md:inline text-xs">
+                      {step.title}
+                    </span>
+                  </div>
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
@@ -2059,27 +2514,27 @@ export default function CreateTemplatePage() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => insertFormatting('_', '_', 'italic', 'carousel-content')}
-                            className="px-2 h-8"
-                          >
-                            <Italic className="w-4 h-4" />
-                          </Button>
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => insertFormatting('_', '_', 'italic', 'carousel-content')}
+                              className="px-2 h-8"
+                            >
+                              <Italic className="w-4 h-4" />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Italic text</TooltipContent>
                         </Tooltip>
 
                         <Tooltip>
                           <TooltipTrigger asChild>
-                           <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => insertFormatting('~', '~', 'strikethrough', 'carousel-content')}
-                            className="px-2 h-8"
-                          >
-                            <Strikethrough className="w-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => insertFormatting('~', '~', 'strikethrough', 'carousel-content')}
+                              className="px-2 h-8"
+                            >
+                              <Strikethrough className="w-4 w-4" />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>Strikethrough text</TooltipContent>
                         </Tooltip>
@@ -2435,6 +2890,705 @@ export default function CreateTemplatePage() {
                   </div>
                 </div>
               </div> */}
+            </div>
+          );
+
+        default:
+          return null;
+      }
+    }
+    // For limited time offer templates
+    if (form.category === 'LIMITED_TIME_OFFER') {
+      switch (currentStep) {
+        case 1:
+          return (
+            <div className="space-y-8">
+              {renderBasicInfoStep()}
+              {renderLimitedTimeOfferSettings()}
+            </div>
+          );
+
+        case 2:
+          return (
+            <div className="space-y-8">
+              {/* Header Section */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <LayoutIcon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium">Header</h3>
+                  </div>
+                  <Badge variant="outline" className="text-gray-500">Optional</Badge>
+                </div>
+
+                <p className="text-sm text-gray-500 mb-4">
+                  Add a header to make your limited time offer more visually appealing. Images work great for promotional content.
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {['none', 'text', 'image'].map((type) => (
+                    <Button
+                      key={type}
+                      variant={form.headerType === type ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setForm(prev => ({
+                        ...prev,
+                        headerType: type as any,
+                        mediaType: type === 'image' ? 'IMAGE' : ''
+                      }))}
+                      className={cn(
+                        "capitalize px-4 py-2",
+                        form.headerType === type ? "bg-primary hover:bg-primary/90" : ""
+                      )}
+                    >
+                      {type === 'none' && <Minus className="h-4 w-4 mr-2" />}
+                      {type === 'text' && <Type className="h-4 w-4 mr-2" />}
+                      {type === 'image' && <Image className="h-4 w-4 mr-2" />}
+                      {type === 'none' ? 'No header' : type}
+                    </Button>
+                  ))}
+                </div>
+
+                {form.headerType === 'text' && (
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Enter header text... (e.g., 🔥 FLASH SALE ALERT!)"
+                      value={form.headerText}
+                      onChange={(e) => setForm(prev => ({ ...prev, headerText: e.target.value }))}
+                      maxLength={60}
+                      className="transition-all"
+                    />
+                    <div className="flex justify-end text-xs text-gray-500">
+                      {form.headerText.length}/60 characters
+                    </div>
+                  </div>
+                )}
+
+                {form.headerType === 'image' && (
+                  <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm flex items-center text-gray-600">
+                      <AlertCircle className="h-4 w-4 mr-2 text-amber-500" />
+                      Image format: JPG, PNG (max 5 MB) - Use high-quality promotional images
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                      <div className="w-full sm:w-auto">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file);
+                          }}
+                          disabled={uploading}
+                          className="hidden"
+                          id="file-upload"
+                        />
+                        <Label
+                          htmlFor="file-upload"
+                          className={cn(
+                            "cursor-pointer w-full sm:w-auto inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                            "bg-primary text-white hover:bg-primary/90"
+                          )}
+                        >
+                          {uploading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload promotional image
+                            </>
+                          )}
+                        </Label>
+                      </div>
+                    </div>
+
+                    {form.mediaHandle && (
+                      <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                        <div>
+                          <span className="text-sm text-green-700">Image uploaded successfully</span>
+                          <p className="text-xs text-green-600 mt-1">Your promotional image is ready to use</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Body Section for LTO */}
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-primary/10 rounded-full p-2">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium">Offer Message</h3>
+                  <Badge variant="default" className="ml-auto">Required</Badge>
+                </div>
+
+                <p className="text-sm text-gray-500 mb-4">
+                  Write your promotional message. Create urgency and highlight the value of your limited time offer.
+                </p>
+
+                <div className="relative">
+                  <Textarea
+                    id="content"
+                    placeholder="Hey {{1}}! 🎉 Don't miss out on our FLASH SALE! Get {{2}}% OFF on all items. Use code {{3}} before time runs out!"
+                    rows={6}
+                    value={form.content}
+                    onChange={(e) => setForm(prev => ({ ...prev, content: e.target.value }))}
+                    className="resize-none font-medium"
+                  />
+
+                  <div className="absolute bottom-2 right-2 bg-white rounded-md shadow-sm border">
+                    <TooltipProvider>
+                      <div className="flex">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => insertFormatting('*', '*', 'bold')}
+                              className="px-2 h-8"
+                            >
+                              <Bold className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Bold text</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => insertFormatting('_', '_', 'italic')}
+                              className="px-2 h-8"
+                            >
+                              <Italic className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Italic text</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => insertFormatting('~', '~', 'strikethrough')}
+                              className="px-2 h-8"
+                            >
+                              <Strikethrough className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Strikethrough text</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addVariable}
+                    className="text-primary border-primary/30"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add variable
+                  </Button>
+
+                  <div className="flex items-center text-xs">
+                    <div className={cn(
+                      "text-gray-500",
+                      characterCount > 1000 ? "text-red-500" : characterCount > 800 ? "text-amber-500" : ""
+                    )}>
+                      {characterCount}/1024 characters
+                    </div>
+                  </div>
+                </div>
+
+                {/* Show variables if any */}
+                {form.variables.length > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Variables in your message:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {form.variables.map((variable, index) => (
+                        <Badge key={index} variant="outline" className="text-blue-700 border-blue-300">
+                          {`{{${index + 1}}}`} → {variable.example || 'No example set'}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Section for LTO */}
+              {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <AlignLeft className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium">Footer</h3>
+                  </div>
+                  <Badge variant="outline" className="text-gray-500">Optional</Badge>
+                </div>
+
+                <p className="text-sm text-gray-500 mb-4">
+                  Add footer text for terms, conditions, or additional information about your offer.
+                </p>
+
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Enter footer text (e.g., *Terms and conditions apply. Limited stock available.)"
+                    value={footerText}
+                    onChange={(e) => setFooterText(e.target.value)}
+                    maxLength={60}
+                  />
+                  <div className="flex justify-end text-xs text-gray-500">
+                    {footerText.length}/60 characters
+                  </div>
+                </div>
+              </div> */}
+
+              {/* Offer Countdown Preview */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Calendar className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-red-800 mb-1">Countdown Timer Preview</h4>
+                    <p className="text-sm text-red-700">
+                      Your offer expires on{' '}
+                      <span className="font-medium">
+                        {form.offerExpirationDate && form.offerExpirationTime ?
+                          new Date(`${form.offerExpirationDate}T${form.offerExpirationTime}`).toLocaleString() :
+                          'Not set'
+                        }
+                      </span>
+                    </p>
+                    <p className="text-xs text-red-600 mt-1">
+                      WhatsApp will automatically show a countdown timer to create urgency
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+
+        case 3:
+          return (
+            <div className="space-y-8">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-primary/10 rounded-full p-2">
+                    <MousePointerClick className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium">Action buttons for your offer</h3>
+                  <Badge variant="outline" className="ml-auto text-gray-500">Optional</Badge>
+                </div>
+
+                <p className="text-sm text-gray-500 mb-6">
+                  Add buttons to help users take action on your limited time offer. Consider adding both a website link and a copy code button.
+                </p>
+
+                {form.buttons.length === 0 ? (
+                  <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                    <div className="bg-gray-100 rounded-full p-3 w-16 h-16 mx-auto flex items-center justify-center mb-3">
+                      <MousePointerClick className="h-6 w-6 text-gray-500" />
+                    </div>
+                    <h4 className="text-lg font-medium mb-1">No buttons added</h4>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Add buttons to make it easy for customers to take action on your offer
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <Button onClick={addButton} className="bg-primary hover:bg-primary/90">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add button
+                      </Button>
+                      {form.couponCode && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            addButton();
+                            // Auto-set as copy code button
+                            setTimeout(() => {
+                              setForm(prev => ({
+                                ...prev,
+                                buttons: prev.buttons.map((btn, idx) =>
+                                  idx === prev.buttons.length - 1 ?
+                                    { ...btn, type: 'COPY_CODE', text: 'Copy Code', copy_code: form.couponCode } :
+                                    btn
+                                )
+                              }));
+                            }, 100);
+                          }}
+                          className="border-primary text-primary"
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          Add copy code button
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {form.buttons.map((button, index) => (
+                      <div
+                        key={index}
+                        className="border rounded-lg p-5 mb-4 relative transition-all hover:shadow-sm"
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-3 right-3 h-8 w-8 p-0 text-gray-500 hover:text-red-500 hover:bg-red-50"
+                          onClick={() => removeButton(index)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                          <div>
+                            <Label className="mb-1.5 block">Button type</Label>
+                            <Select
+                              value={button.type}
+                              onValueChange={(value) => updateButton(index, 'type', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="URL">
+                                  <div className="flex items-center">
+                                    <ExternalLink className="h-4 w-4 mr-2 text-blue-500" />
+                                    Visit website
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="COPY_CODE">
+                                  <div className="flex items-center">
+                                    <Copy className="h-4 w-4 mr-2 text-amber-500" />
+                                    Copy offer code
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="QUICK_REPLY">
+                                  <div className="flex items-center">
+                                    <MessageSquare className="h-4 w-4 mr-2 text-purple-500" />
+                                    Quick reply
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="mb-1.5 block">Button text</Label>
+                            <div className="relative">
+                              <Input
+                                value={button.text}
+                                onChange={(e) => updateButton(index, 'text', e.target.value)}
+                                maxLength={25}
+                                placeholder={
+                                  button.type === 'URL' ? 'Shop Now' :
+                                    button.type === 'COPY_CODE' ? 'Copy Code' :
+                                      'Reply'
+                                }
+                              />
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {button.text.length}/25
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {button.type === 'URL' && (
+                          <div className="space-y-5 mt-2 p-4 bg-blue-50/50 rounded-lg border border-blue-100">
+                            <div>
+                              <Label className="mb-1.5 block text-sm">Website URL</Label>
+                              <div className="relative">
+                                <Input
+                                  value={button.url || ''}
+                                  onChange={(e) => updateButton(index, 'url', e.target.value)}
+                                  placeholder="https://yourstore.com/sale"
+                                  className="pr-16"
+                                />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                  {(button.url || '').length}/2000
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Direct customers to your sale page or product catalog
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {button.type === 'COPY_CODE' && (
+                          <div className="p-4 bg-amber-50/50 rounded-lg border border-amber-100">
+                            <Label className="mb-1.5 block text-sm">Coupon code</Label>
+                            <Input
+                              value={button.copy_code || form.couponCode || ''}
+                              onChange={(e) => updateButton(index, 'copy_code', e.target.value)}
+                              placeholder={form.couponCode || "FLASH50"}
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                              This code will be copied to clipboard when user taps the button
+                            </p>
+                            {form.couponCode && !button.copy_code && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateButton(index, 'copy_code', form.couponCode)}
+                                  className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                                >
+                                  Use offer code: {form.couponCode}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {button.type === 'QUICK_REPLY' && (
+                          <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-100">
+                            <p className="text-xs text-purple-700">
+                              <Info className="inline h-3 w-3 mr-1" />
+                              Quick reply buttons send the button text back as a message when tapped
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <Button
+                      variant="outline"
+                      onClick={addButton}
+                      className="w-full py-6 border-dashed"
+                      disabled={form.buttons.length >= 3}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {form.buttons.length >= 3 ?
+                        "Maximum buttons reached (3)" :
+                        `Add another button (${form.buttons.length}/3)`}
+                    </Button>
+                  </div>
+                )}
+
+                <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-red-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-red-800">Limited Time Offer Tips</h4>
+                      <ul className="text-sm text-red-700 mt-2 space-y-1 list-disc pl-4">
+                        <li>Use "Copy Code" buttons to make it easy for customers to use discount codes</li>
+                        <li>Include a "Shop Now" URL button to drive traffic to your sale page</li>
+                        <li>Keep button text short and action-oriented</li>
+                        <li>The countdown timer will create urgency automatically</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+
+        case 4:
+          return (
+            <div className="space-y-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-5">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-red-800 mb-2">Limited Time Offer Variables</h4>
+                    <p className="text-sm text-red-700">
+                      Configure variables for personalization in your promotional message. Common variables include customer name,
+                      discount percentage, coupon codes, and expiration dates.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {form.variables.length > 0 ? (
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <Brackets className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium">Variable Configuration</h3>
+                    <Badge className="ml-auto bg-amber-500">Required</Badge>
+                  </div>
+
+                  <p className="text-sm text-gray-500 mb-6">
+                    Provide example values for each variable in your limited time offer message.
+                    These examples help WhatsApp understand your content during the review process.
+                  </p>
+
+                  <div className="space-y-4">
+                    {form.variables.map((variable, index) => (
+                      <div key={index} className="bg-white border rounded-lg transition-all hover:shadow-sm">
+                        <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-medium">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <h4 className="font-medium">Variable {index + 1}</h4>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-500 hover:text-red-500 hover:bg-red-50"
+                            onClick={() => removeVariable(index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        <div className="p-4">
+                          <Label className="text-sm font-medium mb-2 block">Example value</Label>
+                          <p className="text-xs text-gray-500 mb-3">
+                            Enter a sample value for this variable in your promotional message
+                          </p>
+                          <div className="flex gap-3">
+                            <Input
+                              value={variable.example}
+                              onChange={(e) => updateVariable(index, 'example', e.target.value)}
+                              placeholder={`e.g., ${getPlaceholderForVariable(index)}`}
+                              className="flex-1"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-gray-500"
+                              onClick={() => updateVariable(index, 'example', getPlaceholderForVariable(index))}
+                            >
+                              Use sample
+                            </Button>
+                          </div>
+
+                          {!variable.example && (
+                            <div className="mt-2 flex items-center text-amber-600 text-xs">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              This variable requires an example value
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="px-4 py-3 bg-gray-50 border-t rounded-b-lg">
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Info className="h-3 w-3 mr-1 text-gray-400" />
+                            Variable preview in message: <span className="font-medium ml-1 text-gray-700">{variable.example || "Not set"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCurrentStep(2);
+                        setTimeout(addVariable, 500);
+                      }}
+                      className="text-primary border-primary/30"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add another variable
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                  <div className="text-center py-12">
+                    <div className="bg-gray-100 rounded-full p-3 w-16 h-16 mx-auto flex items-center justify-center mb-3">
+                      <MessageSquare className="h-7 w-7 text-gray-400" />
+                    </div>
+                    <h4 className="text-lg font-medium mb-2">No variables to configure</h4>
+                    <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+                      Your limited time offer doesn&apos;t contain any variables. Variables allow you to personalize
+                      messages with customer names, discount amounts, or coupon codes.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCurrentStep(2);
+                        setTimeout(addVariable, 500);
+                      }}
+                      className="bg-primary hover:bg-primary/90 text-white hover:text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add a variable to your message
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-green-100 rounded-full p-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-medium">Ready to Submit</h3>
+                </div>
+
+                <p className="text-sm text-gray-700 mb-4">
+                  Your limited time offer template is ready for submission. After approval, you can use it to send promotional
+                  messages with countdown timers. Review times typically take 1-2 business days.
+                </p>
+
+                <div className="bg-gray-50 p-4 rounded-lg border">
+                  <h4 className="font-medium mb-2">Template Summary</h4>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex justify-between">
+                      <span className="text-gray-500">Name:</span>
+                      <span className="font-medium">{form.name || "Not set"}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-500">Category:</span>
+                      <span className="font-medium">Limited Time Offer</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-500">Language:</span>
+                      <span className="font-medium">{getLanguageName(form.language) || "Not set"}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-500">Expires:</span>
+                      <span className="font-medium">
+                        {form.offerExpirationDate && form.offerExpirationTime ?
+                          new Date(`${form.offerExpirationDate}T${form.offerExpirationTime}`).toLocaleDateString() :
+                          'Not set'
+                        }
+                      </span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-500">Variables:</span>
+                      <span className="font-medium">{form.variables.length}</span>
+                    </li>
+                    <li className="flex justify-between">
+                      <span className="text-gray-500">Buttons:</span>
+                      <span className="font-medium">{form.buttons.length}</span>
+                    </li>
+                    {form.couponCode && (
+                      <li className="flex justify-between">
+                        <span className="text-gray-500">Coupon Code:</span>
+                        <span className="font-medium">{form.couponCode}</span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
             </div>
           );
 

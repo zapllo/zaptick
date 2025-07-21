@@ -67,7 +67,8 @@ class WorkflowEngine {
         status: 'running',
         variables: { ...triggerData },
         executionPath: [triggerNode.id],
-        createdAt: new Date()
+        createdAt: new Date(),
+        lastActivity: new Date()
       };
 
       this.executions.set(executionId, execution);
@@ -155,24 +156,29 @@ class WorkflowEngine {
         console.log(`   ➡️ Moving to next node: ${nextNodeId}`);
         execution.currentNodeId = nextNodeId;
         execution.executionPath.push(nextNodeId);
+        execution.lastActivity = new Date();
         // Continue execution
         await this.executeNextNode(executionId);
       } else {
-        console.log(`   ✅ Execution completed - no next node found`);
-        execution.status = 'completed';
-        execution.completedAt = new Date();
+        if (execution.status !== 'paused') {
+          console.log(`   ✅ Execution completed - no next node found`);
+          execution.status = 'completed';
+          execution.completedAt = new Date();
+        } else {
+          console.log(`   ⏸️ Execution paused - waiting for user input`);
+        }
       }
 
       // Update workflow statistics
       if (execution.status === 'completed') {
         await Workflow.findByIdAndUpdate(execution.workflowId, {
-          $inc: { successCount: 1 },
+          $inc: { successCount: 1, executionCount: 1 },
           lastTriggered: new Date()
         });
         console.log(`   ✅ Workflow completed successfully`);
       } else if (execution.status === 'failed') {
         await Workflow.findByIdAndUpdate(execution.workflowId, {
-          $inc: { failureCount: 1 },
+          $inc: { failureCount: 1, executionCount: 1 },
           lastTriggered: new Date()
         });
         console.log(`   ❌ Workflow failed`);
@@ -182,7 +188,7 @@ class WorkflowEngine {
       console.error('❌ Error executing node:', error);
       execution.status = 'failed';
       await Workflow.findByIdAndUpdate(execution.workflowId, {
-        $inc: { failureCount: 1 },
+        $inc: { failureCount: 1, executionCount: 1 },
         lastTriggered: new Date()
       });
     }
@@ -664,9 +670,24 @@ class WorkflowEngine {
     workflow: any
   ): Promise<string | null> {
     try {
+      // Check if we're waiting for user input
+      const waitingForInput = node.data.config?.waitForUserInput !== false; // default true
+      
+      if (waitingForInput && !execution.variables.userReply) {
+        console.log(`     ⏸️ Condition node waiting for user input`);
+        
+        // Mark execution as paused and waiting for input
+        execution.status = 'paused';
+        execution.variables.waitingForCondition = node.id;
+        execution.lastActivity = new Date();
+        
+        return null; // Stop execution here
+      }
+
+      // Use user reply if available, otherwise fall back to trigger message
+      const messageContent = (execution.variables.userReply || execution.variables.messageContent || '').toLowerCase();
       const conditionType = node.data.config?.conditionType;
       const conditionValue = node.data.config?.conditionValue;
-      const messageContent = execution.variables.messageContent?.toLowerCase() || '';
 
       console.log(`     🔀 Evaluating condition: "${messageContent}" ${conditionType} "${conditionValue}"`);
 
@@ -695,6 +716,12 @@ class WorkflowEngine {
 
       console.log(`     ✅ Condition result: ${result}`);
 
+      // Clear the user reply after evaluation
+      if (execution.variables.userReply) {
+        delete execution.variables.userReply;
+        delete execution.variables.waitingForCondition;
+      }
+
       // Find edges from this condition node
       const outgoingEdges = workflow.edges.filter((edge: any) => edge.source === node.id);
       console.log(`     🔗 Found ${outgoingEdges.length} outgoing edges:`, outgoingEdges.map((e: any) => ({
@@ -718,8 +745,7 @@ class WorkflowEngine {
         console.log(`     ⚠️ No handle-specific edge found, using first edge since condition is true`);
       }
 
-      // For your current workflow structure, since you have one edge without sourceHandle,
-      // and the condition is true, we should proceed
+      // For single edge workflows, proceed regardless of condition result
       if (!nextEdge && outgoingEdges.length === 1) {
         nextEdge = outgoingEdges[0];
         console.log(`     ⚠️ Single edge found, proceeding regardless of condition result`);
@@ -753,6 +779,7 @@ class WorkflowEngine {
       if (nextEdge?.target) {
         execution.currentNodeId = nextEdge.target;
         execution.executionPath.push(nextEdge.target);
+        execution.lastActivity = new Date();
 
         // Find the execution ID for this execution
         const executionId = Array.from(this.executions.entries())
@@ -809,7 +836,8 @@ class WorkflowEngine {
       return null;
     }
   }
-  private async recordMessageInConversation(
+
+ private async recordMessageInConversation(
     contact: any,
     messageContent: string,
     messageType: string,
@@ -874,7 +902,7 @@ class WorkflowEngine {
     }
   }
 
-  // Add new method to continue workflow based on user input
+  // Updated method to continue workflow based on user input
   async continueWorkflow(
     workflowId: string,
     contactId: string,
@@ -884,22 +912,24 @@ class WorkflowEngine {
       messageType: 'button_click' | 'list_selection' | 'text_response';
       contextMessageId?: string;
       timestamp: Date;
+      textContent?: string; // Add this for text responses
     }
   ): Promise<void> {
-// Find matching execution from the Map
-const execution = Array.from(this.executions.values()).find(
+    // Find matching execution from the Map
+    const execution = Array.from(this.executions.values()).find(
       exec => exec.workflowId === workflowId && 
                exec.contactId === contactId && 
-               exec.status === 'running'
+               (exec.status === 'running' || exec.status === 'paused') // Include paused executions
     );
 
     if (!execution) {
-      console.log('❌ No running execution found to continue');
+      console.log('❌ No running/paused execution found to continue');
       return;
     }
 
     console.log(`🔄 Continuing workflow execution: ${execution.workflowId}`);
     console.log(`   Current node: ${execution.currentNodeId}`);
+    console.log(`   Execution status: ${execution.status}`);
     console.log(`   User input:`, userInput);
 
     try {
@@ -908,65 +938,88 @@ const execution = Array.from(this.executions.values()).find(
         throw new Error('Workflow not found');
       }
 
-      const contact = await Contact.findById(contactId);
-      if (!contact) {
-        throw new Error('Contact not found');
-      }
-
-      const user = await User.findById(workflow.userId);
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      const wabaAccount = user.wabaAccounts?.find((acc: any) => acc.wabaId === workflow.wabaId);
-      if (!wabaAccount) {
-        throw new Error('WABA account not found');
-      }
-
-      // Find the current node
-      const currentNode = workflow.nodes.find((node: any) => node.id === execution.currentNodeId);
-      if (!currentNode) {
-        throw new Error('Current node not found');
-      }
-
-      // Determine the next node based on the user input
-      let nextNodeId: string | null = null;
-
-      if (currentNode.type === 'action' && 
-          (currentNode.data.config?.actionType === 'send_button' || 
-           currentNode.data.config?.actionType === 'send_list')) {
+      // Handle text responses for paused condition nodes
+      if (execution.status === 'paused' && 
+          execution.variables.waitingForCondition && 
+          userInput.messageType === 'text_response') {
         
-        // Find the edge that corresponds to the button clicked
-        nextNodeId = this.findNextNodeForButtonClick(
-          workflow,
-          currentNode.id,
-          userInput.buttonId || ''
-        );
+        console.log(`📝 Resuming paused workflow with text response: "${userInput.textContent}"`);
+        
+        // Add user reply to execution variables
+        execution.variables.userReply = userInput.textContent;
+        execution.status = 'running';
+        execution.lastActivity = new Date();
+        
+        // Continue execution from current node (the condition node)
+        const executionId = Array.from(this.executions.entries())
+          .find(([_, exec]) => exec === execution)?.[0];
+        
+        if (executionId) {
+          await this.executeNextNode(executionId);
+        }
+        return;
       }
 
-      if (nextNodeId) {
-        console.log(`➡️ Moving to next node: ${nextNodeId}`);
-        execution.currentNodeId = nextNodeId;
-// Update execution path with the new node
-execution.executionPath.push(nextNodeId);
-        
-        // Continue execution from the new node
-// Find execution ID
-const executionId = Array.from(this.executions.entries())
-  .find(([_, exec]) => exec === execution)?.[0];
-if (executionId) {
-  await this.executeNextNode(executionId);
-}
-      } else {
-        console.log('🏁 No next node found, completing execution');
-        execution.status = 'completed';
-        execution.completedAt = new Date();
+      // Handle button/list interactions (existing logic)
+      if (execution.status === 'running') {
+        const contact = await Contact.findById(contactId);
+        if (!contact) {
+          throw new Error('Contact not found');
+        }
+
+        const user = await User.findById(workflow.userId);
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        const wabaAccount = user.wabaAccounts?.find((acc: any) => acc.wabaId === workflow.wabaId);
+        if (!wabaAccount) {
+          throw new Error('WABA account not found');
+        }
+
+        // Find the current node
+        const currentNode = workflow.nodes.find((node: any) => node.id === execution.currentNodeId);
+        if (!currentNode) {
+          throw new Error('Current node not found');
+        }
+
+        // Determine the next node based on the user input
+        let nextNodeId: string | null = null;
+
+        if (currentNode.type === 'action' && 
+            (currentNode.data.config?.actionType === 'send_button' || 
+             currentNode.data.config?.actionType === 'send_list')) {
+          
+          // Find the edge that corresponds to the button clicked
+          nextNodeId = this.findNextNodeForButtonClick(
+            workflow,
+            currentNode.id,
+            userInput.buttonId || ''
+          );
+        }
+
+        if (nextNodeId) {
+          console.log(`➡️ Moving to next node: ${nextNodeId}`);
+          execution.currentNodeId = nextNodeId;
+          execution.executionPath.push(nextNodeId);
+          execution.lastActivity = new Date();
+          
+          // Continue execution from the new node
+          const executionId = Array.from(this.executions.entries())
+            .find(([_, exec]) => exec === execution)?.[0];
+          if (executionId) {
+            await this.executeNextNode(executionId);
+          }
+        } else {
+          console.log('🏁 No next node found, completing execution');
+          execution.status = 'completed';
+          execution.completedAt = new Date();
+        }
       }
 
     } catch (error) {
       console.error('❌ Error continuing workflow:', error);
       execution.status = 'failed';
-      // Store error in variables instead
       execution.variables.error = error instanceof Error ? error.message : 'Unknown error';
     }
   }
@@ -985,7 +1038,6 @@ if (executionId) {
 
     return matchingEdge?.target || null;
   }
-
 
   getExecution(executionId: string): WorkflowExecution | undefined {
     return this.executions.get(executionId);

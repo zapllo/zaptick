@@ -52,6 +52,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { FaWhatsapp } from "react-icons/fa";
 
 interface SidebarProps {
   user: {
@@ -281,7 +282,7 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                 <img
                   src="/tick.png"
                   alt="ZapTick"
-                  className="h-8 w-8  object-contain"
+                  className="h-16  w-16  object-contain"
                 />
               </div>
             </div>
@@ -362,9 +363,9 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
                 <Button
                   size="sm"
                   className="w-full h-9 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all duration-200"
-                  onClick={() => router.push('/settings/waba')}
+                  onClick={() => router.push('/dashboard#waba-section')}
                 >
-                  <MessageCircle className="mr-2 h-4 w-4" />
+                  <FaWhatsapp className="m h-4 w-4" />
                   Connect WhatsApp
                 </Button>
               </div>

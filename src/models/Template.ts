@@ -2,12 +2,15 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITemplate extends Document {
   name: string;
-  category: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY' | 'CAROUSEL' | 'CAROUSEL_UTILITY'; // Add CAROUSEL
+  category: 'AUTHENTICATION' | 'MARKETING' | 'UTILITY' | 'CAROUSEL' | 'CAROUSEL_UTILITY' | 'LIMITED_TIME_OFFER';
   language: string;
   components?: {
-    type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS' | 'CAROUSEL';
+    type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS' | 'CAROUSEL' | 'LIMITED_TIME_OFFER';
     format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
     text?: string;
+    // Add S3 URL fields to components
+    mediaUrl?: string; // S3 URL for media
+    s3Handle?: string; // S3 handle
     example?: {
       header_text?: string[];
       body_text?: string[][];
@@ -22,12 +25,15 @@ export interface ITemplate extends Document {
       copy_code?: string;
       example?: string[];
     }[];
-    // Fix: Update carousel cards structure to match payload
+    // Updated carousel cards structure with S3 URLs
     cards?: {
       components?: {
         type: 'HEADER' | 'BODY' | 'BUTTONS';
         format?: 'IMAGE' | 'VIDEO' | 'TEXT';
         text?: string;
+        // Add S3 URL fields to carousel card components
+        mediaUrl?: string; // S3 URL for carousel card media
+        s3Handle?: string; // S3 handle for carousel card media
         example?: {
           header_handle?: string[];
           body_text?: string[][];
@@ -42,6 +48,15 @@ export interface ITemplate extends Document {
       }[];
     }[];
   }[];
+  // Add limited time offer specific fields
+  limited_time_offer?: {
+    expiration_time_ms?: number;
+  };
+  // Add limited time offer settings
+  offerSettings?: {
+    expirationTimeMs: number;
+    couponCode?: string;
+  };
   wabaId: string;
   phoneNumberId: string;
   userId: string;
@@ -56,7 +71,7 @@ export interface ITemplate extends Document {
   authSettings?: {
     codeExpirationMinutes: number;
     codeLength: number;
-    addCodeEntryOption?: boolean; // Add missing field
+    addCodeEntryOption?: boolean;
   };
 }
 
@@ -71,7 +86,7 @@ const TemplateSchema = new Schema<ITemplate>(
     category: {
       type: String,
       required: [true, 'Template category is required'],
-      enum: ['AUTHENTICATION', 'MARKETING', 'UTILITY', 'CAROUSEL','CAROUSEL_UTILITY'] // Add CAROUSEL
+      enum: ['AUTHENTICATION', 'MARKETING', 'UTILITY', 'CAROUSEL', 'CAROUSEL_UTILITY', 'LIMITED_TIME_OFFER']
     },
     language: {
       type: String,
@@ -82,13 +97,16 @@ const TemplateSchema = new Schema<ITemplate>(
       type: {
         type: String,
         required: true,
-        enum: ['HEADER', 'BODY', 'FOOTER', 'BUTTONS', 'CAROUSEL']
+        enum: ['HEADER', 'BODY', 'FOOTER', 'BUTTONS', 'CAROUSEL', 'LIMITED_TIME_OFFER']
       },
       format: {
         type: String,
         enum: ['TEXT', 'IMAGE', 'VIDEO', 'DOCUMENT']
       },
       text: String,
+      // Add S3 URL fields to component schema
+      mediaUrl: String, // S3 URL for media
+      s3Handle: String, // S3 handle
       example: {
         header_text: [String],
         body_text: [[String]],
@@ -106,7 +124,7 @@ const TemplateSchema = new Schema<ITemplate>(
         copy_code: String,
         example: [String]
       }],
-      // Fix: Update carousel cards schema to match the actual payload structure
+      // Updated carousel cards schema with S3 URLs
       cards: [{
         components: [{
           type: {
@@ -118,6 +136,9 @@ const TemplateSchema = new Schema<ITemplate>(
             enum: ['IMAGE', 'VIDEO', 'TEXT']
           },
           text: String,
+          // Add S3 URL fields to carousel card component schema
+          mediaUrl: String, // S3 URL for carousel card media
+          s3Handle: String, // S3 handle for carousel card media
           example: {
             header_handle: [String],
             body_text: [[String]]
@@ -169,9 +190,18 @@ const TemplateSchema = new Schema<ITemplate>(
         type: Number,
         default: 6
       },
-      addCodeEntryOption: { // Add missing field
+      addCodeEntryOption: {
         type: Boolean,
         default: true
+      }
+    },
+    // Add offer settings schema
+    offerSettings: {
+      expirationTimeMs: {
+        type: Number
+      },
+      couponCode: {
+        type: String
       }
     }
   },

@@ -687,11 +687,11 @@ export default function SignupPage() {
                       </div>
                     </motion.div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                       <motion.div variants={fadeIn} className="space-y-2">
                         <Label htmlFor="companyIndustry">Industry</Label>
                         <Select value={companyIndustry} onValueChange={setCompanyIndustry}>
-                          <SelectTrigger className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400">
+                          <SelectTrigger className="h-11 transition-all focus:ring-2  w-full focus:ring-green-200 focus:border-green-400">
                             <div className="flex items-center gap-2">
                               <Briefcase className="h-4 w-4 text-muted-foreground" />
                               <SelectValue placeholder="Select your industry" />
@@ -714,7 +714,7 @@ export default function SignupPage() {
                           onValueChange={setCompanyCategory}
                           disabled={!companyIndustry}
                         >
-                          <SelectTrigger className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400">
+                          <SelectTrigger className="h-11 transition-all focus:ring-2 focus:ring-green-200 w-full focus:border-green-400">
                             <div className="flex items-center gap-2">
                               <BiCategory className="h-4 w-4 text-muted-foreground" />
                               <SelectValue placeholder={companyIndustry ? "Select category" : "Select industry first"} />

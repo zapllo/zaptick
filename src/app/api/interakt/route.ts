@@ -294,14 +294,69 @@ async function processMessage(
 
   await conv.save();
 
-  // Check for auto replies (only for text messages from customers)
+  // For text messages from customers, check workflows in order of priority
   if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
-    await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
+    // 1. First check if this continues a paused workflow
+    const continuedWorkflow = await checkForWorkflowContinuation(newMsg.content, contact, wabaAcc, userId);
+    
+    if (!continuedWorkflow) {
+      // 2. If no workflow was continued, check for auto replies
+      await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
+      
+      // 3. Then check for new workflow triggers
+      await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+    }
   }
+}
 
-  // Check for workflow triggers (only for text messages from customers)
-  if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
-    await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+// New function to check for paused workflows that need continuation
+async function checkForWorkflowContinuation(
+  messageContent: string,
+  contact: any,
+  wabaAcc: any,
+  userId: string
+): Promise<boolean> {
+  try {
+    console.log(`🔍 Checking for paused workflows for contact: ${contact.phone}`);
+    
+    const workflowEngine = WorkflowEngine.getInstance();
+    
+    // Find paused workflow execution waiting for this contact's input
+    const pausedExecution = workflowEngine.getAllExecutions()
+      .find(exec => 
+        exec.contactId === contact._id.toString() && 
+        exec.status === 'paused' &&
+        exec.variables.waitingForCondition
+      );
+    
+    if (pausedExecution) {
+      console.log(`🔄 Found paused workflow waiting for input: ${pausedExecution.workflowId}`);
+      console.log(`   Waiting for condition node: ${pausedExecution.variables.waitingForCondition}`);
+      console.log(`   User message: "${messageContent}"`);
+      
+      // Continue workflow with text response
+      await workflowEngine.continueWorkflow(
+        pausedExecution.workflowId,
+        contact._id.toString(),
+        {
+          messageType: 'text_response',
+          textContent: messageContent,
+          timestamp: new Date()
+        }
+      );
+      
+      console.log(`✅ Workflow continued with text response`);
+      
+      // Return true to indicate a workflow was continued
+      return true;
+    } else {
+      console.log(`❌ No paused workflow found for contact: ${contact.phone}`);
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('❌ Error checking for workflow continuation:', error);
+    return false;
   }
 }
 
@@ -352,6 +407,7 @@ async function checkAndContinueWorkflow(
     console.error('❌ Error continuing workflow:', error);
   }
 }
+
 // Update the checkAndTriggerWorkflows function
 async function checkAndTriggerWorkflows(
   messageContent: string,
@@ -432,7 +488,6 @@ async function checkAndTriggerWorkflows(
           return match;
         });
       }
-
 
       if (shouldTrigger) {
         console.log(`\n🚀 TRIGGERING WORKFLOW: "${workflow.name}" for contact: ${contact.phone}`);
@@ -573,8 +628,6 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
         );
 
         console.log(`✅ Workflow triggered successfully with execution ID: ${executionId}`);
-    
-
         return; // Exit early since workflow handles the messaging
       } catch (workflowError) {
         console.error('❌ Error triggering workflow:', workflowError);
@@ -648,8 +701,11 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
       if (response.ok) {
         // Record the auto reply in the conversation
         const responseData = JSON.parse(responseText);
-        
-      
+        await recordAutoReplyInConversation(
+          contact,
+          autoReply,
+          responseData.messages?.[0]?.id
+        );
       } else {
         console.error('Failed to send auto reply:', responseText);
       }

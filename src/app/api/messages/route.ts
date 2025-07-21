@@ -10,6 +10,60 @@ import Template from '@/models/Template';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
+// Helper function to build template components from template structure
+function buildTemplateComponents(template: any, variables: any = {}) {
+  const components = [];
+
+  if (!template.components) return components;
+
+  for (const component of template.components) {
+    if (component.type === 'HEADER') {
+      if (component.format === 'TEXT' && component.text?.includes('{{')) {
+        // Extract variables from header text
+        const headerParams = [];
+        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+        matches.forEach((match: string) => {
+          const varName = match.replace(/\{\{|\}\}/g, '').trim();
+          headerParams.push({
+            type: 'text',
+            text: variables[varName] || `[${varName}]`
+          });
+        });
+        
+        if (headerParams.length > 0) {
+          components.push({
+            type: 'header',
+            parameters: headerParams
+          });
+        }
+      } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
+        // Handle media headers if needed
+        // This would require media URLs to be provided
+      }
+    } else if (component.type === 'BODY' && component.text?.includes('{{')) {
+      // Extract variables from body text
+      const bodyParams = [];
+      const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+      matches.forEach((match: string) => {
+        const varName = match.replace(/\{\{|\}\}/g, '').trim();
+        bodyParams.push({
+          type: 'text',
+          text: variables[varName] || `[${varName}]`
+        });
+      });
+      
+      if (bodyParams.length > 0) {
+        components.push({
+          type: 'body',
+          parameters: bodyParams
+        });
+      }
+    }
+  }
+
+  return components;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -36,11 +90,11 @@ export async function POST(req: NextRequest) {
       message,
       messageType = 'text',
       senderName,
-      templateName,
       templateId,
       language = 'en',
       templateComponents,
-      templateData
+      templateData,
+      variables = {} // Add variables from frontend
     } = requestData;
 
     console.log('Request data:', JSON.stringify(requestData, null, 2));
@@ -57,15 +111,24 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    if (messageType === 'template' && !templateName) {
+    if (messageType === 'template' && !templateId) {
       return NextResponse.json({
-        error: 'Missing required field: templateName for template message'
+        error: 'Missing required field: templateId for template message'
       }, { status: 400 });
     }
 
     const contact = await Contact.findById(contactId);
     if (!contact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
+    }
+
+    // Get template if this is a template message
+    let template = null;
+    if (messageType === 'template') {
+      template = await Template.findById(templateId);
+      if (!template) {
+        return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+      }
     }
 
     const wabaAccounts = user.wabaAccounts || [];
@@ -84,8 +147,10 @@ export async function POST(req: NextRequest) {
     let renderedBody = message;
     let headerMedia = {};
  
-    if (messageType === 'template') {
-
+    if (messageType === 'template' && template) {
+      // Build template components automatically or use provided ones
+      const finalComponents = templateComponents || buildTemplateComponents(template, variables);
+      
       // Basic template structure
       whatsappPayload = {
         messaging_product: "whatsapp",
@@ -93,17 +158,19 @@ export async function POST(req: NextRequest) {
         to: phoneNumber,
         type: "template",
         template: {
-          name: templateName,
+          name: template.name,
           language: {
-            code: language
+            code: template.language || language
           }
         }
       };
 
-      // Add components if provided
-      if (templateComponents && Array.isArray(templateComponents) && templateComponents.length > 0) {
-        whatsappPayload.template.components = templateComponents;
+      // Add components if we have any
+      if (finalComponents && finalComponents.length > 0) {
+        whatsappPayload.template.components = finalComponents;
       }
+
+      console.log('Built template components:', JSON.stringify(finalComponents, null, 2));
     } else {
       // Regular text message
       whatsappPayload = {
@@ -117,19 +184,12 @@ export async function POST(req: NextRequest) {
         }
       };
     }
-   if (messageType === 'template') {
-      const tpl = await Template.findOne({
-        name: templateName,
-        wabaId: contact.wabaId,
-      });
 
-      if (tpl) {
-        renderedBody = renderTemplateBody(tpl, templateComponents);
-        headerMedia = extractHeaderMedia(tpl, templateComponents);
-      } else {
-        renderedBody = `Template: ${templateName}`; // fallback
-      }
+    if (messageType === 'template' && template) {
+      renderedBody = renderTemplateBody(template, whatsappPayload.template.components);
+      headerMedia = extractHeaderMedia(template, whatsappPayload.template.components);
     }
+
     console.log('Final WhatsApp payload:', JSON.stringify(whatsappPayload, null, 2));
 
     if (!INT_TOKEN) {
@@ -204,9 +264,8 @@ export async function POST(req: NextRequest) {
     let conversation = await Conversation.findOne({ contactId: contact._id });
 
     const messageContent = messageType === 'template'
-      ? renderedBody            // ← body text, not just the stub
+      ? renderedBody
       : message;
-
 
     const newMessage = {
       id: uuidv4(),
@@ -217,7 +276,7 @@ export async function POST(req: NextRequest) {
       status: 'sent' as const,
       whatsappMessageId: interaktData.messages?.[0]?.id,
       senderName: senderName || user.name || 'Agent',
-      templateName: messageType === 'template' ? templateName : undefined
+      templateName: messageType === 'template' ? template?.name : undefined
     };
 
     if (conversation) {

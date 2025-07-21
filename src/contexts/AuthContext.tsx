@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.setItem('token', data.token);
       setUser(data.user);
-      router.push('/dashboard');
+      router.push('/signup/whatsapp');
     } catch (error) {
       console.error('Signup error:', error);
       throw error;

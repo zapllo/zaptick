@@ -18,11 +18,12 @@ export async function GET(
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-
+    // Await params before using its properties
+    const { id } = await params;
     await dbConnect();
 
     const conversation = await Conversation.findOne({
-      _id: params.id,
+      _id: id,
       userId: decoded.id
     }).populate('contactId', 'name phone email whatsappOptIn tags notes');
 

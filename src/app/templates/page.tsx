@@ -1295,10 +1295,10 @@ export default function TemplatesPage() {
                                             <Edit className="h-4 w-4 mr-2" />
                                             Edit Template
                                           </DropdownMenuItem>
-                                          <DropdownMenuItem>
+                                          {/* <DropdownMenuItem>
                                             <Code className="h-4 w-4 mr-2" />
                                             API Integration
-                                          </DropdownMenuItem>
+                                          </DropdownMenuItem> */}
                                           <DropdownMenuSeparator />
                                           {template.status === 'deleted' ? (
                                             <DropdownMenuItem onClick={() => handleRestoreTemplate(template.id)}>

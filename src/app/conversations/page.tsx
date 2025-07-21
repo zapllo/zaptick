@@ -302,8 +302,11 @@ function ConversationsPageContent() {
   // Add new state for file uploads
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [uploadType, setUploadType] = useState<'IMAGE' | 'VIDEO' | 'DOCUMENT'>('IMAGE');
-
-
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [templateContactInfo, setTemplateContactInfo] = useState<{
+    contactId: string;
+    wabaId: string;
+  } | null>(null);
   const messageMap = useMessageMap(messages);
 
   const renderReplySnippet = (msg: IMessage) => {
@@ -324,73 +327,56 @@ function ConversationsPageContent() {
     console.log('File selected:', file.name, type);
   };
 
-  const handleUploadComplete = async (url: string, type: string, caption?: string) => {
-    if (!getCurrentContact()) {
-      toast({
-        title: "Contact information missing",
-        description: "Please select a contact to send media",
-        variant: "destructive"
-      });
-      return;
-    }
+  // Update the handleUploadComplete function to populate templateMediaInputs
+  // Update handleUploadComplete to better handle template media
+  const handleUploadComplete = (url: string, type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => {
+    console.log('🎉 Upload completed:', { url, type });
+    console.log('Current selectedTemplate:', selectedTemplate?.name);
+    console.log('Current templateMediaInputs before update:', templateMediaInputs);
 
-    setIsSending(true);
-    try {
-      const contactId = selectedContact?.id || activeConversation?.contact?.id;
+    // Always set the uploaded URL for regular messages
+    // setUploadedImageUrl(url);
 
-      const response = await fetch('/api/messages/media', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactId,
-          mediaUrl: url,
-          caption: caption || '',
-          mediaType: type.toLowerCase()
-        }),
-      });
+    // CRITICAL: If we're dealing with a template, set the template media input
+    const mediaType = type.toLowerCase();
+    const inputKey = `header_${mediaType}`;
 
-      const data = await response.json();
+    setTemplateMediaInputs(prev => {
+      const updated = {
+        ...prev,
+        [inputKey]: url
+      };
+      console.log('🔧 Updated templateMediaInputs:', updated);
+      return updated;
+    });
 
-      if (data.success) {
-        if (!activeConversation && data.conversationId) {
-          const convResponse = await fetch(`/api/conversations/${data.conversationId}`);
-          const convData = await convResponse.json();
-          if (convData.success) {
-            setActiveConversation(convData.conversation);
-            setSelectedContact(null);
-            fetchConversations();
-          }
-        } else if (activeConversation) {
-          fetchMessages(activeConversation.id);
-          fetchConversations();
-        }
+    // Close the upload dialog
+    setShowFileUpload(false);
 
-        setShowFileUpload(false);
-        toast({ title: "Media sent successfully" });
-      } else {
-        toast({
-          title: "Failed to send media",
-          description: data.message || "Please try again",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error sending media:', error);
-      toast({
-        title: "Failed to send media",
-        description: "Network error. Please check your connection and try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSending(false);
-    }
+    toast({
+      title: "Upload successful",
+      description: `${type.toLowerCase()} uploaded and ready to use`
+    });
+
+    console.log('📝 Final state after upload:');
+    console.log('- uploadedImageUrl:', url);
+    console.log('- inputKey:', inputKey);
+    console.log('- Will be available at templateMediaInputs[' + inputKey + ']');
   };
+
 
   const handleMediaUpload = (type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => {
+    console.log('handleMediaUpload called with type:', type);
+
+    // Set the upload type and show file upload dialog
     setUploadType(type);
     setShowFileUpload(true);
-  };
 
+    // If we're in template mode, we need to remember this is for a template
+    if (selectedTemplate) {
+      console.log('Upload is for template:', selectedTemplate.name);
+    }
+  };
 
 
   // Add a function to handle emoji selection
@@ -495,13 +481,52 @@ function ConversationsPageContent() {
     return formattedText;
   };
 
+  // Update the hasMediaHeaders function with better case handling
+  const hasMediaHeaders = (template: Template) => {
+    if (!template.components) return false;
+
+    return template.components.some(comp => {
+      const componentType = comp.type?.toUpperCase?.() || comp.type?.toUpperCase();
+      const format = comp.format?.toUpperCase?.() || comp.format?.toUpperCase();
+
+      console.log('Checking component for media header:', {
+        type: componentType,
+        format: format,
+        isHeaderWithMedia: componentType === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(format)
+      });
+
+      return componentType === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(format);
+    });
+  };
+
+  // Update the hasTemplateVariables function with better case handling
   const hasTemplateVariables = (template: Template) => {
-    return template.components?.some(comp =>
-      // Only check for TEXT variables in body and TEXT headers
-      (comp.type === 'body' && comp.text?.includes('{{')) ||
-      (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{'))
-      // Remove the media header check since those don't need variables
-    );
+    if (!template.components) return false;
+
+    return template.components.some(comp => {
+      const componentType = comp.type?.toUpperCase?.() || comp.type?.toUpperCase();
+      const format = comp.format?.toUpperCase?.() || comp.format?.toUpperCase();
+
+      // Check for TEXT variables in body
+      if (componentType === 'BODY' && comp.text?.includes('{{')) {
+        return true;
+      }
+      // Check for TEXT variables in TEXT headers
+      if (componentType === 'HEADER' && format === 'TEXT' && comp.text?.includes('{{')) {
+        return true;
+      }
+      // Check for URL variables in buttons
+      if (componentType === 'BUTTON' && comp.sub_type === 'url' && comp.url?.includes('{{')) {
+        return true;
+      }
+      // Check for URL variables in BUTTONS component
+      if (componentType === 'BUTTONS' && comp.buttons) {
+        return comp.buttons.some((button: any) =>
+          button.type === 'URL' && button.url?.includes('{{')
+        );
+      }
+      return false;
+    });
   };
 
   // Enhanced template dialog states
@@ -1413,26 +1438,44 @@ function ConversationsPageContent() {
     }
   }, [activeConversation]);
 
-  // Also update the fetchConversationDetails function to return a promise
+
+  // Also make sure the fetchConversationDetails function is working properly
   const fetchConversationDetails = async (conversationId: string) => {
     try {
+      console.log('Fetching details for conversation:', conversationId);
       const response = await fetch(`/api/conversations/${conversationId}`);
+
+      if (!response.ok) {
+        console.error('API response not ok:', response.status, response.statusText);
+        return null;
+      }
+
       const data = await response.json();
+      console.log('Conversation details response:', data);
+
       if (data.success && data.conversation) {
+        // Ensure we have complete contact information
+        if (!data.conversation.contact?.id) {
+          console.error('Fetched conversation still missing contact ID:', data.conversation);
+          return null;
+        }
+
         // Update the conversations list with complete details
         setConversations(prevConversations =>
           prevConversations.map(conv =>
             conv.id === conversationId ? data.conversation : conv
           )
         );
+
+        console.log('Updated conversation with contact:', data.conversation.contact);
         return data.conversation;
+      } else {
+        console.error('Failed to fetch conversation details:', data);
+        return null;
       }
     } catch (error) {
       console.error('Error fetching conversation details:', error);
-      toast({
-        title: "Failed to load complete conversation details",
-        variant: "destructive"
-      });
+      return null;
     }
   };
 
@@ -1663,17 +1706,48 @@ function ConversationsPageContent() {
     setMessageInput("");
   };
 
+  const sendTemplate = async (template: Template) => {
+    console.log('🔍 SENDTEMPLATE START - Contact Resolution');
+    console.log('selectedTemplate:', selectedTemplate);
+    console.log('activeConversation:', activeConversation);
 
-  const sendTemplate = async (template: Template, skipVariables = false) => {
     let contactId: string;
     let wabaId: string;
 
+    // Enhanced contact resolution (existing code stays the same...)
     if (selectedContact) {
       contactId = selectedContact.id;
       wabaId = selectedContact.wabaId;
+      console.log('✅ Using selectedContact:', { contactId, wabaId });
     } else if (activeConversation?.contact?.id) {
       contactId = activeConversation.contact.id;
       wabaId = activeConversation.wabaId;
+      console.log('✅ Using activeConversation contact:', { contactId, wabaId });
+    } else if (activeConversation?.id) {
+      console.log('⚠️ Contact ID missing, attempting to fetch conversation details...');
+      try {
+        const completeConversation = await fetchConversationDetails(activeConversation.id);
+        if (completeConversation?.contact?.id) {
+          contactId = completeConversation.contact.id;
+          wabaId = completeConversation.wabaId;
+          setActiveConversation(completeConversation);
+          console.log('✅ Retrieved contact from API:', { contactId, wabaId });
+        } else {
+          toast({
+            title: "Contact information missing",
+            description: "Please reload the conversation and try again",
+            variant: "destructive"
+          });
+          return;
+        }
+      } catch (error) {
+        toast({
+          title: "Failed to load contact information",
+          description: "Please try refreshing the page",
+          variant: "destructive"
+        });
+        return;
+      }
     } else {
       toast({
         title: "Contact information missing",
@@ -1683,147 +1757,54 @@ function ConversationsPageContent() {
       return;
     }
 
-    if (isSending) return;
-
-    console.log('Full template object:', template);
-    console.log('Template components:', template.components);
-
-    // Handle different template formats
-    let hasTextVariables = false;
-    let hasMediaHeaders = false;
-
-    if (template.components) {
-      // Standard WhatsApp template format
-      hasTextVariables = template.components.some(comp =>
-        (comp.type === 'body' && comp.text?.includes('{{')) ||
-        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
-        (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
-      );
-
-      hasMediaHeaders = template.components.some(comp =>
-        comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
-      );
-    } else {
-      // Your custom template format
-      // Check if content has variables
-      hasTextVariables = template.content?.includes('{{') || false;
-
-      // Check if it's a media template
-      hasMediaHeaders = template.mediaType && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(template.mediaType);
+    if (!contactId || !wabaId) {
+      toast({
+        title: "Contact information incomplete",
+        description: "Missing contact ID or WABA ID. Please try again.",
+        variant: "destructive"
+      });
+      return;
     }
 
-    console.log('Template analysis:', {
-      templateName: template.name,
-      hasTextVariables,
-      hasMediaHeaders,
-      skipVariables,
-      shouldShowDialog: (hasTextVariables || hasMediaHeaders) && !skipVariables,
-      templateFormat: template.components ? 'standard' : 'custom'
-    });
+    // 🔥 NEW: Check if template has variables and show dialog
+    const hasVariables = hasTemplateVariables(template);
+    const hasMedia = hasMediaHeaders(template);
 
-    // If template has variables or media headers and we're not skipping the dialog
-    if ((hasTextVariables || hasMediaHeaders) && !skipVariables) {
-      console.log('Opening template variables dialog');
+    if (hasVariables || hasMedia) {
+      // Show the variables dialog instead of sending immediately
       setSelectedTemplate(template);
-      setTemplateVariables({});
-      setTemplateMediaInputs({});
       setShowTemplateVariablesDialog(true);
       return;
     }
 
+    // If no variables needed, send directly
+    await sendTemplateWithData(template, contactId, wabaId, {}, {});
+  };
+
+  // 🔥 NEW: Separate function to actually send the template with data
+  const sendTemplateWithData = async (
+    template: Template,
+    contactId: string,
+    wabaId: string,
+    variables: { [key: string]: string },
+    mediaInputs: { [key: string]: string }
+  ) => {
+    if (isSending) return;
+
     setIsSending(true);
     try {
-      // Prepare the request payload
-      const requestPayload: any = {
+      // Enhanced payload with variables
+      const requestPayload = {
         contactId: contactId,
         messageType: 'template',
-        templateName: template.name,
-        language: template.language,
+        templateId: template.id,
         conversationId: activeConversation?.id,
-        senderName: currentUser.name
+        senderName: currentUser.name,
+        variables: variables, // 🔥 Now sending variables!
+        mediaInputs: mediaInputs // 🔥 And media inputs!
       };
 
-      // Handle template components for your custom format
-      if (hasTextVariables || hasMediaHeaders) {
-        const templateComponents: any[] = [];
-
-        if (template.components) {
-          // Standard WhatsApp template format (existing code)
-          template.components.forEach(component => {
-            // ... your existing component handling code ...
-          });
-        } else {
-          // Handle your custom template format
-          if (hasMediaHeaders && template.mediaType) {
-            // For media templates, we need to add a header component
-            if (template.mediaType === 'IMAGE') {
-              const imageUrl = templateMediaInputs['header_image'];
-              if (imageUrl) {
-                templateComponents.push({
-                  type: 'header',
-                  parameters: [{
-                    type: 'image',
-                    image: {
-                      link: imageUrl
-                    }
-                  }]
-                });
-              }
-            } else if (template.mediaType === 'VIDEO') {
-              const videoUrl = templateMediaInputs['header_video'];
-              if (videoUrl) {
-                templateComponents.push({
-                  type: 'header',
-                  parameters: [{
-                    type: 'video',
-                    video: {
-                      link: videoUrl
-                    }
-                  }]
-                });
-              }
-            } else if (template.mediaType === 'DOCUMENT') {
-              const documentUrl = templateMediaInputs['header_document'];
-              const filename = templateMediaInputs['header_document_filename'] || 'document';
-              if (documentUrl) {
-                templateComponents.push({
-                  type: 'header',
-                  parameters: [{
-                    type: 'document',
-                    document: {
-                      link: documentUrl,
-                      filename: filename
-                    }
-                  }]
-                });
-              }
-            }
-          }
-
-          // Handle text variables in content
-          if (hasTextVariables && template.content) {
-            const variables = (template.content.match(/\{\{[^}]+\}\}/g) || [])
-              .map((v: string) => v.replace(/\{\{|\}\}/g, '').trim());
-
-            if (variables.length > 0) {
-              templateComponents.push({
-                type: 'body',
-                parameters: variables.map((varName: string) => ({
-                  type: 'text',
-                  text: templateVariables[varName] || `[${varName}]`
-                }))
-              });
-            }
-          }
-        }
-
-        // Only add templateComponents if we have valid components
-        if (templateComponents.length > 0) {
-          requestPayload.templateComponents = templateComponents;
-        }
-      }
-
-      console.log('Sending template request:', JSON.stringify(requestPayload, null, 2));
+      console.log('🚀 Final request payload:', JSON.stringify(requestPayload, null, 2));
 
       const response = await fetch('/api/messages', {
         method: 'POST',
@@ -1832,6 +1813,7 @@ function ConversationsPageContent() {
       });
 
       const data = await response.json();
+      console.log('API response:', data);
 
       if (data.success) {
         if (!activeConversation && data.conversationId) {
@@ -1849,8 +1831,7 @@ function ConversationsPageContent() {
 
         setShowTemplateDialog(false);
         setShowTemplateVariablesDialog(false);
-        setTemplateMediaInputs({});
-        setTemplateVariables({});
+        setSelectedTemplate(null);
         toast({ title: "Template sent successfully" });
       } else {
         console.error('Template sending failed:', data);
@@ -1862,174 +1843,22 @@ function ConversationsPageContent() {
       }
     } catch (error) {
       console.error("Template sending error:", error);
-      toast({ title: "Failed to send template", variant: "destructive" });
+      toast({
+        title: "Failed to send template",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
     } finally {
       setIsSending(false);
     }
   };
 
-  const TemplateVariablesDialog = () => {
-    if (!selectedTemplate) return null;
 
-    console.log('TemplateVariablesDialog called with:', {
-      selectedTemplate: selectedTemplate?.name,
-      showTemplateVariablesDialog
-    });
+  const handleTemplateVariablesClose = useCallback(() => {
+    setShowTemplateVariablesDialog(false);
+    setSelectedTemplate(null);
+  }, []);
 
-    // Extract text variable names from template
-    const textVariableNames: string[] = [];
-    let hasMediaHeader = false;
-    let mediaHeaderType = '';
-
-    if (selectedTemplate.components) {
-      // Standard WhatsApp template format
-      selectedTemplate.components.forEach(component => {
-        if (component.type === 'body' && component.text) {
-          const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
-          matches.forEach((match: string) => {
-            const varName = match.replace(/\{\{|\}\}/g, '').trim();
-            if (!textVariableNames.includes(varName)) {
-              textVariableNames.push(varName);
-            }
-          });
-        }
-
-        if (component.type === 'header') {
-          if (component.format === 'TEXT' && component.text) {
-            const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
-            matches.forEach((match: string) => {
-              const varName = match.replace(/\{\{|\}\}/g, '').trim();
-              if (!textVariableNames.includes(varName)) {
-                textVariableNames.push(varName);
-              }
-            });
-          } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
-            hasMediaHeader = true;
-            mediaHeaderType = component.format;
-          }
-        }
-      });
-    } else {
-      // Your custom template format
-      if (selectedTemplate.content) {
-        const matches = selectedTemplate.content.match(/\{\{[^}]+\}\}/g) || [];
-        matches.forEach((match: string) => {
-          const varName = match.replace(/\{\{|\}\}/g, '').trim();
-          if (!textVariableNames.includes(varName)) {
-            textVariableNames.push(varName);
-          }
-        });
-      }
-
-      if (selectedTemplate.mediaType && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(selectedTemplate.mediaType)) {
-        hasMediaHeader = true;
-        mediaHeaderType = selectedTemplate.mediaType;
-      }
-    }
-
-    const canSend = textVariableNames.every(varName => templateVariables[varName]?.trim()) &&
-      (!hasMediaHeader ||
-        (mediaHeaderType === 'IMAGE' && templateMediaInputs['header_image']?.trim()) ||
-        (mediaHeaderType === 'VIDEO' && templateMediaInputs['header_video']?.trim()) ||
-        (mediaHeaderType === 'DOCUMENT' && templateMediaInputs['header_document']?.trim())
-      );
-
-    console.log('Dialog analysis:', {
-      textVariableNames,
-      hasMediaHeader,
-      mediaHeaderType,
-      canSend
-    });
-
-    return (
-      <Dialog open={showTemplateVariablesDialog} onOpenChange={setShowTemplateVariablesDialog}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Template Variables & Media</DialogTitle>
-            <DialogDescription>
-              Fill in the required values for &quot;{selectedTemplate.name}&quot;
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Media Header Inputs */}
-            {hasMediaHeader && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-primary">
-                  Header {mediaHeaderType.toLowerCase()} URL *
-                </label>
-                <Input
-                  placeholder={`Enter ${mediaHeaderType.toLowerCase()} URL`}
-                  value={templateMediaInputs[`header_${mediaHeaderType.toLowerCase()}`] || ''}
-                  onChange={(e) => setTemplateMediaInputs(prev => ({
-                    ...prev,
-                    [`header_${mediaHeaderType.toLowerCase()}`]: e.target.value
-                  }))}
-                  className="border-primary/50 focus:border-primary"
-                />
-                {mediaHeaderType === 'DOCUMENT' && (
-                  <Input
-                    placeholder="Document filename (optional)"
-                    value={templateMediaInputs['header_document_filename'] || ''}
-                    onChange={(e) => setTemplateMediaInputs(prev => ({
-                      ...prev,
-                      'header_document_filename': e.target.value
-                    }))}
-                  />
-                )}
-                <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                  ⚠️ This template requires a valid {mediaHeaderType.toLowerCase()} URL to be sent.
-                </p>
-              </div>
-            )}
-
-            {/* Text Variables */}
-            {textVariableNames.map((varName, index) => (
-              <div key={index} className="space-y-2">
-                <label className="text-sm font-medium">{varName} *</label>
-                <Input
-                  placeholder={`Enter value for ${varName}`}
-                  value={templateVariables[varName] || ''}
-                  onChange={(e) => setTemplateVariables(prev => ({
-                    ...prev,
-                    [varName]: e.target.value
-                  }))}
-                />
-              </div>
-            ))}
-
-            {textVariableNames.length === 0 && !hasMediaHeader && (
-              <div className="text-center py-4 text-sm text-muted-foreground">
-                This template has no variables to fill
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowTemplateVariablesDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => selectedTemplate && sendTemplate(selectedTemplate, true)}
-              disabled={!canSend || isSending}
-            >
-              {isSending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
-                  Sending...
-                </>
-              ) : (
-                "Send Template"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  };
 
   const selectContactForChat = (contact: Contact) => {
     const existingConversation = conversations.find(conv => conv.contact.id === contact.id);
@@ -2511,7 +2340,7 @@ function ConversationsPageContent() {
         <div className="flex flex-1 overflow-hidden">
           {/* Conversations List Sidebar - Modern Design */}
           <div className={cn(
-            "w-full md:w-80 lg:w-96 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-hidden backdrop-blur-md shadow-sm",
+            "w-full md:w-80 lg:w-96 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-y-scroll backdrop-blur-md shadow-sm",
             !isMobileMenuOpen && "hidden md:flex",
             isMobileMenuOpen && "absolute inset-0 z-50 md:relative"
           )}>
@@ -2766,15 +2595,23 @@ function ConversationsPageContent() {
                     selectedConversations.includes(conversation.id) && "bg-green-50 border-green-200",
                     isBulkSelectMode && "hover:bg-accent/20"
                   )}
-                  onClick={() => {
+                  onClick={async () => {
                     if (isBulkSelectMode) {
                       toggleConversationSelection(conversation.id);
                     } else {
                       console.log('Selecting conversation with contact:', conversation.contact);
+
+                      // Always fetch complete conversation details when selecting
                       if (!conversation.contact?.id) {
-                        fetchConversationDetails(conversation.id);
+                        console.log('Contact ID missing, fetching conversation details...');
+                        const completeConversation = await fetchConversationDetails(conversation.id);
+                        if (completeConversation) {
+                          setActiveConversation(completeConversation);
+                        }
+                      } else {
+                        setActiveConversation(conversation);
                       }
-                      setActiveConversation(conversation);
+
                       setSelectedContact(null);
                       setIsMobileMenuOpen(false);
 
@@ -3722,63 +3559,79 @@ function ConversationsPageContent() {
               <div className="sticky md:w-[94%] 2xl:w-[95%]  bottom-12 bg-gradient-to-r from-card/95 to-card/90 border-t border-border/50  shadow-lg px-4 pb-6 pt-4  backdrop-blur-md">
                 {isWithin24Hours() ? (
                   <div className="flex items-end gap-3 relative  mx-auto">
-                    {/* Enhanced Attachment Button */}
+                    {/* Alternative Enhanced Attachment Button - Manual Control */}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <div className='relative w-10'>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-10 w-10 absolute -mt-14 rounded-full bg-accent/50 hover:bg-accent/80 border-border/50 transition-all duration-200 hover:scale-105"
-                                >
-                                  <Paperclip className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-56 p-2 bg-popover/95 backdrop-blur-sm border-border/50">
-                              <DropdownMenuItem
-                                onClick={() => handleMediaUpload('IMAGE')}
-                                className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group"
-                              >
-                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                  <ImageIcon className="h-4 w-4 text-blue-600" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-sm">Photo or Video</p>
-                                  <p className="text-xs text-muted-foreground">Send media files</p>
-                                </div>
-                              </DropdownMenuItem>
+                          <div className="relative w-10">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                              className="h-10 w-10 absolute -mt-14 rounded-full bg-accent/50 hover:bg-accent/80 border-border/50 transition-all duration-200 hover:scale-105"
+                            >
+                              <Paperclip className="h-4 w-4" />
+                            </Button>
 
-                              <DropdownMenuItem
-                                onClick={() => handleMediaUpload('DOCUMENT')}
-                                className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
-                              >
-                                <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                                  <FileText className="h-4 w-4 text-orange-600" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-sm">Document</p>
-                                  <p className="text-xs text-muted-foreground">Share files</p>
-                                </div>
-                              </DropdownMenuItem>
+                            {/* Custom Dropdown Menu */}
+                            {showAttachmentMenu && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-40"
+                                  onClick={() => setShowAttachmentMenu(false)}
+                                />
+                                <div className="absolute bottom-12 left-0 z-50 w-56 p-2 bg-popover/95 backdrop-blur-sm border border-border/50 rounded-md shadow-lg">
+                                  <div
+                                    onClick={() => {
+                                      handleMediaUpload('IMAGE');
+                                      setShowAttachmentMenu(false);
+                                    }}
+                                    className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group"
+                                  >
+                                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                                      <ImageIcon className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-sm">Photo or Video</p>
+                                      <p className="text-xs text-muted-foreground">Send media files</p>
+                                    </div>
+                                  </div>
 
-                              <DropdownMenuItem
-                                onClick={() => setShowTemplateDialog(true)}
-                                className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
-                              >
-                                <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                  <FileText className="h-4 w-4 text-purple-600" />
+                                  <div
+                                    onClick={() => {
+                                      handleMediaUpload('DOCUMENT');
+                                      setShowAttachmentMenu(false);
+                                    }}
+                                    className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
+                                  >
+                                    <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                                      <FileText className="h-4 w-4 text-orange-600" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-sm">Document</p>
+                                      <p className="text-xs text-muted-foreground">Share files</p>
+                                    </div>
+                                  </div>
+
+                                  <div
+                                    onClick={() => {
+                                      setShowTemplateDialog(true);
+                                      setShowAttachmentMenu(false);
+                                    }}
+                                    className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
+                                  >
+                                    <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                                      <FileText className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-sm">Template</p>
+                                      <p className="text-xs text-muted-foreground">Use saved templates</p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-medium text-sm">Template</p>
-                                  <p className="text-xs text-muted-foreground">Use saved templates</p>
-                                </div>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                              </>
+                            )}
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="bg-popover/95 backdrop-blur-sm border-border/50">
                           <p>Attach files</p>
@@ -3896,7 +3749,7 @@ function ConversationsPageContent() {
                   </div>
                 ) : (
                   /* Enhanced 24-hour Window Expired Card */
-                  <div className="max-w-2xl mx-auto">
+                  <div className=" mx-auto">
                     <Card className="bg-gradient-to-r from-amber-50/95 to-amber-100/95 border-amber-200/50 shadow-lg backdrop-blur-sm overflow-hidden">
                       <CardContent className="p-0">
                         <div className="flex items-start gap-4 p-6">
@@ -4078,200 +3931,84 @@ function ConversationsPageContent() {
             </DialogContent>
           </Dialog>
 
-          {/* Template Selection Dialog - improved with better preview */}
+
           <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
-                <DialogTitle>Choose Message Template</DialogTitle>
-                <DialogDescription>
-                  Select an approved template to send to your customer
-                </DialogDescription>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/20 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl font-semibold">Send Message Template</DialogTitle>
+                    <DialogDescription>
+                      Choose a template and customize it before sending
+                    </DialogDescription>
+                  </div>
+                </div>
               </DialogHeader>
 
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search templates..."
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Template list and preview side by side */}
-              <div className="flex gap-4 h-[350px]">
-                {/* Templates list - single column */}
-                <ScrollArea className="w-1/2 pr-2 border-r">
-                  <div className="space-y-2 pb-2">
-                    {templates.map((template) => {
-                      // Enhanced variable detection - check for text variables AND media headers
-                      const hasTextVariables = template.components?.some(comp =>
-                        (comp.type === 'body' && comp.text?.includes('{{')) ||
-                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
-                        (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
-                      );
-
-                      const hasMediaHeaders = template.components?.some(comp =>
-                        comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
-                      );
-
-                      const hasVariables = hasTextVariables || hasMediaHeaders;
-
-                      return (
-                        <div
-                          key={template.id}
-                          className={cn(
-                            "p-3 border rounded-md cursor-pointer transition-all",
-                            selectedTemplate?.id === template.id
-                              ? "border-primary bg-primary/5"
-                              : "hover:border-primary/50 hover:bg-accent/20"
-                          )}
-                          onClick={() => setSelectedTemplate(template)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium text-sm">{template.name}</h4>
-                              <div className="flex gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">{template.category}</Badge>
-                                {hasTextVariables && (
-                                  <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                                    Variables
-                                  </Badge>
-                                )}
-                                {hasMediaHeaders && (
-                                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
-                                    Media
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <Badge variant="secondary" className="text-xs">{template.language}</Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {templates.length === 0 && (
-                      <div className="text-center py-8">
-                        <div className="bg-muted p-4 rounded-full w-fit mx-auto mb-4">
-                          <FileText className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-medium text-foreground mb-2">No templates</h3>
-                        <p className="text-muted-foreground text-sm mb-4">
-                          No templates available
-                        </p>
-                      </div>
-                    )}
+              <div className="flex h-[600px] overflow-y-scroll gap-6">
+                {/* Templates list */}
+                <div className="w-1/2 flex o flex-col">
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search templates..."
+                      className="pl-10 bg-background/50 border-border/50 focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    />
                   </div>
-                </ScrollArea>
 
-                {/* Active template preview */}
-                <div className="w-1/2">
-                  {selectedTemplate ? (
-                    <div className="h-full flex flex-col">
-                      <div className="bg-muted/40 rounded-md p-3 mb-2 flex items-center justify-between">
-                        <h4 className="font-medium text-sm">Template Preview</h4>
-                        <Badge variant="secondary" className="text-xs">
-                          {selectedTemplate.language}
-                        </Badge>
-                      </div>
-                      <ScrollArea className="flex-1 border rounded-md p-4 bg-white">
-                        <div className="space-y-4">
-                          {/* Template header if exists */}
-                          {selectedTemplate.components?.find(c => c.type === 'header') && (
-                            <div className="font-medium">
-                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'TEXT' &&
-                                selectedTemplate.components?.find(c => c.type === 'header')?.text}
-                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'IMAGE' && (
-                                <div className="text-center p-2 bg-blue-50 rounded border border-blue-100 text-blue-700">
-                                  <ImageIcon className="h-4 w-4 mx-auto mb-1" />
-                                  <span className="text-xs">Image Header</span>
-                                </div>
-                              )}
-                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'VIDEO' && (
-                                <div className="text-center p-2 bg-purple-50 rounded border border-purple-100 text-purple-700">
-                                  <Video className="h-4 w-4 mx-auto mb-1" />
-                                  <span className="text-xs">Video Header</span>
-                                </div>
-                              )}
-                              {selectedTemplate.components?.find(c => c.type === 'header')?.format === 'DOCUMENT' && (
-                                <div className="text-center p-2 bg-amber-50 rounded border border-amber-100 text-amber-700">
-                                  <FileText className="h-4 w-4 mx-auto mb-1" />
-                                  <span className="text-xs">Document Header</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                  <ScrollArea className="flex-1 pr-2">
+                    <div className="space-y-2">
+                      {templates.map((template) => (
+                        <TemplateCard
+                          key={template.id}
+                          template={template}
+                          isSelected={selectedTemplate?.id === template.id}
+                          onClick={() => setSelectedTemplate(template)}
+                        />
+                      ))}
 
-                          <div className="text-sm whitespace-pre-wrap">
-                            {(() => {
-                              const bodyComponent = selectedTemplate.components?.find(c => c.type?.toUpperCase?.() === 'BODY');
-
-                              if (!bodyComponent || !bodyComponent.text) {
-                                return <span className="text-muted-foreground italic">No body content available</span>;
-                              }
-
-                              return bodyComponent.text.split(/(\{\{[^}]+\}\})/).map((part, index) =>
-                                part.match(/\{\{[^}]+\}\}/) ? (
-                                  <span key={index} className="bg-blue-100 text-blue-800 px-1 rounded">
-                                    {part}
-                                  </span>
-                                ) : (
-                                  <span key={index}>{part}</span>
-                                )
-                              );
-                            })()}
+                      {templates.length === 0 && (
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted to-muted/70 flex items-center justify-center mb-6 mx-auto">
+                            <FileText className="h-8 w-8 text-muted-foreground" />
                           </div>
-
-                          {/* Template footer if exists */}
-                          {selectedTemplate.components?.find(c => c.type === 'footer') && (
-                            <div className="text-xs text-muted-foreground border-t pt-2 mt-2">
-                              {selectedTemplate.components?.find(c => c.type === 'footer')?.text}
-                            </div>
-                          )}
-
-                          {/* Template buttons if exist */}
-                          {selectedTemplate.components?.some(c => c.type === 'buttons') && (
-                            <div className="pt-2 mt-2 border-t">
-                              <Button variant="outline" className="w-full justify-center text-center h-8 text-xs" disabled>
-                                Example Button
-                              </Button>
-                            </div>
-                          )}
+                          <h3 className="text-lg font-semibold text-foreground mb-2">No templates available</h3>
+                          <p className="text-muted-foreground text-sm mb-6">
+                            Create templates to send structured messages to your customers.
+                          </p>
+                          <Button
+                            onClick={() => window.location.href = '/templates'}
+                            variant="outline"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Template
+                          </Button>
                         </div>
-                      </ScrollArea>
-
-                      {/* Enhanced Variable/Media requirements */}
-                      {(selectedTemplate.components?.some(comp =>
-                        (comp.type === 'body' && comp.text?.includes('{{')) ||
-                        (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
-                        (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
-                      ) || selectedTemplate.components?.some(comp =>
-                        comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
-                      )) && (
-                          <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-100 text-xs text-blue-700">
-                            <div className="flex items-center">
-                              <Info className="h-3.5 w-3.5 mr-1.5" />
-                              This template requires {
-                                selectedTemplate.components?.some(comp =>
-                                  (comp.type === 'body' && comp.text?.includes('{{')) ||
-                                  (comp.type === 'header' && comp.format === 'TEXT' && comp.text?.includes('{{')) ||
-                                  (comp.type === 'button' && comp.sub_type === 'url' && comp.url?.includes('{{'))
-                                ) && selectedTemplate.components?.some(comp =>
-                                  comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
-                                ) ? 'variable values and media URLs' :
-                                  selectedTemplate.components?.some(comp =>
-                                    comp.type === 'header' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
-                                  ) ? 'media URLs' : 'variable values'
-                              } to be entered before sending
-                            </div>
-                          </div>
-                        )}
+                      )}
                     </div>
+                  </ScrollArea>
+                </div>
+
+                {/* Template preview and customization */}
+                <div className="w-1/2 flex flex-col">
+                  {selectedTemplate ? (
+                    <TemplatePreviewAndCustomize
+                      template={selectedTemplate}
+                      onSend={(template) => sendTemplate(template)}
+                      isSending={isSending}
+                    />
                   ) : (
-                    <div className="h-full flex items-center justify-center border rounded-md bg-muted/20">
-                      <div className="text-center p-4">
-                        <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <div className="flex-1 flex items-center justify-center border-2 border-dashed border-border/50 rounded-lg bg-muted/20">
+                      <div className="text-center p-8">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-6 mx-auto">
+                          <FileText className="h-8 w-8 text-primary" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Select a template</h3>
                         <p className="text-muted-foreground text-sm">
-                          Select a template to preview
+                          Choose a template from the list to preview and customize it
                         </p>
                       </div>
                     </div>
@@ -4279,28 +4016,9 @@ function ConversationsPageContent() {
                 </div>
               </div>
 
-              <DialogFooter className="mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowTemplateDialog(false)}
-                >
+              <DialogFooter className="border-t bg-card/50 backdrop-blur-sm">
+                <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
                   Cancel
-                </Button>
-                <Button
-                  onClick={() => selectedTemplate && sendTemplate(selectedTemplate)}
-                  disabled={!selectedTemplate || isSending}
-                >
-                  {isSending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Template
-                    </>
-                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -5216,7 +4934,13 @@ function ConversationsPageContent() {
           </Dialog>
 
           {/* Template Variables Dialog - enhanced UI */}
-          <TemplateVariablesDialog />
+          <TemplateVariablesDialog
+            selectedTemplate={selectedTemplate}
+            showDialog={showTemplateVariablesDialog}
+            onClose={handleTemplateVariablesClose}
+            onSend={handleTemplateVariablesSend}
+            isSending={isSending}
+          />
         </div>
       </div>
     </Layout>
@@ -5437,3 +5161,718 @@ export default function ConversationsPage() {
     </Suspense>
   );
 }
+
+// ... existing code ...
+
+// Move TemplateVariablesDialog outside the main component
+const TemplateVariablesDialog = ({
+  selectedTemplate,
+  showDialog,
+  onClose,
+  onSend,
+  isSending
+}: {
+  selectedTemplate: Template | null;
+  showDialog: boolean;
+  onClose: () => void;
+  onSend: (template: Template, variables: any, mediaInputs: any) => void;
+  isSending: boolean;
+}) => {
+  const [templateVariables, setTemplateVariables] = useState<{ [key: string]: string }>({});
+  const [templateMediaInputs, setTemplateMediaInputs] = useState<{ [key: string]: string }>({});
+  const [uploadingMedia, setUploadingMedia] = useState<{ [key: string]: boolean }>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File | null }>({});
+
+  // Reset state when dialog opens/closes or template changes
+  useEffect(() => {
+    if (!showDialog || !selectedTemplate) {
+      setTemplateVariables({});
+      setTemplateMediaInputs({});
+      setUploadingMedia({});
+      setUploadedFiles({});
+    }
+  }, [showDialog, selectedTemplate?.id]);
+
+  if (!selectedTemplate) return null;
+
+  // Extract text variable names from template
+  const textVariableNames: string[] = [];
+  let hasMediaHeader = false;
+  let mediaHeaderType = '';
+
+  if (selectedTemplate.components) {
+    // Standard WhatsApp template format
+    selectedTemplate.components.forEach(component => {
+      if (component.type === 'BODY' && component.text) {
+        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+        matches.forEach((match: string) => {
+          const varName = match.replace(/\{\{|\}\}/g, '').trim();
+          if (!textVariableNames.includes(varName)) {
+            textVariableNames.push(varName);
+          }
+        });
+      }
+
+      if (component.type === 'HEADER') {
+        if (component.format === 'TEXT' && component.text) {
+          const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+          matches.forEach((match: string) => {
+            const varName = match.replace(/\{\{|\}\}/g, '').trim();
+            if (!textVariableNames.includes(varName)) {
+              textVariableNames.push(varName);
+            }
+          });
+        } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
+          hasMediaHeader = true;
+          mediaHeaderType = component.format;
+        }
+      }
+    });
+  } else {
+    // Custom template format
+    if (selectedTemplate.content) {
+      const matches = selectedTemplate.content.match(/\{\{[^}]+\}\}/g) || [];
+      matches.forEach((match: string) => {
+        const varName = match.replace(/\{\{|\}\}/g, '').trim();
+        if (!textVariableNames.includes(varName)) {
+          textVariableNames.push(varName);
+        }
+      });
+    }
+
+    if (selectedTemplate.mediaType && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(selectedTemplate.mediaType)) {
+      hasMediaHeader = true;
+      mediaHeaderType = selectedTemplate.mediaType;
+    }
+  }
+
+  // Handle file upload
+  const handleFileUpload = async (file: File, mediaKey: string, mediaType: string) => {
+    if (!file) return;
+
+    setUploadingMedia(prev => ({ ...prev, [mediaKey]: true }));
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', mediaType);
+
+      const response = await fetch('/api/upload-media', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+        setTemplateMediaInputs(prev => ({
+          ...prev,
+          [mediaKey]: data.url
+        }));
+        setUploadedFiles(prev => ({
+          ...prev,
+          [mediaKey]: file
+        }));
+      } else {
+        console.error('Upload failed:', data.error);
+        // You might want to show a toast notification here
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setUploadingMedia(prev => ({ ...prev, [mediaKey]: false }));
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, mediaKey: string, mediaType: string) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileUpload(file, mediaKey, mediaType);
+    }
+  };
+
+  // Remove uploaded file
+  const handleRemoveFile = (mediaKey: string) => {
+    setTemplateMediaInputs(prev => {
+      const updated = { ...prev };
+      delete updated[mediaKey];
+      return updated;
+    });
+    setUploadedFiles(prev => {
+      const updated = { ...prev };
+      delete updated[mediaKey];
+      return updated;
+    });
+  };
+
+  // Get file accept attribute based on media type
+  const getAcceptAttribute = (mediaType: string) => {
+    switch (mediaType) {
+      case 'IMAGE':
+        return 'image/*';
+      case 'VIDEO':
+        return 'video/*';
+      case 'DOCUMENT':
+        return '.pdf,.doc,.docx,.txt,.rtf';
+      default:
+        return '*/*';
+    }
+  };
+
+  const canSend = textVariableNames.every(varName => templateVariables[varName]?.trim()) &&
+    (!hasMediaHeader ||
+      (mediaHeaderType === 'IMAGE' && templateMediaInputs['header_image']?.trim()) ||
+      (mediaHeaderType === 'VIDEO' && templateMediaInputs['header_video']?.trim()) ||
+      (mediaHeaderType === 'DOCUMENT' && templateMediaInputs['header_document']?.trim())
+    );
+
+  const handleSend = () => {
+    onSend(selectedTemplate, templateVariables, templateMediaInputs);
+  };
+
+  return (
+    <Dialog open={showDialog} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Template Variables & Media</DialogTitle>
+          <DialogDescription>
+            Fill in the required values for "{selectedTemplate.name}"
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Media Header Inputs */}
+          {hasMediaHeader && (
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-primary">
+                Header {mediaHeaderType.toLowerCase()} *
+              </label>
+
+              {/* File Upload Area */}
+              <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
+                {templateMediaInputs[`header_${mediaHeaderType.toLowerCase()}`] ? (
+                  /* File Uploaded State */
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          {mediaHeaderType === 'IMAGE' && <ImageIcon className="h-5 w-5 text-green-600" />}
+                          {mediaHeaderType === 'VIDEO' && <Video className="h-5 w-5 text-green-600" />}
+                          {mediaHeaderType === 'DOCUMENT' && <FileText className="h-5 w-5 text-green-600" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-800">
+                            {uploadedFiles[`header_${mediaHeaderType.toLowerCase()}`]?.name || `${mediaHeaderType.toLowerCase()} uploaded`}
+                          </p>
+                          <p className="text-xs text-green-600">File uploaded successfully</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveFile(`header_${mediaHeaderType.toLowerCase()}`)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Show preview for images */}
+                    {mediaHeaderType === 'IMAGE' && (
+                      <div className="mt-2">
+                        <img
+                          src={templateMediaInputs[`header_${mediaHeaderType.toLowerCase()}`]}
+                          alt="Preview"
+                          className="max-w-full h-32 object-cover rounded-lg border"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* File Upload State */
+                  <div className="text-center">
+                    {uploadingMedia[`header_${mediaHeaderType.toLowerCase()}`] ? (
+                      <div className="space-y-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto"></div>
+                        <p className="text-sm text-muted-foreground">Uploading {mediaHeaderType.toLowerCase()}...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="p-4">
+                          <div className="p-3 bg-primary/10 rounded-full w-fit mx-auto mb-3">
+                            {mediaHeaderType === 'IMAGE' && <ImageIcon className="h-6 w-6 text-primary" />}
+                            {mediaHeaderType === 'VIDEO' && <Video className="h-6 w-6 text-primary" />}
+                            {mediaHeaderType === 'DOCUMENT' && <FileText className="h-6 w-6 text-primary" />}
+                          </div>
+                          <p className="text-sm font-medium text-foreground mb-1">
+                            Upload {mediaHeaderType.toLowerCase()}
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            {mediaHeaderType === 'IMAGE' && 'JPG, PNG, GIF up to 16MB'}
+                            {mediaHeaderType === 'VIDEO' && 'MP4, AVI, MOV up to 16MB'}
+                            {mediaHeaderType === 'DOCUMENT' && 'PDF, DOC, DOCX up to 16MB'}
+                          </p>
+                          <input
+                            type="file"
+                            accept={getAcceptAttribute(mediaHeaderType)}
+                            onChange={(e) => handleFileSelect(e, `header_${mediaHeaderType.toLowerCase()}`, mediaHeaderType)}
+                            className="hidden"
+                            id={`file-upload-${mediaHeaderType.toLowerCase()}`}
+                          />
+                          <label
+                            htmlFor={`file-upload-${mediaHeaderType.toLowerCase()}`}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer hover:bg-primary/90 transition-colors"
+                          >
+                            <Paperclip className="h-4 w-4" />
+                            Choose File
+                          </label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {mediaHeaderType === 'DOCUMENT' && templateMediaInputs[`header_${mediaHeaderType.toLowerCase()}`] && (
+                <Input
+                  placeholder="Document filename (optional)"
+                  value={templateMediaInputs['header_document_filename'] || ''}
+                  onChange={(e) => setTemplateMediaInputs(prev => ({
+                    ...prev,
+                    'header_document_filename': e.target.value
+                  }))}
+                  className="border-primary/50 focus:border-primary"
+                />
+              )}
+
+              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                ⚠️ This template requires a {mediaHeaderType.toLowerCase()} file to be uploaded.
+              </p>
+            </div>
+          )}
+
+          {/* Text Variables */}
+          {textVariableNames.map((varName, index) => (
+            <div key={index} className="space-y-2">
+              <label className="text-sm font-medium">{varName} *</label>
+              <Input
+                placeholder={`Enter value for ${varName}`}
+                value={templateVariables[varName] || ''}
+                onChange={(e) => setTemplateVariables(prev => ({
+                  ...prev,
+                  [varName]: e.target.value
+                }))}
+              />
+            </div>
+          ))}
+
+          {textVariableNames.length === 0 && !hasMediaHeader && (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              This template has no variables to fill
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSend} disabled={!canSend || isSending || Object.values(uploadingMedia).some(Boolean)}>
+            {isSending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                Sending...
+              </>
+            ) : Object.values(uploadingMedia).some(Boolean) ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                Uploading...
+              </>
+            ) : (
+              "Send Template"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
+// Template Card Component
+const TemplateCard = ({
+  template,
+  isSelected,
+  onClick
+}: {
+  template: Template;
+  isSelected: boolean;
+  onClick: () => void;
+}) => {
+  const hasTextVariables = template.components?.some(comp =>
+    (comp.type === 'BODY' && comp.text?.includes('{{')) ||
+    (comp.type === 'HEADER' && comp.format === 'TEXT' && comp.text?.includes('{{'))
+  );
+
+  const hasMediaHeaders = template.components?.some(comp =>
+    comp.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+  );
+
+  const mediaType = template.components?.find(comp =>
+    comp.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+  )?.format;
+
+  return (
+    <div
+      className={cn(
+        "group p-4 border rounded-lg cursor-pointer transition-all duration-200",
+        isSelected
+          ? "border-primary bg-primary/5 shadow-md"
+          : "border-border/50 hover:border-primary/30 hover:bg-accent/30 hover:shadow-sm"
+      )}
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-sm text-foreground mb-1 truncate">
+            {template.name}
+          </h4>
+          <p className="text-xs text-muted-foreground capitalize">
+            {template.category.toLowerCase()}
+          </p>
+        </div>
+        <Badge variant="outline" className="text-xs shrink-0 ml-2">
+          {template.language}
+        </Badge>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {hasTextVariables && (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5" />
+            Variables
+          </Badge>
+        )}
+        {hasMediaHeaders && (
+          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+            <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5" />
+            {mediaType === 'IMAGE' && 'Image'}
+            {mediaType === 'VIDEO' && 'Video'}
+            {mediaType === 'DOCUMENT' && 'Document'}
+          </Badge>
+        )}
+      </div>
+
+      {/* Preview snippet */}
+      <div className="text-xs text-muted-foreground leading-relaxed">
+        <p className="truncate">
+          {template.components?.find(c => c.type === 'BODY')?.text?.substring(0, 80) || 'No content preview available'}
+          {(template.components?.find(c => c.type === 'BODY')?.text?.length || 0) > 80 && '...'}
+        </p>
+      </div>
+
+      {isSelected && (
+        <div className="mt-3 pt-3 border-t border-primary/20">
+          <div className="flex items-center text-xs text-primary font-medium">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary mr-2" />
+            Selected for customization
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Template Preview and Customize Component
+const TemplatePreviewAndCustomize = ({
+  template,
+  onSend,
+  isSending
+}: {
+  template: Template;
+  onSend: (template: Template) => void;
+  isSending: boolean;
+}) => {
+  const [variables, setVariables] = useState<{ [key: string]: string }>({});
+  console.log(variables, 'let me check variables')
+  // Extract text variables from template
+  const textVariables: string[] = [];
+  if (template.components) {
+    template.components.forEach(component => {
+      if (component.type === 'BODY' && component.text) {
+        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+        matches.forEach((match: string) => {
+          const varName = match.replace(/\{\{|\}\}/g, '').trim();
+          if (!textVariables.includes(varName)) {
+            textVariables.push(varName);
+          }
+        });
+      }
+      if (component.type === 'HEADER' && component.format === 'TEXT' && component.text) {
+        const matches = component.text.match(/\{\{[^}]+\}\}/g) || [];
+        matches.forEach((match: string) => {
+          const varName = match.replace(/\{\{|\}\}/g, '').trim();
+          if (!textVariables.includes(varName)) {
+            textVariables.push(varName);
+          }
+        });
+      }
+    });
+  }
+
+  const hasVariables = textVariables.length > 0;
+  const hasMediaHeader = template.components?.some(comp =>
+    comp.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+  );
+
+  const mediaComponent = template.components?.find(comp =>
+    comp.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format)
+  );
+
+  const canSend = !hasVariables || textVariables.every(varName => variables[varName]?.trim());
+
+  const handleSend = () => {
+    // Store variables in template for server processing
+    const templateWithVariables = {
+      ...template,
+      _variables: variables
+    };
+    onSend(templateWithVariables);
+  };
+
+  // Function to render template text with variable highlighting
+  const renderTextWithVariables = (text: string) => {
+    if (!text) return null;
+
+    return text.split(/(\{\{[^}]+\}\})/).map((part, index) => {
+      if (part.match(/\{\{[^}]+\}\}/)) {
+        const varName = part.replace(/\{\{|\}\}/g, '').trim();
+        const value = variables[varName];
+        return (
+          <span
+            key={index}
+            className={cn(
+              "px-2 py-0.5 rounded-md font-medium transition-colors",
+              value?.trim()
+                ? "bg-green-100 text-green-800 border border-green-200"
+                : "bg-blue-100 text-blue-800 border border-blue-200"
+            )}
+          >
+            {value?.trim() || part}
+          </span>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="bg-gradient-to-r from-card to-card/80 rounded-lg p-4 mb-4 border border-border/50">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-semibold text-foreground">Template Preview</h4>
+          <Badge variant="secondary" className="text-xs">
+            {template.language.toUpperCase()}
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {template.name} • {template.category.toLowerCase()}
+        </p>
+      </div>
+
+      <div className="flex-1 flex flex-col gap-4">
+        {/* Template Preview */}
+        <div className="flex-1 border rounded-lg bg-white shadow-sm">
+          <div className="p-4 border-b border-border/30 bg-gradient-to-r from-green-50 to-green-100/50">
+            <div className="flex items-center gap-2 text-xs text-green-700 font-medium">
+              <MessageCircle className="h-3.5 w-3.5" />
+              WhatsApp Message Preview
+            </div>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Header */}
+            {template.components?.find(c => c.type === 'HEADER') && (
+              <div className="space-y-2">
+                {template.components?.find(c => c.type === 'HEADER')?.format === 'TEXT' && (
+                  <div className="font-semibold text-base">
+                    {renderTextWithVariables(template.components?.find(c => c.type === 'HEADER')?.text || '')}
+                  </div>
+                )}
+                {['IMAGE', 'VIDEO', 'DOCUMENT'].includes(template.components?.find(c => c.type === 'HEADER')?.format || '') && (
+                  <div className="relative">
+                    {mediaComponent?.format === 'IMAGE' && mediaComponent?.mediaUrl ? (
+                      <div className="relative">
+                        <img
+                          src={mediaComponent.mediaUrl}
+                          alt="Template header"
+                          className="w-full max-h-48 object-cover rounded-lg border border-border/30"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <div className="hidden text-center p-8 bg-blue-50 rounded-lg border border-blue-200">
+                          <ImageIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+                          <p className="text-sm text-blue-700 font-medium">Image Header</p>
+                          <p className="text-xs text-blue-600 mt-1">Media will be loaded when sent</p>
+                        </div>
+                      </div>
+                    ) : mediaComponent?.format === 'VIDEO' ? (
+                      <div className="text-center p-8 bg-purple-50 rounded-lg border border-purple-200">
+                        <Video className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+                        <p className="text-sm text-purple-700 font-medium">Video Header</p>
+                        <p className="text-xs text-purple-600 mt-1">Video will be loaded when sent</p>
+                      </div>
+                    ) : mediaComponent?.format === 'DOCUMENT' ? (
+                      <div className="text-center p-8 bg-amber-50 rounded-lg border border-amber-200">
+                        <FileText className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                        <p className="text-sm text-amber-700 font-medium">Document Header</p>
+                        <p className="text-xs text-amber-600 mt-1">Document will be loaded when sent</p>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Body */}
+            {template.components?.find(c => c.type === 'BODY') && (
+              <div className="text-sm leading-relaxed">
+                {renderTextWithVariables(template.components?.find(c => c.type === 'BODY')?.text || '')}
+              </div>
+            )}
+
+            {/* Footer */}
+            {template.components?.find(c => c.type === 'FOOTER') && (
+              <div className="text-xs text-muted-foreground border-t pt-3">
+                {template.components?.find(c => c.type === 'FOOTER')?.text}
+              </div>
+            )}
+
+            {/* Buttons */}
+            {template.components?.some(c => c.type === 'BUTTONS') && (
+              <div className="pt-3 space-y-2">
+                {template.components?.find(c => c.type === 'BUTTONS')?.buttons?.map((button: any, index: number) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    className="w-full justify-center h-9 text-sm"
+                    disabled
+                  >
+                    {button.type === 'URL' && <ExternalLink className="h-3.5 w-3.5 mr-2" />}
+                    {button.type === 'PHONE_NUMBER' && <Phone className="h-3.5 w-3.5 mr-2" />}
+                    {button.type === 'COPY_CODE' && <Copy className="h-3.5 w-3.5 mr-2" />}
+                    {button.text}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Variables Input Section */}
+        {hasVariables && (
+          <div className="border rounded-lg bg-card p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-2 w-2 rounded-full bg-blue-500" />
+              <h5 className="font-medium text-sm">Template Variables</h5>
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                {textVariables.length} required
+              </Badge>
+            </div>
+            <div className="space-y-3">
+              {textVariables.map((varName, index) => (
+                <div key={index} className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                    {varName}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    placeholder={`Enter value for ${varName}`}
+                    value={variables[varName] || ''}
+                    onChange={(e) => setVariables(prev => ({
+                      ...prev,
+                      [varName]: e.target.value
+                    }))}
+                    className="h-9 text-sm border-border/50 focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {!canSend && (
+              <div className="mt-3 p-2.5 bg-amber-50 rounded-lg border border-amber-200 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-amber-800">Variables Required</p>
+                  <p className="text-xs text-amber-700">Fill in all required variables to send this template</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Media Header Info */}
+        {hasMediaHeader && (
+          <div className="border rounded-lg bg-card p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-2 w-2 rounded-full bg-purple-500" />
+              <h5 className="font-medium text-sm">Media Header</h5>
+              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                {mediaComponent?.format?.toLowerCase()}
+              </Badge>
+            </div>
+            <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              {mediaComponent?.format === 'IMAGE' && <ImageIcon className="h-5 w-5 text-purple-600 mt-0.5" />}
+              {mediaComponent?.format === 'VIDEO' && <Video className="h-5 w-5 text-purple-600 mt-0.5" />}
+              {mediaComponent?.format === 'DOCUMENT' && <FileText className="h-5 w-5 text-purple-600 mt-0.5" />}
+              <div>
+                <p className="text-sm font-medium text-purple-800">
+                  {mediaComponent?.format?.toLowerCase()} will be included
+                </p>
+                <p className="text-xs text-purple-700">
+                  The {mediaComponent?.format?.toLowerCase()} file will be automatically attached when sending
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Send Button */}
+        <div className="pt-4 border-t">
+          <Button
+            onClick={handleSend}
+            disabled={!canSend || isSending}
+            className="w-full h-11 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            {isSending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                Sending Template...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Send Template
+              </>
+            )}
+          </Button>
+
+          {hasVariables || hasMediaHeader ? (
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              {hasVariables && hasMediaHeader
+                ? 'Variables will be filled and media will be attached automatically'
+                : hasVariables
+                  ? 'Variable values will be filled automatically'
+                  : 'Media will be attached automatically'
+              }
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+};
