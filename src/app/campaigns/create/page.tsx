@@ -580,7 +580,7 @@ const CreateCampaignPage = () => {
       console.error('Error fetching template buttons:', error);
     }
   };
-
+console.log(templateButtons, 'okay', responseHandling, 'response handling');
   // Add the complete ResponseHandlingSection component within your main component:
   const ResponseHandlingSection = () => {
     return (

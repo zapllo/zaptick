@@ -26,7 +26,7 @@ function buildAudienceQuery(filters: any) {
     const conditionsQuery = filters.conditions.map((condition: any) => {
       let fieldQuery: any = {};
       let field = condition.field;
-      
+
       if (field.startsWith('customField.')) {
         field = field.replace('customField.', '');
         field = `customFields.${field}`;
@@ -92,27 +92,27 @@ function getTimezoneOffset(timezone: string): number {
     'Australia/Sydney': 10 * 60, // AEST (simplified)
     'Australia/Melbourne': 10 * 60, // AEST (simplified)
   };
-  
+
   return timezoneOffsets[timezone] || 0;
 }
 
 // Helper function to determine if campaign should be scheduled or active
-function determineCampaignStatus(scheduleData: any): { 
-  status: 'active' | 'scheduled', 
+function determineCampaignStatus(scheduleData: any): {
+  status: 'active' | 'scheduled',
   adjustedScheduledTime: Date | null,
-  shouldChargeNow: boolean 
+  shouldChargeNow: boolean
 } {
   if (!scheduleData?.sendTime) {
-    return { 
-      status: 'active', 
-      adjustedScheduledTime: null, 
-      shouldChargeNow: true 
+    return {
+      status: 'active',
+      adjustedScheduledTime: null,
+      shouldChargeNow: true
     };
   }
 
   const scheduledTime = new Date(scheduleData.sendTime);
   const now = new Date();
-  
+
   // Handle timezone conversion
   let adjustedScheduledTime = scheduledTime;
   if (scheduleData.timezone && scheduleData.timezone !== 'UTC') {
@@ -122,7 +122,7 @@ function determineCampaignStatus(scheduleData: any): {
   }
 
   const isScheduledForFuture = adjustedScheduledTime > now;
-  
+
   return {
     status: isScheduledForFuture ? 'scheduled' : 'active',
     adjustedScheduledTime,
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
 
     // Validate message type and content
     const messageType = campaignData.message?.type || "template";
-    
+
     if (messageType === "template" && !campaignData.message?.template) {
       return NextResponse.json(
         { error: "Template ID is required for template messages" },
@@ -184,13 +184,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine campaign status and scheduling
-    const { status: campaignStatus, adjustedScheduledTime, shouldChargeNow } = 
+    const { status: campaignStatus, adjustedScheduledTime, shouldChargeNow } =
       determineCampaignStatus(campaignData.schedule);
 
     // Fetch template for template messages
     let template = null;
     let templateCategory = "MARKETING";
-    
+
     if (messageType === "template") {
       template = await Template.findById(campaignData.message.template);
       if (!template) {
@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
     // Calculate pricing (only for template messages)
     let totalCost = 0;
     let messagePrice = { totalPrice: 0, basePrice: 0, gstPrice: 0, markupPrice: 0 };
-    
+
     if (messageType === "template") {
       const isInternational = false; // Can be determined by contact analysis
       messagePrice = calculateMessagePrice(templateCategory, isInternational);
@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      
+
       // For scheduled campaigns, warn if balance might be insufficient
       if (!shouldChargeNow && company.walletBalance < totalCost) {
         console.warn(`Scheduled campaign ${campaignData.name} may fail due to insufficient balance at start time`);
@@ -278,13 +278,27 @@ export async function POST(req: NextRequest) {
         variables: campaignData.message?.variables || []
       },
       responseHandling: {
-        enabled: campaignData.responseHandling?.enabled || false,
-        keywords: campaignData.responseHandling?.keywords || [],
-        defaultResponse: campaignData.responseHandling?.defaultResponse || null,
-        forwardToEmail: campaignData.responseHandling?.forwardToEmail || false,
-        forwardEmail: campaignData.responseHandling?.forwardEmail || null,
-        flows: campaignData.responseHandling?.flows || []
+        enabled: campaignData.responseHandling?.enabled ?? false,
+
+        autoReply: {
+          ...campaignData.responseHandling?.autoReply,
+          enabled: campaignData.responseHandling?.autoReply?.enabled ?? false
+        },
+
+        workflow: {
+          ...campaignData.responseHandling?.workflow,
+          enabled: campaignData.responseHandling?.workflow?.enabled ?? false
+        },
+
+        optOut: {
+          ...campaignData.responseHandling?.optOut,
+          enabled: campaignData.responseHandling?.optOut?.enabled ?? false,
+          triggerButtons: campaignData.responseHandling?.optOut?.triggerButtons ?? [],
+          acknowledgmentMessage: campaignData.responseHandling?.optOut?.acknowledgmentMessage ?? "",
+          updateContact: campaignData.responseHandling?.optOut?.updateContact ?? true
+        }
       },
+
       conversionTracking: {
         enabled: campaignData.conversionTracking?.enabled || false,
         goals: campaignData.conversionTracking?.goals || [],
@@ -337,7 +351,7 @@ export async function POST(req: NextRequest) {
         campaignDoc,
         { new: true, runValidators: true }
       );
-      
+
       if (!campaign) {
         return NextResponse.json(
           { error: "Campaign not found or access denied" },
