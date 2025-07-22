@@ -522,15 +522,40 @@ const CreateCampaignPage = () => {
   const [availableTemplates, setAvailableTemplates] = useState([]);
   const [availableWorkflows, setAvailableWorkflows] = useState([]);
   const [templateButtons, setTemplateButtons] = useState<any[]>([]);
+  const [selectedWabaId, setSelectedWabaId] = useState<string>("");
+  const [wabaAccounts, setWabaAccounts] = useState<WabaAccount[]>([]);
 
 
 
   useEffect(() => {
-
-    fetchTemplateButtons();
+    if (!selectedWabaId) return;          // wait until we have one
+    fetchTemplateButtons();               // ← still depends on template id
     fetchTemplatesAndWorkflows();
+  }, [selectedWabaId, campaign.message.template]);
 
-  }, [campaign.message.template]);
+  useEffect(() => {
+    fetchWabaAccounts();
+  }, []);
+
+  const fetchWabaAccounts = async () => {
+    try {
+      const response = await fetch('/api/waba-accounts');
+      const data = await response.json();
+      if (data.success) {
+        setWabaAccounts(data.accounts);
+        if (data.accounts.length > 0) {
+          setSelectedWabaId(data.accounts[0].wabaId);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching WABA accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch WhatsApp accounts",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchTemplatesAndWorkflows = async () => {
 
@@ -541,9 +566,8 @@ const CreateCampaignPage = () => {
         const templatesData = await templatesResponse.json();
         setAvailableTemplates(templatesData.templates || []);
       }
-
       // Fetch workflows
-      const workflowsResponse = await fetch(`/api/workflows`);
+      const workflowsResponse = await fetch(`/api/workflows?wabaId=${selectedWabaId}`);
       if (workflowsResponse.ok) {
         const workflowsData = await workflowsResponse.json();
         setAvailableWorkflows(workflowsData.workflows || []);
@@ -580,7 +604,7 @@ const CreateCampaignPage = () => {
       console.error('Error fetching template buttons:', error);
     }
   };
-console.log(templateButtons, 'okay', responseHandling, 'response handling');
+  console.log(templateButtons, 'okay', responseHandling, 'response handling');
   // Add the complete ResponseHandlingSection component within your main component:
   const ResponseHandlingSection = () => {
     return (
