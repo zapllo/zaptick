@@ -4004,7 +4004,7 @@ function ConversationsPageContent() {
                   <div>
                     <DialogTitle className="text-red-900">Message Failed to Send</DialogTitle>
                     <DialogDescription className="text-red-700">
-                      Details about why this message couldn't be delivered
+                      Details about why this message couldn&apos;t be delivered
                     </DialogDescription>
                   </div>
                 </div>
@@ -4077,7 +4077,7 @@ function ConversationsPageContent() {
                       Possible Solutions
                     </h4>
                     <ul className="text-xs text-blue-800 space-y-1 ml-6">
-                      <li>• Check if the contact's phone number is valid</li>
+                      <li>• Check if the contact&apos;s phone number is valid</li>
                       <li>• Verify the contact has WhatsApp installed</li>
                       <li>• Ensure the 24-hour window is active for non-template messages</li>
                       <li>• For templates, verify the template is approved</li>
