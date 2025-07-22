@@ -14,6 +14,7 @@ import { fetchWaAsset } from '@/lib/interakt';
 import AutoReply from '@/models/AutoReply';
 import Workflow from '@/models/Workflow';
 import WorkflowEngine from '@/lib/workflowEngine';
+import Campaign from '@/models/Campaign';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
