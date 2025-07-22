@@ -94,9 +94,9 @@ async function processStatusUpdates(v: any) {
 
       if (conversation) {
         // Find the specific message in the conversation
-const messageIndex = conversation.messages.findIndex(
-  (msg: any) => msg.whatsappMessageId === whatsappMessageId
-);
+        const messageIndex = conversation.messages.findIndex(
+          (msg: any) => msg.whatsappMessageId === whatsappMessageId
+        );
 
         if (messageIndex !== -1) {
           // Update the message status
@@ -353,6 +353,32 @@ async function processMessage(
         case 'text': {
           newMsg.messageType = 'text';
           newMsg.content = m.text?.body ?? '';
+          break;
+        }
+
+
+        // Add button message handling (this was missing!)
+        case 'button': {
+          newMsg.messageType = 'interactive';
+          const buttonData = m.button;
+          newMsg.content = buttonData?.text || 'Button clicked';
+          newMsg.interactiveData = {
+            type: 'button_reply',
+            id: buttonData?.payload || buttonData?.text, // Use payload first, then text
+            title: buttonData?.text
+          };
+
+          console.log(`🔘 Button clicked: Payload="${buttonData?.payload}", Text="${buttonData?.text}"`);
+
+          // Check for workflow continuation based on button click
+          await checkAndContinueWorkflow(
+            contact,
+            buttonData?.payload || buttonData?.text,
+            buttonData?.text,
+            wabaAcc,
+            userId,
+            m.context?.id // The message ID this is replying to
+          );
           break;
         }
 
@@ -1038,7 +1064,7 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
       }
     }
 
-  } catch (error:any) {
+  } catch (error: any) {
     console.error('Error sending auto reply message:', error);
 
     // Update message as failed
@@ -1187,6 +1213,8 @@ async function processCampaignResponse(
   }
 }
 
+// Update the handleCampaignResponse function to better handle button clicks:
+
 async function handleCampaignResponse(
   campaign: any,
   messageContent: string,
@@ -1198,29 +1226,50 @@ async function handleCampaignResponse(
 ) {
   const responseHandling = campaign.responseHandling;
 
-  // Handle opt-out responses
-  if (responseHandling.optOut?.enabled && interactiveData?.type === 'button_reply') {
-    const buttonText = interactiveData.title;
-    
-    if (responseHandling.optOut.triggerButtons.includes(buttonText)) {
-      console.log(`Processing opt-out request for contact ${contact.phone} - button: ${buttonText}`);
+  console.log(`🔍 Processing campaign response for campaign: ${campaign.name}`);
+  console.log(`   Message content: "${messageContent}"`);
+  console.log(`   Message type: ${messageType}`);
+  console.log(`   Interactive data:`, interactiveData);
+  console.log(`   Response handling config:`, responseHandling);
+
+  // Handle opt-out responses - check both button_reply types and direct button messages
+  if (responseHandling.optOut?.enabled && interactiveData) {
+    let buttonText = '';
+
+    // Handle both interactive button_reply and direct button messages
+    if (interactiveData.type === 'button_reply') {
+      buttonText = interactiveData.title || interactiveData.id || '';
+    } else if (interactiveData.id || interactiveData.title) {
+      // Direct button message
+      buttonText = interactiveData.title || interactiveData.id || '';
+    }
+
+    console.log(`🔍 Checking opt-out button: "${buttonText}"`);
+    console.log(`   Configured opt-out triggers:`, responseHandling.optOut.triggerButtons);
+
+    if (buttonText && responseHandling.optOut.triggerButtons.includes(buttonText)) {
+      console.log(`🚫 Processing opt-out request for contact ${contact.phone} - button: ${buttonText}`);
       await handleOptOutRequest(campaign, contact, wabaAcc, userId);
       return; // Don't process other response handlers after opt-out
+    } else {
+      console.log(`❌ Button text "${buttonText}" not found in opt-out triggers`);
     }
   }
 
   // Handle auto-reply
   if (responseHandling.autoReply?.enabled) {
-    console.log(`Processing auto-reply for campaign ${campaign._id}`);
+    console.log(`📬 Processing auto-reply for campaign ${campaign._id}`);
     await handleAutoReply(campaign, contact, wabaAcc, userId, messageContent);
   }
 
   // Handle workflow trigger
   if (responseHandling.workflow?.enabled && responseHandling.workflow.workflowId) {
-    console.log(`Processing workflow trigger for campaign ${campaign._id}`);
+    console.log(`🔄 Processing workflow trigger for campaign ${campaign._id}`);
     await handleWorkflowTrigger(campaign, contact, wabaAcc, userId, messageContent, interactiveData);
   }
 }
+
+// Update the handleOptOutRequest function with better logging:
 
 async function handleOptOutRequest(
   campaign: any,
@@ -1230,27 +1279,35 @@ async function handleOptOutRequest(
 ) {
   try {
     console.log(`🚫 Processing opt-out request for contact: ${contact.phone}`);
+    console.log(`   Campaign: ${campaign.name}`);
+    console.log(`   Update contact setting: ${campaign.responseHandling.optOut.updateContact}`);
 
     // Update contact opt-in status if enabled
     if (campaign.responseHandling.optOut.updateContact) {
-      await Contact.findByIdAndUpdate(contact._id, {
-        whatsappOptIn: false,
-        optOutDate: new Date(),
-        optOutReason: `Campaign response - ${campaign.name}`,
-        tags: [...(contact.tags || []), 'opted-out']
-      });
-      
+      const updateResult = await Contact.findByIdAndUpdate(
+        contact._id,
+        {
+          whatsappOptIn: false,
+          optOutDate: new Date(),
+          optOutReason: `Campaign response - ${campaign.name}`,
+          tags: [...(contact.tags || []).filter(tag => tag !== 'opted-out'), 'opted-out']
+        },
+        { new: true }
+      );
+
       console.log(`✅ Updated contact ${contact.phone} opt-in status to false`);
+      console.log(`   Contact update result:`, updateResult ? 'Success' : 'Failed');
     }
 
     // Send acknowledgment message
-    const acknowledgmentMessage = campaign.responseHandling.optOut.acknowledgmentMessage || 
+    const acknowledgmentMessage = campaign.responseHandling.optOut.acknowledgmentMessage ||
       'Thank you. You have been unsubscribed from our messages.';
 
+    console.log(`📤 Sending acknowledgment message: "${acknowledgmentMessage}"`);
     await sendOptOutAcknowledgment(contact, acknowledgmentMessage, wabaAcc);
 
     // Record the opt-out in campaign stats
-    await Campaign.findByIdAndUpdate(campaign._id, {
+    const campaignUpdateResult = await Campaign.findByIdAndUpdate(campaign._id, {
       $inc: { 'stats.optOuts': 1 },
       $push: {
         'stats.optOutEvents': {
@@ -1263,11 +1320,14 @@ async function handleOptOutRequest(
     });
 
     console.log(`✅ Opt-out processed successfully for ${contact.phone}`);
+    console.log(`   Campaign stats updated:`, campaignUpdateResult ? 'Success' : 'Failed');
 
   } catch (error) {
     console.error('❌ Error processing opt-out request:', error);
   }
 }
+
+// Update with better error handling and logging:
 
 async function sendOptOutAcknowledgment(
   contact: any,
@@ -1275,6 +1335,8 @@ async function sendOptOutAcknowledgment(
   wabaAcc: any
 ) {
   try {
+    console.log(`📤 Sending opt-out acknowledgment to ${contact.phone}`);
+
     let phoneNumber = contact.phone;
     if (!phoneNumber.startsWith('+')) {
       phoneNumber = '+' + phoneNumber;
@@ -1291,6 +1353,8 @@ async function sendOptOutAcknowledgment(
       }
     };
 
+    console.log(`🚀 Sending acknowledgment payload:`, JSON.stringify(whatsappPayload, null, 2));
+
     const response = await fetch(
       `https://amped-express.interakt.ai/api/v17.0/${wabaAcc.phoneNumberId}/messages`,
       {
@@ -1306,21 +1370,23 @@ async function sendOptOutAcknowledgment(
     );
 
     const responseText = await response.text();
-    console.log('Opt-out acknowledgment response:', responseText);
+    console.log(`📡 Opt-out acknowledgment response (${response.status}):`, responseText);
 
     if (response.ok) {
       // Record in conversation
       await recordOptOutMessage(contact, message);
       console.log('✅ Opt-out acknowledgment sent successfully');
+      return true;
     } else {
       console.error('❌ Failed to send opt-out acknowledgment:', responseText);
+      return false;
     }
 
   } catch (error) {
     console.error('❌ Error sending opt-out acknowledgment:', error);
+    return false;
   }
 }
-
 async function recordOptOutMessage(contact: any, message: string) {
   try {
     const conversation = await Conversation.findOne({ contactId: contact._id });
