@@ -497,432 +497,432 @@ const CreateCampaignPage = () => {
     status: "draft",
   });
   const [responseHandling, setResponseHandling] = useState({
-  enabled: false,
-  autoReply: {
     enabled: false,
-    message: '',
-    templateId: '',
-    templateName: '',
-    delay: 0
-  },
-  workflow: {
-    enabled: false,
-    workflowId: '',
-    workflowName: '',
-    triggerDelay: 0
-  },
-  optOut: {
-    enabled: false,
-    triggerButtons: [] as string[],
-    acknowledgmentMessage: 'Thank you. You have been unsubscribed from our messages.',
-    updateContact: true
-  }
-});
+    autoReply: {
+      enabled: false,
+      message: '',
+      templateId: '',
+      templateName: '',
+      delay: 0
+    },
+    workflow: {
+      enabled: false,
+      workflowId: '',
+      workflowName: '',
+      triggerDelay: 0
+    },
+    optOut: {
+      enabled: false,
+      triggerButtons: [] as string[],
+      acknowledgmentMessage: 'Thank you. You have been unsubscribed from our messages.',
+      updateContact: true
+    }
+  });
 
-const [availableTemplates, setAvailableTemplates] = useState([]);
-const [availableWorkflows, setAvailableWorkflows] = useState([]);
-const [templateButtons, setTemplateButtons] = useState<any[]>([]);
+  const [availableTemplates, setAvailableTemplates] = useState([]);
+  const [availableWorkflows, setAvailableWorkflows] = useState([]);
+  const [templateButtons, setTemplateButtons] = useState<any[]>([]);
 
 
 
-useEffect(() => {
-  
+  useEffect(() => {
+
     fetchTemplateButtons();
     fetchTemplatesAndWorkflows();
-  
-}, [campaign.message.template]);
 
-const fetchTemplatesAndWorkflows = async () => {
-  
-  try {
-    // Fetch templates
-    const templatesResponse = await fetch(`/api/templates`);
-    if (templatesResponse.ok) {
-      const templatesData = await templatesResponse.json();
-      setAvailableTemplates(templatesData.templates || []);
-    }
-    
-    // Fetch workflows
-    const workflowsResponse = await fetch(`/api/workflows`);
-    if (workflowsResponse.ok) {
-      const workflowsData = await workflowsResponse.json();
-      setAvailableWorkflows(workflowsData.workflows || []);
-    }
-  } catch (error) {
-    console.error('Error fetching templates and workflows:', error);
-  }
-};
+  }, [campaign.message.template]);
 
-const fetchTemplateButtons = async () => {
-  if (!campaign.message.template) return;
-  
-  try {
-    const response = await fetch(`/api/templates/${campaign.message.template}`);
-    if (response.ok) {
-      const data = await response.json();
-      const template = data.template;
-      
-      // Extract quick reply buttons from template
-      const buttons = template.components?.find((comp: any) => comp.type === 'BUTTONS')?.buttons?.filter((btn: any) => btn.type === 'QUICK_REPLY') || [];
-      setTemplateButtons(buttons);
-    }
-  } catch (error) {
-    console.error('Error fetching template buttons:', error);
-  }
-};
+  const fetchTemplatesAndWorkflows = async () => {
 
-// Add the complete ResponseHandlingSection component within your main component:
-const ResponseHandlingSection = () => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageCircle className="w-5 h-5" />
-          Response Handling
-        </CardTitle>
-        <CardDescription>
-          Configure how to handle customer responses to your campaign messages
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        {/* Enable Response Handling */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label>Enable Response Handling</Label>
-            <p className="text-sm text-muted-foreground">
-              Automatically handle customer responses to campaign messages
-            </p>
+    try {
+      // Fetch templates
+      const templatesResponse = await fetch(`/api/templates`);
+      if (templatesResponse.ok) {
+        const templatesData = await templatesResponse.json();
+        setAvailableTemplates(templatesData.templates || []);
+      }
+
+      // Fetch workflows
+      const workflowsResponse = await fetch(`/api/workflows`);
+      if (workflowsResponse.ok) {
+        const workflowsData = await workflowsResponse.json();
+        setAvailableWorkflows(workflowsData.workflows || []);
+      }
+    } catch (error) {
+      console.error('Error fetching templates and workflows:', error);
+    }
+  };
+
+  const fetchTemplateButtons = async () => {
+    if (!campaign.message.template) return;
+
+    try {
+      const response = await fetch(`/api/templates/${campaign.message.template}`);
+      if (response.ok) {
+        const data = await response.json();
+        const template = data.template;
+
+        // Extract quick reply buttons from template
+        const buttons = template.components?.find((comp: any) => comp.type === 'BUTTONS')?.buttons?.filter((btn: any) => btn.type === 'QUICK_REPLY') || [];
+        setTemplateButtons(buttons);
+      }
+    } catch (error) {
+      console.error('Error fetching template buttons:', error);
+    }
+  };
+
+  // Add the complete ResponseHandlingSection component within your main component:
+  const ResponseHandlingSection = () => {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="w-5 h-5" />
+            Response Handling
+          </CardTitle>
+          <CardDescription>
+            Configure how to handle customer responses to your campaign messages
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {/* Enable Response Handling */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable Response Handling</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically handle customer responses to campaign messages
+              </p>
+            </div>
+            <Switch
+              checked={responseHandling.enabled}
+              onCheckedChange={(checked) =>
+                setResponseHandling(prev => ({ ...prev, enabled: checked }))
+              }
+            />
           </div>
-          <Switch
-            checked={responseHandling.enabled}
-            onCheckedChange={(checked) =>
-              setResponseHandling(prev => ({ ...prev, enabled: checked }))
-            }
-          />
-        </div>
 
-        {responseHandling.enabled && (
-          <div className="space-y-6 border-t pt-6">
-            {/* Auto Reply Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="flex items-center gap-2">
-                    <Reply className="w-4 h-4" />
-                    Auto Reply
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Send an automatic reply to any response
-                  </p>
+          {responseHandling.enabled && (
+            <div className="space-y-6 border-t pt-6">
+              {/* Auto Reply Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2">
+                      <Reply className="w-4 h-4" />
+                      Auto Reply
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Send an automatic reply to any response
+                    </p>
+                  </div>
+                  <Switch
+                    checked={responseHandling.autoReply.enabled}
+                    onCheckedChange={(checked) =>
+                      setResponseHandling(prev => ({
+                        ...prev,
+                        autoReply: { ...prev.autoReply, enabled: checked }
+                      }))
+                    }
+                  />
                 </div>
-                <Switch
-                  checked={responseHandling.autoReply.enabled}
-                  onCheckedChange={(checked) =>
-                    setResponseHandling(prev => ({
-                      ...prev,
-                      autoReply: { ...prev.autoReply, enabled: checked }
-                    }))
-                  }
-                />
-              </div>
 
-              {responseHandling.autoReply.enabled && (
-                <div className="ml-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Reply Type</Label>
-                      <Select
-                        value={responseHandling.autoReply.templateId ? 'template' : 'text'}
-                        onValueChange={(value) => {
-                          if (value === 'text') {
+                {responseHandling.autoReply.enabled && (
+                  <div className="ml-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Reply Type</Label>
+                        <Select
+                          value={responseHandling.autoReply.templateId ? 'template' : 'text'}
+                          onValueChange={(value) => {
+                            if (value === 'text') {
+                              setResponseHandling(prev => ({
+                                ...prev,
+                                autoReply: {
+                                  ...prev.autoReply,
+                                  templateId: '',
+                                  templateName: ''
+                                }
+                              }));
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select reply type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">Text Message</SelectItem>
+                            <SelectItem value="template">Template Message</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Delay (minutes)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="1440"
+                          value={responseHandling.autoReply.delay}
+                          onChange={(e) =>
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              autoReply: { ...prev.autoReply, delay: parseInt(e.target.value) || 0 }
+                            }))
+                          }
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+
+                    {responseHandling.autoReply.templateId ? (
+                      <div className="space-y-2">
+                        <Label>Select Template</Label>
+                        <Select
+                          value={responseHandling.autoReply.templateId}
+                          onValueChange={(value) => {
+                            const template = availableTemplates.find((t: any) => t._id === value);
                             setResponseHandling(prev => ({
                               ...prev,
                               autoReply: {
                                 ...prev.autoReply,
-                                templateId: '',
-                                templateName: ''
+                                templateId: value,
+                                templateName: template?.name || ''
                               }
                             }));
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select reply type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="text">Text Message</SelectItem>
-                          <SelectItem value="template">Template Message</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Delay (minutes)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="1440"
-                        value={responseHandling.autoReply.delay}
-                        onChange={(e) =>
-                          setResponseHandling(prev => ({
-                            ...prev,
-                            autoReply: { ...prev.autoReply, delay: parseInt(e.target.value) || 0 }
-                          }))
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-
-                  {responseHandling.autoReply.templateId ? (
-                    <div className="space-y-2">
-                      <Label>Select Template</Label>
-                      <Select
-                        value={responseHandling.autoReply.templateId}
-                        onValueChange={(value) => {
-                          const template = availableTemplates.find((t: any) => t._id === value);
-                          setResponseHandling(prev => ({
-                            ...prev,
-                            autoReply: {
-                              ...prev.autoReply,
-                              templateId: value,
-                              templateName: template?.name || ''
-                            }
-                          }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a template" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableTemplates.map((template: any) => (
-                            <SelectItem key={template._id} value={template._id}>
-                              {template.name} ({template.category})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label>Auto Reply Message</Label>
-                      <Textarea
-                        value={responseHandling.autoReply.message}
-                        onChange={(e) =>
-                          setResponseHandling(prev => ({
-                            ...prev,
-                            autoReply: { ...prev.autoReply, message: e.target.value }
-                          }))
-                        }
-                        placeholder="Thank you for your response. We'll get back to you soon!"
-                        className="min-h-[100px]"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Workflow Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="flex items-center gap-2">
-                    <Workflow className="w-4 h-4" />
-                    Trigger Workflow
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Start a workflow when customers respond
-                  </p>
-                </div>
-                <Switch
-                  checked={responseHandling.workflow.enabled}
-                  onCheckedChange={(checked) =>
-                    setResponseHandling(prev => ({
-                      ...prev,
-                      workflow: { ...prev.workflow, enabled: checked }
-                    }))
-                  }
-                />
-              </div>
-
-              {responseHandling.workflow.enabled && (
-                <div className="ml-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Select Workflow</Label>
-                      <Select
-                        value={responseHandling.workflow.workflowId}
-                        onValueChange={(value) => {
-                          const workflow = availableWorkflows.find((w: any) => w._id === value);
-                          setResponseHandling(prev => ({
-                            ...prev,
-                            workflow: {
-                              ...prev.workflow,
-                              workflowId: value,
-                              workflowName: workflow?.name || ''
-                            }
-                          }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a workflow" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableWorkflows
-                            .filter((workflow: any) => workflow.isActive)
-                            .map((workflow: any) => (
-                              <SelectItem key={workflow._id} value={workflow._id}>
-                                {workflow.name}
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableTemplates.map((template: any) => (
+                              <SelectItem key={template._id} value={template._id}>
+                                {template.name} ({template.category})
                               </SelectItem>
                             ))}
-                        </SelectContent>
-                      </Select>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>Auto Reply Message</Label>
+                        <Textarea
+                          value={responseHandling.autoReply.message}
+                          onChange={(e) =>
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              autoReply: { ...prev.autoReply, message: e.target.value }
+                            }))
+                          }
+                          placeholder="Thank you for your response. We'll get back to you soon!"
+                          className="min-h-[100px]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Workflow Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2">
+                      <Workflow className="w-4 h-4" />
+                      Trigger Workflow
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Start a workflow when customers respond
+                    </p>
+                  </div>
+                  <Switch
+                    checked={responseHandling.workflow.enabled}
+                    onCheckedChange={(checked) =>
+                      setResponseHandling(prev => ({
+                        ...prev,
+                        workflow: { ...prev.workflow, enabled: checked }
+                      }))
+                    }
+                  />
+                </div>
+
+                {responseHandling.workflow.enabled && (
+                  <div className="ml-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Select Workflow</Label>
+                        <Select
+                          value={responseHandling.workflow.workflowId}
+                          onValueChange={(value) => {
+                            const workflow = availableWorkflows.find((w: any) => w._id === value);
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              workflow: {
+                                ...prev.workflow,
+                                workflowId: value,
+                                workflowName: workflow?.name || ''
+                              }
+                            }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a workflow" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableWorkflows
+                              .filter((workflow: any) => workflow.isActive)
+                              .map((workflow: any) => (
+                                <SelectItem key={workflow._id} value={workflow._id}>
+                                  {workflow.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Trigger Delay (minutes)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="1440"
+                          value={responseHandling.workflow.triggerDelay}
+                          onChange={(e) =>
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              workflow: { ...prev.workflow, triggerDelay: parseInt(e.target.value) || 0 }
+                            }))
+                          }
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Opt-out Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2">
+                      <UserX className="w-4 h-4" />
+                      Customer Opt-out
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Handle customer opt-out requests from template button clicks
+                    </p>
+                  </div>
+                  <Switch
+                    checked={responseHandling.optOut.enabled}
+                    onCheckedChange={(checked) =>
+                      setResponseHandling(prev => ({
+                        ...prev,
+                        optOut: { ...prev.optOut, enabled: checked }
+                      }))
+                    }
+                  />
+                </div>
+
+                {responseHandling.optOut.enabled && (
+                  <div className="ml-6 space-y-4">
+                    {templateButtons.length > 0 ? (
+                      <div className="space-y-2">
+                        <Label>Select Opt-out Buttons</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Choose which quick reply buttons should trigger customer opt-out
+                        </p>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {templateButtons.map((button: any, index: number) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`button-${index}`}
+                                checked={responseHandling.optOut.triggerButtons.includes(button.text)}
+                                onCheckedChange={(checked) => {
+                                  setResponseHandling(prev => ({
+                                    ...prev,
+                                    optOut: {
+                                      ...prev.optOut,
+                                      triggerButtons: checked
+                                        ? [...prev.optOut.triggerButtons, button.text]
+                                        : prev.optOut.triggerButtons.filter(id => id !== button.text)
+                                    }
+                                  }));
+                                }}
+                              />
+                              <Label
+                                htmlFor={`button-${index}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {button.text}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+                        <AlertCircle className="w-6 h-6 mx-auto mb-2" />
+                        <p className="text-sm">
+                          No quick reply buttons found in selected template
+                        </p>
+                        <p className="text-xs">
+                          Opt-out functionality requires a template with quick reply buttons
+                        </p>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
-                      <Label>Trigger Delay (minutes)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="1440"
-                        value={responseHandling.workflow.triggerDelay}
+                      <Label>Acknowledgment Message</Label>
+                      <Textarea
+                        value={responseHandling.optOut.acknowledgmentMessage}
                         onChange={(e) =>
                           setResponseHandling(prev => ({
                             ...prev,
-                            workflow: { ...prev.workflow, triggerDelay: parseInt(e.target.value) || 0 }
+                            optOut: { ...prev.optOut, acknowledgmentMessage: e.target.value }
                           }))
                         }
-                        placeholder="0"
+                        placeholder="Thank you. You have been unsubscribed from our messages."
+                        className="min-h-[80px]"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        This message will be sent to customers who opt out
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="update-contact"
+                        checked={responseHandling.optOut.updateContact}
+                        onCheckedChange={(checked) =>
+                          setResponseHandling(prev => ({
+                            ...prev,
+                            optOut: { ...prev.optOut, updateContact: checked as boolean }
+                          }))
+                        }
+                      />
+                      <Label htmlFor="update-contact" className="text-sm">
+                        Automatically update contact opt-in status
+                      </Label>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Opt-out Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="flex items-center gap-2">
-                    <UserX className="w-4 h-4" />
-                    Customer Opt-out
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Handle customer opt-out requests from template button clicks
-                  </p>
-                </div>
-                <Switch
-                  checked={responseHandling.optOut.enabled}
-                  onCheckedChange={(checked) =>
-                    setResponseHandling(prev => ({
-                      ...prev,
-                      optOut: { ...prev.optOut, enabled: checked }
-                    }))
-                  }
-                />
+                )}
               </div>
-
-              {responseHandling.optOut.enabled && (
-                <div className="ml-6 space-y-4">
-                  {templateButtons.length > 0 ? (
-                    <div className="space-y-2">
-                      <Label>Select Opt-out Buttons</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Choose which quick reply buttons should trigger customer opt-out
-                      </p>
-                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                        {templateButtons.map((button: any, index: number) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`button-${index}`}
-                              checked={responseHandling.optOut.triggerButtons.includes(button.text)}
-                              onCheckedChange={(checked) => {
-                                setResponseHandling(prev => ({
-                                  ...prev,
-                                  optOut: {
-                                    ...prev.optOut,
-                                    triggerButtons: checked
-                                      ? [...prev.optOut.triggerButtons, button.text]
-                                      : prev.optOut.triggerButtons.filter(id => id !== button.text)
-                                  }
-                                }));
-                              }}
-                            />
-                            <Label 
-                              htmlFor={`button-${index}`} 
-                              className="text-sm font-normal cursor-pointer"
-                            >
-                              {button.text}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
-                      <AlertCircle className="w-6 h-6 mx-auto mb-2" />
-                      <p className="text-sm">
-                        No quick reply buttons found in selected template
-                      </p>
-                      <p className="text-xs">
-                        Opt-out functionality requires a template with quick reply buttons
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>Acknowledgment Message</Label>
-                    <Textarea
-                      value={responseHandling.optOut.acknowledgmentMessage}
-                      onChange={(e) =>
-                        setResponseHandling(prev => ({
-                          ...prev,
-                          optOut: { ...prev.optOut, acknowledgmentMessage: e.target.value }
-                        }))
-                      }
-                      placeholder="Thank you. You have been unsubscribed from our messages."
-                      className="min-h-[80px]"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      This message will be sent to customers who opt out
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="update-contact"
-                      checked={responseHandling.optOut.updateContact}
-                      onCheckedChange={(checked) =>
-                        setResponseHandling(prev => ({
-                          ...prev,
-                          optOut: { ...prev.optOut, updateContact: checked as boolean }
-                        }))
-                      }
-                    />
-                    <Label htmlFor="update-contact" className="text-sm">
-                      Automatically update contact opt-in status
-                    </Label>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
-// Update your campaign object to include responseHandling:
-const updateCampaignResponseHandling = () => {
-  setCampaign(prev => ({
-    ...prev,
-    responseHandling: responseHandling
-  }));
-};
+  // Update your campaign object to include responseHandling:
+  const updateCampaignResponseHandling = () => {
+    setCampaign(prev => ({
+      ...prev,
+      responseHandling: responseHandling
+    }));
+  };
 
 
   // Steps configuration
@@ -1381,6 +1381,7 @@ const updateCampaignResponseHandling = () => {
         ...campaign,
         audience: {
           ...campaign.audience,
+          responseHandling,
           selectedContacts: selectedContacts
         },
         status: 'draft'
@@ -1479,7 +1480,7 @@ const updateCampaignResponseHandling = () => {
       // Add selected contacts to the audience object before launching
       const campaignToLaunch = {
         ...campaign,
-          responseHandling,
+        responseHandling,
         audience: {
           ...campaign.audience,
           selectedContacts: selectedContacts
@@ -2250,7 +2251,7 @@ const updateCampaignResponseHandling = () => {
 
                   {/* Step 3: Response Handling */}
                   {activeStep === 3 && (
-                 <ResponseHandlingSection />
+                    <ResponseHandlingSection />
                   )}
 
                   {/* Step 4: Conversion Tracking */}
