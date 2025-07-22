@@ -44,7 +44,8 @@ import {
   ArrowUpRight,
   Gauge,
   FilterX,
-  X
+  X,
+  FileText
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -126,6 +127,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { formatCurrency } from "@/lib/pricing";
 
 // Define campaign types
 interface Campaign {
@@ -220,52 +222,117 @@ const CampaignsPage = () => {
     setFilteredCampaigns(result);
   };
 
+  // Add helper function to check if campaign is in grace period
+  const isInGracePeriod = (campaign: Campaign) => {
+    if (campaign.status !== 'active') return false;
+
+    const now = new Date();
+    const campaignAge = now.getTime() - new Date(campaign.createdAt).getTime();
+    return campaignAge < 60000 && !campaign.stats?.processStartedAt;
+  };
+
+
   // Get status badge styling
-  const getStatusBadge = (status: string) => {
+  // Find the getStatusBadge function and replace it with this:
+  const getStatusBadge = (status: string, campaign?: any) => {
+    // Check if campaign is in grace period
+    if (campaign && status === 'active') {
+      const now = new Date();
+      const campaignAge = now.getTime() - new Date(campaign.createdAt).getTime();
+      const isInGracePeriod = campaignAge < 60000 &&
+        !campaign.stats?.processStartedAt;
+
+      if (isInGracePeriod) {
+        const timeRemaining = Math.ceil((60000 - campaignAge) / 1000);
+        return (
+          <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
+            <Clock className="mr-1 h-3 w-3" />
+            Starting in {timeRemaining}s
+          </Badge>
+        );
+      }
+    }
+
+    // Existing status badge logic
     const statusConfig = {
-      'active': {
-        variant: "default" as const,
-        className: "bg-green-100 text-green-700 border-green-200",
-        icon: PlayCircle
+      draft: {
+        color: "text-gray-600 border-gray-200 bg-gray-50",
+        label: "Draft",
+        icon: FileText
       },
-      'paused': {
-        variant: "secondary" as const,
-        className: "bg-yellow-100 text-yellow-700 border-yellow-200",
-        icon: PauseCircle
-      },
-      'scheduled': {
-        variant: "outline" as const,
-        className: "bg-blue-100 text-blue-700 border-blue-200",
+      scheduled: {
+        color: "text-blue-600 border-blue-200 bg-blue-50",
+        label: "Scheduled",
         icon: Calendar
       },
-      'draft': {
-        variant: "outline" as const,
-        className: "bg-gray-100 text-gray-700 border-gray-200",
-        icon: ClipboardList
+      active: {
+        color: "text-green-600 border-green-200 bg-green-50",
+        label: "Active",
+        icon: PlayCircle
       },
-      'completed': {
-        variant: "default" as const,
-        className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      paused: {
+        color: "text-yellow-600 border-yellow-200 bg-yellow-50",
+        label: "Paused",
+        icon: PauseCircle
+      },
+      completed: {
+        color: "text-green-600 border-green-200 bg-green-50",
+        label: "Completed",
         icon: CheckCircle
       },
-      'failed': {
-        variant: "destructive" as const,
-        className: "bg-red-100 text-red-700 border-red-200",
-        icon: XCircle
+      failed: {
+        color: "text-red-600 border-red-200 bg-red-50",
+        label: "Failed",
+        icon: AlertCircle
+      },
+      cancelled: {
+        color: "text-gray-600 border-gray-200 bg-gray-50",
+        label: "Cancelled",
+        icon: X
       }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-    const Icon = config.icon;
+    const IconComponent = config.icon;
 
     return (
-      <Badge variant={config.variant} className={cn("gap-1", config.className)}>
-        <Icon className="h-3 w-3" />
-        <span className="capitalize">{status}</span>
+      <Badge variant="outline" className={config.color}>
+        <IconComponent className="mr-1 h-3 w-3" />
+        {config.label}
       </Badge>
     );
   };
+  // Add cancel campaign function
+  const cancelCampaign = async (campaign: Campaign) => {
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/cancel`, {
+        method: 'POST',
+      });
 
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Campaign Cancelled",
+          description: data.refund.amount > 0
+            ? `Campaign cancelled successfully. ${formatCurrency(data.refund.amount)} has been refunded to your wallet.`
+            : "Campaign cancelled successfully.",
+        });
+
+        // Refresh campaigns list
+        fetchCampaigns();
+      } else {
+        throw new Error(data.error || 'Failed to cancel campaign');
+      }
+    } catch (error) {
+      console.error('Error cancelling campaign:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel campaign",
+        variant: "destructive",
+      });
+    }
+  };
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'ongoing':
@@ -795,7 +862,7 @@ const CampaignsPage = () => {
                                   {campaign.name}
                                 </CardTitle>
                                 <div className="flex items-center gap-2 mt-1">
-                                  {getStatusBadge(campaign.status)}
+                                  {getStatusBadge(campaign.status, campaign)}
                                   <Badge variant="outline" className="text-xs capitalize">
                                     {campaign.type.replace('-', ' ')}
                                   </Badge>
@@ -833,12 +900,16 @@ const CampaignsPage = () => {
                                   </DropdownMenuItem>
                                 )}
                                 {campaign.status === "active" && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleCampaignStatusChange(campaign.id, "paused")}
-                                  >
-                                    <PauseCircle className="h-4 w-4 mr-2" />
-                                    Pause
-                                  </DropdownMenuItem>
+                                  <>
+
+
+                                    <DropdownMenuItem
+                                      onClick={() => handleCampaignStatusChange(campaign.id, "paused")}
+                                    >
+                                      <PauseCircle className="h-4 w-4 mr-2" />
+                                      Pause
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                                 {campaign.status === "paused" && (
                                   <DropdownMenuItem
@@ -848,6 +919,7 @@ const CampaignsPage = () => {
                                     Resume
                                   </DropdownMenuItem>
                                 )}
+
                                 {campaign.status !== "active" && campaign.status !== "completed" && (
                                   <DropdownMenuItem
                                     onClick={() => {
@@ -940,14 +1012,29 @@ const CampaignsPage = () => {
                             <span>Created {format(new Date(campaign.createdAt), "MMM dd, yyyy")}</span>
                             <div className="flex items-center gap-1">
                               {campaign.status === "active" && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCampaignStatusChange(campaign.id, "paused")}
-                                  className="h-7 px-2 text-xs"
-                                >
-                                  <PauseCircle className="h-3 w-3" />
-                                </Button>
+                                <>
+                                  {isInGracePeriod(campaign) ? (
+                                    // Show cancel button for campaigns in grace period
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => cancelCampaign(campaign)}
+                                      className="text-red-600 border-red-200 hover:bg-red-50"
+                                    >
+                                      <X className="h-4 w-4 mr-1" />
+                                      Cancel
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleCampaignStatusChange(campaign.id, "paused")}
+                                      className="h-7 px-2 text-xs"
+                                    >
+                                      <PauseCircle className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </>
                               )}
                               {campaign.status === "paused" && (
                                 <Button
@@ -1010,7 +1097,7 @@ const CampaignsPage = () => {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  {getStatusBadge(campaign.status)}
+                                  {getStatusBadge(campaign.status, campaign)}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">

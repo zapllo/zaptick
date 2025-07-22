@@ -545,6 +545,16 @@ async function processMessage(
 
     await conv.save();
 
+    // Process campaign responses first
+    await processCampaignResponse(
+      newMsg.content,
+      newMsg.messageType,
+      contact,
+      wabaAcc,
+      userId,
+      newMsg.interactiveData
+    );
+
     // For text messages from customers, check workflows in order of priority
     if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
       // 1. First check if this continues a paused workflow
@@ -1136,3 +1146,409 @@ async function updateMessageAsFailed(
     console.error('Error updating message as failed:', error);
   }
 }
+
+// Add this function to handle campaign responses
+async function processCampaignResponse(
+  messageContent: string,
+  messageType: string,
+  contact: any,
+  wabaAcc: any,
+  userId: string,
+  interactiveData?: any
+) {
+  try {
+    // Find recent campaigns that were sent to this contact
+    const recentCampaigns = await Campaign.find({
+      userId,
+      'audience.selectedContacts': contact._id,
+      'responseHandling.enabled': true,
+      'stats.messages': {
+        $elemMatch: {
+          contactId: contact._id.toString(),
+          status: 'sent',
+          sentAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+        }
+      }
+    }).sort({ 'stats.lastProcessedAt': -1 }).limit(5);
+
+    console.log(`Found ${recentCampaigns.length} recent campaigns for response processing`);
+
+    for (const campaign of recentCampaigns) {
+      try {
+        await handleCampaignResponse(campaign, messageContent, messageType, contact, wabaAcc, userId, interactiveData);
+      } catch (error) {
+        console.error(`Error processing response for campaign ${campaign._id}:`, error);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error processing campaign responses:', error);
+  }
+}
+
+async function handleCampaignResponse(
+  campaign: any,
+  messageContent: string,
+  messageType: string,
+  contact: any,
+  wabaAcc: any,
+  userId: string,
+  interactiveData?: any
+) {
+  const responseHandling = campaign.responseHandling;
+
+  // Handle opt-out responses
+  if (responseHandling.optOut?.enabled && interactiveData?.type === 'button_reply') {
+    const buttonText = interactiveData.title;
+    
+    if (responseHandling.optOut.triggerButtons.includes(buttonText)) {
+      console.log(`Processing opt-out request for contact ${contact.phone} - button: ${buttonText}`);
+      await handleOptOutRequest(campaign, contact, wabaAcc, userId);
+      return; // Don't process other response handlers after opt-out
+    }
+  }
+
+  // Handle auto-reply
+  if (responseHandling.autoReply?.enabled) {
+    console.log(`Processing auto-reply for campaign ${campaign._id}`);
+    await handleAutoReply(campaign, contact, wabaAcc, userId, messageContent);
+  }
+
+  // Handle workflow trigger
+  if (responseHandling.workflow?.enabled && responseHandling.workflow.workflowId) {
+    console.log(`Processing workflow trigger for campaign ${campaign._id}`);
+    await handleWorkflowTrigger(campaign, contact, wabaAcc, userId, messageContent, interactiveData);
+  }
+}
+
+async function handleOptOutRequest(
+  campaign: any,
+  contact: any,
+  wabaAcc: any,
+  userId: string
+) {
+  try {
+    console.log(`🚫 Processing opt-out request for contact: ${contact.phone}`);
+
+    // Update contact opt-in status if enabled
+    if (campaign.responseHandling.optOut.updateContact) {
+      await Contact.findByIdAndUpdate(contact._id, {
+        whatsappOptIn: false,
+        optOutDate: new Date(),
+        optOutReason: `Campaign response - ${campaign.name}`,
+        tags: [...(contact.tags || []), 'opted-out']
+      });
+      
+      console.log(`✅ Updated contact ${contact.phone} opt-in status to false`);
+    }
+
+    // Send acknowledgment message
+    const acknowledgmentMessage = campaign.responseHandling.optOut.acknowledgmentMessage || 
+      'Thank you. You have been unsubscribed from our messages.';
+
+    await sendOptOutAcknowledgment(contact, acknowledgmentMessage, wabaAcc);
+
+    // Record the opt-out in campaign stats
+    await Campaign.findByIdAndUpdate(campaign._id, {
+      $inc: { 'stats.optOuts': 1 },
+      $push: {
+        'stats.optOutEvents': {
+          contactId: contact._id,
+          contactPhone: contact.phone,
+          timestamp: new Date(),
+          campaignId: campaign._id
+        }
+      }
+    });
+
+    console.log(`✅ Opt-out processed successfully for ${contact.phone}`);
+
+  } catch (error) {
+    console.error('❌ Error processing opt-out request:', error);
+  }
+}
+
+async function sendOptOutAcknowledgment(
+  contact: any,
+  message: string,
+  wabaAcc: any
+) {
+  try {
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phoneNumber,
+      type: "text",
+      text: {
+        preview_url: false,
+        body: message
+      }
+    };
+
+    const response = await fetch(
+      `https://amped-express.interakt.ai/api/v17.0/${wabaAcc.phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'x-access-token': INT_TOKEN!,
+          'x-waba-id': contact.wabaId,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(whatsappPayload)
+      }
+    );
+
+    const responseText = await response.text();
+    console.log('Opt-out acknowledgment response:', responseText);
+
+    if (response.ok) {
+      // Record in conversation
+      await recordOptOutMessage(contact, message);
+      console.log('✅ Opt-out acknowledgment sent successfully');
+    } else {
+      console.error('❌ Failed to send opt-out acknowledgment:', responseText);
+    }
+
+  } catch (error) {
+    console.error('❌ Error sending opt-out acknowledgment:', error);
+  }
+}
+
+async function recordOptOutMessage(contact: any, message: string) {
+  try {
+    const conversation = await Conversation.findOne({ contactId: contact._id });
+    if (!conversation) return;
+
+    const optOutMessage = {
+      id: uuidv4(),
+      senderId: 'system' as const,
+      content: `🚫 ${message}`,
+      messageType: 'system' as const,
+      timestamp: new Date(),
+      status: 'sent' as const,
+      senderName: 'System - Opt Out'
+    };
+
+    conversation.messages.push(optOutMessage);
+    conversation.lastMessage = optOutMessage.content;
+    conversation.lastMessageType = 'system';
+    conversation.lastMessageAt = new Date();
+
+    await conversation.save();
+    console.log('✅ Opt-out message recorded in conversation');
+
+  } catch (error) {
+    console.error('❌ Error recording opt-out message:', error);
+  }
+}
+
+async function handleAutoReply(
+  campaign: any,
+  contact: any,
+  wabaAcc: any,
+  userId: string,
+  messageContent: string
+) {
+  try {
+    const autoReply = campaign.responseHandling.autoReply;
+    const delay = (autoReply.delay || 0) * 60 * 1000; // Convert minutes to milliseconds
+
+    const sendAutoReply = async () => {
+      try {
+        let phoneNumber = contact.phone;
+        if (!phoneNumber.startsWith('+')) {
+          phoneNumber = '+' + phoneNumber;
+        }
+
+        let whatsappPayload;
+        let messageContent = '';
+
+        if (autoReply.templateId) {
+          // Template-based auto reply
+          const template = await Template.findById(autoReply.templateId);
+          if (!template) {
+            console.error('Template not found for auto reply:', autoReply.templateId);
+            return;
+          }
+
+          whatsappPayload = {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: phoneNumber,
+            type: "template",
+            template: {
+              name: template.name,
+              language: {
+                code: template.language || 'en'
+              }
+            }
+          };
+
+          messageContent = `Template: ${template.name}`;
+        } else {
+          // Text-based auto reply
+          whatsappPayload = {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: phoneNumber,
+            type: "text",
+            text: {
+              preview_url: false,
+              body: autoReply.message
+            }
+          };
+
+          messageContent = autoReply.message;
+        }
+
+        console.log('Sending campaign auto-reply:', JSON.stringify(whatsappPayload, null, 2));
+
+        const response = await fetch(
+          `https://amped-express.interakt.ai/api/v17.0/${wabaAcc.phoneNumberId}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              'x-access-token': INT_TOKEN!,
+              'x-waba-id': contact.wabaId,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(whatsappPayload)
+          }
+        );
+
+        const responseText = await response.text();
+        console.log('Campaign auto-reply response:', responseText);
+
+        if (response.ok) {
+          const responseData = JSON.parse(responseText);
+          await recordCampaignAutoReply(
+            contact,
+            messageContent,
+            autoReply.templateId ? 'template' : 'text',
+            responseData.messages?.[0]?.id,
+            campaign.name
+          );
+          console.log('✅ Campaign auto-reply sent successfully');
+        }
+
+      } catch (error) {
+        console.error('❌ Error sending campaign auto-reply:', error);
+      }
+    };
+
+    if (delay > 0) {
+      console.log(`⏰ Scheduling campaign auto-reply with ${autoReply.delay} minute delay`);
+      setTimeout(sendAutoReply, delay);
+    } else {
+      await sendAutoReply();
+    }
+
+  } catch (error) {
+    console.error('❌ Error processing campaign auto-reply:', error);
+  }
+}
+
+async function recordCampaignAutoReply(
+  contact: any,
+  messageContent: string,
+  messageType: string,
+  whatsappMessageId?: string,
+  campaignName?: string
+) {
+  try {
+    const conversation = await Conversation.findOne({ contactId: contact._id });
+    if (!conversation) return;
+
+    const autoReplyMessage = {
+      id: uuidv4(),
+      senderId: 'agent' as const,
+      content: messageContent,
+      messageType: messageType,
+      timestamp: new Date(),
+      status: 'sent' as const,
+      whatsappMessageId,
+      senderName: `Campaign Auto Reply - ${campaignName}`,
+      templateName: messageType === 'template' ? messageContent.replace('Template: ', '') : undefined
+    };
+
+    conversation.messages.push(autoReplyMessage);
+    conversation.lastMessage = messageContent;
+    conversation.lastMessageType = messageType;
+    conversation.lastMessageAt = new Date();
+
+    await conversation.save();
+    console.log('✅ Campaign auto-reply recorded in conversation');
+
+  } catch (error) {
+    console.error('❌ Error recording campaign auto-reply:', error);
+  }
+}
+
+async function handleWorkflowTrigger(
+  campaign: any,
+  contact: any,
+  wabaAcc: any,
+  userId: string,
+  messageContent: string,
+  interactiveData?: any
+) {
+  try {
+    const workflowConfig = campaign.responseHandling.workflow;
+    const delay = (workflowConfig.triggerDelay || 0) * 60 * 1000; // Convert minutes to milliseconds
+
+    const triggerWorkflow = async () => {
+      try {
+        const workflowEngine = WorkflowEngine.getInstance();
+
+        const triggerData = {
+          campaignId: campaign._id,
+          campaignName: campaign.name,
+          messageContent,
+          contactPhone: contact.phone,
+          contactName: contact.name,
+          wabaId: wabaAcc.wabaId,
+          timestamp: new Date(),
+          triggeredBy: 'campaign_response',
+          interactiveData
+        };
+
+        console.log(`🔄 Triggering workflow ${workflowConfig.workflowId} for campaign response`);
+
+        const executionId = await workflowEngine.triggerWorkflow(
+          workflowConfig.workflowId,
+          contact._id.toString(),
+          triggerData
+        );
+
+        console.log(`✅ Campaign response workflow triggered with execution ID: ${executionId}`);
+
+        // Update workflow statistics
+        await Workflow.findByIdAndUpdate(workflowConfig.workflowId, {
+          $inc: { executionCount: 1 },
+          lastTriggered: new Date()
+        });
+
+      } catch (error) {
+        console.error('❌ Error triggering campaign response workflow:', error);
+      }
+    };
+
+    if (delay > 0) {
+      console.log(`⏰ Scheduling campaign workflow trigger with ${workflowConfig.triggerDelay} minute delay`);
+      setTimeout(triggerWorkflow, delay);
+    } else {
+      await triggerWorkflow();
+    }
+
+  } catch (error) {
+    console.error('❌ Error processing campaign workflow trigger:', error);
+  }
+}
+

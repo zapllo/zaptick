@@ -6,12 +6,10 @@ import Campaign from "@/models/Campaign";
 import { sendCampaignCreationNotification } from "@/lib/notifications";
 import Contact from "@/models/Contact";
 
-
 // Helper function to build MongoDB query from audience filters
 function buildAudienceQuery(filters: any) {
   const query: any = {};
 
-  // Example implementation - this would need to be customized based on your filter structure
   if (filters.tags && filters.tags.length > 0) {
     query.tags = { $in: filters.tags };
   }
@@ -20,12 +18,10 @@ function buildAudienceQuery(filters: any) {
     query.whatsappOptIn = filters.whatsappOptedIn;
   }
 
-  // Handle conditions with AND/OR operators
   if (filters.conditions && filters.conditions.length > 0) {
     const conditionsQuery = filters.conditions.map((condition: any) => {
       let fieldQuery: any = {};
 
-      // Handle custom fields
       let field = condition.field;
       if (field.startsWith('customField.')) {
         field = field.replace('customField.', '');
@@ -72,7 +68,6 @@ function buildAudienceQuery(filters: any) {
   return query;
 }
 
-
 // Create a new campaign
 export async function POST(req: NextRequest) {
   try {
@@ -103,6 +98,7 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    
     // Calculate audience count for notification
     let audienceCount = 0;
     if (campaignData.audience?.selectedContacts && campaignData.audience.selectedContacts.length > 0) {
@@ -121,7 +117,10 @@ export async function POST(req: NextRequest) {
       name: campaignData.name,
       type: campaignData.type || "one-time",
       userId: decoded.id,
-      audience: campaignData.audience,
+      audience: {
+        ...campaignData.audience,
+        count: audienceCount
+      },
       message: campaignData.message,
       responseHandling: campaignData.responseHandling,
       conversionTracking: campaignData.conversionTracking,
@@ -162,7 +161,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
 
 // Get all campaigns
 export async function GET(req: NextRequest) {
@@ -207,6 +205,14 @@ export async function GET(req: NextRequest) {
         },
         createdAt: campaign.createdAt,
         updatedAt: campaign.updatedAt,
+        // Map new stats structure to old metrics structure for frontend compatibility
+        metrics: campaign.stats ? {
+          delivered: campaign.stats.sent || 0,
+          read: campaign.stats.read || 0,
+          replied: campaign.stats.replied || 0,
+          conversions: campaign.stats.conversions || 0,
+        } : undefined,
+        scheduleTime: campaign.schedule?.sendTime,
       })),
     });
   } catch (error) {

@@ -38,6 +38,11 @@ import {
   Plus,
   X,
   Trash,
+  ArrowRight,
+  MessageCircle,
+  Reply,
+  Workflow,
+  UserX,
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -100,6 +105,7 @@ import AudienceFilter from "@/components/filters/AudienceFilter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { calculateMessagePrice, formatCurrency } from "@/lib/pricing";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Campaign type definition
 interface Campaign {
@@ -231,6 +237,8 @@ function CostEstimator({
     }
   });
 
+
+
   // Get wallet balance if not provided
   useEffect(() => {
     if (companyBalance === undefined) {
@@ -253,6 +261,8 @@ function CostEstimator({
       fetchWalletBalance();
     }
   }, [companyBalance]);
+
+
 
   // Calculate cost whenever audience or template changes
   useEffect(() => {
@@ -415,7 +425,9 @@ const CreateCampaignPage = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
-
+  // Add state for custom retry date
+  const [customRetryDate, setCustomRetryDate] = useState<string>('');
+  const [showCustomRetryDate, setShowCustomRetryDate] = useState(false);
   // Filter data state
   const [tags, setTags] = useState<string[]>([]);
   const [traitFields, setTraitFields] = useState<any[]>([]);
@@ -425,7 +437,12 @@ const CreateCampaignPage = () => {
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState<string>("MARKETING");
   const [walletBalance, setWalletBalance] = useState<number | undefined>(undefined);
-
+  // Add countdown dialog state
+  const [showCountdownDialog, setShowCountdownDialog] = useState(false);
+  const [countdown, setCountdown] = useState(60);
+  const [launchedCampaignId, setLaunchedCampaignId] = useState<string | null>(null);
+  const [launchedCampaignData, setLaunchedCampaignData] = useState<any>(null);
+  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   // Add state for selected contacts
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
 
@@ -479,6 +496,434 @@ const CreateCampaignPage = () => {
     },
     status: "draft",
   });
+  const [responseHandling, setResponseHandling] = useState({
+  enabled: false,
+  autoReply: {
+    enabled: false,
+    message: '',
+    templateId: '',
+    templateName: '',
+    delay: 0
+  },
+  workflow: {
+    enabled: false,
+    workflowId: '',
+    workflowName: '',
+    triggerDelay: 0
+  },
+  optOut: {
+    enabled: false,
+    triggerButtons: [] as string[],
+    acknowledgmentMessage: 'Thank you. You have been unsubscribed from our messages.',
+    updateContact: true
+  }
+});
+
+const [availableTemplates, setAvailableTemplates] = useState([]);
+const [availableWorkflows, setAvailableWorkflows] = useState([]);
+const [templateButtons, setTemplateButtons] = useState<any[]>([]);
+
+
+
+useEffect(() => {
+  
+    fetchTemplateButtons();
+    fetchTemplatesAndWorkflows();
+  
+}, [campaign.message.template]);
+
+const fetchTemplatesAndWorkflows = async () => {
+  
+  try {
+    // Fetch templates
+    const templatesResponse = await fetch(`/api/templates`);
+    if (templatesResponse.ok) {
+      const templatesData = await templatesResponse.json();
+      setAvailableTemplates(templatesData.templates || []);
+    }
+    
+    // Fetch workflows
+    const workflowsResponse = await fetch(`/api/workflows`);
+    if (workflowsResponse.ok) {
+      const workflowsData = await workflowsResponse.json();
+      setAvailableWorkflows(workflowsData.workflows || []);
+    }
+  } catch (error) {
+    console.error('Error fetching templates and workflows:', error);
+  }
+};
+
+const fetchTemplateButtons = async () => {
+  if (!campaign.message.template) return;
+  
+  try {
+    const response = await fetch(`/api/templates/${campaign.message.template}`);
+    if (response.ok) {
+      const data = await response.json();
+      const template = data.template;
+      
+      // Extract quick reply buttons from template
+      const buttons = template.components?.find((comp: any) => comp.type === 'BUTTONS')?.buttons?.filter((btn: any) => btn.type === 'QUICK_REPLY') || [];
+      setTemplateButtons(buttons);
+    }
+  } catch (error) {
+    console.error('Error fetching template buttons:', error);
+  }
+};
+
+// Add the complete ResponseHandlingSection component within your main component:
+const ResponseHandlingSection = () => {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          Response Handling
+        </CardTitle>
+        <CardDescription>
+          Configure how to handle customer responses to your campaign messages
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        {/* Enable Response Handling */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>Enable Response Handling</Label>
+            <p className="text-sm text-muted-foreground">
+              Automatically handle customer responses to campaign messages
+            </p>
+          </div>
+          <Switch
+            checked={responseHandling.enabled}
+            onCheckedChange={(checked) =>
+              setResponseHandling(prev => ({ ...prev, enabled: checked }))
+            }
+          />
+        </div>
+
+        {responseHandling.enabled && (
+          <div className="space-y-6 border-t pt-6">
+            {/* Auto Reply Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-2">
+                    <Reply className="w-4 h-4" />
+                    Auto Reply
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Send an automatic reply to any response
+                  </p>
+                </div>
+                <Switch
+                  checked={responseHandling.autoReply.enabled}
+                  onCheckedChange={(checked) =>
+                    setResponseHandling(prev => ({
+                      ...prev,
+                      autoReply: { ...prev.autoReply, enabled: checked }
+                    }))
+                  }
+                />
+              </div>
+
+              {responseHandling.autoReply.enabled && (
+                <div className="ml-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Reply Type</Label>
+                      <Select
+                        value={responseHandling.autoReply.templateId ? 'template' : 'text'}
+                        onValueChange={(value) => {
+                          if (value === 'text') {
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              autoReply: {
+                                ...prev.autoReply,
+                                templateId: '',
+                                templateName: ''
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select reply type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">Text Message</SelectItem>
+                          <SelectItem value="template">Template Message</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Delay (minutes)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="1440"
+                        value={responseHandling.autoReply.delay}
+                        onChange={(e) =>
+                          setResponseHandling(prev => ({
+                            ...prev,
+                            autoReply: { ...prev.autoReply, delay: parseInt(e.target.value) || 0 }
+                          }))
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+
+                  {responseHandling.autoReply.templateId ? (
+                    <div className="space-y-2">
+                      <Label>Select Template</Label>
+                      <Select
+                        value={responseHandling.autoReply.templateId}
+                        onValueChange={(value) => {
+                          const template = availableTemplates.find((t: any) => t._id === value);
+                          setResponseHandling(prev => ({
+                            ...prev,
+                            autoReply: {
+                              ...prev.autoReply,
+                              templateId: value,
+                              templateName: template?.name || ''
+                            }
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a template" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTemplates.map((template: any) => (
+                            <SelectItem key={template._id} value={template._id}>
+                              {template.name} ({template.category})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Auto Reply Message</Label>
+                      <Textarea
+                        value={responseHandling.autoReply.message}
+                        onChange={(e) =>
+                          setResponseHandling(prev => ({
+                            ...prev,
+                            autoReply: { ...prev.autoReply, message: e.target.value }
+                          }))
+                        }
+                        placeholder="Thank you for your response. We'll get back to you soon!"
+                        className="min-h-[100px]"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Workflow Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-2">
+                    <Workflow className="w-4 h-4" />
+                    Trigger Workflow
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Start a workflow when customers respond
+                  </p>
+                </div>
+                <Switch
+                  checked={responseHandling.workflow.enabled}
+                  onCheckedChange={(checked) =>
+                    setResponseHandling(prev => ({
+                      ...prev,
+                      workflow: { ...prev.workflow, enabled: checked }
+                    }))
+                  }
+                />
+              </div>
+
+              {responseHandling.workflow.enabled && (
+                <div className="ml-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Select Workflow</Label>
+                      <Select
+                        value={responseHandling.workflow.workflowId}
+                        onValueChange={(value) => {
+                          const workflow = availableWorkflows.find((w: any) => w._id === value);
+                          setResponseHandling(prev => ({
+                            ...prev,
+                            workflow: {
+                              ...prev.workflow,
+                              workflowId: value,
+                              workflowName: workflow?.name || ''
+                            }
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a workflow" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableWorkflows
+                            .filter((workflow: any) => workflow.isActive)
+                            .map((workflow: any) => (
+                              <SelectItem key={workflow._id} value={workflow._id}>
+                                {workflow.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Trigger Delay (minutes)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="1440"
+                        value={responseHandling.workflow.triggerDelay}
+                        onChange={(e) =>
+                          setResponseHandling(prev => ({
+                            ...prev,
+                            workflow: { ...prev.workflow, triggerDelay: parseInt(e.target.value) || 0 }
+                          }))
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Opt-out Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="flex items-center gap-2">
+                    <UserX className="w-4 h-4" />
+                    Customer Opt-out
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Handle customer opt-out requests from template button clicks
+                  </p>
+                </div>
+                <Switch
+                  checked={responseHandling.optOut.enabled}
+                  onCheckedChange={(checked) =>
+                    setResponseHandling(prev => ({
+                      ...prev,
+                      optOut: { ...prev.optOut, enabled: checked }
+                    }))
+                  }
+                />
+              </div>
+
+              {responseHandling.optOut.enabled && (
+                <div className="ml-6 space-y-4">
+                  {templateButtons.length > 0 ? (
+                    <div className="space-y-2">
+                      <Label>Select Opt-out Buttons</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Choose which quick reply buttons should trigger customer opt-out
+                      </p>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {templateButtons.map((button: any, index: number) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`button-${index}`}
+                              checked={responseHandling.optOut.triggerButtons.includes(button.text)}
+                              onCheckedChange={(checked) => {
+                                setResponseHandling(prev => ({
+                                  ...prev,
+                                  optOut: {
+                                    ...prev.optOut,
+                                    triggerButtons: checked
+                                      ? [...prev.optOut.triggerButtons, button.text]
+                                      : prev.optOut.triggerButtons.filter(id => id !== button.text)
+                                  }
+                                }));
+                              }}
+                            />
+                            <Label 
+                              htmlFor={`button-${index}`} 
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {button.text}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
+                      <AlertCircle className="w-6 h-6 mx-auto mb-2" />
+                      <p className="text-sm">
+                        No quick reply buttons found in selected template
+                      </p>
+                      <p className="text-xs">
+                        Opt-out functionality requires a template with quick reply buttons
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Acknowledgment Message</Label>
+                    <Textarea
+                      value={responseHandling.optOut.acknowledgmentMessage}
+                      onChange={(e) =>
+                        setResponseHandling(prev => ({
+                          ...prev,
+                          optOut: { ...prev.optOut, acknowledgmentMessage: e.target.value }
+                        }))
+                      }
+                      placeholder="Thank you. You have been unsubscribed from our messages."
+                      className="min-h-[80px]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This message will be sent to customers who opt out
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="update-contact"
+                      checked={responseHandling.optOut.updateContact}
+                      onCheckedChange={(checked) =>
+                        setResponseHandling(prev => ({
+                          ...prev,
+                          optOut: { ...prev.optOut, updateContact: checked as boolean }
+                        }))
+                      }
+                    />
+                    <Label htmlFor="update-contact" className="text-sm">
+                      Automatically update contact opt-in status
+                    </Label>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Update your campaign object to include responseHandling:
+const updateCampaignResponseHandling = () => {
+  setCampaign(prev => ({
+    ...prev,
+    responseHandling: responseHandling
+  }));
+};
+
 
   // Steps configuration
   const [steps, setSteps] = useState([
@@ -505,6 +950,16 @@ const CreateCampaignPage = () => {
       setIsLoading(false);
     });
   }, []);
+
+  // Cleanup countdown interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+    };
+  }, [countdownInterval]);
+
 
   // Fetch wallet balance
   const fetchWalletBalance = async () => {
@@ -1010,7 +1465,6 @@ const CreateCampaignPage = () => {
       // Calculate expected cost
       const messagePrice = calculateMessagePrice(selectedTemplateCategory);
       const totalCost = messagePrice.totalPrice * campaign.audience.count;
-
       // Check if wallet balance is sufficient
       if (walletBalance !== undefined && walletBalance < totalCost) {
         toast({
@@ -1025,6 +1479,7 @@ const CreateCampaignPage = () => {
       // Add selected contacts to the audience object before launching
       const campaignToLaunch = {
         ...campaign,
+          responseHandling,
         audience: {
           ...campaign.audience,
           selectedContacts: selectedContacts
@@ -1049,15 +1504,36 @@ const CreateCampaignPage = () => {
       // Update wallet balance after campaign launch
       setWalletBalance(data.billing?.remainingBalance);
 
+      // Show countdown dialog instead of immediate redirect
+      setLaunchedCampaignId(data.campaign.id);
+      setLaunchedCampaignData(data);
+      setShowCountdownDialog(true);
+      setCountdown(60);
+
+      // Start countdown
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            // Countdown finished, redirect to campaigns page
+            clearInterval(interval);
+            setShowCountdownDialog(false);
+            toast({
+              title: "Campaign Started",
+              description: "Your campaign has started sending messages successfully!",
+            });
+            router.push('/campaigns');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      setCountdownInterval(interval);
+
       toast({
-        title: "Success",
+        title: "Campaign Launched",
         description: `Campaign launched successfully. ${formatCurrency(data.billing?.totalCost || 0)} has been deducted from your wallet.`,
       });
-
-      // Redirect after successful launch
-      setTimeout(() => {
-        router.push('/campaigns');
-      }, 1000);
 
     } catch (error) {
       console.error('Error launching campaign:', error);
@@ -1070,6 +1546,72 @@ const CreateCampaignPage = () => {
       setIsLoading(false);
     }
   };
+
+
+  // Cancel launched campaign function
+  const cancelLaunchedCampaign = async () => {
+    if (!launchedCampaignId) return;
+
+    try {
+      setIsLoading(true);
+
+      const response = await fetch(`/api/campaigns/${launchedCampaignId}/cancel`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Clear countdown
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          setCountdownInterval(null);
+        }
+
+        // Update wallet balance with refund
+        setWalletBalance(data.refund.newWalletBalance);
+
+        // Close dialog
+        setShowCountdownDialog(false);
+
+        toast({
+          title: "Campaign Cancelled",
+          description: data.refund.amount > 0
+            ? `Campaign cancelled successfully. ${formatCurrency(data.refund.amount)} has been refunded to your wallet.`
+            : "Campaign cancelled successfully.",
+        });
+
+        // Redirect to campaigns page
+        router.push('/campaigns');
+      } else {
+        throw new Error(data.error || 'Failed to cancel campaign');
+      }
+    } catch (error) {
+      console.error('Error cancelling campaign:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel campaign",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Continue to campaigns without cancelling
+  const continueToCampaigns = () => {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      setCountdownInterval(null);
+    }
+    setShowCountdownDialog(false);
+    toast({
+      title: "Campaign Active",
+      description: "Your campaign is now active and will start sending messages shortly.",
+    });
+    router.push('/campaigns');
+  };
+
 
   // Get initials for avatar
   const getInitials = (name: string) => {
@@ -1708,303 +2250,7 @@ const CreateCampaignPage = () => {
 
                   {/* Step 3: Response Handling */}
                   {activeStep === 3 && (
-                    <div className="space-y-6">
-                      <Card>
-                        <CardHeader>
-                          <div className="flex items-center gap-3">
-                            <div className="bg-amber-100 p-2 rounded-full">
-                              <Bell className="h-5 w-5 text-amber-600" />
-                            </div>
-                            <div>
-                              <CardTitle className="flex items-center gap-2">
-                                Response Handling
-                                <Badge variant="secondary" className="ml-1">
-                                  <Award className="h-3 w-3 mr-1 text-amber-500" />
-                                  Recommended
-                                </Badge>
-                              </CardTitle>
-                              <CardDescription>Configure automated responses to customer replies</CardDescription>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-6">
-                            <div>
-                              <h3 className="font-medium">Enable automated responses</h3>
-                              <p className="text-sm text-gray-500">Set up automated flows to handle customer replies</p>
-                            </div>
-                            <Switch
-                            checked={campaign.responseHandling.enabled}
-                              onCheckedChange={(checked) => setCampaign(prev => ({
-                                ...prev,
-                                responseHandling: {
-                                  ...prev.responseHandling,
-                                  enabled: checked
-                                }
-                              }))}
-                            />
-                          </div>
-
-                          {campaign.responseHandling.enabled ? (
-                            <div className="space-y-6">
-                              {/* Keyword Response Section */}
-                              <div className="border rounded-lg p-5">
-                                <h3 className="font-medium mb-3">Keyword Responses</h3>
-                                <p className="text-sm text-gray-500 mb-4">
-                                  Set up automatic responses when customers reply with specific keywords
-                                </p>
-
-                                {/* Keyword response list */}
-                                {campaign.responseHandling.keywords && campaign.responseHandling.keywords.length > 0 ? (
-                                  <div className="space-y-3 mb-4">
-                                    {campaign.responseHandling.keywords.map((keyword, index) => (
-                                      <div key={index} className="border rounded-lg p-3 bg-gray-50">
-                                        <div className="flex items-center justify-between mb-2">
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant="outline">
-                                              {keyword.matchType === 'exact' ? 'Exactly matches' :
-                                               keyword.matchType === 'starts' ? 'Starts with' :
-                                               keyword.matchType === 'ends' ? 'Ends with' : 'Contains'}
-                                            </Badge>
-                                            <span className="font-medium">&quot;{keyword.trigger}&quot;</span>
-                                          </div>
-
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                              setCampaign(prev => ({
-                                                ...prev,
-                                                responseHandling: {
-                                                  ...prev.responseHandling,
-                                                  keywords: prev.responseHandling.keywords?.filter((_, i) => i !== index)
-                                                }
-                                              }));
-                                            }}
-                                          >
-                                            <X className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-
-                                        <div className="text-sm text-gray-600 pl-2 border-l-2 border-gray-200">
-                                          {keyword.response}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="text-center p-4 border border-dashed rounded-lg mb-4">
-                                    <MessageSquare className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                    <p className="text-sm text-gray-500">No keyword responses configured yet</p>
-                                  </div>
-                                )}
-
-                                {/* Add new keyword form */}
-                                <Collapsible className="border rounded-lg mt-4">
-                                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3">
-                                    <div className="flex items-center gap-2">
-                                      <Plus className="h-4 w-4" />
-                                      <span className="font-medium">Add Keyword Response</span>
-                                    </div>
-                                    <ChevronDown className="h-4 w-4" />
-                                  </CollapsibleTrigger>
-                                  <CollapsibleContent>
-                                    <Separator />
-                                    <div className="p-4">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                          <Label htmlFor="keyword-trigger" className="mb-2 block">
-                                            Keyword
-                                          </Label>
-                                          <Input
-                                            id="keyword-trigger"
-                                            placeholder="Enter keyword (e.g., help, info)"
-                                            value={newKeyword.trigger}
-                                            onChange={(e) => setNewKeyword(prev => ({
-                                              ...prev,
-                                              trigger: e.target.value
-                                            }))}
-                                          />
-                                        </div>
-
-                                        <div>
-                                          <Label htmlFor="match-type" className="mb-2 block">
-                                            Match Type
-                                          </Label>
-                                          <Select
-                                            value={newKeyword.matchType}
-                                            onValueChange={(value) => setNewKeyword(prev => ({
-                                              ...prev,
-                                              matchType: value
-                                            }))}
-                                          >
-                                            <SelectTrigger id="match-type">
-                                              <SelectValue placeholder="Select match type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="contains">Contains</SelectItem>
-                                              <SelectItem value="exact">Exact Match</SelectItem>
-                                              <SelectItem value="starts">Starts With</SelectItem>
-                                              <SelectItem value="ends">Ends With</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </div>
-
-                                      <div className="mb-4">
-                                        <Label htmlFor="keyword-response" className="mb-2 block">
-                                          Response Message
-                                        </Label>
-                                        <Textarea
-                                          id="keyword-response"
-                                          placeholder="Enter the response message"
-                                          rows={3}
-                                          value={newKeyword.response}
-                                          onChange={(e) => setNewKeyword(prev => ({
-                                            ...prev,
-                                            response: e.target.value
-                                          }))}
-                                        />
-                                      </div>
-
-                                      <Button
-                                        onClick={() => {
-                                          if (!newKeyword.trigger || !newKeyword.response) {
-                                            toast({
-                                              title: "Error",
-                                              description: "Please enter both a keyword and a response",
-                                              variant: "destructive",
-                                            });
-                                            return;
-                                          }
-
-                                          setCampaign(prev => ({
-                                            ...prev,
-                                            responseHandling: {
-                                              ...prev.responseHandling,
-                                              keywords: [
-                                                ...(prev.responseHandling.keywords || []),
-                                                { ...newKeyword }
-                                              ]
-                                            }
-                                          }));
-
-                                          // Reset form
-                                          setNewKeyword({
-                                            trigger: '',
-                                            matchType: 'contains',
-                                            response: ''
-                                          });
-
-                                          toast({
-                                            title: "Success",
-                                            description: "Keyword response added",
-                                          });
-                                        }}
-                                      >
-                                        Add Response
-                                      </Button>
-                                    </div>
-                                  </CollapsibleContent>
-                                </Collapsible>
-                              </div>
-
-                              {/* Default Response Section */}
-                              <div className="border rounded-lg p-5">
-                                <h3 className="font-medium mb-3">Default Response</h3>
-                                <p className="text-sm text-gray-500 mb-4">
-                                  Set up a response for messages that don&apos;t match any keywords
-                                </p>
-
-                                <div>
-                                  <Label htmlFor="default-response" className="mb-2 block">
-                                    Default Response Message
-                                  </Label>
-                                  <Textarea
-                                    id="default-response"
-                                    placeholder="Enter default response message"
-                                    rows={3}
-                                    value={campaign.responseHandling.defaultResponse || ""}
-                                    onChange={(e) => setCampaign(prev => ({
-                                      ...prev,
-                                      responseHandling: {
-                                        ...prev.responseHandling,
-                                        defaultResponse: e.target.value
-                                      }
-                                    }))}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Auto-Forward Section */}
-                              <div className="border rounded-lg p-5">
-                                <div className="flex items-center justify-between mb-4">
-                                  <div>
-                                    <h3 className="font-medium">Forward Messages to Email</h3>
-                                    <p className="text-sm text-gray-500">
-                                      Automatically forward customer replies to your email
-                                    </p>
-                                  </div>
-                                  <Switch
-                                    checked={campaign.responseHandling.forwardToEmail || false}
-                                    onCheckedChange={(checked) => setCampaign(prev => ({
-                                      ...prev,
-                                      responseHandling: {
-                                        ...prev.responseHandling,
-                                        forwardToEmail: checked
-                                      }
-                                    }))}
-                                  />
-                                </div>
-
-                                {campaign.responseHandling.forwardToEmail && (
-                                  <div>
-                                    <Label htmlFor="forward-email" className="mb-2 block">
-                                      Email Address
-                                    </Label>
-                                    <Input
-                                      id="forward-email"
-                                      type="email"
-                                      placeholder="Enter email address"
-                                      value={campaign.responseHandling.forwardEmail || ""}
-                                      onChange={(e) => setCampaign(prev => ({
-                                        ...prev,
-                                        responseHandling: {
-                                          ...prev.responseHandling,
-                                          forwardEmail: e.target.value
-                                        }
-                                      }))}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="border border-dashed rounded-lg p-8 text-center">
-                              <Bell className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                              <h3 className="font-medium mb-2">No Response Handling</h3>
-                              <p className="text-sm text-gray-500 max-w-md mx-auto">
-                                You haven&apos;t configured automated responses. Enable this feature to handle customer replies automatically.
-                              </p>
-                            </div>
-                          )}
-                        </CardContent>
-                        <CardFooter className="flex justify-between border-t bg-gray-50">
-                          <Button
-                            variant="outline"
-                            onClick={() => goToStep(2)}
-                          >
-                            <ChevronLeft className="mr-2 h-4 w-4" />
-                            Back
-                          </Button>
-
-                          <Button onClick={() => completeStep(3)}>
-                            Continue
-                            <ChevronRight className="ml-2 h-4 w-4" />
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    </div>
+                 <ResponseHandlingSection />
                   )}
 
                   {/* Step 4: Conversion Tracking */}
@@ -2427,7 +2673,7 @@ const CreateCampaignPage = () => {
                     </div>
                   )}
 
-                  {/* Step 6: Retries */}
+                  {/* Step 6: Retries - Enhanced with day-based intervals */}
                   {activeStep === 6 && (
                     <div className="space-y-6">
                       <Card>
@@ -2461,58 +2707,264 @@ const CreateCampaignPage = () => {
                           </div>
 
                           {campaign.retries.enabled ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="retry-count" className="block mb-2">Number of retry attempts</Label>
-                                  <Input
-                                    id="retry-count"
-                                    type="number"
-                                    min="1"
-                                    max="5"
-                                    value={campaign.retries.count}
-                                    onChange={(e) => setCampaign(prev => ({
-                                      ...prev,
-                                      retries: {
-                                        ...prev.retries,
-                                        count: parseInt(e.target.value) || 1
+                            <div className="space-y-6">
+                              {/* Retry Configuration */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="retry-count" className="block mb-2">
+                                      Number of retry attempts
+                                    </Label>
+                                    <Select
+                                      value={campaign.retries.count.toString()}
+                                      onValueChange={(value) => setCampaign(prev => ({
+                                        ...prev,
+                                        retries: {
+                                          ...prev.retries,
+                                          count: parseInt(value)
+                                        }
+                                      }))}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1">1 attempt</SelectItem>
+                                        <SelectItem value="2">2 attempts</SelectItem>
+                                        <SelectItem value="3">3 attempts</SelectItem>
+                                        <SelectItem value="4">4 attempts</SelectItem>
+                                        <SelectItem value="5">5 attempts (max)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-gray-500 mt-1">Maximum 5 retry attempts allowed</p>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="retry-interval" className="block mb-2">
+                                      Retry schedule
+                                    </Label>
+                                    <Select
+                                      value={showCustomRetryDate ? 'custom' : campaign.retries.interval.toString()}
+                                      onValueChange={(value) => {
+                                        if (value === 'custom') {
+                                          setShowCustomRetryDate(true);
+                                        } else {
+                                          setShowCustomRetryDate(false);
+                                          setCampaign(prev => ({
+                                            ...prev,
+                                            retries: {
+                                              ...prev.retries,
+                                              interval: parseInt(value)
+                                            }
+                                          }));
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1">1 day</SelectItem>
+                                        <SelectItem value="2">2 days</SelectItem>
+                                        <SelectItem value="3">3 days</SelectItem>
+                                        <SelectItem value="7">1 week</SelectItem>
+                                        <SelectItem value="custom">Custom date</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+
+                                    {showCustomRetryDate && (
+                                      <div className="mt-3">
+                                        <Label htmlFor="custom-retry-date" className="block mb-2 text-sm">
+                                          Custom retry date
+                                        </Label>
+                                        <Input
+                                          id="custom-retry-date"
+                                          type="date"
+                                          value={customRetryDate}
+                                          min={new Date().toISOString().split('T')[0]}
+                                          onChange={(e) => {
+                                            setCustomRetryDate(e.target.value);
+                                            // Calculate days difference and update campaign
+                                            if (e.target.value) {
+                                              const today = new Date();
+                                              const selectedDate = new Date(e.target.value);
+                                              const diffTime = selectedDate.getTime() - today.getTime();
+                                              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                              setCampaign(prev => ({
+                                                ...prev,
+                                                retries: {
+                                                  ...prev.retries,
+                                                  interval: Math.max(1, diffDays) // Ensure at least 1 day
+                                                }
+                                              }));
+                                            }
+                                          }}
+                                          className="w-full"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Failed messages will be retried starting from this date
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {showCustomRetryDate
+                                        ? 'Retries will start on your selected date'
+                                        : 'Retries will start after the selected interval'
                                       }
-                                    }))}
-                                    className="w-full max-w-xs"
-                                  />
-                                  <p className="text-xs text-gray-500 mt-1">Maximum 5 retry attempts allowed</p>
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="retry-interval" className="block mb-2">Interval between retries (minutes)</Label>
-                                  <Input
-                                    id="retry-interval"
-                                    type="number"
-                                    min="15"
-                                    max="1440"
-                                    value={campaign.retries.interval}
-                                    onChange={(e) => setCampaign(prev => ({
-                                      ...prev,
-                                      retries: {
-                                        ...prev.retries,
-                                        interval: parseInt(e.target.value) || 60
-                                      }
-                                    }))}
-                                    className="w-full max-w-xs"
-                                  />
-                                  <p className="text-xs text-gray-500 mt-1">Minimum 15 minutes, maximum 24 hours (1440 minutes)</p>
+                              {/* Retry Strategy Explanation */}
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                  <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                  <div>
+                                    <h4 className="font-medium text-blue-700 mb-2">How Retries Work</h4>
+                                    <div className="text-sm text-blue-700 space-y-2">
+                                      <p>
+                                        <strong>Scheduled Retries:</strong> Failed messages will be retried on specific dates based on your schedule.
+                                      </p>
+                                      <div className="bg-blue-100 rounded p-3 mt-2">
+                                        <p className="font-medium mb-1">
+                                          Retry Schedule for {campaign.retries.count} attempts:
+                                        </p>
+                                        <ul className="text-xs space-y-1">
+                                          {Array.from({ length: campaign.retries.count }, (_, i) => {
+                                            const today = new Date();
+                                            let retryDate;
+
+                                            if (showCustomRetryDate && customRetryDate) {
+                                              // Custom date based retries
+                                              retryDate = new Date(customRetryDate);
+                                              retryDate.setDate(retryDate.getDate() + (i * campaign.retries.interval));
+                                            } else {
+                                              // Standard day-based retries
+                                              retryDate = new Date(today);
+                                              retryDate.setDate(today.getDate() + (campaign.retries.interval * (i + 1)));
+                                            }
+
+                                            return (
+                                              <li key={i}>
+                                                • Attempt {i + 1}: {retryDate.toLocaleDateString('en-US', {
+                                                  weekday: 'short',
+                                                  month: 'short',
+                                                  day: 'numeric',
+                                                  year: 'numeric'
+                                                })}
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                      </div>
+                                      <p className="mt-2">
+                                        <strong>Common Retry Reasons:</strong> Network timeouts, temporary API issues, rate limiting, recipient device offline.
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
+
+                              {/* Retry Scenarios */}
+                              <div className="border rounded-lg p-4">
+                                <h4 className="font-medium mb-3">What Messages Get Retried?</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <h5 className="font-medium text-green-700 mb-2 flex items-center gap-1">
+                                      <CheckCircle2 className="h-4 w-4" />
+                                      Will Retry
+                                    </h5>
+                                    <ul className="space-y-1 text-gray-600">
+                                      <li>• Network timeouts</li>
+                                      <li>• API rate limit errors</li>
+                                      <li>• Temporary server errors (5xx)</li>
+                                      <li>• Recipient device temporarily offline</li>
+                                      <li>• WhatsApp service disruptions</li>
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <h5 className="font-medium text-red-700 mb-2 flex items-center gap-1">
+                                      <X className="h-4 w-4" />
+                                      Won&apos;t Retry
+                                    </h5>
+                                    <ul className="space-y-1 text-gray-600">
+                                      <li>• Invalid phone numbers</li>
+                                      <li>• Blocked/spam numbers</li>
+                                      <li>• Template approval issues</li>
+                                      <li>• Account suspension</li>
+                                      <li>• User opted out</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Timing Considerations */}
+                              <div className="border rounded-lg p-4">
+                                <h4 className="font-medium mb-3 flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  Timing Considerations
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <h5 className="font-medium mb-2">Best Practices</h5>
+                                    <ul className="space-y-1 text-gray-600">
+                                      <li>• Wait at least 24 hours between retries</li>
+                                      <li>• Consider time zones for global campaigns</li>
+                                      <li>• Avoid weekends for business messages</li>
+                                      <li>• Schedule during business hours</li>
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <h5 className="font-medium mb-2">Current Schedule</h5>
+                                    <div className="bg-gray-50 p-2 rounded text-xs">
+                                      {showCustomRetryDate ? (
+                                        customRetryDate ? (
+                                          <span>Starting: {new Date(customRetryDate).toLocaleDateString()}</span>
+                                        ) : (
+                                          <span className="text-amber-600">Select a custom date</span>
+                                        )
+                                      ) : (
+                                        <span>
+                                          Every {campaign.retries.interval} day{campaign.retries.interval > 1 ? 's' : ''}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Cost Impact Warning */}
+                              <Alert>
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Cost Impact</AlertTitle>
+                                <AlertDescription>
+                                  Retry attempts don&apos;t incur additional charges - you only pay for successfully delivered messages.
+                                  However, successful retries will count toward your monthly message quota.
+                                </AlertDescription>
+                              </Alert>
                             </div>
-                     ) : (
+                          ) : (
                             <div className="border border-dashed rounded-lg p-8 text-center">
                               <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-3" />
                               <h3 className="font-medium mb-2">No Retry Configuration</h3>
-                              <p className="text-sm text-gray-500 max-w-md mx-auto">
+                              <p className="text-sm text-gray-500 max-w-md mx-auto mb-4">
                                 Without retry configuration, failed message delivery attempts won&apos;t be retried automatically.
+                                This may result in lower delivery rates for your campaign.
                               </p>
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 max-w-md mx-auto">
+                                <div className="flex items-center gap-2 text-amber-800">
+                                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                                  <span className="text-sm font-medium">Recommendation</span>
+                                </div>
+                                <p className="text-xs text-amber-700 mt-1">
+                                  Enable retries to improve delivery rates by up to 15-20% for temporary failures.
+                                </p>
+                              </div>
                             </div>
                           )}
                         </CardContent>
@@ -2525,14 +2977,19 @@ const CreateCampaignPage = () => {
                             Back
                           </Button>
 
-                          <Button onClick={() => completeStep(6)}>
-                            Continue
+                          <Button
+                            onClick={() => completeStep(6)}
+                            disabled={showCustomRetryDate && !customRetryDate}
+                          >
+                            Continue to Review
                             <ChevronRight className="ml-2 h-4 w-4" />
                           </Button>
                         </CardFooter>
                       </Card>
                     </div>
                   )}
+
+
 
                   {/* Step 7: Review */}
                   {activeStep === 7 && (
@@ -2670,7 +3127,77 @@ const CreateCampaignPage = () => {
                                 )}
                               </div>
                             </div>
+                            {/* Retry Configuration Preview */}
+                            {campaign.retries.enabled && (
+                              <div className="bg-gray-50 rounded-lg p-5 border">
+                                <h4 className="font-medium mb-3 text-sm uppercase text-gray-500">Retry Configuration</h4>
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white p-3 rounded-lg border">
+                                      <p className="text-sm font-medium mb-1">Max Retry Attempts</p>
+                                      <p className="text-lg font-semibold text-purple-600">{campaign.retries.count}</p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-lg border">
+                                      <p className="text-sm font-medium mb-1">Retry Interval</p>
+                                      <p className="text-lg font-semibold text-purple-600">
+                                        {showCustomRetryDate ? (
+                                          customRetryDate ?
+                                            `From ${new Date(customRetryDate).toLocaleDateString()}` :
+                                            'Custom date'
+                                        ) : (
+                                          campaign.retries.interval === 1 ? '1 day' :
+                                            campaign.retries.interval === 7 ? '1 week' :
+                                              `${campaign.retries.interval} days`
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>
 
+                                  <div className="bg-white p-3 rounded-lg border">
+                                    <p className="text-sm font-medium mb-2">Retry Schedule</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {Array.from({ length: campaign.retries.count }, (_, i) => {
+                                        const today = new Date();
+                                        let retryDate;
+
+                                        if (showCustomRetryDate && customRetryDate) {
+                                          retryDate = new Date(customRetryDate);
+                                          retryDate.setDate(retryDate.getDate() + (i * campaign.retries.interval));
+                                        } else {
+                                          retryDate = new Date(today);
+                                          retryDate.setDate(today.getDate() + (campaign.retries.interval * (i + 1)));
+                                        }
+
+                                        return (
+                                          <Badge key={i} variant="outline" className="text-xs">
+                                            #{i + 1}: {retryDate.toLocaleDateString('en-US', {
+                                              month: 'short',
+                                              day: 'numeric'
+                                            })}
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 text-blue-800">
+                                      <Info className="h-4 w-4 flex-shrink-0" />
+                                      <span className="text-sm font-medium">Retry Strategy</span>
+                                    </div>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                      {showCustomRetryDate ? (
+                                        customRetryDate ?
+                                          `Failed messages will be retried starting ${new Date(customRetryDate).toLocaleDateString()}, then every ${campaign.retries.interval} day${campaign.retries.interval > 1 ? 's' : ''}` :
+                                          'Please select a custom retry date'
+                                      ) : (
+                                        `Failed messages will be retried every ${campaign.retries.interval} day${campaign.retries.interval > 1 ? 's' : ''} for up to ${campaign.retries.count} attempts`
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             {/* Response Handling Preview */}
                             {campaign.responseHandling.enabled && (
                               <div className="bg-gray-50 rounded-lg p-5 border">
@@ -2818,13 +3345,12 @@ const CreateCampaignPage = () => {
                               </div>
 
                               <div className="flex items-start gap-3">
-                                <div className={`p-0.5 rounded-full ${
-                                  (campaign.message.type === "template" && campaign.message.template) ||
+                                <div className={`p-0.5 rounded-full ${(campaign.message.type === "template" && campaign.message.template) ||
                                   (campaign.message.type === "custom" && campaign.message.customMessage)
-                                    ? 'bg-green-100 text-green-600'
-                                    : 'bg-amber-100 text-amber-600'}`}>
+                                  ? 'bg-green-100 text-green-600'
+                                  : 'bg-amber-100 text-amber-600'}`}>
                                   {(campaign.message.type === "template" && campaign.message.template) ||
-                                   (campaign.message.type === "custom" && campaign.message.customMessage) ? (
+                                    (campaign.message.type === "custom" && campaign.message.customMessage) ? (
                                     <CheckCircle2 className="h-5 w-5" />
                                   ) : (
                                     <CircleAlert className="h-5 w-5" />
@@ -2836,8 +3362,8 @@ const CreateCampaignPage = () => {
                                     {campaign.message.type === "template" && campaign.message.template ?
                                       "You've selected a message template" :
                                       campaign.message.type === "custom" && campaign.message.customMessage ?
-                                      "You've created a custom message" :
-                                      "Please create your message content"}
+                                        "You've created a custom message" :
+                                        "Please create your message content"}
                                   </p>
                                 </div>
                               </div>
@@ -2937,7 +3463,100 @@ const CreateCampaignPage = () => {
             </div>
           </div>
         </div>
+        {/* Add the countdown dialog before the closing Layout tag */}
+        <Dialog open={showCountdownDialog} onOpenChange={() => { }}>
+          <DialogContent className="" closeButton={false}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <Rocket className="h-5 w-5 text-green-600" />
+                </div>
+                Campaign Launched Successfully!
+              </DialogTitle>
+              <DialogDescription>
+                Your campaign has been launched and messages will start sending in:
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col items-center py-6">
+              {/* Countdown Display */}
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full border-4 border-primary/20 flex items-center justify-center bg-primary/5">
+                  <span className="text-3xl font-bold text-primary">{countdown}</span>
+                </div>
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
+              </div>
+
+              <p className="text-sm text-muted-foreground mt-4 text-center">
+                seconds remaining
+              </p>
+
+              {/* Campaign Summary */}
+              {launchedCampaignData && (
+                <div className="w-full mt-6 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-medium mb-2">Campaign Summary</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Campaign:</span>
+                      <span className="font-medium">{launchedCampaignData.campaign.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Audience:</span>
+                      <span className="font-medium">{launchedCampaignData.campaign.audienceCount} contacts</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cost:</span>
+                      <span className="font-medium">{formatCurrency(launchedCampaignData.billing.totalCost)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Wallet Balance:</span>
+                      <span className="font-medium">{formatCurrency(launchedCampaignData.billing.remainingBalance)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Warning Message */}
+              <div className="flex items-start gap-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800">Grace Period Active</p>
+                  <p className="text-amber-700">
+                    You can cancel this campaign before messages start sending.
+                    After the countdown, messages will be sent automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={continueToCampaigns}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                <ArrowRight className="h-4 w-4 mr-2" />
+                Continue to Campaigns
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={cancelLaunchedCampaign}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <X className="h-4 w-4 mr-2" />
+                )}
+                Cancel Campaign
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
+
     </Layout>
   );
 };

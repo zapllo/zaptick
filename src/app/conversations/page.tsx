@@ -302,6 +302,9 @@ function ConversationsPageContent() {
   const [showCreateLabelDialog, setShowCreateLabelDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
+  // Add these state variables near the top of your component
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [selectedErrorMessage, setSelectedErrorMessage] = useState<Message | null>(null);
 
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [noteInput, setNoteInput] = useState("");
@@ -1074,7 +1077,10 @@ function ConversationsPageContent() {
   // Update the applyFilters function
   const applyFilters = (convs: Conversation[]) => {
     let filtered = [...convs];
-
+    // **NEW: Filter out closed conversations by default unless specifically filtered for**
+    if (!filters.status.includes('closed')) {
+      filtered = filtered.filter(conv => conv.status !== 'closed');
+    }
     // Text search
     if (searchQuery.trim()) {
       filtered = filtered.filter(conversation =>
@@ -1906,6 +1912,8 @@ function ConversationsPageContent() {
   const changeConversationStatus = async (status: 'active' | 'closed' | 'resolved' | 'pending') => {
     if (!activeConversation) return;
 
+    const previousStatus = activeConversation.status; // Store the previous status
+
     try {
       const response = await fetch(`/api/conversations/${activeConversation.id}/status`, {
         method: 'POST',
@@ -1919,21 +1927,62 @@ function ConversationsPageContent() {
       const data = await response.json();
 
       if (data.success) {
-        // Refresh the conversation to get updated data
+        // **FIRST: Always refetch conversations to update the sidebar**
+        await fetchConversations();
+
+        // **SECOND: Get the updated conversation data**
         const convResponse = await fetch(`/api/conversations/${activeConversation.id}`);
         const convData = await convResponse.json();
+        let updatedConversation = null;
         if (convData.success) {
-          setActiveConversation(convData.conversation);
+          updatedConversation = convData.conversation;
+          setActiveConversation(updatedConversation);
         }
 
-        // Fetch messages to get the system message
-        fetchMessages(activeConversation.id);
+        // **THIRD: Fetch messages to get the system message**
+        await fetchMessages(activeConversation.id);
 
-        toast({ title: `Conversation marked as ${status.charAt(0).toUpperCase() + status.slice(1)}` });
+        // **FOURTH: Handle status-specific logic**
+        if (status === 'closed') {
+          // If closing, clear active conversation and select next available
+          // setActiveConversation(null);
+          setMessages([]);
+
+          // Wait a bit for conversations to update, then select first available
+          setTimeout(async () => {
+            // Refetch to get the latest conversations
+            await fetchConversations();
+
+            // Get conversations that aren't closed
+            const response = await fetch(`/api/conversations${selectedWabaId ? `?wabaId=${selectedWabaId}` : ''}`);
+            const data = await response.json();
+            if (data.success) {
+              const availableConversations = data.conversations.filter((conv: Conversation) => conv.status !== 'closed');
+              // if (availableConversations.length > 0) {
+              //   setActiveConversation(availableConversations[0]);
+              // }
+            }
+          }, 300);
+        } else if (previousStatus === 'closed' && status !== 'closed') {
+          // If reopening a closed conversation, ensure it stays active
+          if (updatedConversation) {
+            setActiveConversation(updatedConversation);
+          }
+        }
+
+        toast({
+          title: `Conversation marked as ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+          description: status === 'closed'
+            ? 'Conversation has been closed'
+            : previousStatus === 'closed'
+              ? 'Conversation has been reopened and is now visible in the sidebar'
+              : undefined
+        });
       } else {
         toast({ title: data.message || "Failed to update conversation status", variant: "destructive" });
       }
     } catch (error) {
+      console.error('Error updating conversation status:', error);
       toast({ title: "Failed to update conversation status", variant: "destructive" });
     }
   };
@@ -3328,9 +3377,6 @@ function ConversationsPageContent() {
                                                   </div>
                                                 </div>
                                               )}
-
-                                              {/* Template indicator */}
-                                             
                                             </div>
                                           ) : (
                                             // Regular text message
@@ -3339,13 +3385,13 @@ function ConversationsPageContent() {
                                             </p>
                                           )}
 
-                                          {/* WhatsApp-style timestamp and status in bottom right */}
+                                          {/* Enhanced WhatsApp-style timestamp and status in bottom right */}
                                           <div className="flex items-center justify-end gap-1 mt-1 absolute bottom-1 right-2">
                                             <span className="text-xs text-gray-500">
                                               {format(new Date(message.timestamp), "h:mm a")}
                                             </span>
                                             {message.senderId === "agent" && (
-                                              <div className="flex items-center">
+                                              <div className="flex items-center gap-1">
                                                 {message.status === 'sent' && (
                                                   <Check className="h-3 w-3 text-gray-400" />
                                                 )}
@@ -3362,7 +3408,25 @@ function ConversationsPageContent() {
                                                   </div>
                                                 )}
                                                 {message.status === 'failed' && (
-                                                  <AlertCircle className="h-3 w-3 text-red-500" />
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <button
+                                                          onClick={() => {
+                                                            setSelectedErrorMessage(message);
+                                                            setShowErrorDialog(true);
+                                                          }}
+                                                          className="flex items-center gap-1 hover:bg-red-50 rounded-full p-1 transition-colors group"
+                                                        >
+                                                          <AlertCircle className="h-3 w-3 text-red-500 group-hover:text-red-600" />
+                                                          <Info className="h-2 w-2 text-red-500 group-hover:text-red-600" />
+                                                        </button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent side="top" className="bg-red-50 border-red-200">
+                                                        <p className="text-red-800 text-xs">Message failed to send - Click for details</p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
                                                 )}
                                               </div>
                                             )}
@@ -3388,13 +3452,13 @@ function ConversationsPageContent() {
                                             <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
                                           )}
 
-                                          {/* WhatsApp-style timestamp and status */}
+                                          {/* Enhanced WhatsApp-style timestamp and status with error handling */}
                                           <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
                                             <span className="text-xs text-gray-500">
                                               {format(new Date(message.timestamp), "h:mm a")}
                                             </span>
                                             {message.senderId === "agent" && (
-                                              <div className="flex items-center">
+                                              <div className="flex items-center gap-1">
                                                 {message.status === 'sent' && (
                                                   <Check className="h-3 w-3 text-gray-400" />
                                                 )}
@@ -3411,7 +3475,25 @@ function ConversationsPageContent() {
                                                   </div>
                                                 )}
                                                 {message.status === 'failed' && (
-                                                  <AlertCircle className="h-3 w-3 text-red-500" />
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <button
+                                                          onClick={() => {
+                                                            setSelectedErrorMessage(message);
+                                                            setShowErrorDialog(true);
+                                                          }}
+                                                          className="flex items-center gap-1 hover:bg-red-50 rounded-full p-1 transition-colors group"
+                                                        >
+                                                          <AlertCircle className="h-3 w-3 text-red-500 group-hover:text-red-600" />
+                                                          <Info className="h-2 w-2 text-red-500 group-hover:text-red-600" />
+                                                        </button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent side="top" className="bg-red-50 border-red-200">
+                                                        <p className="text-red-800 text-xs">Message failed to send - Click for details</p>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
                                                 )}
                                               </div>
                                             )}
@@ -3555,7 +3637,7 @@ function ConversationsPageContent() {
                                       )}
 
                                       {/* Enhanced Template Indicator */}
-                                      
+
                                     </div>
                                     {message.senderId === 'agent' || message.senderId === 'customer' ? (
                                       <div className="flex justify-end items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -3761,6 +3843,10 @@ function ConversationsPageContent() {
                         </div>
                       </div>
                     </div>
+
+
+
+
                     {/* Add File Upload Dialog */}
                     <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
                       <DialogContent className="max-w-">
@@ -3907,7 +3993,131 @@ function ConversationsPageContent() {
               </div>
             </SheetContent>
           </Sheet>
+          {/* Message Error Details Dialog */}
+          <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-red-900">Message Failed to Send</DialogTitle>
+                    <DialogDescription className="text-red-700">
+                      Details about why this message couldn't be delivered
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
 
+              {selectedErrorMessage && (
+                <div className="space-y-4 py-4">
+                  {/* Message Preview */}
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                    <div className="flex items-start gap-3">
+                      <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                        <MessageSquare className="h-4 w-4 text-red-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-red-900 mb-1">Failed Message</p>
+                        <p className="text-sm text-red-800 break-words">
+                          {selectedErrorMessage.content.length > 100
+                            ? `${selectedErrorMessage.content.substring(0, 100)}...`
+                            : selectedErrorMessage.content
+                          }
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-red-600">
+                          <span>Type: {selectedErrorMessage.messageType}</span>
+                          <span>Time: {format(new Date(selectedErrorMessage.timestamp), "MMM d, h:mm a")}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Error Details */}
+                  <div className="space-y-3">
+                    {selectedErrorMessage.errorCode && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Error Code</label>
+                        <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                          <code className="text-sm font-mono text-slate-800">
+                            {selectedErrorMessage.errorCode}
+                          </code>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedErrorMessage.errorMessage && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Error Message</label>
+                        <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                          <p className="text-sm text-slate-800 leading-relaxed">
+                            {selectedErrorMessage.errorMessage}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedErrorMessage.retryCount && selectedErrorMessage.retryCount > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Retry Attempts</label>
+                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <p className="text-sm text-amber-800">
+                            Failed {selectedErrorMessage.retryCount} time{selectedErrorMessage.retryCount > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Common Error Solutions */}
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Possible Solutions
+                    </h4>
+                    <ul className="text-xs text-blue-800 space-y-1 ml-6">
+                      <li>• Check if the contact's phone number is valid</li>
+                      <li>• Verify the contact has WhatsApp installed</li>
+                      <li>• Ensure the 24-hour window is active for non-template messages</li>
+                      <li>• For templates, verify the template is approved</li>
+                      <li>• Check your WhatsApp Business account status</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowErrorDialog(false);
+                    setSelectedErrorMessage(null);
+                  }}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    // TODO: Add retry functionality here if needed
+                    if (selectedErrorMessage) {
+                      toast({
+                        title: "Retry functionality",
+                        description: "Message retry feature coming soon",
+                        variant: "default"
+                      });
+                    }
+                    setShowErrorDialog(false);
+                    setSelectedErrorMessage(null);
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  Retry Message
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           {/* Contact Selection Dialog - enhanced UI */}
           <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
             <DialogContent className="max-w-2xl">
