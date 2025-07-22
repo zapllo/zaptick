@@ -37,7 +37,7 @@ export async function GET(
       conversation.messages.map(async (message: any) => {
         if (message.messageType === 'template' && message.templateName) {
           try {
-            console.log('Processing template message with templateName:', message.templateName);
+            // console.log('Processing template message with templateName:', message.templateName);
             
             // Find template by name and user ID
             const template = await Template.findOne({ 
@@ -46,8 +46,8 @@ export async function GET(
             });
             
             if (template && template.components) {
-              console.log('Template found:', template.name);
-              console.log('Template components:', template.components.length);
+              // console.log('Template found:', template.name);
+              // console.log('Template components:', template.components.length);
               
               // Extract mediaUrl from HEADER component with IMAGE format
               const headerComponent = template.components.find(
@@ -59,10 +59,10 @@ export async function GET(
                 (comp: any) => comp.type === 'BUTTONS'
               );
 
-              console.log('Header component found:', !!headerComponent);
-              console.log('MediaUrl:', headerComponent?.mediaUrl);
-              console.log('Buttons component found:', !!buttonsComponent);
-              console.log('Buttons count:', buttonsComponent?.buttons?.length || 0);
+              // console.log('Header component found:', !!headerComponent);
+              // console.log('MediaUrl:', headerComponent?.mediaUrl);
+              // console.log('Buttons component found:', !!buttonsComponent);
+              // console.log('Buttons count:', buttonsComponent?.buttons?.length || 0);
 
               // Return enhanced message with template data
               return {

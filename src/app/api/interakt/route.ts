@@ -81,7 +81,7 @@ async function processStatusUpdates(v: any) {
   for (const status of v.statuses) {
     try {
       const whatsappMessageId = status.id;
-      const statusValue = status.status; // 'sent', 'delivered', 'read', etc.
+      const statusValue = status.status;
       const timestamp = new Date(parseInt(status.timestamp) * 1000);
 
       console.log(`Processing status update: ${whatsappMessageId} => ${statusValue}`);
@@ -92,28 +92,193 @@ async function processStatusUpdates(v: any) {
       });
 
       if (conversation) {
-        // Update the message status in the conversation
-        const updatedConversation = await Conversation.findOneAndUpdate(
-          {
-            _id: conversation._id,
-            "messages.whatsappMessageId": whatsappMessageId
-          },
-          {
-            $set: {
-              "messages.$.status": statusValue,
-              "messages.$.timestamp": timestamp // Update the timestamp if needed
-            }
-          },
-          { new: true }
-        );
+        // Find the specific message in the conversation
+const messageIndex = conversation.messages.findIndex(
+  (msg: any) => msg.whatsappMessageId === whatsappMessageId
+);
 
-        console.log(`Updated message status to ${statusValue} for message ${whatsappMessageId}`);
+        if (messageIndex !== -1) {
+          // Update the message status
+          conversation.messages[messageIndex].status = statusValue;
+
+          // Handle failed messages - add comprehensive error information
+          if (statusValue === 'failed') {
+            console.log(`❌ Message failed: ${whatsappMessageId}`, status);
+
+            let errorMessage = 'Message delivery failed';
+            let errorCode = 'unknown';
+
+            // Check multiple possible error locations in the status object
+            if (status.errors && status.errors.length > 0) {
+              const error = status.errors[0];
+              errorMessage = error.title || error.message || error.details || errorMessage;
+              errorCode = error.code?.toString() || error.error_code?.toString() || 'api_error';
+            } else if (status.error) {
+              // Sometimes error is at root level
+              errorMessage = status.error.message || status.error.title || errorMessage;
+              errorCode = status.error.code?.toString() || 'api_error';
+            } else if (status.error_code) {
+              // Direct error code
+              errorCode = status.error_code.toString();
+              errorMessage = getErrorMessageFromCode(status.error_code);
+            }
+
+            conversation.messages[messageIndex].errorMessage = errorMessage;
+            conversation.messages[messageIndex].errorCode = errorCode;
+
+            // Increment retry count
+            conversation.messages[messageIndex].retryCount =
+              (conversation.messages[messageIndex].retryCount || 0) + 1;
+
+            console.log(`Error details saved: ${errorMessage} (${errorCode})`);
+          }
+
+          await conversation.save();
+          console.log(`Updated message status to ${statusValue} for message ${whatsappMessageId}`);
+        } else {
+          console.log(`Message not found in conversation: ${whatsappMessageId}`);
+        }
       } else {
         console.log(`Could not find conversation with message ID: ${whatsappMessageId}`);
+
+        // For failed messages that we can't find in existing conversations
+        if (statusValue === 'failed') {
+          await handleOrphanedFailedMessage(status, phoneNumberId);
+        }
       }
     } catch (err) {
       console.error('Error processing status update:', err);
     }
+  }
+}
+
+
+// Helper function to get user-friendly error messages from error codes
+function getErrorMessageFromCode(errorCode: number | string): string {
+  const errorMap: { [key: string]: string } = {
+    '1': 'Invalid phone number',
+    '2': 'Phone number not on WhatsApp',
+    '3': 'Message limit exceeded',
+    '4': 'Message not delivered',
+    '100': 'Invalid parameter',
+    '131000': 'Message undeliverable',
+    '131005': 'Message not sent - phone number blocked',
+    '131014': 'Message not sent - invalid template',
+    '131021': 'Message not sent - recipient not available',
+    '131026': 'Message not sent - rate limit exceeded',
+    '131047': 'Message not sent - re-engagement required',
+    '131051': 'Message not sent - unsupported message type',
+    '470': 'Message failed due to unknown error',
+    '471': 'Message failed due to rate limiting',
+    '472': 'Message failed due to policy violation'
+  };
+
+  return errorMap[errorCode.toString()] || `Message delivery failed (Error: ${errorCode})`;
+}
+
+
+// Enhanced handleOrphanedFailedMessage function
+async function handleOrphanedFailedMessage(status: any, phoneNumberId: string) {
+  try {
+    console.log(`🔍 Handling orphaned failed message: ${status.id}`);
+
+    const recipientPhone = status.recipient_id;
+    if (!recipientPhone) return;
+
+    // Find user by phone number ID
+    const user = await User.findOne({ 'wabaAccounts.phoneNumberId': phoneNumberId });
+    if (!user) return;
+
+    const wabaAcc = user.wabaAccounts.find((a: any) => a.phoneNumberId === phoneNumberId);
+    if (!wabaAcc) return;
+
+    // Try to find contact
+    const senderPhone = recipientPhone.replace(/^\+?/, '');
+    let contact = await Contact.findOne({
+      $or: [
+        { phone: senderPhone },
+        { phone: `+${senderPhone}` },
+        { phone: senderPhone.slice(-10) },
+        { phone: `+${senderPhone.slice(-10)}` },
+      ],
+      wabaId: wabaAcc.wabaId,
+    });
+
+    if (!contact) {
+      // Create contact for failed message tracking
+      const contactData = {
+        name: `+${senderPhone}`,
+        phone: `+${senderPhone}`,
+        wabaId: wabaAcc.wabaId,
+        phoneNumberId: wabaAcc.phoneNumberId,
+        userId: user._id,
+        whatsappOptIn: false,
+        lastMessageAt: new Date(),
+      };
+
+      if (user.companyId) {
+        (contactData as any).companyId = user.companyId;
+      }
+
+      contact = await Contact.create(contactData);
+    }
+
+    // Extract comprehensive error information
+    let errorMessage = 'Message delivery failed';
+    let errorCode = 'unknown';
+
+    if (status.errors && status.errors.length > 0) {
+      const error = status.errors[0];
+      errorMessage = error.title || error.message || error.details || errorMessage;
+      errorCode = error.code?.toString() || 'api_error';
+    } else if (status.error) {
+      errorMessage = status.error.message || status.error.title || errorMessage;
+      errorCode = status.error.code?.toString() || 'api_error';
+    } else if (status.error_code) {
+      errorCode = status.error_code.toString();
+      errorMessage = getErrorMessageFromCode(status.error_code);
+    }
+
+    // Create a comprehensive failed message record
+    const failedMessage = {
+      id: uuidv4(),
+      senderId: 'agent' as const,
+      content: `❌ Failed Message: ${errorMessage}`,
+      messageType: 'system' as const,
+      timestamp: new Date(parseInt(status.timestamp) * 1000),
+      status: 'failed' as const,
+      whatsappMessageId: status.id,
+      errorMessage,
+      errorCode,
+      retryCount: 1,
+      senderName: 'System'
+    };
+
+    // Find or create conversation
+    let conversation = await Conversation.findOne({ contactId: contact._id });
+    if (!conversation) {
+      conversation = new Conversation({
+        contactId: contact._id,
+        wabaId: wabaAcc.wabaId,
+        phoneNumberId: wabaAcc.phoneNumberId,
+        userId: user._id,
+        messages: [],
+        unreadCount: 0,
+        status: 'active',
+        isWithin24Hours: true,
+      });
+    }
+
+    conversation.messages.push(failedMessage);
+    conversation.lastMessage = failedMessage.content;
+    conversation.lastMessageType = 'system';
+    conversation.lastMessageAt = failedMessage.timestamp;
+
+    await conversation.save();
+    console.log(`✅ Recorded orphaned failed message: ${errorMessage} (${errorCode})`);
+
+  } catch (error) {
+    console.error('Error handling orphaned failed message:', error);
   }
 }
 
@@ -123,188 +288,320 @@ async function processMessage(
   userId: string,
   wabaAcc: any,
 ) {
-  /* ---- sender + timestamps ------------------------------------------- */
+  try {
+    /* ---- sender + timestamps ------------------------------------------- */
 
-  const waId = m.from;
-  const senderPhone = waId.replace(/^\+?/, '');
-  const ts = new Date(+m.timestamp * 1000);
+    const waId = m.from;
+    const senderPhone = waId.replace(/^\+?/, '');
+    const ts = new Date(+m.timestamp * 1000);
 
-   /* ---- contact ------------------------------------------------------- */
+    /* ---- contact ------------------------------------------------------- */
 
-  let contact = await Contact.findOne({
-    $or: [
-      { phone: senderPhone },
-      { phone: `+${senderPhone}` },
-      { phone: senderPhone.slice(-10) },
-      { phone: `+${senderPhone.slice(-10)}` },
-    ],
-    wabaId: wabaAcc.wabaId,
-  });
-
-  if (!contact) {
-    const waContact = contacts.find((c: any) => c.wa_id === waId);
-    
-    // Create contact without companyId for now
-    const contactData = {
-      name: waContact?.profile?.name || `+${senderPhone}`,
-      phone: `+${senderPhone}`,
+    let contact = await Contact.findOne({
+      $or: [
+        { phone: senderPhone },
+        { phone: `+${senderPhone}` },
+        { phone: senderPhone.slice(-10) },
+        { phone: `+${senderPhone.slice(-10)}` },
+      ],
       wabaId: wabaAcc.wabaId,
-      phoneNumberId: wabaAcc.phoneNumberId,
-      userId,
-      whatsappOptIn: true,
-      lastMessageAt: ts,
+    });
+
+    if (!contact) {
+      const waContact = contacts.find((c: any) => c.wa_id === waId);
+
+      // Create contact without companyId for now
+      const contactData = {
+        name: waContact?.profile?.name || `+${senderPhone}`,
+        phone: `+${senderPhone}`,
+        wabaId: wabaAcc.wabaId,
+        phoneNumberId: wabaAcc.phoneNumberId,
+        userId,
+        whatsappOptIn: true,
+        lastMessageAt: ts,
+      };
+
+      // Only add companyId if the user has one
+      const user = await User.findById(userId);
+      if (user && user.companyId) {
+        (contactData as any).companyId = user.companyId;
+      }
+
+      contact = await Contact.create(contactData);
+    } else {
+      contact.lastMessageAt = ts;
+      contact.whatsappOptIn = true;
+      await contact.save();
+    }
+
+    /* ---- new message object ------------------------------------------- */
+
+    const newMsg: any = {
+      id: uuidv4(),
+      senderId: 'customer',
+      timestamp: ts,
+      status: 'delivered',
+      whatsappMessageId: m.id,
+      senderName: contact.name || `+${senderPhone}`,
     };
 
-    // Only add companyId if the user has one
-    const user = await User.findById(userId);
-    if (user && user.companyId) {
-      (contactData as any).companyId = user.companyId;
-    }
+    /* ---- content / media ---------------------------------------------- */
 
-    contact = await Contact.create(contactData);
-  } else {
-    contact.lastMessageAt = ts;
-    contact.whatsappOptIn = true;
-    await contact.save();
-  }
+    try {
+      switch (m.type) {
+        case 'text': {
+          newMsg.messageType = 'text';
+          newMsg.content = m.text?.body ?? '';
+          break;
+        }
 
-  /* ---- new message object ------------------------------------------- */
+        // Handle interactive messages (button clicks, list selections)
+        case 'interactive': {
+          newMsg.messageType = 'interactive';
 
-  const newMsg: any = {
-    id: uuidv4(),
-    senderId: 'customer',
-    timestamp: ts,
-    status: 'delivered',
-    whatsappMessageId: m.id,
-  };
+          if (m.interactive?.type === 'button_reply') {
+            const buttonReply = m.interactive.button_reply;
+            newMsg.content = buttonReply.title || 'Button clicked';
+            newMsg.interactiveData = {
+              type: 'button_reply',
+              id: buttonReply.id,
+              title: buttonReply.title
+            };
 
-  /* ---- content / media ---------------------------------------------- */
+            console.log(`🔘 Button clicked: ID="${buttonReply.id}", Title="${buttonReply.title}"`);
 
-  switch (m.type) {
-    case 'text': {
-      newMsg.messageType = 'text';
-      newMsg.content = m.text?.body ?? '';
-      break;
-    }
+            // Check for workflow continuation based on button click
+            await checkAndContinueWorkflow(
+              contact,
+              buttonReply.id,
+              buttonReply.title,
+              wabaAcc,
+              userId,
+              m.context?.id // The message ID this is replying to
+            );
 
-    // Handle interactive messages (button clicks, list selections)
-    case 'interactive': {
-      newMsg.messageType = 'interactive';
-      
-      if (m.interactive?.type === 'button_reply') {
-        const buttonReply = m.interactive.button_reply;
-        newMsg.content = buttonReply.title || 'Button clicked';
-        newMsg.buttonData = {
-          id: buttonReply.id,
-          title: buttonReply.title
-        };
-        
-        console.log(`🔘 Button clicked: ID="${buttonReply.id}", Title="${buttonReply.title}"`);
-        
-        // Check for workflow continuation based on button click
-        await checkAndContinueWorkflow(
-          contact,
-          buttonReply.id,
-          buttonReply.title,
-          wabaAcc,
-          userId,
-          m.context?.id // The message ID this is replying to
-        );
-        
-      } else if (m.interactive?.type === 'list_reply') {
-        const listReply = m.interactive.list_reply;
-        newMsg.content = listReply.title || 'List item selected';
-        newMsg.listData = {
-          id: listReply.id,
-          title: listReply.title,
-          description: listReply.description
-        };
-        
-        console.log(`📝 List item selected: ID="${listReply.id}", Title="${listReply.title}"`);
-        
-        // Check for workflow continuation based on list selection
-        await checkAndContinueWorkflow(
-          contact,
-          listReply.id,
-          listReply.title,
-          wabaAcc,
-          userId,
-          m.context?.id
-        );
+          } else if (m.interactive?.type === 'list_reply') {
+            const listReply = m.interactive.list_reply;
+            newMsg.content = listReply.title || 'List item selected';
+            newMsg.interactiveData = {
+              type: 'list_reply',
+              id: listReply.id,
+              title: listReply.title,
+              description: listReply.description
+            };
+
+            console.log(`📝 List item selected: ID="${listReply.id}", Title="${listReply.title}"`);
+
+            // Check for workflow continuation based on list selection
+            await checkAndContinueWorkflow(
+              contact,
+              listReply.id,
+              listReply.title,
+              wabaAcc,
+              userId,
+              m.context?.id
+            );
+          }
+          break;
+        }
+
+        case 'image':
+        case 'video':
+        case 'audio':
+        case 'document': {
+          try {
+            const mediaId = m[m.type].id;
+            const asset = await fetchWaAsset(
+              wabaAcc.phoneNumberId,
+              wabaAcc.wabaId,
+              mediaId,
+            );
+
+            const s3Url = await uploadToS3(
+              asset.buf,
+              asset.mime,
+              `wa/${m.type}`,
+              asset.name ?? `${mediaId}.${asset.mime.split('/')[1]}`,
+            );
+
+            newMsg.messageType = m.type;
+            newMsg.mediaId = mediaId;
+            newMsg.mediaUrl = s3Url;
+            newMsg.mimeType = asset.mime;
+            newMsg.fileName = asset.name;
+            newMsg.mediaCaption = m[m.type]?.caption || asset.name || '';
+            newMsg.content = newMsg.mediaCaption || `${m.type} file`;
+          } catch (mediaError: any) {
+            console.error(`Error processing ${m.type} media:`, mediaError);
+            // Still record the message but mark it with error
+            newMsg.messageType = m.type;
+            newMsg.content = `Failed to process ${m.type} file`;
+            newMsg.errorMessage = `Media processing failed: ${mediaError.message}`;
+            newMsg.errorCode = 'media_processing_failed';
+          }
+          break;
+        }
+
+        // Handle location messages
+        case 'location': {
+          newMsg.messageType = 'text';
+          const location = m.location;
+          newMsg.content = `Location: ${location.latitude}, ${location.longitude}`;
+          if (location.name) {
+            newMsg.content += ` (${location.name})`;
+          }
+          if (location.address) {
+            newMsg.content += ` - ${location.address}`;
+          }
+          break;
+        }
+
+        // Handle contact messages
+        case 'contacts': {
+          newMsg.messageType = 'text';
+          const contacts = m.contacts || [];
+          if (contacts.length > 0) {
+            const contactInfo = contacts.map((c: any) => {
+              let info = `Contact: ${c.name?.formatted_name || 'Unknown'}`;
+              if (c.phones?.[0]) {
+                info += ` (${c.phones[0].phone})`;
+              }
+              return info;
+            }).join('\n');
+            newMsg.content = contactInfo;
+          } else {
+            newMsg.content = 'Contact shared';
+          }
+          break;
+        }
+
+        // Handle reaction messages
+        case 'reaction': {
+          newMsg.messageType = 'text';
+          const reaction = m.reaction;
+          newMsg.content = `Reacted with ${reaction.emoji || '👍'} to a message`;
+          newMsg.replyTo = reaction.message_id;
+          break;
+        }
+
+        // Handle system messages
+        case 'system': {
+          newMsg.messageType = 'system';
+          newMsg.senderId = 'system';
+          newMsg.content = m.system?.body || 'System message';
+          break;
+        }
+
+        // Handle unsupported message types
+        default: {
+          console.log(`⚠️ Unsupported message type: ${m.type}`, m);
+          newMsg.messageType = 'unsupported';
+          newMsg.content = `Unsupported message type: ${m.type}`;
+
+          // Try to extract any available content
+          if (m[m.type]) {
+            const typeData = m[m.type];
+            if (typeData.caption) {
+              newMsg.content += ` - ${typeData.caption}`;
+            }
+            if (typeData.body) {
+              newMsg.content += ` - ${typeData.body}`;
+            }
+          }
+          break;
+        }
       }
-      break;
-    }
-
-    /* existing media cases... */
-    case 'image':
-    case 'video':
-    case 'audio':
-    case 'document': {
-      const mediaId = m[m.type].id;
-      const asset = await fetchWaAsset(
-        wabaAcc.phoneNumberId,
-        wabaAcc.wabaId,
-        mediaId,
-      );
-
-      const s3Url = await uploadToS3(
-        asset.buf,
-        asset.mime,
-        `wa/${m.type}`,
-        asset.name ?? `${mediaId}.${asset.mime.split('/')[1]}`,
-      );
-
-      newMsg.messageType = m.type;
-      newMsg.mediaId = mediaId;
-      newMsg.mediaUrl = s3Url;
-      newMsg.mimeType = asset.mime;
-      newMsg.fileName = asset.name;
-      newMsg.mediaCaption = m[m.type]?.caption || asset.name || '';
-      newMsg.content = newMsg.mediaCaption || m.type;
-      break;
-    }
-
-    default:
+    } catch (contentProcessingError: any) {
+      console.error('Error processing message content:', contentProcessingError);
+      // Ensure we still record something
       newMsg.messageType = 'text';
-      newMsg.content = `Unsupported WA type: ${m.type}`;
-  }
+      newMsg.content = `Error processing message of type: ${m.type}`;
+      newMsg.errorMessage = `Content processing failed: ${contentProcessingError.message}`;
+      newMsg.errorCode = 'content_processing_failed';
+    }
 
-  /* ---- conversation upsert ------------------------------------------ */
+    /* ---- conversation upsert ------------------------------------------ */
 
-  let conv = await Conversation.findOne({ contactId: contact._id });
-  if (!conv) {
-    conv = new Conversation({
-      contactId: contact._id,
-      wabaId: wabaAcc.wabaId,
-      phoneNumberId: wabaAcc.phoneNumberId,
-      userId,
-      messages: [],
-      unreadCount: 0,
-      status: 'active',
-      isWithin24Hours: true,
-    });
-  }
+    let conv = await Conversation.findOne({ contactId: contact._id });
+    if (!conv) {
+      conv = new Conversation({
+        contactId: contact._id,
+        wabaId: wabaAcc.wabaId,
+        phoneNumberId: wabaAcc.phoneNumberId,
+        userId,
+        messages: [],
+        unreadCount: 0,
+        status: 'active',
+        isWithin24Hours: true,
+      });
+    }
 
-  conv.messages.push(newMsg);
-  conv.lastMessage = newMsg.content;
-  conv.lastMessageType = newMsg.messageType;
-  conv.lastMessageAt = ts;
-  conv.unreadCount = (conv.unreadCount ?? 0) + 1;
-  conv.isWithin24Hours = ts.getTime() > Date.now() - 86_400_000;
+    conv.messages.push(newMsg);
+    conv.lastMessage = newMsg.content;
+    conv.lastMessageType = newMsg.messageType;
+    conv.lastMessageAt = ts;
+    conv.unreadCount = (conv.unreadCount ?? 0) + 1;
+    conv.isWithin24Hours = ts.getTime() > Date.now() - 86_400_000;
 
-  await conv.save();
+    await conv.save();
 
-  // For text messages from customers, check workflows in order of priority
-  if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
-    // 1. First check if this continues a paused workflow
-    const continuedWorkflow = await checkForWorkflowContinuation(newMsg.content, contact, wabaAcc, userId);
-    
-    if (!continuedWorkflow) {
-      // 2. If no workflow was continued, check for auto replies
-      await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
-      
-      // 3. Then check for new workflow triggers
-      await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+    // For text messages from customers, check workflows in order of priority
+    if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
+      // 1. First check if this continues a paused workflow
+      const continuedWorkflow = await checkForWorkflowContinuation(newMsg.content, contact, wabaAcc, userId);
+
+      if (!continuedWorkflow) {
+        // 2. If no workflow was continued, check for auto replies
+        await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
+
+        // 3. Then check for new workflow triggers
+        await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+      }
+    }
+
+    console.log(`✅ Successfully processed message: ${newMsg.messageType} - "${newMsg.content}"`);
+
+  } catch (error: any) {
+    console.error('❌ Error processing message:', error);
+
+    // Try to save a basic error message to the conversation if possible
+    try {
+      const waId = m.from;
+      const senderPhone = waId.replace(/^\+?/, '');
+
+      const contact = await Contact.findOne({
+        $or: [
+          { phone: senderPhone },
+          { phone: `+${senderPhone}` },
+        ],
+        wabaId: wabaAcc.wabaId,
+      });
+
+      if (contact) {
+        const errorMsg = {
+          id: uuidv4(),
+          senderId: 'system' as const,
+          content: `Failed to process incoming message of type: ${m.type}`,
+          messageType: 'system' as const,
+          timestamp: new Date(+m.timestamp * 1000),
+          status: 'failed' as const,
+          whatsappMessageId: m.id,
+          errorMessage: error.message,
+          errorCode: 'message_processing_failed',
+          senderName: 'System'
+        };
+
+        let conv = await Conversation.findOne({ contactId: contact._id });
+        if (conv) {
+          conv.messages.push(errorMsg);
+          conv.lastMessage = errorMsg.content;
+          conv.lastMessageType = 'system';
+          conv.lastMessageAt = errorMsg.timestamp;
+          await conv.save();
+        }
+      }
+    } catch (errorSaveError) {
+      console.error('Failed to save error message:', errorSaveError);
     }
   }
 }
@@ -318,22 +615,22 @@ async function checkForWorkflowContinuation(
 ): Promise<boolean> {
   try {
     console.log(`🔍 Checking for paused workflows for contact: ${contact.phone}`);
-    
+
     const workflowEngine = WorkflowEngine.getInstance();
-    
+
     // Find paused workflow execution waiting for this contact's input
     const pausedExecution = workflowEngine.getAllExecutions()
-      .find(exec => 
-        exec.contactId === contact._id.toString() && 
+      .find(exec =>
+        exec.contactId === contact._id.toString() &&
         exec.status === 'paused' &&
         exec.variables.waitingForCondition
       );
-    
+
     if (pausedExecution) {
       console.log(`🔄 Found paused workflow waiting for input: ${pausedExecution.workflowId}`);
       console.log(`   Waiting for condition node: ${pausedExecution.variables.waitingForCondition}`);
       console.log(`   User message: "${messageContent}"`);
-      
+
       // Continue workflow with text response
       await workflowEngine.continueWorkflow(
         pausedExecution.workflowId,
@@ -344,15 +641,15 @@ async function checkForWorkflowContinuation(
           timestamp: new Date()
         }
       );
-      
+
       console.log(`✅ Workflow continued with text response`);
-      
+
       // Return true to indicate a workflow was continued
       return true;
     } else {
       console.log(`❌ No paused workflow found for contact: ${contact.phone}`);
     }
-    
+
     return false;
   } catch (error) {
     console.error('❌ Error checking for workflow continuation:', error);
@@ -371,23 +668,23 @@ async function checkAndContinueWorkflow(
 ) {
   try {
     console.log(`🔄 Checking for workflow continuation: buttonId="${buttonId}", title="${buttonTitle}"`);
-    
+
     const workflowEngine = WorkflowEngine.getInstance();
-    
+
     // Find any running workflow execution for this contact
     const runningExecution = workflowEngine.getAllExecutions()
-      .find(exec => 
-        exec.contactId === contact._id.toString() && 
+      .find(exec =>
+        exec.contactId === contact._id.toString() &&
         exec.status === 'running'
       );
-    
+
     if (!runningExecution) {
       console.log('❌ No running workflow execution found for this contact');
       return;
     }
-    
+
     console.log(`✅ Found running workflow execution: ${runningExecution.workflowId}`);
-    
+
     // Continue the workflow with the button response
     await workflowEngine.continueWorkflow(
       runningExecution.workflowId,
@@ -400,9 +697,9 @@ async function checkAndContinueWorkflow(
         timestamp: new Date()
       }
     );
-    
+
     console.log(`✅ Workflow continued with button click: ${buttonId}`);
-    
+
   } catch (error) {
     console.error('❌ Error continuing workflow:', error);
   }
@@ -417,7 +714,7 @@ async function checkAndTriggerWorkflows(
 ) {
   try {
     console.log(`🔍 Checking workflows for message: "${messageContent}" from contact: ${contact.phone}`);
-    
+
     // Get all active workflows for this user
     const workflows = await Workflow.find({
       userId,
@@ -438,13 +735,13 @@ async function checkAndTriggerWorkflows(
       console.log(`\n🔎 Checking workflow: "${workflow.name}" (ID: ${workflow._id})`);
       console.log(`   - Workflow WABA ID: ${workflow.wabaId}`);
       console.log(`   - Contact WABA ID: ${wabaAcc.wabaId}`);
-      
+
       // Check if workflow is for this WABA
       if (workflow.wabaId !== wabaAcc.wabaId) {
         console.log(`   ❌ WABA ID mismatch, skipping workflow`);
         continue;
       }
-      
+
       const triggerNode = workflow.nodes.find((node: any) => node.type === 'trigger');
       if (!triggerNode) {
         console.log(`   ❌ No trigger node found in workflow: ${workflow.name}`);
@@ -479,9 +776,9 @@ async function checkAndTriggerWorkflows(
           .split(',')
           .map((k: string) => k.trim().toLowerCase())
           .filter((k: string) => k.length > 0);
-        
+
         console.log(`   🔑 Parsed keywords:`, keywords);
-        
+
         shouldTrigger = keywords.some((keyword: string) => {
           const match = messageText.includes(keyword);
           console.log(`      "${keyword}" in "${messageText}": ${match}`);
@@ -508,7 +805,7 @@ async function checkAndTriggerWorkflows(
           );
 
           console.log(`✅ Workflow triggered successfully with execution ID: ${executionId}`);
-          
+
           // Update workflow statistics
           await Workflow.findByIdAndUpdate(workflow._id, {
             $inc: { executionCount: 1 },
@@ -517,7 +814,7 @@ async function checkAndTriggerWorkflows(
 
         } catch (triggerError) {
           console.error(`❌ Error triggering workflow ${workflow.name}:`, triggerError);
-          
+
           // Update failure count
           await Workflow.findByIdAndUpdate(workflow._id, {
             $inc: { executionCount: 1, failureCount: 1 },
@@ -597,7 +894,11 @@ function checkTriggerMatch(messageContent: string, autoReply: any): boolean {
   });
 }
 
+// Enhanced sendAutoReplyMessage with better error tracking
 async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) {
+  let messageId = uuidv4();
+  let messageContent = '';
+
   try {
     let phoneNumber = contact.phone;
     if (!phoneNumber.startsWith('+')) {
@@ -605,12 +906,11 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
     }
 
     let whatsappPayload;
-    let messageContent;
 
     if (autoReply.replyType === 'workflow') {
-      // For workflow type, trigger the workflow instead of sending a message
+      // Workflow handling remains the same
       console.log(`🔄 Triggering workflow for auto reply: ${autoReply.name}`);
-      
+
       try {
         const workflowEngine = WorkflowEngine.getInstance();
         const executionId = await workflowEngine.triggerWorkflow(
@@ -628,10 +928,9 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
         );
 
         console.log(`✅ Workflow triggered successfully with execution ID: ${executionId}`);
-        return; // Exit early since workflow handles the messaging
+        return;
       } catch (workflowError) {
         console.error('❌ Error triggering workflow:', workflowError);
-        // Fall back to sending a text message about the error
         messageContent = `Sorry, there was an issue processing your request. Please try again later.`;
         whatsappPayload = {
           messaging_product: "whatsapp",
@@ -663,7 +962,6 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
         (whatsappPayload.template as any).components = autoReply.templateComponents;
       }
     } else {
-      // Text message
       messageContent = autoReply.replyMessage;
       whatsappPayload = {
         messaging_product: "whatsapp",
@@ -677,8 +975,16 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
       };
     }
 
-    // Only send WhatsApp message if not workflow type or if workflow failed
+    // Pre-record the message as 'sent' - it will be updated by status webhook
     if (whatsappPayload) {
+      await recordAutoReplyInConversation(
+        contact,
+        autoReply,
+        undefined, // No WhatsApp message ID yet
+        messageId,
+        messageContent
+      );
+
       console.log('Sending auto reply:', JSON.stringify(whatsappPayload, null, 2));
 
       const response = await fetch(
@@ -699,50 +1005,75 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
       console.log('Auto reply response:', responseText);
 
       if (response.ok) {
-        // Record the auto reply in the conversation
+        // Update with WhatsApp message ID
         const responseData = JSON.parse(responseText);
-        await recordAutoReplyInConversation(
-          contact,
-          autoReply,
-          responseData.messages?.[0]?.id
-        );
+        if (responseData.messages?.[0]?.id) {
+          await updateMessageWithWhatsAppId(
+            contact._id,
+            messageId,
+            responseData.messages[0].id
+          );
+        }
       } else {
         console.error('Failed to send auto reply:', responseText);
+
+        // Update message as failed
+        await updateMessageAsFailed(
+          contact._id,
+          messageId,
+          `Auto reply failed: ${response.status}`,
+          response.status.toString()
+        );
       }
     }
 
-  } catch (error) {
+  } catch (error:any) {
     console.error('Error sending auto reply message:', error);
+
+    // Update message as failed
+    await updateMessageAsFailed(
+      contact._id,
+      messageId,
+      `Auto reply error: ${error.message}`,
+      'send_error'
+    );
   }
 }
 
+
+// Enhanced recordAutoReplyInConversation
 async function recordAutoReplyInConversation(
   contact: any,
   autoReply: any,
-  whatsappMessageId?: string
+  whatsappMessageId?: string,
+  messageId?: string,
+  messageContent?: string
 ) {
   try {
     const conversation = await Conversation.findOne({ contactId: contact._id });
     if (!conversation) return;
 
-    const messageContent = autoReply.replyType === 'template'
+    const content = messageContent || (autoReply.replyType === 'template'
       ? `Template: ${autoReply.templateName}`
-      : autoReply.replyMessage;
+      : autoReply.replyMessage);
 
     const autoReplyMessage = {
-      id: uuidv4(),
+      id: messageId || uuidv4(),
       senderId: 'agent' as const,
-      content: messageContent,
+      content: content,
       messageType: autoReply.replyType,
       timestamp: new Date(),
       status: 'sent' as const,
       whatsappMessageId,
       senderName: 'Auto Reply',
-      templateName: autoReply.replyType === 'template' ? autoReply.templateName : undefined
+      templateName: autoReply.replyType === 'template' ? autoReply.templateName : undefined,
+      errorMessage: undefined,
+      errorCode: undefined,
+      retryCount: 0
     };
 
     conversation.messages.push(autoReplyMessage);
-    conversation.lastMessage = messageContent;
+    conversation.lastMessage = content;
     conversation.lastMessageType = autoReply.replyType;
     conversation.lastMessageAt = new Date();
 
@@ -751,5 +1082,57 @@ async function recordAutoReplyInConversation(
 
   } catch (error) {
     console.error('Error recording auto reply in conversation:', error);
+  }
+}
+
+// Helper function to update message with WhatsApp ID
+async function updateMessageWithWhatsAppId(
+  contactId: string,
+  messageId: string,
+  whatsappMessageId: string
+) {
+  try {
+    await Conversation.findOneAndUpdate(
+      {
+        contactId,
+        "messages.id": messageId
+      },
+      {
+        $set: {
+          "messages.$.whatsappMessageId": whatsappMessageId
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error updating message with WhatsApp ID:', error);
+  }
+}
+
+// Helper function to update message as failed
+async function updateMessageAsFailed(
+  contactId: string,
+  messageId: string,
+  errorMessage: string,
+  errorCode: string
+) {
+  try {
+    await Conversation.findOneAndUpdate(
+      {
+        contactId,
+        "messages.id": messageId
+      },
+      {
+        $set: {
+          "messages.$.status": "failed",
+          "messages.$.errorMessage": errorMessage,
+          "messages.$.errorCode": errorCode
+        },
+        $inc: {
+          "messages.$.retryCount": 1
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error updating message as failed:', error);
   }
 }

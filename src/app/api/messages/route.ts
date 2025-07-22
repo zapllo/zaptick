@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
       if (!template) {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
-      console.log('🔍 Template found:', template.name, 'with components:', template.components.length);
+      // console.log('🔍 Template found:', template.name, 'with components:', template.components.length);
     }
 
     const wabaAccounts = user.wabaAccounts || [];
