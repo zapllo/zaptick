@@ -563,8 +563,18 @@ const CreateCampaignPage = () => {
         const template = data.template;
 
         // Extract quick reply buttons from template
-        const buttons = template.components?.find((comp: any) => comp.type === 'BUTTONS')?.buttons?.filter((btn: any) => btn.type === 'QUICK_REPLY') || [];
+        const buttons =
+          template.components
+            ?.find((c: any) => c.type === 'BUTTONS')
+            ?.buttons?.filter((b: any) => b.type === 'QUICK_REPLY')
+            // keep both the visible text and the payload (id)
+            ?.map((b: any) => ({
+              text: b.text,                 // what users see
+              payload: b.payload || b.id || b.text  // what WA sends back
+            })) || [];
+
         setTemplateButtons(buttons);
+
       }
     } catch (error) {
       console.error('Error fetching template buttons:', error);
@@ -838,19 +848,20 @@ const CreateCampaignPage = () => {
                             <div key={index} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`button-${index}`}
-                                checked={responseHandling.optOut.triggerButtons.includes(button.text)}
+                                checked={responseHandling.optOut.triggerButtons.includes(button.payload)}
                                 onCheckedChange={(checked) => {
                                   setResponseHandling(prev => ({
                                     ...prev,
                                     optOut: {
                                       ...prev.optOut,
                                       triggerButtons: checked
-                                        ? [...prev.optOut.triggerButtons, button.text]
-                                        : prev.optOut.triggerButtons.filter(id => id !== button.text)
+                                        ? [...prev.optOut.triggerButtons, button.payload]
+                                        : prev.optOut.triggerButtons.filter(p => p !== button.payload)
                                     }
                                   }));
                                 }}
                               />
+
                               <Label
                                 htmlFor={`button-${index}`}
                                 className="text-sm font-normal cursor-pointer"

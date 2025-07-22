@@ -1233,28 +1233,34 @@ async function handleCampaignResponse(
   console.log(`   Response handling config:`, responseHandling);
 
   // Handle opt-out responses - check both button_reply types and direct button messages
+  // ── OPT‑OUT HANDLING ─────────────────────────────────────────
   if (responseHandling.optOut?.enabled && interactiveData) {
-    let buttonText = '';
+    // normalise helper
+    const norm = (s: string) => s.trim().toLowerCase();
 
-    // Handle both interactive button_reply and direct button messages
-    if (interactiveData.type === 'button_reply') {
-      buttonText = interactiveData.title || interactiveData.id || '';
-    } else if (interactiveData.id || interactiveData.title) {
-      // Direct button message
-      buttonText = interactiveData.title || interactiveData.id || '';
-    }
+    // Pull both fields from WhatsApp payload
+    const btnId = interactiveData.id ? norm(interactiveData.id) : '';
+    const btnTitle = interactiveData.title ? norm(interactiveData.title) : '';
 
-    console.log(`🔍 Checking opt-out button: "${buttonText}"`);
-    console.log(`   Configured opt-out triggers:`, responseHandling.optOut.triggerButtons);
+    // Normalise triggers stored in DB (now payloads)
+    const triggers = (responseHandling.optOut.triggerButtons || []).map(norm);
 
-    if (buttonText && responseHandling.optOut.triggerButtons.includes(buttonText)) {
-      console.log(`🚫 Processing opt-out request for contact ${contact.phone} - button: ${buttonText}`);
+    console.log('🔍 Checking opt‑out – id:', btnId, 'title:', btnTitle);
+    console.log('   Configured triggers :', triggers);
+
+    const isOptOut =
+      (btnId && triggers.includes(btnId)) ||
+      (btnTitle && triggers.includes(btnTitle));
+
+    if (isOptOut) {
+      console.log(`🚫 Processing opt‑out request for contact ${contact.phone}`);
       await handleOptOutRequest(campaign, contact, wabaAcc, userId);
-      return; // Don't process other response handlers after opt-out
-    } else {
-      console.log(`❌ Button text "${buttonText}" not found in opt-out triggers`);
+      return;                                   // stop further handlers
     }
+
+    console.log('❌ No match – opt‑out not triggered');
   }
+
 
   // Handle auto-reply
   if (responseHandling.autoReply?.enabled) {
