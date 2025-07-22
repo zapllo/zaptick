@@ -1379,9 +1379,10 @@ const CreateCampaignPage = () => {
       // Add selected contacts to the audience object before saving
       const campaignToSave = {
         ...campaign,
+        responseHandling,
+
         audience: {
           ...campaign.audience,
-          responseHandling,
           selectedContacts: selectedContacts
         },
         status: 'draft'
