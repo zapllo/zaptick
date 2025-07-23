@@ -56,6 +56,26 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         }, { status: 400 });
       }
     }
+    // Process tags based on whatsappOptIn status
+    let updatedTags = tags || [];
+    if (Array.isArray(updatedTags)) {
+      // Convert string to array if it's a comma-separated string
+      updatedTags = updatedTags;
+    } else if (typeof updatedTags === 'string') {
+      updatedTags = updatedTags.split(',').map(tag => tag.trim()).filter(Boolean);
+    }
+
+    // Add or remove "opted-out" tag based on whatsappOptIn value
+    const optedOutTagIndex = updatedTags.findIndex(tag => tag.toLowerCase() === 'opted-out');
+
+    // If opted out and tag doesn't exist, add it
+    if (whatsappOptIn === false && optedOutTagIndex === -1) {
+      updatedTags.push('opted-out');
+    }
+    // If opted in and tag exists, remove it
+    else if (whatsappOptIn === true && optedOutTagIndex !== -1) {
+      updatedTags.splice(optedOutTagIndex, 1);
+    }
 
     const updatedContact = await Contact.findByIdAndUpdate(
       params.id,
@@ -64,8 +84,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         phone: phone.trim(),
         email: email?.trim(),
         countryCode: countryCode?.trim(),
-        whatsappOptIn: whatsappOptIn !== undefined ? whatsappOptIn : true, // Add this
-        tags: tags || [],
+        whatsappOptIn: whatsappOptIn !== undefined ? whatsappOptIn : true,
+        tags: updatedTags,
         notes: notes?.trim(),
         customFields: customFields || {}
       },

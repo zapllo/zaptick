@@ -3,7 +3,9 @@ import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Contact from '@/models/Contact';
+import ContactCustomField from '@/models/ContactCustomField';
 import { parse } from 'papaparse';
+import { sendContactImportNotification } from '@/lib/notifications';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +30,8 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const wabaId = formData.get('wabaId') as string;
+    const fieldMappings = formData.get('fieldMappings') as string;
+    const skipFirstRow = formData.get('skipFirstRow') === 'true';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -46,8 +50,14 @@ export async function POST(req: NextRequest) {
     // Read file content as text
     const fileContent = await file.text();
 
+    // Get company's custom fields
+    const customFields = await ContactCustomField.find({
+      companyId: user.companyId,
+      active: true
+    });
+
     // Parse CSV content
-    const { data, errors } = parse(fileContent, {
+    const { data, errors, meta } = parse(fileContent, {
       header: true,
       skipEmptyLines: true
     });
@@ -63,15 +73,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No contacts found in file' }, { status: 400 });
     }
 
-    // Validate required fields
-    const invalidRows = data.filter((row: unknown) => {
-      const typedRow = row as { [key: string]: string };
-      return !typedRow.name || !typedRow.phone;
-    });
-    if (invalidRows.length > 0) {
+    // If we're just analyzing the file to get headers
+    const isAnalyze = formData.get('analyze') === 'true';
+    if (isAnalyze) {
+      // Return the headers and a sample of the data
       return NextResponse.json({
-        error: 'Invalid data in CSV',
-        details: `${invalidRows.length} rows missing required fields (name, phone)`
+        success: true,
+        headers: meta.fields || [],
+        sampleData: data.slice(0, 3),
+        totalRows: data.length
+      });
+    }
+
+    // Parse field mappings JSON
+    let mappings: Record<string, string> = {};
+    try {
+      mappings = fieldMappings ? JSON.parse(fieldMappings) : {};
+    } catch (error) {
+      return NextResponse.json({
+        error: 'Invalid field mappings format',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 400 });
+    }
+
+    // Check for required fields mapping
+    if (!mappings.name || !mappings.phone) {
+      return NextResponse.json({
+        error: 'Required field mappings missing',
+        details: 'Name and phone field mappings are required'
       }, { status: 400 });
     }
 
@@ -80,14 +109,70 @@ export async function POST(req: NextRequest) {
       total: data.length,
       imported: 0,
       skipped: 0,
-      errors: 0
+      errors: 0,
+      errorDetails: [] as { row: number; error: string }[]
     };
 
-    for (const row of data as Array<{ [key: string]: string }>) {
+    // Skip first row if requested (in case headers were included even with header:true)
+    const rowsToProcess = skipFirstRow ? data.slice(1) : data;
+
+    for (let i = 0; i < rowsToProcess.length; i++) {
       try {
+        const row = rowsToProcess[i] as Record<string, string>;
+
+        // Apply field mappings
+        const name = row[mappings.name]?.trim();
+        const phone = row[mappings.phone]?.trim();
+        const email = mappings.email ? row[mappings.email]?.trim() : undefined;
+        const countryCode = mappings.countryCode ? row[mappings.countryCode]?.trim() : undefined;
+        const notes = mappings.notes ? row[mappings.notes]?.trim() : undefined;
+
+        // Get whatsappOptIn value (default to true if not specified)
+        let whatsappOptIn = true;
+        if (mappings.whatsappOptIn && row[mappings.whatsappOptIn]) {
+          const optInValue = row[mappings.whatsappOptIn].toLowerCase();
+          whatsappOptIn = !(optInValue === 'false' || optInValue === 'no' || optInValue === '0' || optInValue === 'n');
+        }
+
+        // Get tags
+        let tags: string[] = [];
+        if (mappings.tags && row[mappings.tags]) {
+          tags = row[mappings.tags].split(',').map((tag: string) => tag.trim()).filter(Boolean);
+        }
+
+        // Validate required fields
+        if (!name || !phone) {
+          importResults.errors++;
+          importResults.errorDetails.push({
+            row: i + (skipFirstRow ? 2 : 1), // Add 1 for 0-index, add another 1 if skipping first row
+            error: `Missing required fields (name: ${name}, phone: ${phone})`
+          });
+          continue;
+        }
+
+        // Extract custom fields from mappings
+        const customFieldsData: Record<string, any> = {};
+        Object.entries(mappings).forEach(([targetField, sourceField]) => {
+          if (targetField.startsWith('customField.')) {
+            const fieldKey = targetField.replace('customField.', '');
+            const customField = customFields.find(cf => cf.key === fieldKey);
+
+            if (customField && sourceField && row[sourceField]) {
+              let value = row[sourceField].trim();
+
+              // Convert types based on custom field definition
+              if (customField.type === 'Number' && value) {
+                value = Number(value);
+              }
+
+              customFieldsData[fieldKey] = value;
+            }
+          }
+        });
+
         // Check if contact already exists
         const existingContact = await Contact.findOne({
-          phone: row.phone.trim(),
+          phone,
           wabaId
         });
 
@@ -96,23 +181,20 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Prepare tags
-        let tags: string[] = [];
-        if (row.tags) {
-          tags = row.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
-        }
-
         // Create new contact
         const contact = new Contact({
-          name: row.name.trim(),
-          phone: row.phone.trim(),
-          email: row.email?.trim(),
+          name,
+          phone,
+          email,
+          countryCode,
           wabaId,
           phoneNumberId: wabaAccount.phoneNumberId,
           userId: decoded.id,
+          companyId: user.companyId,
           tags,
-          notes: row.notes?.trim(),
-          whatsappOptIn: row.whatsappOptIn === 'false' ? false : true
+          notes,
+          whatsappOptIn,
+          customFields: Object.keys(customFieldsData).length > 0 ? customFieldsData : undefined
         });
 
         await contact.save();
@@ -120,8 +202,22 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         console.error('Error importing contact:', error);
         importResults.errors++;
+        importResults.errorDetails.push({
+          row: i + (skipFirstRow ? 2 : 1),
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
+    // Send email notification (async, don't wait for it)
+    sendContactImportNotification(decoded.id, {
+      total: importResults.total,
+      imported: importResults.imported,
+      skipped: importResults.skipped,
+      errors: importResults.errors,
+      wabaId
+    }).catch(error => {
+      console.error('Email notification failed:', error);
+    });
 
     return NextResponse.json({
       success: true,
@@ -132,6 +228,65 @@ export async function POST(req: NextRequest) {
     console.error('Contact import error:', error);
     return NextResponse.json({
       error: 'Failed to import contacts',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}
+
+// New endpoint to get available fields for mapping
+export async function GET(req: NextRequest) {
+  try {
+    const token = req.cookies.get('token')?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token) as { id: string };
+    if (!decoded || !decoded.id) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    await dbConnect();
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Get custom fields
+    const customFields = await ContactCustomField.find({
+      companyId: user.companyId,
+      active: true
+    });
+
+    // Prepare available fields for mapping
+    const availableFields = [
+      { key: 'name', label: 'Name', required: true },
+      { key: 'phone', label: 'Phone Number', required: true },
+      { key: 'email', label: 'Email Address', required: false },
+      { key: 'countryCode', label: 'Country Code', required: false },
+      { key: 'tags', label: 'Tags (comma separated)', required: false },
+      { key: 'notes', label: 'Notes', required: false },
+      { key: 'whatsappOptIn', label: 'WhatsApp Opt-In (true/false)', required: false },
+      // Add custom fields
+      ...customFields.map(field => ({
+        key: `customField.${field.key}`,
+        label: field.name,
+        required: field.required,
+        type: field.type
+      }))
+    ];
+
+    return NextResponse.json({
+      success: true,
+      fields: availableFields
+    });
+
+  } catch (error) {
+    console.error('Error fetching import fields:', error);
+    return NextResponse.json({
+      error: 'Failed to fetch import fields',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }

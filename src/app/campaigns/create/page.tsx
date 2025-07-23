@@ -1,12 +1,11 @@
 // src/app/campaigns/create/page.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
-  Calendar,
   Check,
   ChevronDown,
   ChevronRight,
@@ -106,6 +105,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { calculateMessagePrice, formatCurrency } from "@/lib/pricing";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { Calendar } from "@/components/ui/calendar";
+import { BiCalendar } from "react-icons/bi";
 
 // Campaign type definition
 interface Campaign {
@@ -414,6 +418,391 @@ const timezones: Timezone[] = [
   { value: "Australia/Sydney", label: "Sydney", offset: "+10:00" },
 ];
 
+// Add the complete ResponseHandlingSection component within your main component:
+// Update the ResponseHandlingSection component to match modern design
+const ResponseHandlingSection = ({
+  responseHandling,
+  setResponseHandling,
+  setCampaign,
+  campaign,
+  setActiveStep,
+  contentRef,
+  setSteps,
+  steps,
+  availableTemplates,
+  availableWorkflows,
+  templateButtons
+}) => {
+  const handleContinue = () => {
+    console.log("Continue button clicked");
+
+    // Update the campaign with response handling data
+    setCampaign(prev => ({
+      ...prev,
+      responseHandling: responseHandling
+    }));
+
+    // Mark the step as completed - use find instead of array index
+    setSteps(prevSteps => {
+      return prevSteps.map(step =>
+        step.id === 3 ? { ...step, isCompleted: true } : step
+      );
+    });
+    // Navigate to the next step
+    setActiveStep(4);
+
+    // Scroll to content if needed
+    if (contentRef.current) {
+      contentRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+            <MessageCircle className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-xl font-semibold text-slate-900">
+              Response Handling
+            </CardTitle>
+            <CardDescription className="text-slate-600">
+              Configure how to handle customer responses to your campaign messages
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+
+      <div className="flex-1 px-6 py-6">
+        <div className="space-y-8">
+          {/* Main toggle */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                Response Settings
+              </h3>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center">
+                  <Bell className="h-5 w-5 text-slate-700" />
+                </div>
+                <div>
+                  <Label htmlFor="enable-response" className="text-sm font-medium text-slate-800">
+                    Enable Response Handling
+                  </Label>
+                  <p className="text-xs text-slate-600">
+                    Automatically handle customer responses to campaign messages
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="enable-response"
+                checked={responseHandling.enabled}
+                onCheckedChange={(checked) =>
+                  setResponseHandling(prev => ({ ...prev, enabled: checked }))
+                }
+                className="data-[state=checked]:bg-primary"
+              />
+            </div>
+          </div>
+
+          {responseHandling.enabled && (
+            <>
+              {/* Auto Reply Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                    Auto Reply
+                  </h3>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                      <Reply className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <Label htmlFor="auto-reply" className="text-sm font-medium text-green-800">
+                        Send Automatic Reply
+                      </Label>
+                      <p className="text-xs text-green-600">
+                        Send an automatic response to any customer message
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="auto-reply"
+                    checked={responseHandling.autoReply.enabled}
+                    onCheckedChange={(checked) =>
+                      setResponseHandling(prev => ({
+                        ...prev,
+                        autoReply: { ...prev.autoReply, enabled: checked }
+                      }))
+                    }
+                    className="data-[state=checked]:bg-green-600"
+                  />
+                </div>
+
+                {responseHandling.autoReply.enabled && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">
+                        Reply Type
+                      </Label>
+                      <Select
+                        value={responseHandling.autoReply.templateId ? 'template' : 'text'}
+                        onValueChange={(value) => {
+                          if (value === 'text') {
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              autoReply: {
+                                ...prev.autoReply,
+                                templateId: '',
+                                templateName: ''
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20">
+                          <SelectValue placeholder="Select reply type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">Text Message</SelectItem>
+                        
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">
+                        Delay (minutes)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="1440"
+                        value={responseHandling.autoReply.delay}
+                        onChange={(e) =>
+                          setResponseHandling(prev => ({
+                            ...prev,
+                            autoReply: { ...prev.autoReply, delay: parseInt(e.target.value) || 0 }
+                          }))
+                        }
+                        placeholder="0"
+                        className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                      />
+                      <p className="text-xs text-slate-500">
+                        How long to wait before sending the auto reply
+                      </p>
+                    </div>
+
+                    {responseHandling.autoReply.templateId ? (
+                      <div className="space-y-2 lg:col-span-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Select Template
+                        </Label>
+                        <Select
+                          value={responseHandling.autoReply.templateId}
+                          onValueChange={(value) => {
+                            const template = availableTemplates.find((t: any) => t._id === value);
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              autoReply: {
+                                ...prev.autoReply,
+                                templateId: value,
+                                templateName: template?.name || ''
+                              }
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20">
+                            <SelectValue placeholder="Select a template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableTemplates.map((template: any) => (
+                              <SelectItem key={template._id} value={template._id}>
+                                {template.name} ({template.category})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 lg:col-span-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Auto Reply Message
+                        </Label>
+                        <Textarea
+                          value={responseHandling.autoReply.message}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              autoReply: {
+                                ...prev.autoReply,
+                                message: value
+                              }
+                            }));
+                          }}
+                          placeholder="Thank you for your response. We'll get back to you soon!"
+                          className="min-h-[100px] bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Opt-out Section - Only show if there are template buttons */}
+              {templateButtons.length > 0 && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                      Customer Opt-out
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center">
+                        <UserX className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <Label htmlFor="opt-out" className="text-sm font-medium text-amber-800">
+                          Handle Opt-out Requests
+                        </Label>
+                        <p className="text-xs text-amber-600">
+                          Process opt-out requests from template button clicks
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="opt-out"
+                      checked={responseHandling.optOut.enabled}
+                      onCheckedChange={(checked) =>
+                        setResponseHandling(prev => ({
+                          ...prev,
+                          optOut: { ...prev.optOut, enabled: checked }
+                        }))
+                      }
+                      className="data-[state=checked]:bg-amber-600"
+                    />
+                  </div>
+
+                  {responseHandling.optOut.enabled && (
+                    <div className="space-y-6 pl-6">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Select Opt-out Buttons
+                        </Label>
+                        <p className="text-xs text-slate-500">
+                          Choose which quick reply buttons should trigger customer opt-out
+                        </p>
+                        <div className="space-y-3 max-h-32 overflow-y-auto p-4 bg-white rounded-lg border border-slate-200">
+                          {templateButtons.map((button: any, index: number) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`button-${index}`}
+                                checked={responseHandling.optOut.triggerButtons.includes(button.payload)}
+                                onCheckedChange={(checked) => {
+                                  setResponseHandling(prev => ({
+                                    ...prev,
+                                    optOut: {
+                                      ...prev.optOut,
+                                      triggerButtons: checked
+                                        ? [...prev.optOut.triggerButtons, button.payload]
+                                        : prev.optOut.triggerButtons.filter(p => p !== button.payload)
+                                    }
+                                  }));
+                                }}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                              />
+                              <Label
+                                htmlFor={`button-${index}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {button.text}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Acknowledgment Message
+                        </Label>
+                        <Textarea
+                          value={responseHandling.optOut.acknowledgmentMessage}
+                          onChange={(e) =>
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              optOut: { ...prev.optOut, acknowledgmentMessage: e.target.value }
+                            }))
+                          }
+                          placeholder="Thank you. You have been unsubscribed from our messages."
+                          className="min-h-[80px] bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
+                        />
+                        <p className="text-xs text-slate-500">
+                          This message will be sent to customers who opt out
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="update-contact"
+                          checked={responseHandling.optOut.updateContact}
+                          onCheckedChange={(checked) =>
+                            setResponseHandling(prev => ({
+                              ...prev,
+                              optOut: { ...prev.optOut, updateContact: checked as boolean }
+                            }))
+                          }
+                          className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                        />
+                        <Label htmlFor="update-contact" className="text-sm">
+                          Automatically update contact opt-in status
+                        </Label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <CardFooter className="px-6 py-4 justify-between w-full flex border-t border-slate-100 flex-shrink-0 bg-white">
+        <Button
+          variant="outline"
+          onClick={() => setActiveStep(2)}
+          className="hover:bg-slate-50"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+        <Button
+          onClick={handleContinue}
+          className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
+        >
+          Continue
+          <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+
 const CreateCampaignPage = () => {
   const router = useRouter();
   const [activeStep, setActiveStep] = useState(1);
@@ -605,370 +994,30 @@ const CreateCampaignPage = () => {
     }
   };
   console.log(templateButtons, 'okay', responseHandling, 'response handling');
-  // Add the complete ResponseHandlingSection component within your main component:
-  const ResponseHandlingSection = () => {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5" />
-            Response Handling
-          </CardTitle>
-          <CardDescription>
-            Configure how to handle customer responses to your campaign messages
-          </CardDescription>
-        </CardHeader>
 
-        <CardContent className="space-y-6">
-          {/* Enable Response Handling */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Response Handling</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically handle customer responses to campaign messages
-              </p>
-            </div>
-            <Switch
-              checked={responseHandling.enabled}
-              onCheckedChange={(checked) =>
-                setResponseHandling(prev => ({ ...prev, enabled: checked }))
-              }
-            />
-          </div>
-
-          {responseHandling.enabled && (
-            <div className="space-y-6 border-t pt-6">
-              {/* Auto Reply Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2">
-                      <Reply className="w-4 h-4" />
-                      Auto Reply
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Send an automatic reply to any response
-                    </p>
-                  </div>
-                  <Switch
-                    checked={responseHandling.autoReply.enabled}
-                    onCheckedChange={(checked) =>
-                      setResponseHandling(prev => ({
-                        ...prev,
-                        autoReply: { ...prev.autoReply, enabled: checked }
-                      }))
-                    }
-                  />
-                </div>
-
-                {responseHandling.autoReply.enabled && (
-                  <div className="ml-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Reply Type</Label>
-                        <Select
-                          value={responseHandling.autoReply.templateId ? 'template' : 'text'}
-                          onValueChange={(value) => {
-                            if (value === 'text') {
-                              setResponseHandling(prev => ({
-                                ...prev,
-                                autoReply: {
-                                  ...prev.autoReply,
-                                  templateId: '',
-                                  templateName: ''
-                                }
-                              }));
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select reply type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Text Message</SelectItem>
-                            <SelectItem value="template">Template Message</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Delay (minutes)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="1440"
-                          value={responseHandling.autoReply.delay}
-                          onChange={(e) =>
-                            setResponseHandling(prev => ({
-                              ...prev,
-                              autoReply: { ...prev.autoReply, delay: parseInt(e.target.value) || 0 }
-                            }))
-                          }
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-
-                    {responseHandling.autoReply.templateId ? (
-                      <div className="space-y-2">
-                        <Label>Select Template</Label>
-                        <Select
-                          value={responseHandling.autoReply.templateId}
-                          onValueChange={(value) => {
-                            const template = availableTemplates.find((t: any) => t._id === value);
-                            setResponseHandling(prev => ({
-                              ...prev,
-                              autoReply: {
-                                ...prev.autoReply,
-                                templateId: value,
-                                templateName: template?.name || ''
-                              }
-                            }));
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a template" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableTemplates.map((template: any) => (
-                              <SelectItem key={template._id} value={template._id}>
-                                {template.name} ({template.category})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Label>Auto Reply Message</Label>
-                        <Textarea
-                          value={responseHandling.autoReply.message}
-                          onChange={(e) =>
-                            setResponseHandling(prev => ({
-                              ...prev,
-                              autoReply: { ...prev.autoReply, message: e.target.value }
-                            }))
-                          }
-                          placeholder="Thank you for your response. We'll get back to you soon!"
-                          className="min-h-[100px]"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Workflow Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2">
-                      <Workflow className="w-4 h-4" />
-                      Trigger Workflow
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Start a workflow when customers respond
-                    </p>
-                  </div>
-                  <Switch
-                    checked={responseHandling.workflow.enabled}
-                    onCheckedChange={(checked) =>
-                      setResponseHandling(prev => ({
-                        ...prev,
-                        workflow: { ...prev.workflow, enabled: checked }
-                      }))
-                    }
-                  />
-                </div>
-
-                {responseHandling.workflow.enabled && (
-                  <div className="ml-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Select Workflow</Label>
-                        <Select
-                          value={responseHandling.workflow.workflowId}
-                          onValueChange={(value) => {
-                            const workflow = availableWorkflows.find((w: any) => w._id === value);
-                            setResponseHandling(prev => ({
-                              ...prev,
-                              workflow: {
-                                ...prev.workflow,
-                                workflowId: value,
-                                workflowName: workflow?.name || ''
-                              }
-                            }));
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a workflow" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableWorkflows
-                              .filter((workflow: any) => workflow.isActive)
-                              .map((workflow: any) => (
-                                <SelectItem key={workflow._id} value={workflow._id}>
-                                  {workflow.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Trigger Delay (minutes)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="1440"
-                          value={responseHandling.workflow.triggerDelay}
-                          onChange={(e) =>
-                            setResponseHandling(prev => ({
-                              ...prev,
-                              workflow: { ...prev.workflow, triggerDelay: parseInt(e.target.value) || 0 }
-                            }))
-                          }
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Opt-out Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2">
-                      <UserX className="w-4 h-4" />
-                      Customer Opt-out
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Handle customer opt-out requests from template button clicks
-                    </p>
-                  </div>
-                  <Switch
-                    checked={responseHandling.optOut.enabled}
-                    onCheckedChange={(checked) =>
-                      setResponseHandling(prev => ({
-                        ...prev,
-                        optOut: { ...prev.optOut, enabled: checked }
-                      }))
-                    }
-                  />
-                </div>
-
-                {responseHandling.optOut.enabled && (
-                  <div className="ml-6 space-y-4">
-                    {templateButtons.length > 0 ? (
-                      <div className="space-y-2">
-                        <Label>Select Opt-out Buttons</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Choose which quick reply buttons should trigger customer opt-out
-                        </p>
-                        <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {templateButtons.map((button: any, index: number) => (
-                            <div key={index} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`button-${index}`}
-                                checked={responseHandling.optOut.triggerButtons.includes(button.payload)}
-                                onCheckedChange={(checked) => {
-                                  setResponseHandling(prev => ({
-                                    ...prev,
-                                    optOut: {
-                                      ...prev.optOut,
-                                      triggerButtons: checked
-                                        ? [...prev.optOut.triggerButtons, button.payload]
-                                        : prev.optOut.triggerButtons.filter(p => p !== button.payload)
-                                    }
-                                  }));
-                                }}
-                              />
-
-                              <Label
-                                htmlFor={`button-${index}`}
-                                className="text-sm font-normal cursor-pointer"
-                              >
-                                {button.text}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 border border-dashed rounded-lg text-center text-muted-foreground">
-                        <AlertCircle className="w-6 h-6 mx-auto mb-2" />
-                        <p className="text-sm">
-                          No quick reply buttons found in selected template
-                        </p>
-                        <p className="text-xs">
-                          Opt-out functionality requires a template with quick reply buttons
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label>Acknowledgment Message</Label>
-                      <Textarea
-                        value={responseHandling.optOut.acknowledgmentMessage}
-                        onChange={(e) =>
-                          setResponseHandling(prev => ({
-                            ...prev,
-                            optOut: { ...prev.optOut, acknowledgmentMessage: e.target.value }
-                          }))
-                        }
-                        placeholder="Thank you. You have been unsubscribed from our messages."
-                        className="min-h-[80px]"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        This message will be sent to customers who opt out
-                      </p>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="update-contact"
-                        checked={responseHandling.optOut.updateContact}
-                        onCheckedChange={(checked) =>
-                          setResponseHandling(prev => ({
-                            ...prev,
-                            optOut: { ...prev.optOut, updateContact: checked as boolean }
-                          }))
-                        }
-                      />
-                      <Label htmlFor="update-contact" className="text-sm">
-                        Automatically update contact opt-in status
-                      </Label>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Update your campaign object to include responseHandling:
+  // Add a function to synchronize the responseHandling state with the campaign
   const updateCampaignResponseHandling = () => {
     setCampaign(prev => ({
       ...prev,
       responseHandling: responseHandling
     }));
   };
-
+  // Make sure to call this when navigating away from the response handling section
+  useEffect(() => {
+    if (activeStep !== 3 && campaign.responseHandling !== responseHandling) {
+      updateCampaignResponseHandling();
+    }
+  }, [activeStep]);
 
   // Steps configuration
   const [steps, setSteps] = useState([
     { id: 1, title: "Audience", icon: Users, isCompleted: false, isRequired: true },
     { id: 2, title: "Message", icon: MessageSquare, isCompleted: false, isRequired: true },
     { id: 3, title: "Response Handling", icon: Bell, isCompleted: false, isRequired: false, badgeText: "Recommended" },
-    { id: 4, title: "Conversion Tracking", icon: BarChart, isCompleted: false, isRequired: false, badgeText: "Optional" },
-    { id: 5, title: "Schedule", icon: Calendar, isCompleted: false, isRequired: true },
-    { id: 6, title: "Retries", icon: RefreshCw, isCompleted: false, isRequired: false, badgeText: "Optional" },
-    { id: 7, title: "Review", icon: Rocket, isCompleted: false, isRequired: true },
+
+    { id: 4, title: "Schedule", icon: BiCalendar, isCompleted: false, isRequired: true },
+    { id: 5, title: "Retries", icon: RefreshCw, isCompleted: false, isRequired: false, badgeText: "Optional" },
+    { id: 6, title: "Review", icon: Rocket, isCompleted: false, isRequired: true },
   ]);
 
   // Fetch initial data on component mount
@@ -995,6 +1044,58 @@ const CreateCampaignPage = () => {
     };
   }, [countdownInterval]);
 
+  useEffect(() => {
+    // Mark steps as completed based on campaign state
+    const updatedSteps = [...steps];
+
+    // Step 1: Audience
+    updatedSteps[0].isCompleted = Boolean(
+      campaign.name &&
+      campaign.audience.count > 0
+    );
+
+    // Step 2: Message
+    updatedSteps[1].isCompleted = Boolean(
+      (campaign.message.type === "template" && campaign.message.template) ||
+      (campaign.message.type === "custom" && campaign.message.customMessage)
+    );
+
+    // Step 3: Response Handling
+    // Mark as completed if it's enabled or if we've visited and explicitly disabled it
+    updatedSteps[2].isCompleted = Boolean(
+      activeStep > 3 ||
+      (responseHandling.enabled && (
+        (responseHandling.autoReply.enabled) ||
+        (responseHandling.workflow.enabled) ||
+        (responseHandling.optOut.enabled)
+      ))
+    );
+
+
+
+    // Step 5: Schedule
+    updatedSteps[3].isCompleted = Boolean(
+      activeStep > 4 ||
+      campaign.schedule.sendTime ||
+      activeStep === 4
+    );
+
+    // Step 6: Retries
+    // Mark as completed if retries are configured or if we've visited and explicitly disabled them
+    updatedSteps[4].isCompleted = Boolean(
+      activeStep > 5 ||
+      campaign.retries.enabled ||
+      activeStep === 5
+    );
+
+    // Step 7: Review
+    updatedSteps[5].isCompleted = activeStep === 6;
+
+    // Update steps state only if there are changes
+    if (JSON.stringify(updatedSteps) !== JSON.stringify(steps)) {
+      setSteps(updatedSteps);
+    }
+  }, [campaign, activeStep, responseHandling, steps]);
 
   // Fetch wallet balance
   const fetchWalletBalance = async () => {
@@ -1345,10 +1446,21 @@ const CreateCampaignPage = () => {
       // Update template category for cost calculation
       setSelectedTemplateCategory(template.category || "MARKETING");
 
-      // Check if template.variables exists and is an array before mapping
-      const templateVariables = Array.isArray(template.variables)
-        ? template.variables.map(variable => ({ name: variable, value: "" }))
-        : [];
+      // Fix: Check if variables field exists and correctly parse it
+      let templateVariables = [];
+      if (typeof template.variables === 'number' && template.variables > 0) {
+        // Handle case where variables is just a count
+        templateVariables = Array.from({ length: template.variables }, (_, i) => ({
+          name: `Variable ${i + 1}`,
+          value: ""
+        }));
+      } else if (Array.isArray(template.variables)) {
+        // Handle case where variables is already an array
+        templateVariables = template.variables.map(variable => ({
+          name: variable,
+          value: ""
+        }));
+      }
 
       setCampaign(prev => ({
         ...prev,
@@ -1378,7 +1490,7 @@ const CreateCampaignPage = () => {
     }));
   };
 
-  // Mark a step as completed
+  // Update completeStep function to handle renumbered steps
   const completeStep = (stepId: number) => {
     setSteps(prevSteps =>
       prevSteps.map(step =>
@@ -1386,17 +1498,19 @@ const CreateCampaignPage = () => {
       )
     );
 
-    // Move to next step
-    if (stepId < steps.length) {
-      setActiveStep(stepId + 1);
+    // Move to next step (based on ID, not array index)
+    const currentStepIndex = steps.findIndex(step => step.id === stepId);
+    if (currentStepIndex !== -1 && currentStepIndex < steps.length - 1) {
+      // Find the ID of the next step
+      const nextStepId = steps[currentStepIndex + 1].id;
+      setActiveStep(nextStepId);
+    }
 
-      // Scroll to content
-      if (contentRef.current) {
-        contentRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
+    // Scroll to content
+    if (contentRef.current) {
+      contentRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
-
   // Save campaign as draft
   const saveCampaignAsDraft = async () => {
     if (!campaign.name) {
@@ -1694,20 +1808,29 @@ const CreateCampaignPage = () => {
     <Layout>
       <div className="min-h-screen p-6">
         {/* Header */}
-        <div className="sticky top-0 z-30  ">
-          <div className="container py-4">
+        <div className="sticky top-0 z-30  backdrop-blur-sm border-b border-slate-200">
+          <div className=" py-4">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => router.push('/campaigns')}
+                  className="rounded-full h-9 w-9 hover:bg-slate-100"
                 >
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="h-5 w-5 text-slate-700" />
                 </Button>
                 <div>
-                  <h1 className="text-2xl font-semibold">Create Campaign</h1>
-                  <p className="text-sm text-gray-500">Set up a new WhatsApp campaign</p>
+                     <div className="flex items-center gap-3 ">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                   <div>
+                  <h1 className="text-2xl font-semibold text-slate-700">Create Campaign</h1>
+                  <p className="text-xs text-slate-500">Set up a new WhatsApp campaign</p>
+                  </div>
+                  </div>
+                 
                 </div>
               </div>
 
@@ -1716,6 +1839,7 @@ const CreateCampaignPage = () => {
                   variant="outline"
                   onClick={saveCampaignAsDraft}
                   disabled={isLoading}
+                  className="border-slate-200 text-slate-700 hover:bg-slate-50"
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1728,6 +1852,7 @@ const CreateCampaignPage = () => {
                 <Button
                   onClick={launchCampaign}
                   disabled={isLoading || calculateProgress() < 100}
+                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1740,26 +1865,42 @@ const CreateCampaignPage = () => {
             </div>
 
             {/* Campaign name input */}
-            <div className="max-w-2xl mb-6">
-              <Label htmlFor="campaign-name" className="text-sm font-medium mb-2 block">
-                Campaign Name
-              </Label>
-              <Input
-                id="campaign-name"
-                placeholder="Enter a descriptive name for your campaign"
-                value={campaign.name}
-                onChange={(e) => setCampaign(prev => ({ ...prev, name: e.target.value }))}
-                className="h-12 text-lg"
-              />
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-700">Campaign Details</h2>
+                  <p className="text-xs text-slate-500">Give your campaign a clear, descriptive name</p>
+                </div>
+              </div>
+
+              <div className="max-w-2xl">
+                <Label htmlFor="campaign-name" className="text-sm font-medium mb-2 block text-slate-700">
+                  Campaign Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="campaign-name"
+                  placeholder="Enter a descriptive name for your campaign"
+                  value={campaign.name}
+                  onChange={(e) => setCampaign(prev => ({ ...prev, name: e.target.value }))}
+                  className="h-12 text-lg bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Choose a name that clearly identifies this campaign's purpose
+                </p>
+              </div>
             </div>
 
             {/* Progress */}
-            <div className="mb-2">
+            <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Campaign Setup</span>
-                <span className="text-sm text-gray-500">{calculateProgress()}% complete</span>
+                <span className="text-sm font-medium text-slate-700">Campaign Setup</span>
+                <span className="text-sm text-slate-500">{calculateProgress()}% complete</span>
               </div>
-              <Progress value={calculateProgress()} className="h-2" />
+              <div className="relative">
+                <Progress value={calculateProgress()} className="h-2" />
+              
+              </div>
             </div>
           </div>
         </div>
@@ -1834,11 +1975,11 @@ const CreateCampaignPage = () => {
                       <Card>
                         <CardHeader>
                           <div className="flex items-center gap-3">
-                            <div className="bg-primary/10 p-2 rounded-full">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
                               <Users className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                              <CardTitle>Choose Your Audience</CardTitle>
+                              <CardTitle className="text-xl">Choose Your Audience</CardTitle>
                               <CardDescription>Define who will receive your campaign messages</CardDescription>
                             </div>
                           </div>
@@ -2100,165 +2241,144 @@ const CreateCampaignPage = () => {
                       <Card>
                         <CardHeader>
                           <div className="flex items-center gap-3">
-                            <div className="bg-primary/10 p-2 rounded-full">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
                               <MessageSquare className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                              <CardTitle>Create Your Message</CardTitle>
-                              <CardDescription>Craft your WhatsApp message content</CardDescription>
+                              <CardTitle className='text-xl'>Create Your Message</CardTitle>
+                              <CardDescription>Select a WhatsApp message template for your campaign</CardDescription>
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <Tabs defaultValue="template" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2 mb-6">
-                              <TabsTrigger value="template">Use Template</TabsTrigger>
-                              <TabsTrigger value="custom">Custom Message</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="template">
-                              {isLoadingTemplates ? (
-                                <div className="py-8 text-center">
-                                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary/60" />
-                                  <p className="text-muted-foreground">Loading templates...</p>
-                                </div>
-                              ) : templates.length > 0 ? (
-                                <div className="space-y-6">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                      <Label className="mb-2 block">Select a Template</Label>
-                                      <Select
-                                        value={campaign.message.template}
-                                        onValueChange={(templateId) => {
-                                          handleTemplateSelect(templateId);
-                                          // Set message type to template when template is selected
-                                          setCampaign(prev => ({
-                                            ...prev,
-                                            message: {
-                                              ...prev.message,
-                                              type: "template",
-                                              template: templateId,
-                                              customMessage: "" // Clear custom message
-                                            }
-                                          }));
-                                        }}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Choose a message template" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {templates.map((template) => (
-                                            <SelectItem key={template.id} value={template.id}>
-                                              {template.name} {template.category && `(${template.category})`}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-                                  {campaign.message.template && (
-                                    <>
-                                      <div className="bg-gray-50 rounded-lg p-4 border">
-                                        <Label className="mb-2 block">Template Preview</Label>
-                                        <div className="bg-white p-4 rounded-lg border">
-                                          <p className="whitespace-pre-wrap">
-                                            {templates.find(t => t.id === campaign.message.template)?.content}
-                                          </p>
-                                        </div>
-                                      </div>
-                                      {/* Add a conditional check here */}
-                                      {campaign.message.variables && campaign.message.variables.length > 0 ? (
-                                        <div className="border rounded-lg p-4">
-                                          <h3 className="font-medium mb-4">Fill Template Variables</h3>
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {campaign.message.variables.map((variable, index) => (
-                                              <div key={index}>
-                                                <Label htmlFor={`var-${variable.name}`} className="mb-1 block">
-                                                  {variable.name}
-                                                </Label>
-                                                <Input
-                                                  id={`var-${variable.name}`}
-                                                  placeholder={`Enter ${variable.name}`}
-                                                  value={variable.value}
-                                                  onChange={(e) => handleVariableUpdate(variable.name, e.target.value)}
-                                                />
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="border border-dashed rounded-lg p-4 text-center">
-                                          <p className="text-sm text-gray-500">
-                                            This template has no variables to fill.
-                                          </p>
-                                        </div>
-                                      )}
-
-                                      {/* Cost Estimator */}
-                                      <div className="mt-8">
-                                        <CostEstimator
-                                          audienceCount={campaign.audience.count}
-                                          templateCategory={selectedTemplateCategory}
-                                          templateId={campaign.message.template}
-                                          companyBalance={walletBalance}
-                                        />
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="border rounded-lg p-8 text-center">
-                                  <FileText className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                                  <h3 className="font-medium mb-2">No templates available</h3>
-                                  <p className="text-sm text-gray-500 max-w-md mx-auto">
-                                    You need to create WhatsApp message templates first
-                                  </p>
-                                  <Button
-                                    variant="outline"
-                                    className="mt-4"
-                                    onClick={() => router.push('/templates')}
+                          {isLoadingTemplates ? (
+                            <div className="py-8 text-center">
+                              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary/60" />
+                              <p className="text-muted-foreground">Loading templates...</p>
+                            </div>
+                          ) : templates.length > 0 ? (
+                            <div className="space-y-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium text-slate-700">Select a Template</Label>
+                                  <Select
+                                    value={campaign.message.template}
+                                    onValueChange={(templateId) => {
+                                      handleTemplateSelect(templateId);
+                                      setCampaign(prev => ({
+                                        ...prev,
+                                        message: {
+                                          ...prev.message,
+                                          type: "template",
+                                          template: templateId,
+                                          customMessage: ""
+                                        }
+                                      }));
+                                    }}
                                   >
-                                    Go to Templates
-                                  </Button>
-                                </div>
-                              )}
-                            </TabsContent>
-
-                            <TabsContent value="custom">
-                              <div className="space-y-4">
-                                <div className="bg-amber-50 text-amber-800 p-4 rounded-lg border border-amber-200 flex items-start gap-3">
-                                  <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                                  <div>
-                                    <h4 className="font-medium mb-1">Custom messages have limitations</h4>
-                                    <p className="text-sm">
-                                      WhatsApp only allows sending custom format messages to users who have messaged you in the last
-                                      24 hours. For all other users, you must use an approved template.
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <Label htmlFor="custom-message" className="mb-2 block">Message Content</Label>
-                                  <Textarea
-                                    id="custom-message"
-                                    placeholder="Enter your message here..."
-                                    rows={6}
-                                    value={campaign.message.customMessage || ""}
-                                    onChange={(e) => setCampaign(prev => ({
-                                      ...prev,
-                                      message: {
-                                        ...prev.message,
-                                        type: "custom", // Set message type to custom
-                                        customMessage: e.target.value,
-                                        template: "" // Clear template when using custom message
-                                      }
-                                    }))}
-                                    className="font-mono"
-                                  />
+                                    <SelectTrigger className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20">
+                                      <SelectValue placeholder="Choose a message template" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {templates.map((template) => (
+                                        <SelectItem key={template.id} value={template.id}>
+                                          {template.name} {template.category && `(${template.category})`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-slate-500">
+                                    Select an approved template to send to your contacts
+                                  </p>
                                 </div>
                               </div>
-                            </TabsContent>
-                          </Tabs>
+
+                              {campaign.message.template && (
+                                <>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                        Template Preview
+                                      </h3>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg border border-slate-200">
+                                      <p className="whitespace-pre-wrap">
+                                        {templates.find(t => t.id === campaign.message.template)?.content}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Template Variables */}
+                                  {campaign.message.variables && campaign.message.variables.length > 0 ? (
+                                    <div className="space-y-4">
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                          Fill Template Variables
+                                        </h3>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {campaign.message.variables.map((variable, index) => (
+                                          <div key={index} className="space-y-2">
+                                            <Label htmlFor={`var-${variable.name}`} className="text-sm font-medium text-slate-700">
+                                              {variable.name}
+                                            </Label>
+                                            <Input
+                                              id={`var-${variable.name}`}
+                                              placeholder={`Enter ${variable.name}`}
+                                              value={variable.value}
+                                              onChange={(e) => handleVariableUpdate(variable.name, e.target.value)}
+                                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="border border-dashed rounded-lg p-4 text-center">
+                                      <p className="text-sm text-slate-500">
+                                        This template has no variables to fill.
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {/* Cost Estimator */}
+                                  <div className="space-y-3 mt-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                      <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                        Campaign Cost
+                                      </h3>
+                                    </div>
+
+                                    <CostEstimator
+                                      audienceCount={campaign.audience.count}
+                                      templateCategory={selectedTemplateCategory}
+                                      templateId={campaign.message.template}
+                                      companyBalance={walletBalance}
+                                    />
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="border rounded-lg p-8 text-center">
+                              <FileText className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                              <h3 className="font-medium mb-2">No templates available</h3>
+                              <p className="text-sm text-gray-500 max-w-md mx-auto">
+                                You need to create WhatsApp message templates first
+                              </p>
+                              <Button
+                                variant="outline"
+                                className="mt-4"
+                                onClick={() => router.push('/templates')}
+                              >
+                                Go to Templates
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                         <CardFooter className="flex justify-between border-t bg-gray-50">
                           <Button
@@ -2271,11 +2391,7 @@ const CreateCampaignPage = () => {
 
                           <Button
                             onClick={() => completeStep(2)}
-                            disabled={
-                              (!campaign.message.type || campaign.message.type === "template")
-                                ? !campaign.message.template
-                                : !campaign.message.customMessage
-                            }
+                            disabled={!campaign.message.template}
                           >
                             Continue
                             <ChevronRight className="ml-2 h-4 w-4" />
@@ -2284,298 +2400,252 @@ const CreateCampaignPage = () => {
                       </Card>
                     </div>
                   )}
-
                   {/* Step 3: Response Handling */}
                   {activeStep === 3 && (
-                    <ResponseHandlingSection />
+                    <ResponseHandlingSection
+                      responseHandling={responseHandling}
+                      setResponseHandling={setResponseHandling}
+                      setCampaign={setCampaign}
+                      campaign={campaign}
+                      setActiveStep={setActiveStep}
+                      contentRef={contentRef}
+                      setSteps={setSteps}
+                      steps={steps}
+                      availableTemplates={availableTemplates}
+                      availableWorkflows={availableWorkflows}
+                      templateButtons={templateButtons}
+                    />
                   )}
 
-                  {/* Step 4: Conversion Tracking */}
+
+                  {/* Step 5: Schedule */}
                   {activeStep === 4 && (
                     <div className="space-y-6">
                       <Card>
                         <CardHeader>
                           <div className="flex items-center gap-3">
-                            <div className="bg-blue-100 p-2 rounded-full">
-                              <BarChart className="h-5 w-5 text-blue-600" />
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                              <BiCalendar className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                              <CardTitle>Conversion Tracking</CardTitle>
-                              <CardDescription>Track goals and conversions from this campaign</CardDescription>
+                              <CardTitle className="text-xl font-semibold text-slate-900">Schedule Your Campaign</CardTitle>
+                              <CardDescription className="text-slate-600">Choose when your messages will be sent</CardDescription>
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-6">
-                            <div>
-                              <h3 className="font-medium">Enable conversion tracking</h3>
-                              <p className="text-sm text-gray-500">Track specific goals and conversions from this campaign</p>
-                            </div>
-                            <Switch
-                              checked={campaign.conversionTracking.enabled}
-                              onCheckedChange={(checked) => setCampaign(prev => ({
-                                ...prev,
-                                conversionTracking: {
-                                  ...prev.conversionTracking,
-                                  enabled: checked
-                                }
-                              }))}
-                            />
-                          </div>
-
-                          {campaign.conversionTracking.enabled ? (
+                          <div className="space-y-8">
+                            {/* Schedule Settings */}
                             <div className="space-y-6">
-                              {/* Conversion Goals Section */}
-                              <div className="border rounded-lg p-5">
-                                <h3 className="font-medium mb-3">Conversion Goals</h3>
-                                <p className="text-sm text-gray-500 mb-4">
-                                  Select one or more goals to track for this campaign
-                                </p>
-
-                                <div className="space-y-4">
-                                  {/* Predefined goals */}
-                                  <div>
-                                    <Label className="mb-2 block">Standard Goals</Label>
-                                    <div className="flex flex-wrap gap-2">
-                                      {['Purchase', 'Sign Up', 'Appointment', 'Registration', 'Form Submission', 'Download'].map(goal => (
-                                        <Badge
-                                          key={goal}
-                                          variant={campaign.conversionTracking.goals.includes(goal) ? "default" : "outline"}
-                                          className="cursor-pointer py-1.5 px-3"
-                                          onClick={() => {
-                                            setCampaign(prev => {
-                                              const goals = prev.conversionTracking.goals.includes(goal)
-                                                ? prev.conversionTracking.goals.filter(g => g !== goal)
-                                                : [...prev.conversionTracking.goals, goal];
-
-                                              return {
-                                                ...prev,
-                                                conversionTracking: {
-                                                  ...prev.conversionTracking,
-                                                  goals
-                                                }
-                                              };
-                                            });
-                                          }}
-                                        >
-                                          {goal}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  {/* Custom goal */}
-                                  <div>
-                                    <Label htmlFor="custom-goal" className="mb-2 block">
-                                      Custom Goal (Optional)
-                                    </Label>
-                                    <div className="flex gap-2">
-                                      <Input
-                                        id="custom-goal"
-                                        placeholder="Enter custom goal name"
-                                        value={customGoal}
-                                        onChange={(e) => setCustomGoal(e.target.value)}
-                                      />
-                                      <Button
-                                        onClick={() => {
-                                          if (!customGoal) return;
-
-                                          setCampaign(prev => ({
-                                            ...prev,
-                                            conversionTracking: {
-                                              ...prev.conversionTracking,
-                                              goals: [...prev.conversionTracking.goals, customGoal]
-                                            }
-                                          }));
-
-                                          setCustomGoal('');
-
-                                          toast({
-                                            title: "Custom goal added",
-                                            description: `Added custom goal: ${customGoal}`,
-                                          });
-                                        }}
-                                      >
-                                        Add
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                  Timing Options
+                                </h3>
                               </div>
 
-                              {/* Tracking Method Section */}
-                              <div className="border rounded-lg p-5">
-                                <h3 className="font-medium mb-3">Tracking Method</h3>
-                                <p className="text-sm text-gray-500 mb-4">
-                                  Choose how you want to track conversions from this campaign
-                                </p>
-
-                                <div className="space-y-4">
-                                  <div className="flex items-start gap-3">
-                                    <div className="mt-1">
-                                      <Checkbox
-                                        id="tracking-link"
-                                        checked={campaign.conversionTracking.methods?.includes('link')}
-                                        onCheckedChange={(checked) => {
-                                          setCampaign(prev => {
-                                            const methods = checked
-                                              ? [...(prev.conversionTracking.methods || []), 'link']
-                                              : (prev.conversionTracking.methods || []).filter(m => m !== 'link');
-
-                                            return {
-                                              ...prev,
-                                              conversionTracking: {
-                                                ...prev.conversionTracking,
-                                                methods
-                                              }
-                                            };
-                                          });
-                                        }}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label
-                                        htmlFor="tracking-link"
-                                        className="text-base font-medium"
-                                      >
-                                        Tracking Links
-                                      </Label>
-                                      <p className="text-sm text-gray-500">
-                                        Track conversions through unique tracking links in your messages
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-start gap-3">
-                                    <div className="mt-1">
-                                      <Checkbox
-                                        id="tracking-code"
-                                        checked={campaign.conversionTracking.methods?.includes('code')}
-                                        onCheckedChange={(checked) => {
-                                          setCampaign(prev => {
-                                            const methods = checked
-                                              ? [...(prev.conversionTracking.methods || []), 'code']
-                                              : (prev.conversionTracking.methods || []).filter(m => m !== 'code');
-
-                                            return {
-                                              ...prev,
-                                              conversionTracking: {
-                                                ...prev.conversionTracking,
-                                                methods
-                                              }
-                                            };
-                                          });
-                                        }}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label
-                                        htmlFor="tracking-code"
-                                        className="text-base font-medium"
-                                      >
-                                        Tracking Pixel
-                                      </Label>
-                                      <p className="text-sm text-gray-500">
-                                        Use a tracking pixel code on your website to track conversions
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-start gap-3">
-                                    <div className="mt-1">
-                                      <Checkbox
-                                        id="tracking-api"
-                                        checked={campaign.conversionTracking.methods?.includes('api')}
-                                        onCheckedChange={(checked) => {
-                                          setCampaign(prev => {
-                                            const methods = checked
-                                              ? [...(prev.conversionTracking.methods || []), 'api']
-                                              : (prev.conversionTracking.methods || []).filter(m => m !== 'api');
-
-                                            return {
-                                              ...prev,
-                                              conversionTracking: {
-                                                ...prev.conversionTracking,
-                                                methods
-                                              }
-                                            };
-                                          });
-                                        }}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label
-                                        htmlFor="tracking-api"
-                                        className="text-base font-medium"
-                                      >
-                                        API Integration
-                                      </Label>
-                                      <p className="text-sm text-gray-500">
-                                        Track conversions via API calls from your system
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Attribution Window */}
-                              <div className="border rounded-lg p-5">
-                                <h3 className="font-medium mb-3">Attribution Window</h3>
-                                <p className="text-sm text-gray-500 mb-4">
-                                  Set how long after message delivery a conversion will be attributed to this campaign
-                                </p>
-
-                                <div>
-                                  <Label htmlFor="attribution-window" className="mb-2 block">
-                                    Attribution Window (days)
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <Label htmlFor="send-date" className="text-sm font-medium text-slate-700">
+                                    Send Date
                                   </Label>
-                                  <div className="max-w-xs">
-                                    <Select
-                                      value={String(campaign.conversionTracking.attributionWindow || 7)}
-                                      onValueChange={(value) => setCampaign(prev => ({
-                                        ...prev,
-                                        conversionTracking: {
-                                          ...prev.conversionTracking,
-                                          attributionWindow: parseInt(value)
-                                        }
-                                      }))}
-                                    >
-                                      <SelectTrigger id="attribution-window">
-                                        <SelectValue placeholder="Select attribution window" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="1">1 day</SelectItem>
-                                        <SelectItem value="3">3 days</SelectItem>
-                                        <SelectItem value="7">7 days</SelectItem>
-                                        <SelectItem value="14">14 days</SelectItem>
-                                        <SelectItem value="30">30 days</SelectItem>
-                                        <SelectItem value="90">90 days</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        className={cn(
+                                          "w-full justify-start text-left font-normal bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20",
+                                          !campaign.schedule.sendTime.split('T')[0] && "text-muted-foreground"
+                                        )}
+                                      >
+                                        <BiCalendar className="mr-2 h-4 w-4" />
+                                        {campaign.schedule.sendTime.split('T')[0] ? (
+                                          format(new Date(campaign.schedule.sendTime.split('T')[0]), "PPP")
+                                        ) : (
+                                          <span>Pick a date</span>
+                                        )}
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                      <Calendar
+                                        mode="single"
+                                        selected={campaign.schedule.sendTime.split('T')[0] ? new Date(campaign.schedule.sendTime.split('T')[0]) : undefined}
+                                        onSelect={(date) => {
+                                          if (date) {
+                                            const time = campaign.schedule.sendTime.split('T')[1] || '12:00';
+                                            const formattedDate = format(date, "yyyy-MM-dd");
+                                            setCampaign(prev => ({
+                                              ...prev,
+                                              schedule: {
+                                                ...prev.schedule,
+                                                sendTime: `${formattedDate}T${time}`
+                                              }
+                                            }));
+                                          }
+                                        }}
+                                        initialFocus
+                                      />
+                                    </PopoverContent>
+                                  </Popover>
+                                  <p className="text-xs text-slate-500">
+                                    Select the date when your campaign should be sent
+                                  </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="send-time" className="text-sm font-medium text-slate-700">
+                                    Send Time
+                                  </Label>
+                                  <div className="flex">
+                                    <Input
+                                      id="send-time"
+                                      type="time"
+                                      value={campaign.schedule.sendTime.split('T')[1] || '12:00'}
+                                      onChange={(e) => {
+                                        const time = e.target.value;
+                                        const date = campaign.schedule.sendTime.split('T')[0] || '';
+                                        setCampaign(prev => ({
+                                          ...prev,
+                                          schedule: {
+                                            ...prev.schedule,
+                                            sendTime: date ? `${date}T${time}` : `T${time}`
+                                          }
+                                        }));
+                                      }}
+                                      className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
+                                    />
+                                  </div>
+                                  <p className="text-xs text-slate-500">
+                                    Set the time in 24-hour format (HH:MM)
+                                  </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="timezone" className="text-sm font-medium text-slate-700">
+                                    Timezone
+                                  </Label>
+                                  <Select
+                                    value={campaign.schedule.timezone}
+                                    onValueChange={(value) => setCampaign(prev => ({
+                                      ...prev,
+                                      schedule: {
+                                        ...prev.schedule,
+                                        timezone: value
+                                      }
+                                    }))}
+                                  >
+                                    <SelectTrigger id="timezone" className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20">
+                                      <SelectValue placeholder="Select timezone" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {timezones.map((tz) => (
+                                        <SelectItem key={tz.value} value={tz.value}>
+                                          {tz.label} ({tz.offset})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <p className="text-xs text-slate-500">
+                                    Choose the timezone for your scheduled time
+                                  </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium text-slate-700">
+                                    Scheduled For
+                                  </Label>
+                                  <div className="flex items-center gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200 h-10">
+                                    <Clock className="h-4 w-4 text-slate-500" />
+                                    <span className="text-slate-700 text-sm">
+                                      {campaign.schedule.sendTime
+                                        ? `${format(new Date(campaign.schedule.sendTime), "PPP")} at ${format(new Date(campaign.schedule.sendTime), "p")}`
+                                        : "Send immediately when launched"
+                                      }
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-500">
+                                    Your campaign will be sent at this date and time
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Send Now Option */}
+                            <div className="space-y-6">
+                              <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                  Quick Send
+                                </h3>
+                              </div>
+
+                              <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center">
+                                    <Rocket className="h-5 w-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-amber-800">
+                                      Send Immediately
+                                    </p>
+                                    <p className="text-xs text-amber-600">
+                                      Skip scheduling and send as soon as campaign is launched
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setCampaign(prev => ({
+                                    ...prev,
+                                    schedule: {
+                                      ...prev.schedule,
+                                      sendTime: ""
+                                    }
+                                  }))}
+                                  className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50"
+                                >
+                                  <Rocket className="h-4 w-4 mr-2" />
+                                  Send Now
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Info Section */}
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <h4 className="font-medium text-blue-700 mb-1">Scheduling Information</h4>
+                                  <div className="text-sm text-blue-700 space-y-2">
+                                    <p>
+                                      If you don&apos;t select a date and time, your campaign will be sent immediately when launched.
+                                    </p>
+                                    <p>
+                                      Messages will only be sent to contacts who have opted in to receive WhatsApp messages.
+                                    </p>
+                                    <p>
+                                      For optimal engagement, consider your audience's local time when scheduling.
+                                    </p>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          ) : (
-                            <div className="border border-dashed rounded-lg p-8 text-center">
-                              <BarChart className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                              <h3 className="font-medium mb-2">No Conversion Tracking</h3>
-                              <p className="text-sm text-gray-500 max-w-md mx-auto">
-                                You haven&apos;t set up conversion tracking. Enable this feature to track the effectiveness of your campaign.
-                              </p>
-                            </div>
-                          )}
+                          </div>
                         </CardContent>
-                        <CardFooter className="flex justify-between border-t bg-gray-50">
+                        <CardFooter className="px-6 w-full flex justify-between py-4 border-t border-slate-100 flex-shrink-0 bg-white">
                           <Button
                             variant="outline"
                             onClick={() => goToStep(3)}
+                            className="hover:bg-slate-50"
                           >
                             <ChevronLeft className="mr-2 h-4 w-4" />
                             Back
                           </Button>
 
-                          <Button onClick={() => completeStep(4)}>
+                          <Button
+                            onClick={() => completeStep(4)}
+                            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
+                          >
                             Continue
                             <ChevronRight className="ml-2 h-4 w-4" />
                           </Button>
@@ -2583,144 +2653,17 @@ const CreateCampaignPage = () => {
                       </Card>
                     </div>
                   )}
-
-                  {/* Step 5: Schedule */}
+                  {/* Step 6: Retries - Enhanced with day-based intervals */}
                   {activeStep === 5 && (
                     <div className="space-y-6">
                       <Card>
                         <CardHeader>
                           <div className="flex items-center gap-3">
-                            <div className="bg-green-100 p-2 rounded-full">
-                              <Calendar className="h-5 w-5 text-green-600" />
-                            </div>
-                            <div>
-                              <CardTitle>Schedule Your Campaign</CardTitle>
-                              <CardDescription>Choose when your messages will be sent</CardDescription>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <Label htmlFor="send-date" className="mb-2 block">Send Date</Label>
-                              <Input
-                                id="send-date"
-                                type="date"
-                                value={campaign.schedule.sendTime.split('T')[0] || ''}
-                                onChange={(e) => {
-                                  const date = e.target.value;
-                                  const time = campaign.schedule.sendTime.split('T')[1] || '12:00';
-                                  setCampaign(prev => ({
-                                    ...prev,
-                                    schedule: {
-                                      ...prev.schedule,
-                                      sendTime: date ? `${date}T${time}` : ''
-                                    }
-                                  }));
-                                }}
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor="send-time" className="mb-2 block">Send Time</Label>
-                              <Input
-                                id="send-time"
-                                type="time"
-                                value={campaign.schedule.sendTime.split('T')[1] || '12:00'}
-                                onChange={(e) => {
-                                  const time = e.target.value;
-                                  const date = campaign.schedule.sendTime.split('T')[0] || '';
-                                  setCampaign(prev => ({
-                                    ...prev,
-                                    schedule: {
-                                      ...prev.schedule,
-                                      sendTime: date ? `${date}T${time}` : `T${time}`
-                                    }
-                                  }));
-                                }}
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor="timezone" className="mb-2 block">Timezone</Label>
-                              <Select
-                                value={campaign.schedule.timezone}
-                                onValueChange={(value) => setCampaign(prev => ({
-                                  ...prev,
-                                  schedule: {
-                                    ...prev.schedule,
-                                    timezone: value
-                                  }
-                                }))}
-                              >
-                                <SelectTrigger id="timezone">
-                                  <SelectValue placeholder="Select timezone" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {timezones.map((tz) => (
-                                    <SelectItem key={tz.value} value={tz.value}>
-                                      {tz.label} ({tz.offset})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="flex items-center">
-                              <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 border w-full">
-                                <Clock className="h-5 w-5 text-gray-500" />
-                                <span className="text-gray-600">
-                                  {campaign.schedule.sendTime
-                                    ? `Scheduled for ${new Date(campaign.schedule.sendTime).toLocaleString()}`
-                                    : "Send immediately when launched"
-                                  }
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <div className="flex items-start gap-3">
-                              <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <h4 className="font-medium text-blue-700 mb-1">Scheduling Information</h4>
-                                <p className="text-sm text-blue-700">
-                                  If you don&apos;t select a date and time, your campaign will be sent immediately when launched.
-                                  Messages will only be sent to contacts who have opted in to receive WhatsApp messages.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter className="flex justify-between border-t bg-gray-50">
-                          <Button
-                            variant="outline"
-                            onClick={() => goToStep(4)}
-                          >
-                            <ChevronLeft className="mr-2 h-4 w-4" />
-                            Back
-                          </Button>
-
-                          <Button onClick={() => completeStep(5)}>
-                            Continue
-                            <ChevronRight className="ml-2 h-4 w-4" />
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Step 6: Retries - Enhanced with day-based intervals */}
-                  {activeStep === 6 && (
-                    <div className="space-y-6">
-                      <Card>
-                        <CardHeader>
-                          <div className="flex items-center gap-3">
-                            <div className="bg-purple-100 p-2 rounded-full">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
                               <RefreshCw className="h-5 w-5 text-purple-600" />
                             </div>
                             <div>
-                              <CardTitle>Message Retries</CardTitle>
+                              <CardTitle className='text-xl'>Message Retries</CardTitle>
                               <CardDescription>Configure how to handle failed message deliveries</CardDescription>
                             </div>
                           </div>
@@ -3029,16 +2972,16 @@ const CreateCampaignPage = () => {
 
 
                   {/* Step 7: Review */}
-                  {activeStep === 7 && (
+                  {activeStep === 6 && (
                     <div className="space-y-6">
                       <Card>
                         <CardHeader>
                           <div className="flex items-center gap-3">
-                            <div className="bg-green-100 p-2 rounded-full">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
                               <Rocket className="h-5 w-5 text-green-600" />
                             </div>
                             <div>
-                              <CardTitle>Review and Launch</CardTitle>
+                              <CardTitle className='text-xl'>Review and Launch</CardTitle>
                               <CardDescription>Verify your campaign details before launching</CardDescription>
                             </div>
                           </div>

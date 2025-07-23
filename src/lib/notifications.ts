@@ -5,7 +5,8 @@ import {
   templateCreationEmail,
   workflowCreationEmail,
   campaignCreationEmail,
-  campaignLaunchEmail
+  campaignLaunchEmail,
+  contactImportEmail
 } from '@/lib/emailTemplates';
 
 const DASHBOARD_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -229,5 +230,69 @@ export async function sendCampaignLaunchNotification(
     }
   } catch (error) {
     console.error('Failed to send campaign launch notification:', error);
+  }
+}
+// Add this function with your other notification functions
+export async function sendContactImportNotification(
+  userId: string,
+  importData: {
+    total: number;
+    imported: number;
+    skipped: number;
+    errors: number;
+    wabaId: string;
+  }
+) {
+  try {
+    const user = await User.findById(userId).populate('companyId');
+    if (!user) return;
+
+    const company = user.companyId;
+    const dashboardUrl = `${DASHBOARD_BASE_URL}/contacts`;
+    
+    // Find WABA account name
+    const wabaAccount = user.wabaAccounts?.find((account: any) => account.wabaId === importData.wabaId);
+    const wabaName = wabaAccount?.businessName || 'WhatsApp Business Account';
+
+    const emailData = {
+      userName: user.name,
+      totalContacts: importData.total,
+      importedContacts: importData.imported,
+      skippedContacts: importData.skipped,
+      failedContacts: importData.errors,
+      wabaName: wabaName,
+      dashboardUrl,
+      importDate: new Date().toLocaleDateString(),
+      importTime: new Date().toLocaleTimeString()
+    };
+
+    const emailTemplate = contactImportEmail(emailData);
+
+    // Send to the user who imported the contacts
+    await sendEmail({
+      to: user.email,
+      subject: emailTemplate.subject,
+      text: emailTemplate.text,
+      html: emailTemplate.html
+    });
+
+    // Send to company owner if different from the importer
+    if (!user.isOwner) {
+      const owner = await User.findOne({ 
+        companyId: company._id, 
+        isOwner: true 
+      });
+      
+      if (owner && owner.email !== user.email) {
+        await sendEmail({
+          to: owner.email,
+          subject: emailTemplate.subject,
+          text: emailTemplate.text,
+          html: emailTemplate.html
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Failed to send contact import notification:', error);
   }
 }

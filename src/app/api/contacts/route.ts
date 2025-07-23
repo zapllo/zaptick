@@ -115,7 +115,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ... existing imports and code ...
 
 // Update the main GET function to handle condition groups
 export async function GET(req: NextRequest) {

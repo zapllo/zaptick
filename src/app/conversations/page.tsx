@@ -3267,8 +3267,8 @@ function ConversationsPageContent() {
                               // Enhanced System Messages
                               if (message.messageType === 'system' || message.messageType === 'note') {
                                 return (
-                                  <div key={message.id} className="flex justify-center">
-                                    <div className="bg-background/80 backdrop-blur-sm px-4 py-2 rounded-xl text-sm text-muted-foreground max-w-[80%] text-center border border-border/30 shadow-sm">
+                                  <div key={message.id} className="flex justify-center pb-6">
+                                    <div className="bg-background/80 backdrop-blur-sm  px-4 py-2 rounded-xl text-sm text-muted-foreground max-w-[80%] text-center border border-border/30 shadow-sm">
                                       {message.content}
                                     </div>
                                   </div>
@@ -3284,6 +3284,19 @@ function ConversationsPageContent() {
                                     message.senderId === "agent" ? "justify-end" : "justify-start"
                                   )}
                                 >
+                                  {message.status === 'failed' && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedErrorMessage(message);
+                                        setShowErrorDialog(true);
+                                      }}
+                                      className="flex items-center gap-1 cursor-pointer  rounded-full p-2 transition-colors group"
+                                    >
+                                      <AlertCircle className="h-6 w-6 text-red-500 group-hover:text-red-600" />
+                                      {/* <Info className="h-2 w-2 text-red-500 group-hover:text-red-600" /> */}
+                                    </button>
+
+                                  )}
                                   <div className="max-w-[65%] min-w-[120px]">
                                     {/* Sender Name - WhatsApp Style */}
                                     <div className={cn(
@@ -3305,13 +3318,10 @@ function ConversationsPageContent() {
                                     >
                                       {/* 🔥 —‑‑‑‑‑‑‑‑‑ NEW REPLY PREVIEW BLOCK ‑‑‑‑‑‑‑‑‑‑‑‑ */}
                                       {message.replyTo && (
-                                        <div className="mb-1 rounded border-l-4 border-blue-400 /10 bg-gray-200 px-2 py-2 text-xs text-muted-foreground">
+                                        <div className="mb-1  rounded border-l-4 border-blue-400 /10 bg-gray-200 px-2 py-2 text-xs text-muted-foreground">
                                           {getOriginalMessageContent(message.replyTo)}
                                         </div>
                                       )}
-                                      {/* Enhanced Message Content */}
-                                      {/* Enhanced Message Content */}
-
                                       {/* Enhanced Message Content */}
                                       {['text', 'template'].includes(message.messageType) && (
                                         <div className="pb-4">
@@ -3378,6 +3388,35 @@ function ConversationsPageContent() {
                                                 </div>
                                               )}
                                             </div>
+                                          ) : message.messageType === 'interactive' ? (
+                                            <div>
+                                              {console.log('Rendering interactive message:', message)}
+
+                                              {/* Interactive message response with enhanced visualization */}
+                                              <div className="bg-blue-50 border border-blue-100 rounded-md p-2 mb-2">
+                                                <div className="flex items-start gap-2">
+                                                  <div className="bg-blue-100 rounded-full p-1.5 mt-0.5">
+                                                    <Reply className="h-3.5 w-3.5 text-blue-600" />
+                                                  </div>
+                                                  <div>
+                                                    <p className="text-xs text-blue-600 font-medium mb-0.5">
+                                                      {message.interactiveData?.type === 'button_reply'
+                                                        ? 'Button Response'
+                                                        : message.interactiveData?.type === 'list_reply'
+                                                          ? 'List Selection'
+                                                          : 'Interactive Response'}
+                                                    </p>
+                                                    <p className="text-sm font-medium text-gray-800">
+                                                      {/* First check interactiveData.title, then fallback to content */}
+                                                      {message.interactiveData?.title || message.content}
+                                                    </p>
+                                                    {message.interactiveData?.description && (
+                                                      <p className="text-xs text-gray-600 mt-0.5">{message.interactiveData.description}</p>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
                                           ) : (
                                             // Regular text message
                                             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
@@ -3407,27 +3446,7 @@ function ConversationsPageContent() {
                                                     <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
                                                   </div>
                                                 )}
-                                                {message.status === 'failed' && (
-                                                  <TooltipProvider>
-                                                    <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                        <button
-                                                          onClick={() => {
-                                                            setSelectedErrorMessage(message);
-                                                            setShowErrorDialog(true);
-                                                          }}
-                                                          className="flex items-center gap-1 hover:bg-red-50 rounded-full p-1 transition-colors group"
-                                                        >
-                                                          <AlertCircle className="h-3 w-3 text-red-500 group-hover:text-red-600" />
-                                                          <Info className="h-2 w-2 text-red-500 group-hover:text-red-600" />
-                                                        </button>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent side="top" className="bg-red-50 border-red-200">
-                                                        <p className="text-red-800 text-xs">Message failed to send - Click for details</p>
-                                                      </TooltipContent>
-                                                    </Tooltip>
-                                                  </TooltipProvider>
-                                                )}
+
                                               </div>
                                             )}
                                           </div>
@@ -3687,20 +3706,22 @@ function ConversationsPageContent() {
                 )}
               </div>
               {replyingTo && (
-                <div className="mb-2 px-4 py-2 border-l-4 border-blue-500 bg-blue-50 text-sm text-blue-900 rounded">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <strong>{replyingTo.senderName}:</strong>
-                      <div className="truncate max-w-xs">{replyingTo.content}</div>
+                <div className='relative w-full'>
+                  <div className="mb-2 px-4 py-2 absolute -mt-24 z-[100] w-[95%]  border-l-4 border-blue-500 border-b-0 bg-blue-50 text-sm text-blue-900 rounded">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <strong>{replyingTo.senderName}:</strong>
+                        <div className="truncate max-w-xs">{replyingTo.content}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setReplyingTo(null)}
+                        className="text-blue-500"
+                      >
+                        ✕
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setReplyingTo(null)}
-                      className="text-blue-500"
-                    >
-                      ✕
-                    </Button>
                   </div>
                 </div>
               )}
@@ -3980,7 +4001,7 @@ function ConversationsPageContent() {
 
           {/* Contact Info Side Panel - enhanced with Card components */}
           <Sheet open={showInfoPanel} onOpenChange={setShowInfoPanel}>
-            <SheetContent className="w-[350px] h-full sm:w-[400px] p-0 overflow-y-scroll">
+            <SheetContent className=" h-full  p-0 overflow-y-scroll">
               <div className="h-full flex flex-col">
                 <SheetHeader className="p-6 border-b">
                   <div className="flex items-center justify-between">
@@ -3993,111 +4014,181 @@ function ConversationsPageContent() {
               </div>
             </SheetContent>
           </Sheet>
-          {/* Message Error Details Dialog */}
+          {/* Message Error Details Dialog - Modernized */}
           <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
+            <DialogContent className="max-w-2xl  m-auto  p-0 overflow-y-scroll h-fit max-h-screen">
+              <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-red-50 to-red-100/80">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/20 flex items-center justify-center">
                     <AlertCircle className="h-5 w-5 text-red-600" />
                   </div>
                   <div>
-                    <DialogTitle className="text-red-900">Message Failed to Send</DialogTitle>
-                    <DialogDescription className="text-red-700">
-                      Details about why this message couldn&apos;t be delivered
+                    <DialogTitle className="text-xl font-semibold text-slate-900">Message Failed</DialogTitle>
+                    <DialogDescription className="text-slate-600">
+                      Details about why this message couldn't be delivered
                     </DialogDescription>
                   </div>
                 </div>
               </DialogHeader>
 
               {selectedErrorMessage && (
-                <div className="space-y-4 py-4">
-                  {/* Message Preview */}
-                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                    <div className="flex items-start gap-3">
-                      <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                        <MessageSquare className="h-4 w-4 text-red-600" />
+                <div className="px-6 py-4">
+                  <div className="space-y-6">
+                    {/* Message Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Failed Message
+                        </h3>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-red-900 mb-1">Failed Message</p>
-                        <p className="text-sm text-red-800 break-words">
-                          {selectedErrorMessage.content.length > 100
-                            ? `${selectedErrorMessage.content.substring(0, 100)}...`
-                            : selectedErrorMessage.content
-                          }
-                        </p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-red-600">
-                          <span>Type: {selectedErrorMessage.messageType}</span>
-                          <span>Time: {format(new Date(selectedErrorMessage.timestamp), "MMM d, h:mm a")}</span>
+                      <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                        <div className="flex items-start gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500/10 to-red-600/20 flex items-center justify-center flex-shrink-0">
+                            <MessageSquare className="h-4 w-4 text-red-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-red-900 mb-1">Message Content</p>
+                            <div className="text-sm text-red-800 break-words bg-white/60 p-3 rounded border border-red-100">
+                              {selectedErrorMessage.content.length > 100
+                                ? `${selectedErrorMessage.content.substring(0, 100)}...`
+                                : selectedErrorMessage.content
+                              }
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 mt-3">
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                {selectedErrorMessage.messageType}
+                              </Badge>
+                              <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+                                {format(new Date(selectedErrorMessage.timestamp), "MMM d, h:mm a")}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Error Details Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Error Details
+                        </h3>
+                      </div>
+
+                      <div className="grid gap-3">
+                        {selectedErrorMessage.errorCode && (
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-600">Error Code</label>
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+                              <code className="text-sm font-mono text-slate-800">
+                                {selectedErrorMessage.errorCode}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 rounded-md hover:bg-slate-200"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedErrorMessage.errorCode);
+                                  toast({
+                                    title: "Copied to clipboard",
+                                    description: "Error code copied",
+                                    variant: "default"
+                                  });
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5 text-slate-600" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedErrorMessage.errorMessage && (
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-600">Error Message</label>
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                              <p className="text-sm text-slate-800 leading-relaxed">
+                                {selectedErrorMessage.errorMessage}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedErrorMessage.retryCount && selectedErrorMessage.retryCount > 0 && (
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-600">Retry Attempts</label>
+                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 flex items-center gap-2">
+                              <div className="h-6 w-6 rounded-full bg-amber-100 flex items-center justify-center">
+                                <RefreshCcw className="h-3 w-3 text-amber-600" />
+                              </div>
+                              <p className="text-sm text-amber-800">
+                                Failed after {selectedErrorMessage.retryCount} attempt{selectedErrorMessage.retryCount > 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Troubleshooting Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Troubleshooting
+                        </h3>
+                      </div>
+
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Info className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-blue-900 mb-2">Possible Solutions</h4>
+                            <ul className="text-sm text-blue-800 space-y-2">
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-1.5 w-1.5 text-blue-500 mt-1.5" />
+                                <span>Verify the contact&apos;s phone number format is correct</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-1.5 w-1.5 text-blue-500 mt-1.5" />
+                                <span>Confirm the contact has WhatsApp installed</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-1.5 w-1.5 text-blue-500 mt-1.5" />
+                                <span>For non-template messages, ensure the 24-hour window is active</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-1.5 w-1.5 text-blue-500 mt-1.5" />
+                                <span>For templates, check that the template is approved</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-1.5 w-1.5 text-blue-500 mt-1.5" />
+                                <span>Verify your WhatsApp Business account is in good standing</span>
+                              </li>
+                            </ul>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Error Details */}
-                  <div className="space-y-3">
-                    {selectedErrorMessage.errorCode && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Error Code</label>
-                        <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
-                          <code className="text-sm font-mono text-slate-800">
-                            {selectedErrorMessage.errorCode}
-                          </code>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedErrorMessage.errorMessage && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Error Message</label>
-                        <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
-                          <p className="text-sm text-slate-800 leading-relaxed">
-                            {selectedErrorMessage.errorMessage}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedErrorMessage.retryCount && selectedErrorMessage.retryCount > 0 && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Retry Attempts</label>
-                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                          <p className="text-sm text-amber-800">
-                            Failed {selectedErrorMessage.retryCount} time{selectedErrorMessage.retryCount > 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Common Error Solutions */}
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="text-sm font-medium text-blue-900 mb-2 flex items-center gap-2">
-                      <Info className="h-4 w-4" />
-                      Possible Solutions
-                    </h4>
-                    <ul className="text-xs text-blue-800 space-y-1 ml-6">
-                      <li>• Check if the contact&apos;s phone number is valid</li>
-                      <li>• Verify the contact has WhatsApp installed</li>
-                      <li>• Ensure the 24-hour window is active for non-template messages</li>
-                      <li>• For templates, verify the template is approved</li>
-                      <li>• Check your WhatsApp Business account status</li>
-                    </ul>
-                  </div>
                 </div>
               )}
 
-              <DialogFooter>
+              <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 gap-2 bg-gradient-to-r from-slate-50 to-slate-100/80">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowErrorDialog(false);
                     setSelectedErrorMessage(null);
                   }}
+                  className="border-slate-200 hover:bg-slate-50"
                 >
                   Close
                 </Button>
-                <Button
+                {/* <Button
                   onClick={() => {
                     // TODO: Add retry functionality here if needed
                     if (selectedErrorMessage) {
@@ -4110,11 +4201,11 @@ function ConversationsPageContent() {
                     setShowErrorDialog(false);
                     setSelectedErrorMessage(null);
                   }}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   <RefreshCcw className="h-4 w-4 mr-2" />
                   Retry Message
-                </Button>
+                </Button> */}
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -5268,10 +5359,97 @@ function ConversationsPageContent() {
 
   function ContactInfoPanel() {
     const contact = getCurrentContact();
+    const { toast } = useToast();
+
+    const [isUpdating, setIsUpdating] = useState(false);
+
     if (!contact) return null;
 
+    // Handle WhatsApp opt-in toggle
+    const handleOptInToggle = async (checked: boolean) => {
+      if (!contact) return;
+
+      setIsUpdating(true);
+
+      try {
+        // Update the contact's opt-in status
+        const response = await fetch(`/api/contacts/${contact.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...contact,
+            whatsappOptIn: checked,
+            // The API will handle adding/removing the opted-out tag
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Update the contact in the local state
+          if (selectedContact) {
+            setSelectedContact({
+              ...selectedContact,
+              whatsappOptIn: checked,
+              tags: handleOptedOutTag(selectedContact.tags || [], checked)
+            });
+          } else if (activeConversation) {
+            setActiveConversation({
+              ...activeConversation,
+              contact: {
+                ...activeConversation.contact,
+                whatsappOptIn: checked,
+                tags: handleOptedOutTag(activeConversation.contact.tags || [], checked)
+              }
+            });
+          }
+
+          toast({
+            title: checked ? "WhatsApp opt-in enabled" : "WhatsApp opt-in disabled",
+            description: checked ? "Contact can now receive marketing messages" : "Contact will only receive service messages",
+          });
+
+          // Refresh contacts to update the sidebar
+          fetchContacts();
+        } else {
+          toast({
+            title: "Failed to update contact",
+            description: data.message || "Please try again",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error("Error updating WhatsApp opt-in status:", error);
+        toast({
+          title: "Error updating contact",
+          description: "Please try again later",
+          variant: "destructive"
+        });
+      } finally {
+        setIsUpdating(false);
+      }
+    };
+
+    // Helper function to manage the opted-out tag
+    const handleOptedOutTag = (tags: string[], isOptedIn: boolean) => {
+      const updatedTags = [...tags];
+      const optedOutIndex = updatedTags.findIndex(tag => tag.toLowerCase() === 'opted-out');
+
+      if (!isOptedIn && optedOutIndex === -1) {
+        // Add opted-out tag if opted out and tag doesn't exist
+        updatedTags.push('opted-out');
+      } else if (isOptedIn && optedOutIndex !== -1) {
+        // Remove opted-out tag if opted in and tag exists
+        updatedTags.splice(optedOutIndex, 1);
+      }
+
+      return updatedTags;
+    };
+
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6 w-full p-6">
         {/* Profile Section - Modernized with gradient background */}
         <div className="relative overflow-hidden rounded-lg mb-6">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/20 to-background"></div>
@@ -5306,6 +5484,60 @@ function ConversationsPageContent() {
                 )}
               </Badge>
             </div>
+          </div>
+        </div>
+
+        {/* WhatsApp Settings - New section */}
+        <div className="bg-card rounded-lg border border-border/50 p-4">
+          <h4 className="font-medium text-foreground mb-3 flex items-center gap-2 text-primary">
+            <MessageSquare className="h-4 w-4" />
+            WhatsApp Settings
+          </h4>
+
+          <div className="bg-green-50 rounded-lg border border-green-200 p-4 transition-all hover:border-green-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h5 className="font-medium text-green-800">Marketing Messages</h5>
+                  <p className="text-xs text-green-600">
+                    Allows sending promotional content
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="whatsapp-optin-toggle"
+                  checked={contact.whatsappOptIn}
+                  onCheckedChange={handleOptInToggle}
+                  disabled={isUpdating}
+                  className="text-green-600 border-green-300 rounded focus:ring-green-500 h-5 w-5"
+                />
+                <Label
+                  htmlFor="whatsapp-optin-toggle"
+                  className={cn(
+                    "text-sm font-medium",
+                    contact.whatsappOptIn ? "text-green-800" : "text-slate-800"
+                  )}
+                >
+                  {isUpdating ? "Updating..." : (contact.whatsappOptIn ? "Opted In" : "Opted Out")}
+                </Label>
+              </div>
+            </div>
+
+            {!contact.whatsappOptIn && (
+              <div className="mt-3 pt-3 border-t border-green-200">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-700">
+                    This contact has opted out of marketing messages. You can only send them service messages or template messages.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -5399,7 +5631,7 @@ function ConversationsPageContent() {
         {/* Tags Section - Interactive tags */}
         <div className="bg-card rounded-lg border border-border/50 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium  flex items-center gap-2 text-primary">
+            <h4 className="font-medium flex items-center gap-2 text-primary">
               <Tag className="h-4 w-4" />
               Tags
             </h4>
@@ -5414,10 +5646,14 @@ function ConversationsPageContent() {
                 <Badge
                   key={index}
                   variant="outline"
-                  className="bg-accent/30 hover:bg-accent/50 border-border/80 transition-colors py-1 px-2.5 cursor-pointer group"
+                  className={cn(
+                    "bg-accent/30 hover:bg-accent/50 border-border/80 transition-colors py-1 px-2.5 cursor-pointer group",
+                    tag.toLowerCase() === 'opted-out' && "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                  )}
+                  onClick={() => handleRemoveTag(tag)}
                 >
                   {tag}
-                  <X className="h-3 w-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <X className="h-3 w-3 ml-1 " />
                 </Badge>
               ))}
             </div>
@@ -5431,7 +5667,7 @@ function ConversationsPageContent() {
         {/* Notes Section - Enhanced styling */}
         <div className="bg-card rounded-lg border border-border/50 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-foreground flex items-center gap-2 text-primary">
+            <h4 className="font-medium text- flex items-center gap-2 text-primary">
               <FileText className="h-4 w-4" />
               Notes
             </h4>

@@ -39,6 +39,21 @@ interface CampaignLaunchData {
   dashboardUrl: string;
 }
 
+
+interface ContactImportData {
+  userName: string;
+  totalContacts: number;
+  importedContacts: number;
+  skippedContacts: number;
+  failedContacts: number;
+  wabaName: string;
+  dashboardUrl: string;
+  importDate: string;
+  importTime: string;
+}
+
+
+
 export const templateCreationEmail = (data: TemplateData): EmailTemplate => ({
   subject: `New WhatsApp Template Created: ${data.templateName}`,
   text: `A new WhatsApp template "${data.templateName}" has been created by ${data.userName}. Category: ${data.templateCategory}, Language: ${data.templateLanguage}, Status: ${data.templateStatus}. View it at: ${data.dashboardUrl}`,
@@ -150,6 +165,36 @@ export const campaignLaunchEmail = (data: CampaignLaunchData): EmailTemplate => 
       </div>
 
       <p style="color: #777; font-size: 12px; margin-top: 30px;">This is an automated notification. You can monitor the campaign progress in your dashboard.</p>
+    </div>
+  `
+});
+
+export const contactImportEmail = (data: ContactImportData): EmailTemplate => ({
+  subject: `Contact Import Complete: ${data.importedContacts} Contacts Added`,
+  text: `Contact import to ${data.wabaName} has been completed by ${data.userName}. Total processed: ${data.totalContacts}, Successfully imported: ${data.importedContacts}, Skipped: ${data.skippedContacts}, Failed: ${data.failedContacts}. Completed on ${data.importDate} at ${data.importTime}. View your contacts at: ${data.dashboardUrl}`,
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/zapzap.png" alt="Zaptick Logo" style="height: 40px;" />
+      </div>
+      <h2 style="color: #333; margin-bottom: 20px;">Contact Import Complete</h2>
+      <p style="color: #555; margin-bottom: 15px;">Hello,</p>
+      <p style="color: #555; margin-bottom: 20px;">A contact import to <strong>${data.wabaName}</strong> has been completed by <strong>${data.userName}</strong>.</p>
+      
+      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin: 0 0 10px 0; color: #333;">Import Summary:</h3>
+        <p style="margin: 5px 0; color: #555;"><strong>Total Processed:</strong> ${data.totalContacts}</p>
+        <p style="margin: 5px 0; color: #22c55e;"><strong>Successfully Imported:</strong> ${data.importedContacts}</p>
+        <p style="margin: 5px 0; color: #f59e0b;"><strong>Skipped (Duplicates):</strong> ${data.skippedContacts}</p>
+        <p style="margin: 5px 0; color: ${data.failedContacts > 0 ? '#ef4444' : '#555'};"><strong>Failed:</strong> ${data.failedContacts}</p>
+        <p style="margin: 5px 0; color: #555;"><strong>Completed:</strong> ${data.importDate} at ${data.importTime}</p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${data.dashboardUrl}" style="background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">View Contacts</a>
+      </div>
+
+      <p style="color: #777; font-size: 12px; margin-top: 30px;">This is an automated notification from your WhatsApp Business account management system.</p>
     </div>
   `
 });

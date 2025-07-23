@@ -1,8 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPermission {
-  resource: string; // e.g., 'conversations', 'templates', 'dashboard', etc.
-  actions: string[]; // e.g., ['read', 'write', 'delete']
+  resource: string;
+  actions: string[];
 }
 
 export interface IRole extends Document {
@@ -55,4 +55,6 @@ const RoleSchema = new Schema<IRole>(
 // Ensure unique role names per company
 RoleSchema.index({ name: 1, companyId: 1 }, { unique: true });
 
-export default mongoose.models.Role || mongoose.model<IRole>('Role', RoleSchema);
+// Use a more robust check for model existence
+const Role = mongoose.models.Role || mongoose.model<IRole>('Role', RoleSchema);
+export default Role;

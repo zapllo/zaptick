@@ -488,112 +488,115 @@ export default function DashboardPage() {
       return (
         <div className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
+
+
+            {/* Show connection options only if no pending connection */}
+            {!pendingConnection && (
+              <ConnectWabaButton />
+            )}
             {wabaAccounts.map((account, index) => (
               <Card
                 key={account.wabaId || index}
                 className={cn(
-                  "group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1",
-                  selectedWabaId === account.wabaId 
-                    ? "border-primary shadow-lg bg-gradient-to-br from-primary/5 to-primary/10" 
-                    : "border-gray-200 bg-gradient-to-br from-white to-gray-50/50 hover:border-primary/30 wark:border-gray-700 wark:from-muted/40 wark:to-gray-800/50"
+                  "group relative overflow-hidden rounded-xl border transition-all duration-300 cursor-pointer",
+                  selectedWabaId === account.wabaId
+                    ? "border-primary shadow-md bg-gradient-to-br from-primary/5 to-primary/10"
+                    : "border-border/50 bg-card hover:border-primary/30 hover:shadow-sm"
                 )}
                 onClick={() => setSelectedWabaId(account.wabaId)}
               >
-                {/* Header stripe */}
-                {/* <div className={cn(
-                  "h-2 w-full transition-all duration-300",
-                  selectedWabaId === account.wabaId 
-                    ? "bg-gradient-to-r from-primary to-primary/80" 
-                    : "bg-gradient-to-r from-gray-200 to-gray-300 group-hover:from-primary/50 group-hover:to-primary/70"
-                )} /> */}
-                
+                {/* Header with business info */}
+                <CardHeader className="px-6 py-4 border-b border-border/50 bg-gradient-to-r from-gray-50 to-transparent">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "flex h-12 w-12 items-center justify-center rounded-xl shadow-sm transition-all duration-300",
+                      selectedWabaId === account.wabaId
+                        ? "bg-gradient-to-br from-primary to-primary/80 shadow-md"
+                        : "bg-gradient-to-br from-green-500 to-green-600 group-hover:from-primary/90 group-hover:to-primary"
+                    )}>
+                      <Users2Icon className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg text-foreground">
+                        {account.businessName}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Connected on {format(new Date(account.connectedAt), "MMM d, yyyy")}
+                      </p>
+                    </div>
+
+                    {/* Selection indicator */}
+                    {selectedWabaId === account.wabaId && (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10">
+                        <CheckCircle className="h-4 w-4 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+
                 {/* Status badges */}
                 <div className="absolute top-4 right-4 flex gap-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-800">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-1" />
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse mr-1.5" />
                     Active
                   </Badge>
                   {account.provider === 'interakt' && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 wark:bg-blue-900/30 wark:text-blue-400 wark:border-blue-800">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                       Interakt
                     </Badge>
                   )}
                 </div>
 
-                <CardContent className="p-6 pt-4 mt-">
-                  <div className="space-y-4">
-                    {/* Business info */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
-                          <Users2Icon className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gray-900 wark:text-white">
-                            {account.businessName}
-                          </h3>
-                          <p className="text-sm text-gray-500 wark:text-gray-400">
-                            Connected on {format(new Date(account.connectedAt), "MMM d, yyyy")}
-                          </p>
-                        </div>
+                <CardContent className="p-6 space-y-4">
+                  {/* Account details */}
+                  <div className="space-y-3">
+                    {/* Phone number */}
+                    <div className="group">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-muted-foreground block mb-1">Phone Number</label>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-3 p-2.5 rounded-md bg-accent/30 border border-border/50 hover:border-accent transition-colors">
+                        <Phone className="h-4 w-4 text-primary flex-shrink-0" />
+                        <span className="text-sm font-medium font-mono truncate">
+                          {account.phoneNumber || "No phone number"}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Account details */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 wark:bg-gray-800/50">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 wark:bg-green-900/30">
-                          <Phone className="h-4 w-4 text-green-600 wark:text-green-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 wark:text-white">Phone Number</p>
-                          <p className="text-sm text-gray-600 wark:text-gray-300 font-mono">
-                            {account.phoneNumber || "No phone number"}
-                          </p>
-                        </div>
+                    {/* WABA ID */}
+                    <div className="group">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-muted-foreground block mb-1">WABA ID</label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">Copy WABA ID</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
-                      
-                      {/* <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 wark:bg-gray-800/50">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 wark:bg-blue-900/30">
-                          <MessageSquare className="h-4 w-4 text-blue-600 wark:text-blue-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 wark:text-white">Templates</p>
-                          <p className="text-sm text-gray-600 wark:text-gray-300">
-                            {account.templateCount || 0} message templates
-                          </p>
-                        </div>
+                      <div className="p-2.5 rounded-md bg-accent/30 border border-border/50 hover:border-accent transition-colors">
+                        <p className="text-sm font-mono truncate">
+                          {account.wabaId}
+                        </p>
                       </div>
-                       */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50/50 wark:bg-gray-800/50 cursor-help">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 wark:bg-purple-900/30">
-                                <User className="h-4 w-4 text-purple-600 wark:text-purple-400" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 wark:text-white">WABA ID</p>
-                                <p className="text-sm text-gray-600 wark:text-gray-300 font-mono truncate">
-                                  {account.wabaId}
-                                </p>
-                              </div>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="font-mono text-xs">{account.wabaId}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
                     </div>
                   </div>
                 </CardContent>
-                
-                <CardFooter className="p-6 pt-0 flex gap-3">
+
+                <CardFooter className="px-6 py-4 border-t border-border/50 flex gap-3 bg-gradient-to-r from-gray-50 to-transparent">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1 hover:bg-gray-50 wark:hover:bg-gray-800"
+                    className="flex-1 border-border/80 hover:bg-accent/30"
                     asChild
                   >
                     <Link href="/templates">
@@ -605,9 +608,9 @@ export default function DashboardPage() {
                     size="sm"
                     className={cn(
                       "flex-1 transition-all duration-200",
-                      selectedWabaId === account.wabaId 
-                        ? "bg-primary hover:bg-primary/90 shadow-md" 
-                        : "bg-gray-900 hover:bg-gray-800 wark:bg-gray-100 wark:hover:bg-gray-200 wark:text-gray-900"
+                      selectedWabaId === account.wabaId
+                        ? "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-sm"
+                        : "bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white"
                     )}
                     onClick={() => setSelectedWabaId(account.wabaId)}
                   >
@@ -625,26 +628,12 @@ export default function DashboardPage() {
                   </Button>
                 </CardFooter>
 
-                {/* Selection indicator */}
-                {/* {selectedWabaId === account.wabaId && (
-                  <div className="absolute top-4 left-4">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary shadow-lg">
-                      <CheckCircle className="h-4 w-4 text-white" />
-                    </div>
-                  </div>
-                )} */}
-
-                {/* Hover overlay */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                {/* Subtle highlight effect on hover */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
               </Card>
             ))}
-
-            {/* Show connection options only if no pending connection */}
-            {!pendingConnection && (
-              <ConnectWabaButton />
-            )}
           </div>
-          
+
           {/* Manual connect section */}
           <ManualWabaConnect />
         </div>
@@ -822,7 +811,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-purple-200 bg-gradient-to-br from-white to-purple-50/30 wark:from-muted/40 wark:to-purple-900/10">
+              <Card className="group h-fit cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-purple-200 bg-gradient-to-br from-white to-purple-50/30 wark:from-muted/40 wark:to-purple-900/10">
                 <a href="/campaigns/create">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -837,7 +826,7 @@ export default function DashboardPage() {
                 </a>
               </Card>
 
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-white to-blue-50/30 wark:from-muted/40 wark:to-blue-900/10">
+              <Card className="group h-fit cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-white to-blue-50/30 wark:from-muted/40 wark:to-blue-900/10">
                 <Link href="/templates">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -852,7 +841,7 @@ export default function DashboardPage() {
                 </Link>
               </Card>
 
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-green-200 bg-gradient-to-br from-white to-green-50/30 wark:from-muted/40 wark:to-green-900/10">
+              <Card className="group h-fit cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-green-200 bg-gradient-to-br from-white to-green-50/30 wark:from-muted/40 wark:to-green-900/10">
                 <a href="/contacts">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -867,7 +856,7 @@ export default function DashboardPage() {
                 </a>
               </Card>
 
-              <Card className="group cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-amber-200 bg-gradient-to-br from-white to-amber-50/30 wark:from-muted/40 wark:to-amber-900/10">
+              <Card className="group h-fit cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-amber-200 bg-gradient-to-br from-white to-amber-50/30 wark:from-muted/40 wark:to-amber-900/10">
                 <a href="/contacts/import">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -877,7 +866,7 @@ export default function DashboardPage() {
                       <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all duration-200" />
                     </div>
                     <h3 className="font-semibold group-hover:text-amber-600 transition-colors">Create Workflows</h3>
-                    <p className="text-sm text-gray-600 wark:text-gray-300 mt-1">Create and manage multi-step automation sequences</p>
+                    <p className="text-sm text-gray-600 wark:text-gray-300 mt-1">Create automation sequences</p>
                   </CardContent>
                 </a>
               </Card>
@@ -892,7 +881,7 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
-                    <Phone className="h-5 w-5 text-white" />
+                    <FaWhatsapp className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <CardTitle className="text-xl">WhatsApp Business Accounts</CardTitle>
@@ -1929,7 +1918,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" className="gap-2 hover:bg-blue-50 wark:hover:bg-blue-900/20">
-                    View all 
+                    View all
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>

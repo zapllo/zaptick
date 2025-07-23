@@ -133,6 +133,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import AudienceFilter from "@/components/filters/AudienceFilter";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import ImportMappingDialog from "@/components/contacts/importMappingDialog";
 
 type FieldType = 'Text' | 'Number' | 'Date' | 'Dropdown';
 
@@ -263,10 +264,13 @@ export default function ContactsPage() {
     actions: true
   });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [isAudienceFilterActive, setIsAudienceFilterActive] = useState(false);
+  // Inside the ContactsPage component, add these new state variables
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+
 
   useEffect(() => {
     fetchWabaAccounts();
@@ -503,7 +507,6 @@ export default function ContactsPage() {
       });
       return;
     }
-
     const missingRequiredFields = customFields
       .filter(field => field.required)
       .filter(field => {
@@ -521,6 +524,8 @@ export default function ContactsPage() {
     }
 
     try {
+      // Process tags
+      let tagsArray = editContact.tags.split(',').map(tag => tag.trim()).filter(Boolean);
       const response = await fetch(`/api/contacts/${editContact.id}`, {
         method: 'PUT',
         headers: {
@@ -531,8 +536,8 @@ export default function ContactsPage() {
           phone: editContact.phone,
           countryCode: editContact.countryCode,
           email: editContact.email,
-          whatsappOptIn: editContact.whatsappOptIn, // Add this
-          tags: editContact.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+          whatsappOptIn: editContact.whatsappOptIn, // This should now be correctly sent
+          tags: tagsArray,
           notes: editContact.notes,
           customFields: editContact.customFields || {}
         }),
@@ -929,57 +934,27 @@ export default function ContactsPage() {
       .map(([key]) => key);
   }, [columnVisibility]);
 
+  // Update the import click handler
   const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedWabaId) {
-      return;
-    }
-
-    setImportLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('wabaId', selectedWabaId);
-
-      const response = await fetch('/api/contacts/import', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast({
-          title: "Import Successful",
-          description: `Imported ${data.results.imported} contacts. Skipped ${data.results.skipped}. Failed ${data.results.errors}.`,
-        });
-        fetchContacts();
-      } else {
-        toast({
-          title: "Import Failed",
-          description: data.error || "Failed to import contacts",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error importing contacts:', error);
+    if (!selectedWabaId) {
       toast({
-        title: "Import Failed",
-        description: "An error occurred while importing contacts",
+        title: "Error",
+        description: "Please select a WhatsApp Business Account first",
         variant: "destructive",
       });
-    } finally {
-      setImportLoading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      return;
     }
+    setIsImportDialogOpen(true);
   };
+
+  // Add this handler for when import is complete
+  const handleImportComplete = () => {
+    fetchContacts();
+    setImportLoading(false);
+  };
+
+
+
 
   const handleExportContacts = async () => {
     if (!selectedWabaId) {
@@ -1214,13 +1189,7 @@ export default function ContactsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <input
-                    type="file"
-                    accept=".csv"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
+
 
                   <Button
                     variant="outline"
@@ -2343,7 +2312,7 @@ export default function ContactsPage() {
                                 <MessageSquare className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <Label htmlFor="whatsapp-optin" className="text-sm font-medium text-green-800">
+                                <Label htmlFor="edit-whatsapp-optin" className="text-sm font-medium text-green-800">
                                   WhatsApp Marketing Messages
                                 </Label>
                                 <p className="text-xs text-green-600">
@@ -2353,14 +2322,20 @@ export default function ContactsPage() {
                             </div>
                             <div className="flex items-center space-x-2">
                               <input
-                                id="whatsapp-optin"
+                                id="edit-whatsapp-optin"
                                 type="checkbox"
-                                checked={newContact.whatsappOptIn}
-                                onChange={(e) => setNewContact({ ...newContact, whatsappOptIn: e.target.checked })}
+                                checked={editContact.whatsappOptIn}
+                                onChange={(e) => {
+                                  console.log("Checkbox changed:", e.target.checked); // Add debug logging
+                                  setEditContact({
+                                    ...editContact,
+                                    whatsappOptIn: e.target.checked
+                                  });
+                                }}
                                 className="w-5 h-5 text-green-600 border-green-300 rounded focus:ring-green-500"
                               />
-                              <Label htmlFor="whatsapp-optin" className="text-sm font-medium text-green-800">
-                                {newContact.whatsappOptIn ? 'Opted In' : 'Opted Out'}
+                              <Label htmlFor="edit-whatsapp-optin" className="text-sm font-medium text-green-800">
+                                {editContact.whatsappOptIn ? 'Opted In' : 'Opted Out'}
                               </Label>
                             </div>
                           </div>
@@ -3275,7 +3250,12 @@ export default function ContactsPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-
+              <ImportMappingDialog
+                open={isImportDialogOpen}
+                onOpenChange={setIsImportDialogOpen}
+                onImportComplete={handleImportComplete}
+                wabaId={selectedWabaId}
+              />
               {/* Edit Tag Dialog */}
               <Dialog open={isEditTagDialogOpen} onOpenChange={setIsEditTagDialogOpen}>
                 <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col p-0">

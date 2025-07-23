@@ -128,6 +128,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { formatCurrency } from "@/lib/pricing";
+import { Label } from "@/components/ui/label";
 
 // Define campaign types
 interface Campaign {
@@ -393,7 +394,66 @@ const CampaignsPage = () => {
       setSelectedCampaign(null);
     }
   };
+  const exportCampaigns = () => {
+    try {
+      // Generate CSV headers
+      const headers = [
+        'Campaign Name',
+        'Type',
+        'Status',
+        'Audience Size',
+        'Created Date',
+        'Scheduled Date',
+        'Delivered',
+        'Read',
+        'Replied',
+        'Conversions'
+      ].join(',');
 
+      // Generate CSV rows from campaigns data
+      const rows = filteredCampaigns.map(campaign => {
+        return [
+          `"${campaign.name.replace(/"/g, '""')}"`, // Escape quotes in names
+          campaign.type,
+          campaign.status,
+          campaign.audience.count,
+          format(new Date(campaign.createdAt), "yyyy-MM-dd"),
+          campaign.scheduleTime ? format(new Date(campaign.scheduleTime), "yyyy-MM-dd HH:mm") : 'N/A',
+          campaign.metrics?.delivered || 0,
+          campaign.metrics?.read || 0,
+          campaign.metrics?.replied || 0,
+          campaign.metrics?.conversions || 0
+        ].join(',');
+      }).join('\n');
+
+      // Combine headers and rows
+      const csvContent = `${headers}\n${rows}`;
+
+      // Create a Blob with the CSV data
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      // Create a URL for the Blob
+      const url = URL.createObjectURL(blob);
+
+      // Create a temporary link element to trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `whatsapp-campaigns-${format(new Date(), "yyyy-MM-dd")}.csv`);
+      document.body.appendChild(link);
+
+      // Trigger the download
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Campaign data exported successfully");
+    } catch (error) {
+      console.error("Error exporting campaigns:", error);
+      toast.error("Failed to export campaign data");
+    }
+  };
   // Handle campaign status change
   const handleCampaignStatusChange = async (campaignId: string, newStatus: string) => {
     try {
@@ -472,9 +532,7 @@ const CampaignsPage = () => {
                   variant="outline"
                   size="sm"
                   className="gap-2"
-                  onClick={() => {
-                    toast.success("Campaign data exported successfully");
-                  }}
+                  onClick={exportCampaigns}
                 >
                   <Download className="h-4 w-4" />
                   Export
@@ -1370,252 +1428,320 @@ const CampaignsPage = () => {
               open={isViewDetailsOpen}
               onOpenChange={setIsViewDetailsOpen}
             >
-              <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[700px] max-h-[95vh] flex flex-col p-0">
                 {selectedCampaign ? (
                   <>
-                    <DialogHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <DialogTitle className="text-xl font-semibold flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-br from-primary/10 to-primary/20 rounded-lg">
-                              <Rocket className="h-6 w-6 text-primary" />
-                            </div>
+                    <DialogHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                          <Rocket className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <DialogTitle className="text-xl font-semibold text-slate-900">
                             {selectedCampaign.name}
                           </DialogTitle>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(selectedCampaign.status)}
-                            <Badge variant="outline" className="capitalize">
-                              {selectedCampaign.type.replace('-', ' ')} Campaign
-                            </Badge>
-                          </div>
+                          <DialogDescription className="text-slate-600">
+                            {selectedCampaign.type.replace('-', ' ')} campaign • Created {format(new Date(selectedCampaign.createdAt), "MMM dd, yyyy")}
+                          </DialogDescription>
                         </div>
                       </div>
                     </DialogHeader>
 
-                    <Tabs defaultValue="overview" className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="overview" className="gap-2">
-                          <Eye className="h-4 w-4" />
-                          Overview
-                        </TabsTrigger>
-                        <TabsTrigger value="performance" className="gap-2">
-                          <BarChart3 className="h-4 w-4" />
-                          Performance
-                        </TabsTrigger>
-                        <TabsTrigger value="audience" className="gap-2">
-                          <Users className="h-4 w-4" />
-                          Audience
-                        </TabsTrigger>
-                      </TabsList>
+                    <div className="flex-1 overflow-y-auto px-6 py-6">
+                      <div className="space-y-8">
+                        {/* Campaign Status */}
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                              Campaign Status
+                            </h3>
+                          </div>
 
-                      <TabsContent value="overview" className="space-y-6 pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                                Campaign Details
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-muted-foreground">Type</span>
-                                <div className="flex items-center gap-2">
-                                  {getTypeIcon(selectedCampaign.type)}
-                                  <span className="font-medium capitalize">{selectedCampaign.type.replace('-', ' ')}</span>
-                                </div>
+                          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                                <Activity className="h-5 w-5 text-slate-700" />
                               </div>
-                              <Separator />
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-muted-foreground">Status</span>
-                                {getStatusBadge(selectedCampaign.status)}
+                              <div>
+                                <p className="text-sm font-medium text-slate-800">
+                                  Current Status
+                                </p>
+                                <p className="text-xs text-slate-600">
+                                  {selectedCampaign.status === "active" ? "Campaign is currently active and sending messages" :
+                                    selectedCampaign.status === "paused" ? "Campaign is paused and not sending messages" :
+                                      selectedCampaign.status === "scheduled" ? "Campaign is scheduled to run later" :
+                                        selectedCampaign.status === "draft" ? "Campaign is a draft and not yet launched" :
+                                          selectedCampaign.status === "completed" ? "Campaign has completed all message deliveries" :
+                                            "Campaign failed to deliver some messages"}
+                                </p>
                               </div>
-                              <Separator />
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-muted-foreground">Audience Size</span>
-                                <div className="flex items-center gap-1">
-                                  <Users className="h-4 w-4 text-muted-foreground" />
-                                  <span className="font-medium">{selectedCampaign.audience.count.toLocaleString()}</span>
-                                </div>
-                              </div>
-                              <Separator />
-                              <div className="flex justify-between items-center py-2">
-                                <span className="text-muted-foreground">Created</span>
-                                <span className="font-medium">
-                                  {format(new Date(selectedCampaign.createdAt), "MMM dd, yyyy 'at' HH:mm")}
-                                </span>
-                              </div>
-                              {selectedCampaign.scheduleTime && (
-                                <>
-                                  <Separator />
-                                  <div className="flex justify-between items-center py-2">
-                                    <span className="text-muted-foreground">Scheduled</span>
-                                    <div className="flex items-center gap-1">
-                                      <Clock className="h-4 w-4 text-muted-foreground" />
-                                      <span className="font-medium">
-                                        {format(new Date(selectedCampaign.scheduleTime), "MMM dd, yyyy 'at' HH:mm")}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </CardContent>
-                          </Card>
-
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                                Performance Summary
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              {selectedCampaign.metrics ? (
-                                <div className="space-y-4">
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Delivered</span>
-                                      <span className="text-sm font-medium">
-                                        {selectedCampaign.metrics.delivered} / {selectedCampaign.audience.count}
-                                      </span>
-                                    </div>
-                                    <Progress
-                                      value={calculateProgress(
-                                        selectedCampaign.metrics.delivered,
-                                        selectedCampaign.audience.count
-                                      )}
-                                      className="h-2"
-                                    />
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Read</span>
-                                      <span className="text-sm font-medium">
-                                        {selectedCampaign.metrics.read} / {selectedCampaign.metrics.delivered}
-                                      </span>
-                                    </div>
-                                    <Progress
-                                      value={calculateProgress(
-                                        selectedCampaign.metrics.read,
-                                        selectedCampaign.metrics.delivered
-                                      )}
-                                      className="h-2"
-                                    />
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Replied</span>
-                                      <span className="text-sm font-medium">
-                                        {selectedCampaign.metrics.replied} / {selectedCampaign.metrics.delivered}
-                                      </span>
-                                    </div>
-                                    <Progress
-                                      value={calculateProgress(
-                                        selectedCampaign.metrics.replied,
-                                        selectedCampaign.metrics.delivered
-                                      )}
-                                      className="h-2"
-                                    />
-                                  </div>
-
-                                  {selectedCampaign.metrics.conversions !== undefined && (
-                                    <div className="space-y-2">
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-sm">Conversions</span>
-                                        <span className="text-sm font-medium">
-                                          {selectedCampaign.metrics.conversions} / {selectedCampaign.metrics.delivered}
-                                        </span>
-                                      </div>
-                                      <Progress
-                                        value={calculateProgress(
-                                          selectedCampaign.metrics.conversions,
-                                          selectedCampaign.metrics.delivered
-                                        )}
-                                        className="h-2"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col items-center justify-center py-8 text-center">
-                                  <BarChart className="h-8 w-8 text-muted-foreground mb-3" />
-                                  <p className="text-muted-foreground">
-                                    {selectedCampaign.status === "draft" || selectedCampaign.status === "scheduled"
-                                      ? "Campaign has not started yet"
-                                      : "No metrics available"}
-                                  </p>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
+                            </div>
+                            <div>
+                              {getStatusBadge(selectedCampaign.status, selectedCampaign)}
+                            </div>
+                          </div>
                         </div>
 
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                        {/* Campaign Details */}
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                              Campaign Details
+                            </h3>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-slate-700">
+                                Campaign Type
+                              </Label>
+                              <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-slate-200">
+                                {getTypeIcon(selectedCampaign.type)}
+                                <span className="font-medium capitalize">
+                                  {selectedCampaign.type.replace('-', ' ')} Campaign
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-slate-700">
+                                Audience Size
+                              </Label>
+                              <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-slate-200">
+                                <Users className="h-4 w-4 text-blue-600" />
+                                <span className="font-medium">
+                                  {selectedCampaign.audience.count.toLocaleString()} contacts
+                                </span>
+                              </div>
+                            </div>
+
+                            {selectedCampaign.scheduleTime && (
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-slate-700">
+                                  Scheduled Time
+                                </Label>
+                                <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-slate-200">
+                                  <Clock className="h-4 w-4 text-amber-600" />
+                                  <span className="font-medium">
+                                    {format(new Date(selectedCampaign.scheduleTime), "MMM dd, yyyy 'at' HH:mm")}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Performance Metrics */}
+                        {selectedCampaign.metrics && (
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                Performance Metrics
+                              </h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-slate-700">
+                                  Delivery Rate
+                                </Label>
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Send className="h-4 w-4 text-green-600" />
+                                      <span className="text-sm font-medium">
+                                        {selectedCampaign.metrics.delivered} of {selectedCampaign.audience.count} messages
+                                      </span>
+                                    </div>
+                                    <span className="font-medium">
+                                      {calculateProgress(selectedCampaign.metrics.delivered, selectedCampaign.audience.count)}%
+                                    </span>
+                                  </div>
+                                  <Progress
+                                    value={calculateProgress(selectedCampaign.metrics.delivered, selectedCampaign.audience.count)}
+                                    className="h-2 bg-slate-200"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-slate-700">
+                                  Read Rate
+                                </Label>
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle className="h-4 w-4 text-blue-600" />
+                                      <span className="text-sm font-medium">
+                                        {selectedCampaign.metrics.read} of {selectedCampaign.metrics.delivered} delivered
+                                      </span>
+                                    </div>
+                                    <span className="font-medium">
+                                      {calculateProgress(selectedCampaign.metrics.read, selectedCampaign.metrics.delivered)}%
+                                    </span>
+                                  </div>
+                                  <Progress
+                                    value={calculateProgress(selectedCampaign.metrics.read, selectedCampaign.metrics.delivered)}
+                                    className="h-2 bg-slate-200"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-slate-700">
+                                  Reply Rate
+                                </Label>
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <MessageSquare className="h-4 w-4 text-purple-600" />
+                                      <span className="text-sm font-medium">
+                                        {selectedCampaign.metrics.replied} of {selectedCampaign.metrics.delivered} delivered
+                                      </span>
+                                    </div>
+                                    <span className="font-medium">
+                                      {calculateProgress(selectedCampaign.metrics.replied, selectedCampaign.metrics.delivered)}%
+                                    </span>
+                                  </div>
+                                  <Progress
+                                    value={calculateProgress(selectedCampaign.metrics.replied, selectedCampaign.metrics.delivered)}
+                                    className="h-2 bg-slate-200"
+                                  />
+                                </div>
+                              </div>
+
+                              {selectedCampaign.metrics.conversions !== undefined && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium text-slate-700">
+                                    Conversion Rate
+                                  </Label>
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <Target className="h-4 w-4 text-amber-600" />
+                                        <span className="text-sm font-medium">
+                                          {selectedCampaign.metrics.conversions} of {selectedCampaign.metrics.delivered} delivered
+                                        </span>
+                                      </div>
+                                      <span className="font-medium">
+                                        {calculateProgress(selectedCampaign.metrics.conversions, selectedCampaign.metrics.delivered)}%
+                                      </span>
+                                    </div>
+                                    <Progress
+                                      value={calculateProgress(selectedCampaign.metrics.conversions, selectedCampaign.metrics.delivered)}
+                                      className="h-2 bg-slate-200"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* If no metrics available */}
+                        {!selectedCampaign.metrics && (
+                          <div className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center mb-4">
+                              <BarChart className="h-8 w-8 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2">No performance data available</h3>
+                            <p className="text-sm text-slate-600 text-center max-w-md">
+                              {selectedCampaign.status === "draft" || selectedCampaign.status === "scheduled"
+                                ? "This campaign hasn't started yet. Performance metrics will be available once the campaign is active."
+                                : "No performance data is available for this campaign."}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Campaign Actions */}
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
                               Campaign Actions
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex flex-wrap gap-3">
-                              {selectedCampaign.status === "draft" && (
+                            </h3>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {selectedCampaign.status === "draft" && (
+                              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                                    <Settings className="h-5 w-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-blue-800">
+                                      Edit Campaign
+                                    </p>
+                                    <p className="text-xs text-blue-600">
+                                      Modify campaign settings and content
+                                    </p>
+                                  </div>
+                                </div>
                                 <Button
                                   variant="outline"
-                                  onClick={() => router.push(`/campaigns/edit/${selectedCampaign.id}`)}
-                                  className="gap-2"
+                                  onClick={() => {
+                                    setIsViewDetailsOpen(false);
+                                    router.push(`/campaigns/edit/${selectedCampaign.id}`);
+                                  }}
+                                  className="bg-white border-blue-200 text-blue-700 hover:bg-blue-50"
                                 >
-                                  <Settings className="h-4 w-4" />
-                                  Edit Campaign
+                                  <Settings className="h-4 w-4 mr-2" />
+                                  Edit
                                 </Button>
-                              )}
+                              </div>
+                            )}
 
-                              {selectedCampaign.status === "active" && (
+                            {selectedCampaign.status === "active" && (
+                              <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center">
+                                    <PauseCircle className="h-5 w-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-amber-800">
+                                      Pause Campaign
+                                    </p>
+                                    <p className="text-xs text-amber-600">
+                                      Temporarily stop sending messages
+                                    </p>
+                                  </div>
+                                </div>
                                 <Button
                                   variant="outline"
                                   onClick={() => {
                                     handleCampaignStatusChange(selectedCampaign.id, "paused");
                                     setIsViewDetailsOpen(false);
                                   }}
-                                  className="gap-2"
+                                  className="bg-white border-amber-200 text-amber-700 hover:bg-amber-50"
                                 >
-                                  <PauseCircle className="h-4 w-4" />
-                                  Pause Campaign
+                                  <PauseCircle className="h-4 w-4 mr-2" />
+                                  Pause
                                 </Button>
-                              )}
+                              </div>
+                            )}
 
-                              {selectedCampaign.status === "paused" && (
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    handleCampaignStatusChange(selectedCampaign.id, "active");
-                                    setIsViewDetailsOpen(false);
-                                  }}
-                                  className="gap-2"
-                                >
-                                  <PlayCircle className="h-4 w-4" />
-                                  Resume Campaign
-                                </Button>
-                              )}
 
-                              {selectedCampaign.status !== "active" && selectedCampaign.status !== "completed" && (
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    setIsViewDetailsOpen(false);
-                                    setTimeout(() => {
-                                      setSelectedCampaign(selectedCampaign);
-                                      setIsDuplicateDialogOpen(true);
-                                    }, 100);
-                                  }}
-                                  className="gap-2"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                  Duplicate Campaign
-                                </Button>
-                              )}
 
+                            <div className="flex items-center justify-between w-96 p-4 bg-red-50 rounded-lg border border-red-200">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center">
+                                  <Trash2 className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-red-800">
+                                    Delete Campaign
+                                  </p>
+                                  <p className="text-xs text-red-600">
+                                    Permanently remove this campaign
+                                  </p>
+                                </div>
+                              </div>
                               <Button
-                                variant="destructive"
+                                variant="outline"
                                 onClick={() => {
                                   setIsViewDetailsOpen(false);
                                   setTimeout(() => {
@@ -1623,228 +1749,136 @@ const CampaignsPage = () => {
                                     setIsDeleteDialogOpen(true);
                                   }, 100);
                                 }}
-                                className="gap-2"
+                                className="bg-white border-red-200 text-red-700 hover:bg-red-50"
                               >
-                                <Trash2 className="h-4 w-4" />
-                                Delete Campaign
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
                               </Button>
                             </div>
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
-
-                      <TabsContent value="performance" className="space-y-6 pt-6">
-                        {selectedCampaign.metrics ? (
-                          <>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                              <Card>
-                                <CardContent className="pt-6">
-                                  <div className="flex items-center justify-between">
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-medium">Delivery Rate</p>
-                                      <p className="text-sm text-muted-foreground">Messages successfully sent</p>
-                                    </div>
-                                    <div className="p-3 bg-primary/10 rounded-xl">
-                                      <Send className="h-5 w-5 text-primary" />
-                                    </div>
-                                  </div>
-                                  <div className="mt-4">
-                                    <div className="text-2xl font-bold">
-                                      {selectedCampaign.audience.count > 0
-                                        ? `${Math.round((selectedCampaign.metrics.delivered / selectedCampaign.audience.count) * 100)}%`
-                                        : "0%"}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {selectedCampaign.metrics.delivered} of {selectedCampaign.audience.count} messages
-                                    </p>
-                                  </div>
-                                </CardContent>
-                              </Card>
-
-                              <Card>
-                                <CardContent className="pt-6">
-                                  <div className="flex items-center justify-between">
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-medium">Read Rate</p>
-                                      <p className="text-sm text-muted-foreground">Messages opened and read</p>
-                                    </div>
-                                    <div className="p-3 bg-green-100 rounded-xl">
-                                      <CheckCircle className="h-5 w-5 text-green-600" />
-                                    </div>
-                                  </div>
-                                  <div className="mt-4">
-                                    <div className="text-2xl font-bold">
-                                      {selectedCampaign.metrics.delivered > 0
-                                        ? `${Math.round((selectedCampaign.metrics.read / selectedCampaign.metrics.delivered) * 100)}%`
-                                        : "0%"}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {selectedCampaign.metrics.read} of {selectedCampaign.metrics.delivered} delivered
-                                    </p>
-                                  </div>
-                                </CardContent>
-                              </Card>
-
-                              <Card>
-                                <CardContent className="pt-6">
-                                  <div className="flex items-center justify-between">
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-medium">Reply Rate</p>
-                                      <p className="text-sm text-muted-foreground">Recipients who responded</p>
-                                    </div>
-                                    <div className="p-3 bg-blue-100 rounded-xl">
-                                      <MessageSquare className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                  </div>
-                                  <div className="mt-4">
-                                    <div className="text-2xl font-bold">
-                                      {selectedCampaign.metrics.delivered > 0
-                                        ? `${Math.round((selectedCampaign.metrics.replied / selectedCampaign.metrics.delivered) * 100)}%`
-                                        : "0%"}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {selectedCampaign.metrics.replied} of {selectedCampaign.metrics.delivered} delivered
-                                    </p>
-                                  </div>
-                                </CardContent>
-                              </Card>
-
-                              {selectedCampaign.metrics.conversions !== undefined && (
-                                <Card>
-                                  <CardContent className="pt-6">
-                                    <div className="flex items-center justify-between">
-                                      <div className="space-y-1">
-                                        <p className="text-sm font-medium">Conversion Rate</p>
-                                        <p className="text-sm text-muted-foreground">Campaign goals achieved</p>
-                                      </div>
-                                      <div className="p-3 bg-amber-100 rounded-xl">
-                                        <Target className="h-5 w-5 text-amber-600" />
-                                      </div>
-                                    </div>
-                                    <div className="mt-4">
-                                      <div className="text-2xl font-bold">
-                                        {selectedCampaign.metrics.delivered > 0
-                                          ? `${Math.round((selectedCampaign.metrics.conversions / selectedCampaign.metrics.delivered) * 100)}%`
-                                          : "0%"}
-                                      </div>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {selectedCampaign.metrics.conversions} of {selectedCampaign.metrics.delivered} delivered
-                                      </p>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              )}
-                            </div>
-
-                            <Card>
-                              <CardHeader>
-                                <CardTitle>Performance Metrics</CardTitle>
-                                <CardDescription>
-                                  Detailed campaign performance analytics
-                                </CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="h-[300px] flex items-center justify-center">
-                                  <div className="text-center">
-                                    <BarChart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold mb-2">Detailed Analytics Coming Soon</h3>
-                                    <p className="text-muted-foreground max-w-md mx-auto">
-                                      Enhanced campaign analytics with detailed charts and insights will be available in a future update.
-                                    </p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center py-16 text-center">
-                            <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                              <BarChart className="h-10 w-10 text-primary" />
-                            </div>
-                            <h3 className="text-xl font-semibold text-slate-900 mb-2">No performance data available</h3>
-                            <p className="text-muted-foreground max-w-md mx-auto">
-                              {selectedCampaign.status === "draft" || selectedCampaign.status === "scheduled"
-                                ? "This campaign hasn't started yet. Performance metrics will be available once the campaign is active."
-                                : "No performance data is available for this campaign."}
-                            </p>
                           </div>
-                        )}
-                      </TabsContent>
-
-                      <TabsContent value="audience" className="space-y-6 pt-6">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                              <Users className="h-5 w-5" />
-                              Audience Overview
-                            </CardTitle>
-                            <CardDescription>
-                              {selectedCampaign.audience.count.toLocaleString()} contacts targeted in this campaign
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-center py-16">
-                              <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <Users className="h-10 w-10 text-primary" />
+                          {selectedCampaign.status === "paused" && (
+                            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                                  <PlayCircle className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-green-800">
+                                    Resume Campaign
+                                  </p>
+                                  <p className="text-xs text-green-600">
+                                    Continue sending paused messages
+                                  </p>
+                                </div>
                               </div>
-                              <h3 className="text-xl font-semibold text-slate-900 mb-2">Audience Details Coming Soon</h3>
-                              <p className="text-muted-foreground max-w-md mx-auto">
-                                Detailed audience information and segmentation will be available in a future update.
-                              </p>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  handleCampaignStatusChange(selectedCampaign.id, "active");
+                                  setIsViewDetailsOpen(false);
+                                }}
+                                className="bg-white border-green-200 text-green-700 hover:bg-green-50"
+                              >
+                                <PlayCircle className="h-4 w-4 mr-2" />
+                                Resume
+                              </Button>
                             </div>
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
-                    </Tabs>
+                          )}
 
-                    <DialogFooter className="bg-slate-50 -mx-6 -mb-6 px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        {selectedCampaign.status === "draft" && (
-                          <Button
-                            variant="outline"
-                            onClick={() => router.push(`/campaigns/edit/${selectedCampaign.id}`)}
-                            className="gap-2"
-                          >
-                            <Settings className="h-4 w-4" />
-                            Edit Campaign
-                          </Button>
-                        )}
-                        {selectedCampaign.status !== "active" && selectedCampaign.status !== "completed" && (
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setIsViewDetailsOpen(false);
-                              setTimeout(() => {
-                                setSelectedCampaign(selectedCampaign);
-                                setIsDuplicateDialogOpen(true);
-                              }, 100);
-                            }}
-                            className="gap-2"
-                          >
-                            <Copy className="h-4 w-4" />
-                            Duplicate
-                          </Button>
-                        )}
+                          {selectedCampaign.status !== "active" && selectedCampaign.status !== "completed" && (
+                            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
+                                  <Copy className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-purple-800">
+                                    Duplicate Campaign
+                                  </p>
+                                  <p className="text-xs text-purple-600">
+                                    Create a copy with the same settings
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setIsViewDetailsOpen(false);
+                                  setTimeout(() => {
+                                    setSelectedCampaign(selectedCampaign);
+                                    setIsDuplicateDialogOpen(true);
+                                  }, 100);
+                                }}
+                                className="bg-white border-purple-200 text-purple-700 hover:bg-purple-50"
+                              >
+                                <Copy className="h-4 w-4 mr-2" />
+                                Duplicate
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsViewDetailsOpen(false)}
+                        className="hover:bg-slate-50"
+                      >
+                        Close
+                      </Button>
+                      {selectedCampaign.status === "active" && (
                         <Button
-                          variant="destructive"
+                          onClick={() => {
+                            handleCampaignStatusChange(selectedCampaign.id, "paused");
+                            setIsViewDetailsOpen(false);
+                          }}
+                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                        >
+                          <PauseCircle className="h-4 w-4 mr-2" />
+                          Pause Campaign
+                        </Button>
+                      )}
+                      {selectedCampaign.status === "paused" && (
+                        <Button
+                          onClick={() => {
+                            handleCampaignStatusChange(selectedCampaign.id, "active");
+                            setIsViewDetailsOpen(false);
+                          }}
+                          className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                        >
+                          <PlayCircle className="h-4 w-4 mr-2" />
+                          Resume Campaign
+                        </Button>
+                      )}
+                      {selectedCampaign.status === "draft" && (
+                        <Button
                           onClick={() => {
                             setIsViewDetailsOpen(false);
-                            setTimeout(() => {
-                              setSelectedCampaign(selectedCampaign);
-                              setIsDeleteDialogOpen(true);
-                            }, 100);
+                            router.push(`/campaigns/edit/${selectedCampaign.id}`);
                           }}
-                          className="gap-2"
+                          className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
                         >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
+                          <Settings className="h-4 w-4 mr-2" />
+                          Edit Campaign
                         </Button>
-                      </div>
+                      )}
                     </DialogFooter>
                   </>
                 ) : (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin" />
+                  <div className="flex items-center justify-center p-12">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                      <div className="relative">
+                        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Rocket className="w-6 h-6 text-primary animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-slate-600">Loading campaign details...</p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </DialogContent>
