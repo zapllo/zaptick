@@ -4025,7 +4025,7 @@ function ConversationsPageContent() {
                   <div>
                     <DialogTitle className="text-xl font-semibold text-slate-900">Message Failed</DialogTitle>
                     <DialogDescription className="text-slate-600">
-                      Details about why this message couldn't be delivered
+                      Details about why this message couldn&apos;t be delivered
                     </DialogDescription>
                   </div>
                 </div>

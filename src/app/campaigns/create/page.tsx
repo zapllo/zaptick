@@ -1886,7 +1886,7 @@ const CreateCampaignPage = () => {
                   className="h-12 text-lg bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Choose a name that clearly identifies this campaign's purpose
+                  Choose a name that clearly identifies this campaign&apos;s purpose
                 </p>
               </div>
             </div>
@@ -2624,7 +2624,7 @@ const CreateCampaignPage = () => {
                                       Messages will only be sent to contacts who have opted in to receive WhatsApp messages.
                                     </p>
                                     <p>
-                                      For optimal engagement, consider your audience's local time when scheduling.
+                                      For optimal engagement, consider your audience&apos;s local time when scheduling.
                                     </p>
                                   </div>
                                 </div>
