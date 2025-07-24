@@ -393,7 +393,7 @@ export default function PricingPage() {
               <Separator orientation="vertical" className="h-6" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">WhatsApp Business API Pricing</h1>
-                <p className="text-sm text-gray-600">A marketing automation tool that doesn't burn the pocket</p>
+                <p className="text-sm text-gray-600">A marketing automation tool that doesn&apos;t burn the pocket</p>
               </div>
             </div>
           </div>
