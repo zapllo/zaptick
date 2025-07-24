@@ -692,7 +692,7 @@ export default function Demo() {
                 Ready to see Zaptick in your business?
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Schedule a personalized demo with our experts. We'll show you exactly how Zaptick can transform your WhatsApp communication.
+                Schedule a personalized demo with our experts. We&apos;ll show you exactly how Zaptick can transform your WhatsApp communication.
               </p>
             </motion.div>
 
