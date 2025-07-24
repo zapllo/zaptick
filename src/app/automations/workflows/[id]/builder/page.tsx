@@ -678,7 +678,7 @@ function WorkflowBuilderContent() {
     );
   }
 
-  
+
   return (
     <Layout>
       <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
@@ -1170,60 +1170,85 @@ function WorkflowBuilderContent() {
 
           {/* Node Properties Panel */}
           <Sheet open={isNodePanelOpen} onOpenChange={setIsNodePanelOpen}>
-            <SheetContent className="w-96 p-6">
-              <SheetHeader className="pb-6">
-                <SheetTitle className="text-xl font-bold text-gray-900">Node Properties</SheetTitle>
-                <SheetDescription className="text-gray-600">
-                  Configure the selected node settings and behavior
-                </SheetDescription>
+            <SheetContent className="sm:max-w-[800px] max-h-[100vh] flex flex-col p-0 overflow-hidden">
+              <SheetHeader className="px-6 py-4 border-b border-slate-300 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                    <Settings className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <SheetTitle className="text-xl font-semibold text-slate-900">
+                      Node Properties
+                    </SheetTitle>
+                    <SheetDescription className="text-slate-600">
+                      Configure the selected node settings and behavior
+                    </SheetDescription>
+                  </div>
+                </div>
               </SheetHeader>
 
               {selectedNode && (
-                <div className="h-full pb-6 overflow-y-auto">
-                  <div className="space-y-6">
-                    {/* Node Info */}
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-white rounded-lg shadow-sm">
-                            {selectedNode.type === 'action' ? (
-                              actionTemplates.find(t => t.type === selectedNode.data.config?.actionType)?.icon ? (
-                                React.createElement(actionTemplates.find(t => t.type === selectedNode.data.config?.actionType)!.icon, {
-                                  className: "h-5 w-5 text-gray-700"
-                                })
+                <div className="flex-1 overflow-y-auto px-6 py-6">
+                  <div className="space-y-8">
+                    {/* Node Information */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Node Information
+                        </h3>
+                      </div>
+
+                      <Card className="bg-slate-50/50 border-slate-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-200">
+                              {selectedNode.type === 'action' ? (
+                                actionTemplates.find(t => t.type === selectedNode.data.config?.actionType)?.icon ? (
+                                  React.createElement(actionTemplates.find(t => t.type === selectedNode.data.config?.actionType)!.icon, {
+                                    className: "h-5 w-5 text-slate-700"
+                                  })
+                                ) : (
+                                  <Send className="h-5 w-5 text-slate-700" />
+                                )
                               ) : (
-                                <Send className="h-5 w-5 text-gray-700" />
-                              )
-                            ) : (
-                              nodeTemplates.find(t => t.type === selectedNode.type)?.icon && (
-                                React.createElement(nodeTemplates.find(t => t.type === selectedNode.type)!.icon, {
-                                  className: "h-5 w-5 text-gray-700"
-                                })
-                              )
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-gray-900">{selectedNode.data.label}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="capitalize">
-                                {selectedNode.type}
-                              </Badge>
-                              {selectedNode.data.config?.actionType && (
-                                <Badge variant="secondary" className="capitalize">
-                                  {selectedNode.data.config.actionType.replace('_', ' ')}
-                                </Badge>
+                                nodeTemplates.find(t => t.type === selectedNode.type)?.icon && (
+                                  React.createElement(nodeTemplates.find(t => t.type === selectedNode.type)!.icon, {
+                                    className: "h-5 w-5 text-slate-700"
+                                  })
+                                )
                               )}
                             </div>
+                            <div>
+                              <h4 className="font-semibold text-slate-900">{selectedNode.data.label}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="capitalize border-slate-300 text-slate-600">
+                                  {selectedNode.type}
+                                </Badge>
+                                {selectedNode.data.config?.actionType && (
+                                  <Badge variant="secondary" className="capitalize bg-slate-100 text-slate-700">
+                                    {selectedNode.data.config.actionType.replace('_', ' ')}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </div>
 
                     {/* Basic Settings */}
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="node-label" className="text-sm font-medium text-gray-700">
-                          Node Label
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Basic Settings
+                        </h3>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="node-label" className="text-sm font-medium text-slate-700">
+                          Node Label <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="node-label"
@@ -1237,19 +1262,25 @@ function WorkflowBuilderContent() {
                               )
                             );
                           }}
-                          className="mt-1"
+                          className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                         />
                       </div>
+                    </div>
 
-                      {/* Type-specific configuration */}
-                      {selectedNode.type === 'trigger' && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-sm">Trigger Configuration</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div>
-                              <Label htmlFor="trigger-keywords" className="text-sm font-medium">
+                    {/* Type-specific Configuration */}
+                    {selectedNode.type === 'trigger' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Trigger Configuration
+                          </h3>
+                        </div>
+
+                        <Card className="bg-white border-slate-200">
+                          <CardContent className="p-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="trigger-keywords" className="text-sm font-medium text-slate-700">
                                 Keywords (comma-separated)
                               </Label>
                               <Input
@@ -1274,23 +1305,32 @@ function WorkflowBuilderContent() {
                                     )
                                   );
                                 }}
-                                className="mt-1"
+                                className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                               />
+                              <p className="text-xs text-slate-500">
+                                Add keywords that will trigger this workflow
+                              </p>
                             </div>
                           </CardContent>
                         </Card>
-                      )}
+                      </div>
+                    )}
 
-                      {selectedNode.type === 'action' && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-sm">Action Configuration</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
+                    {selectedNode.type === 'action' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Action Configuration
+                          </h3>
+                        </div>
+
+                        <Card className="bg-white border-slate-200">
+                          <CardContent className="p-4 space-y-6">
                             {/* Action Type Selection */}
-                            <div>
-                              <Label htmlFor="action-type" className="text-sm font-medium">
-                                Action Type
+                            <div className="space-y-2">
+                              <Label htmlFor="action-type" className="text-sm font-medium text-slate-700">
+                                Action Type <span className="text-red-500">*</span>
                               </Label>
                               <Select
                                 value={selectedNode.data.config?.actionType || 'send_message'}
@@ -1315,7 +1355,7 @@ function WorkflowBuilderContent() {
                                   );
                                 }}
                               >
-                                <SelectTrigger className="mt-1">
+                                <SelectTrigger className="bg-white border-slate-200">
                                   <SelectValue placeholder="Select action type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1330,9 +1370,9 @@ function WorkflowBuilderContent() {
 
                             {/* Send Message Configuration */}
                             {selectedNode.data.config?.actionType === 'send_message' && (
-                              <div className="space-y-3">
-                                <div>
-                                  <Label htmlFor="message-type" className="text-sm font-medium">
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="message-type" className="text-sm font-medium text-slate-700">
                                     Message Type
                                   </Label>
                                   <Select
@@ -1356,7 +1396,7 @@ function WorkflowBuilderContent() {
                                       );
                                     }}
                                   >
-                                    <SelectTrigger className="mt-1">
+                                    <SelectTrigger className="bg-white border-slate-200">
                                       <SelectValue placeholder="Select message type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1367,10 +1407,10 @@ function WorkflowBuilderContent() {
                                 </div>
 
                                 {selectedNode.data.config?.messageType === 'template' ? (
-                                  <div className="space-y-3">
-                                    <div>
-                                      <Label htmlFor="template-name" className="text-sm font-medium">
-                                        Template Name
+                                  <div className="space-y-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="template-name" className="text-sm font-medium text-slate-700">
+                                        Template Name <span className="text-red-500">*</span>
                                       </Label>
                                       <Input
                                         id="template-name"
@@ -1394,11 +1434,11 @@ function WorkflowBuilderContent() {
                                             )
                                           );
                                         }}
-                                        className="mt-1"
+                                        className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                       />
                                     </div>
-                                    <div>
-                                      <Label htmlFor="template-language" className="text-sm font-medium">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="template-language" className="text-sm font-medium text-slate-700">
                                         Template Language
                                       </Label>
                                       <Input
@@ -1423,14 +1463,14 @@ function WorkflowBuilderContent() {
                                             )
                                           );
                                         }}
-                                        className="mt-1"
+                                        className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                       />
                                     </div>
                                   </div>
                                 ) : (
-                                  <div>
-                                    <Label htmlFor="action-message" className="text-sm font-medium">
-                                      Message Content
+                                  <div className="space-y-2">
+                                    <Label htmlFor="action-message" className="text-sm font-medium text-slate-700">
+                                      Message Content <span className="text-red-500">*</span>
                                     </Label>
                                     <Textarea
                                       id="action-message"
@@ -1454,7 +1494,7 @@ function WorkflowBuilderContent() {
                                           )
                                         );
                                       }}
-                                      className="mt-1"
+                                      className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
                                       rows={4}
                                     />
                                   </div>
@@ -1464,10 +1504,10 @@ function WorkflowBuilderContent() {
 
                             {/* Send Button Configuration */}
                             {selectedNode.data.config?.actionType === 'send_button' && (
-                              <div className="space-y-3">
-                                <div>
-                                  <Label htmlFor="button-text" className="text-sm font-medium">
-                                    Button Message Text
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="button-text" className="text-sm font-medium text-slate-700">
+                                    Button Message Text <span className="text-red-500">*</span>
                                   </Label>
                                   <Textarea
                                     id="button-text"
@@ -1491,17 +1531,17 @@ function WorkflowBuilderContent() {
                                         )
                                       );
                                     }}
-                                    className="mt-1"
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
                                     rows={3}
                                   />
                                 </div>
-                                <div>
-                                  <Label className="text-sm font-medium">Buttons</Label>
-                                  <div className="mt-2 space-y-2">
+                                <div className="space-y-3">
+                                  <Label className="text-sm font-medium text-slate-700">Buttons</Label>
+                                  <div className="space-y-3">
                                     {(selectedNode.data.config?.buttons || []).map((button: any, index: number) => (
-                                      <div key={index} className="space-y-2 p-3 border rounded-lg">
+                                      <div key={index} className="p-4 border border-slate-200 rounded-lg bg-slate-50/30 space-y-3">
                                         <div className="flex items-center justify-between">
-                                          <span className="text-sm font-medium">Button {index + 1}</span>
+                                          <span className="text-sm font-medium text-slate-700">Button {index + 1}</span>
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -1525,14 +1565,14 @@ function WorkflowBuilderContent() {
                                                 )
                                               );
                                             }}
-                                            className="h-6 w-6 p-0"
+                                            className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
                                           >
                                             <X className="h-3 w-3" />
                                           </Button>
                                         </div>
 
-                                        <div>
-                                          <Label className="text-xs">Button Type</Label>
+                                        <div className="space-y-2">
+                                          <Label className="text-xs font-medium text-slate-600">Button Type</Label>
                                           <Select
                                             value={button.type || 'QUICK_REPLY'}
                                             onValueChange={(value) => {
@@ -1556,7 +1596,7 @@ function WorkflowBuilderContent() {
                                               );
                                             }}
                                           >
-                                            <SelectTrigger className="mt-1">
+                                            <SelectTrigger className="bg-white border-slate-200">
                                               <SelectValue placeholder="Select button type" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -1567,14 +1607,13 @@ function WorkflowBuilderContent() {
                                           </Select>
                                         </div>
 
-                                        <div>
-                                          <Label className="text-xs">Button Text</Label>
+                                        <div className="space-y-2">
+                                          <Label className="text-xs font-medium text-slate-600">Button Text</Label>
                                           <Input
                                             placeholder="Button text"
                                             value={button.text || ''}
                                             onChange={(e) => {
                                               const newButtons = [...(selectedNode.data.config?.buttons || [])];
-                                              // Auto-generate ID based on text if not provided
                                               const buttonId = button.id || e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '_') || `btn_${index + 1}`;
                                               newButtons[index] = {
                                                 ...button,
@@ -1598,13 +1637,13 @@ function WorkflowBuilderContent() {
                                                 )
                                               );
                                             }}
-                                            className="mt-1"
+                                            className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                           />
                                         </div>
 
                                         {button.type === 'URL' && (
-                                          <div>
-                                            <Label className="text-xs">URL</Label>
+                                          <div className="space-y-2">
+                                            <Label className="text-xs font-medium text-slate-600">URL</Label>
                                             <Input
                                               placeholder="https://example.com"
                                               value={button.url || ''}
@@ -1628,14 +1667,14 @@ function WorkflowBuilderContent() {
                                                   )
                                                 );
                                               }}
-                                              className="mt-1"
+                                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                             />
                                           </div>
                                         )}
 
                                         {button.type === 'PHONE_NUMBER' && (
-                                          <div>
-                                            <Label className="text-xs">Phone Number</Label>
+                                          <div className="space-y-2">
+                                            <Label className="text-xs font-medium text-slate-600">Phone Number</Label>
                                             <Input
                                               placeholder="+1234567890"
                                               value={button.phone_number || ''}
@@ -1659,7 +1698,7 @@ function WorkflowBuilderContent() {
                                                   )
                                                 );
                                               }}
-                                              className="mt-1"
+                                              className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                             />
                                           </div>
                                         )}
@@ -1692,7 +1731,7 @@ function WorkflowBuilderContent() {
                                           )
                                         );
                                       }}
-                                      className="w-full"
+                                      className="w-full border-dashed border-slate-300 hover:border-primary/50 hover:bg-primary/5"
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add Button
@@ -1704,12 +1743,12 @@ function WorkflowBuilderContent() {
 
                             {/* Send Media Configuration */}
                             {selectedNode.data.config?.actionType === 'send_media' && (
-                              <div className="space-y-3">
-                                <div>
-                                  <Label htmlFor="media-url" className="text-sm font-medium">
-                                    Media URL or Handle
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="media-url" className="text-sm font-medium text-slate-700">
+                                    Media URL or Handle <span className="text-red-500">*</span>
                                   </Label>
-                                  <div className="flex gap-2 mt-1">
+                                  <div className="flex gap-2">
                                     <Input
                                       id="media-url"
                                       placeholder="https://example.com/image.jpg or media handle"
@@ -1732,7 +1771,7 @@ function WorkflowBuilderContent() {
                                           )
                                         );
                                       }}
-                                      className="flex-1"
+                                      className="flex-1 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                     />
                                     <Button
                                       variant="outline"
@@ -1768,17 +1807,18 @@ function WorkflowBuilderContent() {
                                         input.click();
                                       }}
                                       disabled={isUploadingMedia}
+                                      className="border-slate-200 hover:bg-slate-50"
                                     >
                                       {isUploadingMedia ? (
-                                        <div className="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+                                        <div className="animate-spin h-3 w-3 border border-slate-400 border-t-transparent rounded-full" />
                                       ) : (
                                         <Upload className="h-3 w-3" />
                                       )}
                                     </Button>
                                   </div>
                                 </div>
-                                <div>
-                                  <Label htmlFor="media-caption" className="text-sm font-medium">
+                                <div className="space-y-2">
+                                  <Label htmlFor="media-caption" className="text-sm font-medium text-slate-700">
                                     Caption (Optional)
                                   </Label>
                                   <Textarea
@@ -1803,7 +1843,7 @@ function WorkflowBuilderContent() {
                                         )
                                       );
                                     }}
-                                    className="mt-1"
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
                                     rows={3}
                                   />
                                 </div>
@@ -1812,12 +1852,12 @@ function WorkflowBuilderContent() {
 
                             {/* Send Video Configuration */}
                             {selectedNode.data.config?.actionType === 'send_video' && (
-                              <div className="space-y-3">
-                                <div>
-                                  <Label htmlFor="video-url" className="text-sm font-medium">
-                                    Video URL or Handle
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="video-url" className="text-sm font-medium text-slate-700">
+                                    Video URL or Handle <span className="text-red-500">*</span>
                                   </Label>
-                                  <div className="flex gap-2 mt-1">
+                                  <div className="flex gap-2">
                                     <Input
                                       id="video-url"
                                       placeholder="https://example.com/video.mp4 or video handle"
@@ -1840,7 +1880,7 @@ function WorkflowBuilderContent() {
                                           )
                                         );
                                       }}
-                                      className="flex-1"
+                                      className="flex-1 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                     />
                                     <Button
                                       variant="outline"
@@ -1876,17 +1916,18 @@ function WorkflowBuilderContent() {
                                         input.click();
                                       }}
                                       disabled={isUploadingMedia}
+                                      className="border-slate-200 hover:bg-slate-50"
                                     >
                                       {isUploadingMedia ? (
-                                        <div className="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+                                        <div className="animate-spin h-3 w-3 border border-slate-400 border-t-transparent rounded-full" />
                                       ) : (
                                         <Upload className="h-3 w-3" />
                                       )}
                                     </Button>
                                   </div>
                                 </div>
-                                <div>
-                                  <Label htmlFor="video-caption" className="text-sm font-medium">
+                                <div className="space-y-2">
+                                  <Label htmlFor="video-caption" className="text-sm font-medium text-slate-700">
                                     Caption (Optional)
                                   </Label>
                                   <Textarea
@@ -1911,7 +1952,7 @@ function WorkflowBuilderContent() {
                                         )
                                       );
                                     }}
-                                    className="mt-1"
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
                                     rows={3}
                                   />
                                 </div>
@@ -1920,10 +1961,10 @@ function WorkflowBuilderContent() {
 
                             {/* Send List Configuration */}
                             {selectedNode.data.config?.actionType === 'send_list' && (
-                              <div className="space-y-3">
-                                <div>
-                                  <Label htmlFor="list-text" className="text-sm font-medium">
-                                    List Message Text
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="list-text" className="text-sm font-medium text-slate-700">
+                                    List Message Text <span className="text-red-500">*</span>
                                   </Label>
                                   <Textarea
                                     id="list-text"
@@ -1947,13 +1988,13 @@ function WorkflowBuilderContent() {
                                         )
                                       );
                                     }}
-                                    className="mt-1"
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20 resize-none"
                                     rows={3}
                                   />
                                 </div>
-                                <div>
-                                  <Label htmlFor="list-button-text" className="text-sm font-medium">
-                                    Button Text
+                                <div className="space-y-2">
+                                  <Label htmlFor="list-button-text" className="text-sm font-medium text-slate-700">
+                                    Button Text <span className="text-red-500">*</span>
                                   </Label>
                                   <Input
                                     id="list-button-text"
@@ -1977,16 +2018,16 @@ function WorkflowBuilderContent() {
                                         )
                                       );
                                     }}
-                                    className="mt-1"
+                                    className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                   />
                                 </div>
-                                <div>
-                                  <Label className="text-sm font-medium">List Sections</Label>
-                                  <div className="mt-2 space-y-3">
+                                <div className="space-y-3">
+                                  <Label className="text-sm font-medium text-slate-700">List Sections</Label>
+                                  <div className="space-y-4">
                                     {(selectedNode.data.config?.sections || []).map((section: any, sectionIndex: number) => (
-                                      <div key={sectionIndex} className="p-3 border rounded-lg space-y-2">
+                                      <div key={sectionIndex} className="p-4 border border-slate-200 rounded-lg bg-slate-50/30 space-y-3">
                                         <div className="flex items-center justify-between">
-                                          <span className="text-sm font-medium">Section {sectionIndex + 1}</span>
+                                          <span className="text-sm font-medium text-slate-700">Section {sectionIndex + 1}</span>
                                           <Button
                                             variant="ghost"
                                             size="sm"
@@ -2010,7 +2051,7 @@ function WorkflowBuilderContent() {
                                                 )
                                               );
                                             }}
-                                            className="h-6 w-6 p-0"
+                                            className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
                                           >
                                             <X className="h-3 w-3" />
                                           </Button>
@@ -2038,9 +2079,10 @@ function WorkflowBuilderContent() {
                                               )
                                             );
                                           }}
+                                          className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                         />
-                                        <div className="space-y-2">
-                                          <Label className="text-xs">Section Rows</Label>
+                                        <div className="space-y-3">
+                                          <Label className="text-xs font-medium text-slate-600">Section Rows</Label>
                                           {(section.rows || []).map((row: any, rowIndex: number) => (
                                             <div key={rowIndex} className="flex gap-2">
                                               <Input
@@ -2068,7 +2110,7 @@ function WorkflowBuilderContent() {
                                                     )
                                                   );
                                                 }}
-                                                className="flex-1"
+                                                className="flex-1 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                               />
                                               <Input
                                                 placeholder="Row Title"
@@ -2095,7 +2137,7 @@ function WorkflowBuilderContent() {
                                                     )
                                                   );
                                                 }}
-                                                className="flex-1"
+                                                className="flex-1 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                               />
                                               <Button
                                                 variant="ghost"
@@ -2122,7 +2164,7 @@ function WorkflowBuilderContent() {
                                                     )
                                                   );
                                                 }}
-                                                className="h-9 w-9 p-0"
+                                                className="h-9 w-9 p-0 hover:bg-red-50 hover:text-red-600"
                                               >
                                                 <X className="h-3 w-3" />
                                               </Button>
@@ -2152,7 +2194,7 @@ function WorkflowBuilderContent() {
                                                 )
                                               );
                                             }}
-                                            className="w-full"
+                                            className="w-full border-dashed border-slate-300 hover:border-primary/50 hover:bg-primary/5"
                                           >
                                             <Plus className="h-3 w-3 mr-1" />
                                             Add Row
@@ -2182,7 +2224,7 @@ function WorkflowBuilderContent() {
                                           )
                                         );
                                       }}
-                                      className="w-full"
+                                      className="w-full border-dashed border-slate-300 hover:border-primary/50 hover:bg-primary/5"
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add Section
@@ -2194,59 +2236,66 @@ function WorkflowBuilderContent() {
 
                             {/* Assign Conversation Configuration */}
                             {selectedNode.data.config?.actionType === 'assign_conversation' && (
-                              <div className="space-y-3">
-                                <div>
-                                  <Label htmlFor="assigned-to" className="text-sm font-medium">
-                                    Assign To User
-                                  </Label>
-                                  <Select
-                                    value={selectedNode.data.config?.assignedTo || ''}
-                                    onValueChange={(value) => {
-                                      setNodes((nds) =>
-                                        nds.map((node) =>
-                                          node.id === selectedNode.id
-                                            ? {
-                                              ...node,
-                                              data: {
-                                                ...node.data,
-                                                config: {
-                                                  ...node.data.config,
-                                                  assignedTo: value
-                                                }
+                              <div className="space-y-2">
+                                <Label htmlFor="assigned-to" className="text-sm font-medium text-slate-700">
+                                  Assign To User <span className="text-red-500">*</span>
+                                </Label>
+                                <Select
+                                  value={selectedNode.data.config?.assignedTo || ''}
+                                  onValueChange={(value) => {
+                                    setNodes((nds) =>
+                                      nds.map((node) =>
+                                        node.id === selectedNode.id
+                                          ? {
+                                            ...node,
+                                            data: {
+                                              ...node.data,
+                                              config: {
+                                                ...node.data.config,
+                                                assignedTo: value
                                               }
                                             }
-                                            : node
-                                        )
-                                      );
-                                    }}
-                                  >
-                                    <SelectTrigger className="mt-1">
-                                      <SelectValue placeholder="Select user to assign conversation to" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {companyUsers.map((user) => (
-                                        <SelectItem key={user._id} value={user._id}>
-                                          {user.name} ({user.email})
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+                                          }
+                                          : node
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger className="bg-white border-slate-200">
+                                    <SelectValue placeholder="Select user to assign conversation to" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {companyUsers.map((user) => (
+                                      <SelectItem key={user._id} value={user._id}>
+                                        {user.name} ({user.email})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-slate-500">
+                                  Select a team member to handle this conversation
+                                </p>
                               </div>
                             )}
                           </CardContent>
                         </Card>
-                      )}
+                      </div>
+                    )}
 
-                      {selectedNode.type === 'delay' && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-sm">Delay Configuration</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div>
-                              <Label htmlFor="delay-duration" className="text-sm font-medium">
-                                Duration (minutes)
+                    {selectedNode.type === 'delay' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Delay Configuration
+                          </h3>
+                        </div>
+
+                        <Card className="bg-white border-slate-200">
+                          <CardContent className="p-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="delay-duration" className="text-sm font-medium text-slate-700">
+                                Duration (minutes) <span className="text-red-500">*</span>
                               </Label>
                               <Input
                                 id="delay-duration"
@@ -2271,22 +2320,31 @@ function WorkflowBuilderContent() {
                                     )
                                   );
                                 }}
-                                className="mt-1"
+                                className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                               />
+                              <p className="text-xs text-slate-500">
+                                How long to wait before continuing to the next node
+                              </p>
                             </div>
                           </CardContent>
                         </Card>
-                      )}
+                      </div>
+                    )}
 
-                      {selectedNode.type === 'condition' && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-sm">Condition Configuration</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div>
-                              <Label htmlFor="condition-type" className="text-sm font-medium">
-                                Condition Type
+                    {selectedNode.type === 'condition' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Condition Configuration
+                          </h3>
+                        </div>
+
+                        <Card className="bg-white border-slate-200">
+                          <CardContent className="p-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="condition-type" className="text-sm font-medium text-slate-700">
+                                Condition Type <span className="text-red-500">*</span>
                               </Label>
                               <Select
                                 value={selectedNode.data.config?.conditionType || ''}
@@ -2309,7 +2367,7 @@ function WorkflowBuilderContent() {
                                   );
                                 }}
                               >
-                                <SelectTrigger className="mt-1">
+                                <SelectTrigger className="bg-white border-slate-200">
                                   <SelectValue placeholder="Select condition" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2320,9 +2378,9 @@ function WorkflowBuilderContent() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div>
-                              <Label htmlFor="condition-value" className="text-sm font-medium">
-                                Condition Value
+                            <div className="space-y-2">
+                              <Label htmlFor="condition-value" className="text-sm font-medium text-slate-700">
+                                Condition Value <span className="text-red-500">*</span>
                               </Label>
                               <Input
                                 id="condition-value"
@@ -2346,22 +2404,31 @@ function WorkflowBuilderContent() {
                                     )
                                   );
                                 }}
-                                className="mt-1"
+                                className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                               />
+                              <p className="text-xs text-slate-500">
+                                The text or pattern to match against incoming messages
+                              </p>
                             </div>
                           </CardContent>
                         </Card>
-                      )}
+                      </div>
+                    )}
 
-                      {selectedNode.type === 'webhook' && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-sm">Webhook Configuration</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div>
-                              <Label htmlFor="webhook-url" className="text-sm font-medium">
-                                Webhook URL
+                    {selectedNode.type === 'webhook' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                            Webhook Configuration
+                          </h3>
+                        </div>
+
+                        <Card className="bg-white border-slate-200">
+                          <CardContent className="p-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="webhook-url" className="text-sm font-medium text-slate-700">
+                                Webhook URL <span className="text-red-500">*</span>
                               </Label>
                               <Input
                                 id="webhook-url"
@@ -2386,12 +2453,12 @@ function WorkflowBuilderContent() {
                                     )
                                   );
                                 }}
-                                className="mt-1"
+                                className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                               />
                             </div>
-                            <div>
-                              <Label htmlFor="webhook-method" className="text-sm font-medium">
-                                HTTP Method
+                            <div className="space-y-2">
+                              <Label htmlFor="webhook-method" className="text-sm font-medium text-slate-700">
+                                HTTP Method <span className="text-red-500">*</span>
                               </Label>
                               <Select
                                 value={selectedNode.data.config?.webhookMethod || 'POST'}
@@ -2414,7 +2481,7 @@ function WorkflowBuilderContent() {
                                   );
                                 }}
                               >
-                                <SelectTrigger className="mt-1">
+                                <SelectTrigger className="bg-white border-slate-200">
                                   <SelectValue placeholder="Select HTTP method" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -2424,34 +2491,99 @@ function WorkflowBuilderContent() {
                                   <SelectItem value="DELETE">DELETE</SelectItem>
                                 </SelectContent>
                               </Select>
+                              <p className="text-xs text-slate-500">
+                                The HTTP method to use when calling your webhook
+                              </p>
                             </div>
                           </CardContent>
                         </Card>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Danger Zone */}
-                    <Card className="border-red-200 bg-red-50">
-                      <CardHeader>
-                        <CardTitle className="text-sm text-red-800">Danger Zone</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <Button
-                          variant="destructive"
-                          onClick={deleteSelectedNodes}
-                          className="w-full bg-red-600 hover:bg-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Node
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                          Danger Zone
+                        </h3>
+                      </div>
+
+                      <Card className="border-red-200 bg-red-50/50">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div>
+                              <h4 className="text-sm font-medium text-red-800">Delete Node</h4>
+                              <p className="text-xs text-red-600">
+                                This action cannot be undone. This will permanently delete the node and all its connections.
+                              </p>
+                            </div>
+                            <Button
+                              variant="destructive"
+                              onClick={deleteSelectedNodes}
+                              className="w-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Node
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* Footer with action buttons */}
+              <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsNodePanelOpen(false)}
+                    className="hover:bg-slate-50"
+                  >
+                    Close
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // Reset node to defaults
+                        if (selectedNode) {
+                          setNodes((nds) =>
+                            nds.map((node) =>
+                              node.id === selectedNode.id
+                                ? {
+                                  ...node,
+                                  data: {
+                                    ...node.data,
+                                    config: {}
+                                  }
+                                }
+                                : node
+                            )
+                          );
+                        }
+                      }}
+                      className="hover:bg-slate-50"
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        saveWorkflow();
+                        setIsNodePanelOpen(false);
+                      }}
+                      className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </SheetContent>
           </Sheet>
-
           {/* Settings Dialog */}
           <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
             <DialogContent className="sm:max-w-[500px]">

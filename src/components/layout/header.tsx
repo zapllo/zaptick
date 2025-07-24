@@ -24,7 +24,7 @@ export default function Header() {
   return (
     <header className={`sticky top-0 z-50 w-full transition-all duration-200 ${isScrolled ? "bg-background/95 backdrop-blur-md shadow-sm" : "bg-transparent"
       }`}>
-      <div className="container mx-auto py-4 px-4 md:px-8 flex justify-between items-center">
+      <div className=" mx-auto py-4 px-4 md:px-8 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Image src="/zapzap.png" alt="ZapTick Logo" width={150} height={150} />
         </div>

@@ -32,12 +32,12 @@ const WebhookNode = ({ data, selected }: any) => {
       </CardContent>
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="w-3 h-3 bg-red-500 border-2 border-white"
       />
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="w-3 h-3 bg-red-500 border-2 border-white"
       />
     </Card>

@@ -27,7 +27,7 @@ const ConditionNode: React.FC<NodeProps> = ({ data, selected }) => {
       {/* Input Handle */}
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="w-3 h-3 bg-white border-2 border-gray-400 hover:border-blue-500 transition-colors"
       />
 
@@ -88,26 +88,29 @@ const ConditionNode: React.FC<NodeProps> = ({ data, selected }) => {
         </CardContent>
       </Card>
 
-      {/* Output Handles */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="yes"
-        style={{ left: '30%' }}
-        className="w-3 h-3 bg-green-500 border-2 border-white hover:bg-green-600 transition-colors"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="no"
-        style={{ left: '70%' }}
-        className="w-3 h-3 bg-red-500 border-2 border-white hover:bg-red-600 transition-colors"
-      />
-      
-      {/* Labels for condition handles */}
-      <div className="absolute -bottom-6 left-0 right-0 flex justify-between px-2">
-        <span className="text-xs text-green-600 font-medium">Yes</span>
-        <span className="text-xs text-red-600 font-medium">No</span>
+      {/* Output Handles with Labels */}
+      <div className="absolute right-0 top-0 h-full -mt-8 flex flex-col justify-between">
+        {/* Yes handle with label */}
+        <div className="relative flex items-center" style={{ top: '30%' }}>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="yes"
+            className="w-3 h-3 bg-green-500 border-2 border-white hover:bg-green-600 transition-colors"
+          />
+          <span className="text-xs text-green-600 font-medium ml-1 absolute left-4">Yes</span>
+        </div>
+
+        {/* No handle with label */}
+        <div className="relative flex items-center" >
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="no"
+            className="w-3 h-3 bg-red-500 border-2 border-white hover:bg-red-600 transition-colors"
+          />
+          <span className="text-xs text-red-600 font-medium ml-1 absolute left-4">No</span>
+        </div>
       </div>
     </div>
   );

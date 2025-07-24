@@ -85,7 +85,7 @@ const TriggerNode: React.FC<NodeProps> = ({ data, selected }) => {
       {/* Output Handle */}
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="w-3 h-3 bg-emerald-500 border-2 border-white hover:bg-emerald-600 transition-colors"
       />
     </div>

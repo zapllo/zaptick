@@ -462,7 +462,7 @@ export default function WorkflowsPage() {
                   <Lightbulb className="h-4 w-4" />
                   Templates
                 </Button>
-                <Button
+                {/* <Button
                   variant="outline"
                   size="sm"
                   className="gap-2"
@@ -475,7 +475,7 @@ export default function WorkflowsPage() {
                 >
                   <Download className="h-4 w-4" />
                   Export
-                </Button>
+                </Button> */}
                 <Button
                   onClick={() => setIsCreateDialogOpen(true)}
                   className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"

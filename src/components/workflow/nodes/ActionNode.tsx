@@ -104,7 +104,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       {/* Input Handle */}
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="w-3 h-3 bg-white border-2 border-gray-400 hover:border-blue-500 transition-colors"
       />
 
@@ -201,7 +201,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                     {/* Handle */}
                     <Handle
                       type="source"
-                      position={Position.Bottom}
+                      position={Position.left}
                       id={buttonId}
                       style={{ 
                         position: 'relative',
@@ -264,7 +264,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                       {/* Handle */}
                       <Handle
                         type="source"
-                        position={Position.Bottom}
+                        position={Position.Right}
                         id={rowId}
                         style={{ 
                           position: 'relative',
@@ -298,7 +298,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       ) : (
         <Handle
           type="source"
-          position={Position.Bottom}
+          position={Position.Right}
           className="w-3 h-3 bg-white border-2 border-gray-400 hover:border-blue-500 transition-colors"
         />
       )}
