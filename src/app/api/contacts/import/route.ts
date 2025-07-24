@@ -7,6 +7,52 @@ import ContactCustomField from '@/models/ContactCustomField';
 import { parse } from 'papaparse';
 import { sendContactImportNotification } from '@/lib/notifications';
 
+// Helper function to format phone number with country code
+function formatPhoneWithCountryCode(phone: string, countryCode?: string): { formattedPhone: string; finalCountryCode: string } {
+  // Clean the phone number
+  let cleanPhone = phone.replace(/\D/g, ''); // Remove all non-digits
+  
+  // Default country code
+  let finalCountryCode = countryCode || '91'; // Default to India (+91)
+  
+  // Remove + from country code if present
+  if (finalCountryCode.startsWith('+')) {
+    finalCountryCode = finalCountryCode.substring(1);
+  }
+  
+  // Check if phone already has a country code
+  if (phone.startsWith('+')) {
+    // Phone already has country code, extract it
+    const match = phone.match(/^\+(\d{1,4})/);
+    if (match) {
+      finalCountryCode = match[1];
+      cleanPhone = phone.replace(/^\+\d{1,4}/, '').replace(/\D/g, '');
+    }
+  } else if (cleanPhone.length > 10) {
+    // Phone might already include country code without +
+    // Common country codes and their lengths
+    const countryCodes = [
+      { code: '1', length: 11 }, // US/Canada: 1 + 10 digits
+      { code: '91', length: 12 }, // India: 91 + 10 digits
+      { code: '44', length: 12 }, // UK: 44 + 10 digits
+      { code: '86', length: 13 }, // China: 86 + 11 digits
+    ];
+    
+    for (const cc of countryCodes) {
+      if (cleanPhone.length === cc.length && cleanPhone.startsWith(cc.code)) {
+        finalCountryCode = cc.code;
+        cleanPhone = cleanPhone.substring(cc.code.length);
+        break;
+      }
+    }
+  }
+  
+  // Format the final phone number
+  const formattedPhone = `+${finalCountryCode}${cleanPhone}`;
+  
+  return { formattedPhone, finalCountryCode: `+${finalCountryCode}` };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -122,10 +168,25 @@ export async function POST(req: NextRequest) {
 
         // Apply field mappings
         const name = row[mappings.name]?.trim();
-        const phone = row[mappings.phone]?.trim();
+        const rawPhone = row[mappings.phone]?.trim();
         const email = mappings.email ? row[mappings.email]?.trim() : undefined;
-        const countryCode = mappings.countryCode ? row[mappings.countryCode]?.trim() : undefined;
+        const rawCountryCode = mappings.countryCode ? row[mappings.countryCode]?.trim() : undefined;
         const notes = mappings.notes ? row[mappings.notes]?.trim() : undefined;
+
+        // Validate required fields
+        if (!name || !rawPhone) {
+          importResults.errors++;
+          importResults.errorDetails.push({
+            row: i + (skipFirstRow ? 2 : 1), // Add 1 for 0-index, add another 1 if skipping first row
+            error: `Missing required fields (name: ${name}, phone: ${rawPhone})`
+          });
+          continue;
+        }
+
+        // Format phone number with country code
+        const { formattedPhone, finalCountryCode } = formatPhoneWithCountryCode(rawPhone, rawCountryCode);
+        
+        console.log(`Row ${i + 1}: Raw phone: ${rawPhone}, Country code: ${rawCountryCode}, Formatted: ${formattedPhone}, Final CC: ${finalCountryCode}`);
 
         // Get whatsappOptIn value (default to true if not specified)
         let whatsappOptIn = true;
@@ -138,16 +199,6 @@ export async function POST(req: NextRequest) {
         let tags: string[] = [];
         if (mappings.tags && row[mappings.tags]) {
           tags = row[mappings.tags].split(',').map((tag: string) => tag.trim()).filter(Boolean);
-        }
-
-        // Validate required fields
-        if (!name || !phone) {
-          importResults.errors++;
-          importResults.errorDetails.push({
-            row: i + (skipFirstRow ? 2 : 1), // Add 1 for 0-index, add another 1 if skipping first row
-            error: `Missing required fields (name: ${name}, phone: ${phone})`
-          });
-          continue;
         }
 
         // Extract custom fields from mappings
@@ -170,10 +221,11 @@ export async function POST(req: NextRequest) {
           }
         });
 
-        // Check if contact already exists
+        // Check if contact already exists (using formatted phone)
         const existingContact = await Contact.findOne({
-          phone,
-          wabaId
+          phone: formattedPhone,
+          wabaId,
+          companyId: user.companyId
         });
 
         if (existingContact) {
@@ -181,12 +233,12 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Create new contact
+        // Create new contact with formatted phone number
         const contact = new Contact({
           name,
-          phone,
+          phone: formattedPhone,
           email,
-          countryCode,
+          countryCode: finalCountryCode,
           wabaId,
           phoneNumberId: wabaAccount.phoneNumberId,
           userId: decoded.id,
@@ -208,6 +260,7 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+    
     // Send email notification (async, don't wait for it)
     sendContactImportNotification(decoded.id, {
       total: importResults.total,
