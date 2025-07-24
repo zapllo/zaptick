@@ -371,7 +371,7 @@ export default function QRGenerator() {
                                                         <div>
                                                             <h4 className="font-semibold text-gray-900 mb-2">QR Code Preview</h4>
                                                             <p className="text-sm text-gray-500">
-                                                                Enter your WhatsApp number and click "Generate QR Code" to see the preview
+                                                                Enter your WhatsApp number and click &quot;Generate QR Code&quot; to see the preview
                                                             </p>
                                                         </div>
                                                     </div>

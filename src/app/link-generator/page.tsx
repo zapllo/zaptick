@@ -311,7 +311,7 @@ export default function LinkGenerator() {
                                   </p>
                                   {message && (
                                     <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-sm text-gray-700">
-                                      <span className="font-medium">Pre-filled message:</span> "{message}"
+                                      <span className="font-medium">Pre-filled message:</span> &quot;{message}&quot;
                                     </div>
                                   )}
                                 </div>
@@ -330,7 +330,7 @@ export default function LinkGenerator() {
                             <div>
                               <h4 className="font-semibold text-gray-900 mb-2">Link Preview</h4>
                               <p className="text-sm text-gray-500">
-                                Enter your WhatsApp number and click "Generate WhatsApp Link" to see the preview
+                                Enter your WhatsApp number and click &quot;Generate WhatsApp Link&quot; to see the preview
                               </p>
                             </div>
                           </div>
