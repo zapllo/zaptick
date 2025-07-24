@@ -37,6 +37,7 @@ import {
   Layers,
   Info
 } from "lucide-react";
+import PartnerBadges from "@/components/ui/partner-badges";
 
 export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -102,16 +103,17 @@ export default function Home() {
       title: "AI-Powered Automation",
       description: "Deploy sophisticated chatbots and conversation flows that handle inquiries, qualify leads, and provide instant support 24/7.",
       icon: Bot,
-      image: '/automation.png',
+      image: '/03.png',
       highlights: ["Visual flow builder", "AI responses", "Smart routing"],
       color: "blue",
       gradient: "from-blue-500 to-cyan-600"
     },
     {
-      title: "Commerce Integration",
-      description: "Convert conversations into sales with seamless product catalogs, secure checkout, and payment processing within WhatsApp.",
-      icon: ShoppingBag,
-      highlights: ["Native checkout", "Payment gateways", "Order tracking"],
+      title: "Smart Campaigns",
+      description: "Create and manage targeted broadcast campaigns with personalized messaging, automated scheduling, and real-time performance tracking.",
+      icon: Target,
+      image: '/04.png',
+      highlights: ["Bulk messaging", "Smart segmentation", "Campaign analytics"],
       color: "purple",
       gradient: "from-purple-500 to-pink-600"
     },
@@ -119,7 +121,7 @@ export default function Home() {
       title: "Advanced Analytics",
       description: "Gain actionable insights with real-time performance metrics, customer journey analytics, and ROI tracking.",
       icon: TrendingUp,
-      image: '/dashboard.png',
+      image: '/02.png',
       highlights: ["Real-time insights", "Customer analytics", "ROI tracking"],
       color: "orange",
       gradient: "from-orange-500 to-red-600"
@@ -234,12 +236,12 @@ export default function Home() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     className="h-14 px-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25 transition-all duration-300"
                   >
                     <Link href="/signup" className="flex items-center gap-2">
-                      Start Free Trial
+                      Book Free Demo
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -254,6 +256,15 @@ export default function Home() {
                     Watch Demo
                   </Button>
                 </div>
+                {/* Partner Badges */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.2, duration: 0.5 }}
+                  className="pt-6"
+                >
+                  <PartnerBadges animated={true} size="md" />
+                </motion.div>
 
                 {/* Trust Indicators */}
                 <motion.div
@@ -263,14 +274,29 @@ export default function Home() {
                   className="flex items-center gap-6 pt-4"
                 >
                   <div className="flex -space-x-3">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-blue-400 border-2 border-white shadow-md flex items-center justify-center">
-                        <span className="text-white text-xs font-semibold">U{i}</span>
+                    {[
+                      "/avatars/man1.jpg",
+                      "/avatars/female1.jpg",
+                      "/avatars/man2.jpg",
+                      "/avatars/female2.jpg"
+                    ].map((avatar, i) => (
+                      <div key={i} className="h-10 w-10 rounded-full border-2 border-white shadow-md overflow-hidden">
+                        <Image
+                          src={avatar}
+                          alt={`Customer ${i + 1}`}
+                          width={40}
+                          height={40}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40' fill='none'%3E%3Ccircle cx='20' cy='20' r='20' fill='url(%23gradient)'/%3E%3Cdefs%3E%3ClinearGradient id='gradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2334d399'/%3E%3Cstop offset='100%25' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='12' font-weight='600' fill='white'%3EU" + (i + 1) + "%3C/text%3E%3C/svg%3E";
+                          }}
+                        />
                       </div>
                     ))}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">500+ businesses</p>
+                    <p className="text-sm font-semibold text-gray-900">5000+ businesses</p>
                     <p className="text-xs text-gray-500">trust Zaptick daily</p>
                   </div>
                 </motion.div>
@@ -293,13 +319,13 @@ export default function Home() {
                         <div className="w-3 h-3 rounded-full bg-green-400"></div>
                       </div>
                       <div className="text-sm font-mono text-gray-600 bg-white px-4 py-1.5 rounded-lg flex-grow text-center shadow-sm">
-                        app.zaptick.com
+                        zaptick.io/analytics
                       </div>
                     </div>
 
                     <div className="relative p-2">
                       <Image
-                        src="/dashboard.png"
+                        src="/01.png"
                         alt="Zaptick Dashboard"
                         width={600}
                         height={400}
@@ -315,13 +341,13 @@ export default function Home() {
 
                   {/* Floating Notification Cards */}
                   <motion.div
-                    className="absolute -top-6 -right-6 bg-white rounded-xl shadow-xl border border-gray-100 p-4 max-w-[200px]"
+                    className="absolute -bottom-3 -right-6 bg-white rounded-xl shadow-xl border border-gray-100 p-4 max-w-[200px]"
                     initial={{ opacity: 0, scale: 0.8, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ delay: 1.2, duration: 0.6 }}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-sm">
+                      <div className="flex h-10 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-sm">
                         <CheckCircle className="h-5 w-5 text-white" />
                       </div>
                       <div>
@@ -336,7 +362,7 @@ export default function Home() {
                   </motion.div>
 
                   <motion.div
-                    className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-xl border border-gray-100 p-4 max-w-[220px]"
+                    className="absolute top-5 -left-6 bg-white rounded-xl shadow-xl border border-gray-100 p-4 max-w-[220px]"
                     initial={{ opacity: 0, scale: 0.8, y: -20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ delay: 1.4, duration: 0.6 }}
@@ -385,7 +411,7 @@ export default function Home() {
           </motion.div>
 
           <motion.div
-            className="flex flex-wrap justify-center items-center gap-x-12 gap-y-8 opacity-60"
+            className="flex flex-wrap justify-center items-center gap-x-12 gap-y-8 "
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 0.6 }}
             viewport={{ once: true }}
@@ -457,7 +483,7 @@ export default function Home() {
                   <div className={`flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-${metric.color}-500 to-${metric.color}-600 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     <metric.icon className="h-7 w-7 text-white" />
                   </div>
-                  
+
                   {activeMetric === index && (
                     <motion.span
                       className={`inline-flex items-center gap-1 rounded-full bg-${metric.color}-100 px-3 py-1 text-xs font-medium text-${metric.color}-700`}
@@ -485,7 +511,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-white">
+      <section id="features" className="py-24 bg-white">
         <div className=" mx-auto px-4">
           <motion.div
             className="text-center max-w-3xl mx-auto mb-20"
@@ -559,7 +585,7 @@ export default function Home() {
                       alt={feature.title}
                       width={400}
                       height={200}
-                      className="w-full h object-cover"
+                      className="w-full rounded-lg border h object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200' fill='none'%3E%3Crect width='400' height='200' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='16' fill='%236b7280'%3E" + feature.title + "%3C/text%3E%3C/svg%3E";
@@ -568,12 +594,12 @@ export default function Home() {
                   </div>
                 )}
 
-                <Button
+                {/* <Button
                   variant="ghost"
                   className={`text-${feature.color}-600 hover:bg-${feature.color}-50 p-0 h-auto font-semibold`}
                 >
                   Learn more <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
+                </Button> */}
 
                 {/* Decorative element */}
                 <div className={`absolute -right-8 -top-8 h-20 w-20 rounded-full bg-${feature.color}-500/10 transition-all duration-500 group-hover:scale-125`} />
@@ -687,7 +713,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-24 bg-white">
+      <section id="testimonials" className="py-24 bg-white">
         <div className=" mx-auto px-4">
           <motion.div
             className="text-center max-w-3xl mx-auto mb-20"
@@ -770,7 +796,7 @@ export default function Home() {
       </section>
 
       {/* Integrations Section */}
-      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section id="testimonials" className="py-24 px-4 bg-gradient-to-b from-gray-50 to-white">
         <div className=" mx-auto px-4">
           <motion.div
             className="text-center m-3xl mx-auto mb-20"
@@ -834,7 +860,7 @@ export default function Home() {
                   />
                 </div>
                 <p className="text-xs font-medium text-gray-700">{integration.alt}</p>
-                
+
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-indigo-600 bg-opacity-90 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                   <span className="text-white font-medium text-xs px-2 py-1 rounded-full bg-white/20 flex items-center">
@@ -872,7 +898,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.count}</h3>
                 <p className="text-gray-600 font-medium">{stat.label}</p>
-                
+
                 {/* Decorative element */}
                 <div className={`absolute -right-4 -top-4 h-12 w-12 rounded-full bg-${stat.color}-500/10 transition-all duration-300 group-hover:scale-110`} />
               </motion.div>
@@ -937,8 +963,8 @@ export default function Home() {
                   viewport={{ once: true }}
                   transition={{ delay: 0.5 }}
                 >
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     className="h-14 px-8 bg-white text-green-700 hover:bg-gray-50 shadow-lg font-semibold text-base"
                   >
                     <Link href="/demo" className="flex items-center gap-2">
@@ -947,7 +973,7 @@ export default function Home() {
                     </Link>
                   </Button>
 
-                  <Button 
+                  {/* <Button 
                     size="lg" 
                     variant="outline" 
                     className="h-14 px-8 text-black border-white/30 hover:bg-white/10 font-semibold text-base"
@@ -955,7 +981,7 @@ export default function Home() {
                     <Link href="/contact">
                       Book a Demo
                     </Link>
-                  </Button>
+                  </Button> */}
                 </motion.div>
 
                 <motion.div

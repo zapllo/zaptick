@@ -424,17 +424,17 @@ export default function SignupPage() {
 
             <div className="flex items-start gap-4 relative">
               <div className="h-12 w-12 rounded-full overflow-hidden bg-muted flex-shrink-0 border-2 border-green-100">
-                {/* <Image
-                  src="/testimonial-avatar.png"
+                <Image
+                  src="/avatars/female1.jpg"
                   alt="User testimonial"
                   width={48}
                   height={48}
-                  className="object-cover"
+                  className="object-fill"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='%23d4d4d8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
                   }}
-                /> */}
+                />
               </div>
               <div>
                 <div className="flex mb-1">

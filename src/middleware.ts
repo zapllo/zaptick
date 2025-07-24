@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Define paths that are public
-  const isPublicPath = path === '/login' || path === '/signup' || path === '/' || path === '/forgot-password' || path === '/reset-password' || path.startsWith('/api/') || path === '/signup/whatsapp';
+  const isPublicPath = path === '/login' || path === '/signup' || path === '/' || path === '/forgot-password' || path === '/reset-password' || path.startsWith('/api/') || path === '/signup/whatsapp'|| path === '/qr-generator' || path === '/link-generator' || path === '/demo';
 
   // Get the token from the cookies
   const hasToken = request.cookies.has('token');
