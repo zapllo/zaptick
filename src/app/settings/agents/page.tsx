@@ -73,6 +73,7 @@ import {
     TrendingUp,
     Globe,
     Zap,
+    Sparkles,
 } from "lucide-react";
 
 interface Role {
@@ -100,6 +101,16 @@ interface User {
     };
     invitedAt?: string;
     createdAt: string;
+}
+
+interface TeamLimitInfo {
+    currentCount: number;
+    limit: number;
+    canAddMore: boolean;
+    plan: string;
+    planName: string;
+    subscriptionStatus: string;
+    remainingSlots: number;
 }
 
 export default function AgentsPage() {
@@ -133,10 +144,26 @@ export default function AgentsPage() {
         role: "agent",
     });
 
+    const [teamLimitInfo, setTeamLimitInfo] = useState<TeamLimitInfo | null>(null);
+
     useEffect(() => {
         fetchUsers();
         fetchRoles();
+        fetchTeamLimitInfo();
     }, []);
+    const fetchTeamLimitInfo = async () => {
+        try {
+            const response = await fetch('/api/users/team-limit');
+            const data = await response.json();
+
+            if (data.success) {
+                setTeamLimitInfo(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching team limit info:', error);
+        }
+    };
+
     const fetchUsers = async () => {
         try {
             const response = await fetch('/api/users');
@@ -232,12 +259,48 @@ export default function AgentsPage() {
                     role: "agent",
                 });
                 fetchUsers();
+                fetchTeamLimitInfo(); // Refresh team limit info
             } else {
-                toast({
-                    title: "Error",
-                    description: data.message || "Failed to add team member",
-                    variant: "destructive",
-                });
+                // Handle specific error codes
+                if (data.code === 'TEAM_LIMIT_REACHED') {
+                    toast({
+                        title: "Team Limit Reached",
+                        description: `You've reached the ${data.limit} team member limit for your ${data.plan} plan. Upgrade to add more members.`,
+                        variant: "destructive",
+                        action: (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.location.href = '/settings/billing'}
+                                className="ml-2"
+                            >
+                                Upgrade Plan
+                            </Button>
+                        ),
+                    });
+                } else if (data.code === 'SUBSCRIPTION_INACTIVE') {
+                    toast({
+                        title: "Subscription Required",
+                        description: "Your subscription is not active. Please upgrade or renew your plan to add team members.",
+                        variant: "destructive",
+                        action: (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.location.href = '/settings/billing'}
+                                className="ml-2"
+                            >
+                                View Billing
+                            </Button>
+                        ),
+                    });
+                } else {
+                    toast({
+                        title: "Error",
+                        description: data.message || "Failed to add team member",
+                        variant: "destructive",
+                    });
+                }
             }
         } catch (error) {
             console.error('Error creating user:', error);
@@ -248,7 +311,25 @@ export default function AgentsPage() {
             });
         }
     };
+    const getPlanColor = (plan: string) => {
+        switch (plan) {
+            case 'starter': return 'text-blue-600 bg-blue-50 border-blue-200';
+            case 'growth': return 'text-purple-600 bg-purple-50 border-purple-200';
+            case 'advanced': return 'text-orange-600 bg-orange-50 border-orange-200';
+            case 'enterprise': return 'text-green-600 bg-green-50 border-green-200';
+            default: return 'text-gray-600 bg-gray-50 border-gray-200';
+        }
+    };
 
+    const getPlanIcon = (plan: string) => {
+        switch (plan) {
+            case 'starter': return <Zap className="h-4 w-4" />;
+            case 'growth': return <TrendingUp className="h-4 w-4" />;
+            case 'advanced': return <Sparkles className="h-4 w-4" />;
+            case 'enterprise': return <Crown className="h-4 w-4" />;
+            default: return <Activity className="h-4 w-4" />;
+        }
+    };
     const handleUpdateUser = async () => {
         if (!editUser.name || !editUser.email) {
             toast({
@@ -440,7 +521,46 @@ export default function AgentsPage() {
                                 </Button>
                                 <Button
                                     className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
-                                    onClick={() => setIsAddDialogOpen(true)}
+                                    onClick={() => {
+                                        if (teamLimitInfo && !teamLimitInfo.canAddMore) {
+                                            if (teamLimitInfo.subscriptionStatus !== 'active') {
+                                                toast({
+                                                    title: "Subscription Required",
+                                                    description: "Your subscription is not active. Please upgrade or renew your plan to add team members.",
+                                                    variant: "destructive",
+                                                    action: (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => window.location.href = '/settings/billing'}
+                                                            className="ml-2"
+                                                        >
+                                                            View Billing
+                                                        </Button>
+                                                    ),
+                                                });
+                                            } else {
+                                                toast({
+                                                    title: "Team Limit Reached",
+                                                    description: `You've reached the ${teamLimitInfo.limit} team member limit for your ${teamLimitInfo.planName} plan. Upgrade to add more members.`,
+                                                    variant: "destructive",
+                                                    action: (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => window.location.href = '/settings/billing'}
+                                                            className="ml-2"
+                                                        >
+                                                            Upgrade Plan
+                                                        </Button>
+                                                    ),
+                                                });
+                                            }
+                                            return;
+                                        }
+                                        setIsAddDialogOpen(true);
+                                    }}
+                                    disabled={teamLimitInfo && !teamLimitInfo.canAddMore}
                                 >
                                     <UserPlus className="h-4 w-4 mr-2" />
                                     Add Team Member
@@ -527,7 +647,59 @@ export default function AgentsPage() {
                             <div className="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-orange-500/5" />
                         </Card>
                     </div> */}
-
+                    {/* Team Limit Info Card */}
+                    {teamLimitInfo && (
+                        <Card className="mb-6 p-0 border-0 shadow-lg bg-gradient-to-r from-slate-50 to-white">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${getPlanColor(teamLimitInfo.plan)}`}>
+                                            {getPlanIcon(teamLimitInfo.plan)}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-slate-900">
+                                                {teamLimitInfo.planName} Plan
+                                            </h3>
+                                            <p className="text-sm text-slate-600">
+                                                {teamLimitInfo.limit === Infinity
+                                                    ? `${teamLimitInfo.currentCount} team members (Unlimited)`
+                                                    : `${teamLimitInfo.currentCount} of ${teamLimitInfo.limit} team members used`
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        {/* {teamLimitInfo.limit !== Infinity && (
+                                            <div className="text-right">
+                                                <div className="text-sm font-medium text-slate-700">
+                                                    {teamLimitInfo.remainingSlots} slots remaining
+                                                </div>
+                                                <div className="w-32 bg-slate-200 rounded-full h-2 mt-1">
+                                                    <div
+                                                        className="bg-gradient-to-r from-primary to-primary/80 h-2 rounded-full transition-all duration-300"
+                                                        style={{
+                                                            width: `${(teamLimitInfo.currentCount / teamLimitInfo.limit) * 100}%`
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )} */}
+                                        {!teamLimitInfo.canAddMore && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => window.location.href = '/settings/billing'}
+                                                className="border-primary/20 text-primary hover:bg-primary/5"
+                                            >
+                                                Upgrade Plan
+                                                <ArrowRight className="h-4 w-4 ml-2" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                     {isLoading ? (
                         <Card className="border-0 shadow-lg">
                             <CardContent className="p-8">
@@ -568,7 +740,18 @@ export default function AgentsPage() {
                                     </div>
                                     <Button
                                         className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
-                                        onClick={() => setIsAddDialogOpen(true)}
+                                        onClick={() => {
+                                            if (teamLimitInfo && !teamLimitInfo.canAddMore) {
+                                                toast({
+                                                    title: "Team Limit Reached",
+                                                    description: `Upgrade your ${teamLimitInfo.planName} plan to add team members.`,
+                                                    variant: "destructive",
+                                                });
+                                                return;
+                                            }
+                                            setIsAddDialogOpen(true);
+                                        }}
+                                        disabled={teamLimitInfo && !teamLimitInfo.canAddMore}
                                     >
                                         <UserPlus className="h-5 w-5 mr-2" />
                                         Invite Your First Team Member

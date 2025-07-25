@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from "@/lib/jwt";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import Company from "@/models/Company";
-import WalletTransaction from "@/models/WalletTransaction";
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const token = req.cookies.get("token")?.value;
+    const token = request.cookies.get("token")?.value;
 
     if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -18,8 +17,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
+    const { 
+      plan_id, 
+      billing_cycle, 
+      payment_id, 
+      order_id, 
+      base_amount, 
+      gst_amount, 
+      total_amount 
+    } = await request.json();
+
     await dbConnect();
 
+    // Get user and company
     const user = await User.findById(decoded.id);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -30,136 +40,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
-    const {
-      plan_id,
-      billing_cycle,
-      payment_id,
-      order_id,
-      amount
-    } = await req.json();
+    // Calculate subscription dates
+    const startDate = new Date();
+    const endDate = new Date();
 
-    // Calculate subscription end date
-    const now = new Date();
-    let subscriptionEndDate = new Date(now);
-    
-    switch (billing_cycle) {
-      case "monthly":
-        subscriptionEndDate.setMonth(now.getMonth() + 1);
-        break;
-      case "quarterly":
-        subscriptionEndDate.setMonth(now.getMonth() + 3);
-        break;
-      case "yearly":
-        subscriptionEndDate.setFullYear(now.getFullYear() + 1);
-        break;
+    if (billing_cycle === 'quarterly') {
+      endDate.setMonth(endDate.getMonth() + 3);
+    } else if (billing_cycle === 'yearly') {
+      endDate.setFullYear(endDate.getFullYear() + 1);
     }
 
     // Update company subscription
-    const updatedCompany = await Company.findByIdAndUpdate(
-      company._id,
-      {
-        $set: {
-          subscriptionPlan: plan_id,
-          subscriptionStatus: "active",
-          subscriptionStartDate: now,
-          subscriptionEndDate: subscriptionEndDate,
-          billingCycle: billing_cycle,
-          lastPaymentId: payment_id,
-          lastPaymentAmount: amount,
-          lastPaymentDate: now
-        }
-      },
-      { new: true }
-    );
-
-    // Create wallet transaction record
-    const walletTransaction = new WalletTransaction({
-      companyId: company._id,
-      userId: user._id,
-      type: "debit",
-      amount: amount,
-      description: `Subscription payment for ${plan_id} plan (${billing_cycle})`,
-      referenceId: payment_id,
-      referenceType: "subscription",
-      status: "completed",
-      metadata: {
-        plan_id,
-        billing_cycle,
-        order_id,
-        payment_id,
-        subscription_start: now,
-        subscription_end: subscriptionEndDate
-      }
+    await Company.findByIdAndUpdate(company._id, {
+      subscriptionPlan: plan_id,
+      subscriptionStatus: 'active',
+      subscriptionStartDate: startDate,
+      subscriptionEndDate: endDate,
+      billingCycle: billing_cycle,
+      lastPaymentId: payment_id,
+      lastPaymentAmount: total_amount,
+      lastPaymentDate: new Date(),
+      updatedAt: new Date()
     });
 
-    await walletTransaction.save();
-
-    // Add subscription credits based on plan
-    let creditsToAdd = 0;
-    switch (plan_id) {
-      case "starter":
-        creditsToAdd = 1000;
-        break;
-      case "growth":
-        creditsToAdd = 2500;
-        break;
-      case "advanced":
-        creditsToAdd = 5000;
-        break;
-      case "enterprise":
-        creditsToAdd = 25000;
-        break;
-    }
-
-    if (creditsToAdd > 0) {
-      // Add credits to wallet
-      const creditTransaction = new WalletTransaction({
-        companyId: company._id,
-        userId: user._id,
-        type: "credit",
-        amount: creditsToAdd,
-        description: `Subscription credits for ${plan_id} plan`,
-        referenceId: payment_id,
-        referenceType: "subscription_credit",
-        status: "completed",
-        metadata: {
-          plan_id,
-          billing_cycle,
-          credit_type: "subscription_bonus"
-        }
-      });
-
-      await creditTransaction.save();
-
-      // Update company wallet balance
-      await Company.findByIdAndUpdate(
-        company._id,
-        {
-          $inc: { walletBalance: creditsToAdd }
-        }
-      );
-    }
+    // You can also create a payment record here if you have a Payment model
+    // const paymentRecord = new Payment({
+    //   companyId: company._id,
+    //   userId: user._id,
+    //   planId: plan_id,
+    //   orderId: order_id,
+    //   paymentId: payment_id,
+    //   baseAmount: base_amount,
+    //   gstAmount: gst_amount,
+    //   totalAmount: total_amount,
+    //   billingCycle: billing_cycle,
+    //   status: 'completed',
+    //   paymentDate: new Date()
+    // });
+    // await paymentRecord.save();
 
     return NextResponse.json({
       success: true,
       message: "Subscription updated successfully",
-      data: {
-        subscription: {
-          plan: plan_id,
-          status: "active",
-          billing_cycle,
-          start_date: now,
-          end_date: subscriptionEndDate,
-          credits_added: creditsToAdd
-        }
+      subscription: {
+        plan: plan_id,
+        status: 'active',
+        startDate,
+        endDate,
+        billingCycle: billing_cycle,
+        amount: total_amount
       }
     });
 
   } catch (error) {
     console.error("Subscription update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update subscription" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: "Failed to update subscription"
+    }, { status: 500 });
   }
 }

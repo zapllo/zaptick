@@ -666,7 +666,7 @@ const WalletPage = () => {
                     <Input
                       id="amount"
                       type="number"
-                      min="100"
+                      min="1000"
                       value={amount}
                       onChange={(e) => setAmount(Number(e.target.value))}
                       className="pl-8 h-12 text-lg font-semibold bg-white border-green-300 focus:border-green-500 focus:ring-green-500/20"
@@ -675,7 +675,7 @@ const WalletPage = () => {
                   </div>
                   <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    Minimum amount: ₹100
+                    Minimum amount: ₹1000
                   </p>
                 </div>
               </div>

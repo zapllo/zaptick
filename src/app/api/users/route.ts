@@ -32,12 +32,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const users = await User.find({ 
+    const users = await User.find({
       companyId: currentUser.companyId,
     })
-    .populate('roleId', 'name permissions')
-    .populate('invitedBy', 'name email')
-    .select('-password');
+      .populate('roleId', 'name permissions')
+      .populate('invitedBy', 'name email')
+      .select('-password');
 
     // Sort users by role hierarchy: owner first, then admin, then others
     const sortedUsers = users.sort((a, b) => {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       if (weightA !== weightB) {
         return weightB - weightA;
       }
-      
+
       // If same role weight, sort by creation date (newest first)
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     // Get current user to verify permissions and get WABA accounts
-    const currentUser = await User.findById(decoded.id).select('companyId role isOwner wabaAccounts');
+    const currentUser = await User.findById(decoded.id).select('companyId role isOwner wabaAccounts').populate('companyId', 'subscriptionPlan subscriptionStatus');
     if (!currentUser) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
     }
@@ -98,6 +98,54 @@ export async function POST(req: NextRequest) {
     const isOwnerOrAdmin = currentUser.isOwner || currentUser.role === 'owner' || currentUser.role === 'admin';
     if (!isOwnerOrAdmin) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    // Check subscription plan limits
+    const company = currentUser.companyId as any;
+    const subscriptionPlan = company?.subscriptionPlan || 'free';
+    const subscriptionStatus = company?.subscriptionStatus || 'expired';
+
+    // Check if subscription is active
+    if (subscriptionStatus !== 'active') {
+      return NextResponse.json({
+        success: false,
+        message: 'Your subscription is not active. Please upgrade or renew your plan to add team members.',
+        code: 'SUBSCRIPTION_INACTIVE'
+      }, { status: 403 });
+    }
+
+    // Define team member limits based on subscription plan
+    const planLimits = {
+      free: 1, // Only owner
+      starter: 5, // Up to 5 total members including owner
+      growth: 10, // Up to 10 total members including owner  
+      advanced: 25, // Up to 25 total members including owner
+      enterprise: Infinity // Unlimited
+    };
+
+    const currentLimit = planLimits[subscriptionPlan as keyof typeof planLimits] || planLimits.free;
+
+    // Count existing users in the company
+    const existingUsersCount = await User.countDocuments({ companyId: currentUser.companyId });
+
+    // Check if adding this user would exceed the plan limit
+    if (existingUsersCount >= currentLimit) {
+      const planNames = {
+        free: 'Free',
+        starter: 'Starter',
+        growth: 'Growth',
+        advanced: 'Advanced',
+        enterprise: 'Enterprise'
+      };
+
+      return NextResponse.json({
+        success: false,
+        message: `You've reached the team member limit for your ${planNames[subscriptionPlan as keyof typeof planNames] || 'current'} plan. Please upgrade to add more team members.`,
+        code: 'TEAM_LIMIT_REACHED',
+        currentCount: existingUsersCount,
+        limit: currentLimit,
+        plan: subscriptionPlan
+      }, { status: 403 });
     }
 
     const { name, email, password, roleId, role = 'agent' } = await req.json();
@@ -129,9 +177,9 @@ export async function POST(req: NextRequest) {
 
     // Verify role exists if provided
     if (roleId) {
-      const roleExists = await Role.findOne({ 
-        _id: roleId, 
-        companyId: currentUser.companyId 
+      const roleExists = await Role.findOne({
+        _id: roleId,
+        companyId: currentUser.companyId
       });
       if (!roleExists) {
         return NextResponse.json(
@@ -144,26 +192,26 @@ export async function POST(req: NextRequest) {
     // If no roleId provided, get default role
     let finalRoleId = roleId;
     if (!finalRoleId) {
-      const defaultRole = await Role.findOne({ 
-        companyId: currentUser.companyId, 
-        isDefault: true 
+      const defaultRole = await Role.findOne({
+        companyId: currentUser.companyId,
+        isDefault: true
       });
       finalRoleId = defaultRole?._id;
     }
 
     // Get company WABA accounts from the owner or find the owner's accounts
     let companyWabaAccounts = currentUser.wabaAccounts || [];
-    
+
     // If current user doesn't have WABA accounts, find the owner's accounts
     if (!companyWabaAccounts.length) {
-      const owner = await User.findOne({ 
+      const owner = await User.findOne({
         companyId: currentUser.companyId,
         $or: [
           { isOwner: true },
           { role: 'owner' }
         ]
       }).select('wabaAccounts');
-      
+
       if (owner && owner.wabaAccounts) {
         companyWabaAccounts = owner.wabaAccounts;
       }

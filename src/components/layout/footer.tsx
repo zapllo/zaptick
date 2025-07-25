@@ -3,6 +3,8 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Facebook, Twitter, Instagram, Linkedin, Mail, Zap, QrCode, Link as LinkIcon, MessageSquare, Bot, BarChart2, Users } from "lucide-react";
+import PartnerBadges from "../ui/partner-badges";
+import { motion } from 'framer-motion'
 
 export default function Footer() {
   return (
@@ -62,9 +64,18 @@ export default function Footer() {
                 className="brightness-0  w-56 invert"
               />
             </div>
-            <p className="text-gray-400 mb-8 max-w-md leading-relaxed">
+            <p className="text-gray-400  max-w-md leading-relaxed">
               Empowering businesses to harness WhatsApp&apos;s potential. From automated conversations to enterprise-grade analytics, we&apos;re your gateway to WhatsApp success.
             </p>
+            {/* Partner Badges */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2, duration: 0.5 }}
+              className="pt-6 flex mb-8 flex justify-center"
+            >
+              <PartnerBadges animated={true} size="md" />
+            </motion.div>
             <div className="flex gap-4 mb-8">
               <Link href="#" className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
@@ -167,7 +178,6 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-
         {/* Bottom Section */}
         <div className="border-t border-gray-700/50 pt-8">
           <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
@@ -183,10 +193,16 @@ export default function Footer() {
               </div>
             </div>
 
-
             <div className="flex items-center gap-2">
-              <div className="text-sm text-gray-500">
-                Built with ❤️ for WhatsApp businesses
+              <div>
+                <div className="text-sm flex items-center gap-1 text-gray-500">
+                  <img src='/india.png' className="h-12" />
+
+                  Proudly made in India
+                </div>
+                <div className="text-sm text-gray-500">
+                  Built with ❤️ for WhatsApp Businesses
+                </div>
               </div>
               <div className="flex items-center gap-2 ml-4">
                 <span className="text-xs text-gray-600">Powered by</span>

@@ -50,7 +50,7 @@ interface PricingPlan {
   description: string;
   tagline: string;
   price: {
-    monthly: number;
+    quarterly: number;
     yearly: number;
   };
   yearlyDiscount?: number;
@@ -73,8 +73,8 @@ const plans: PricingPlan[] = [
     description: "Build simple bots",
     tagline: "Perfect for small businesses getting started",
     price: {
-      monthly: 2944, // ₹2500 + 18% GST
-      yearly: 2500 // Display yearly as the base price
+      quarterly: 8832, // ₹2500 * 3 months + 18% GST = ₹8,832
+      yearly: 2500 // Display yearly as the base price per month
     },
     yearlyDiscount: 15,
     features: [
@@ -105,8 +105,8 @@ const plans: PricingPlan[] = [
     description: "Build complex bots",
     tagline: "Advanced features for growing businesses",
     price: {
-      monthly: 4130, // ₹3500 + 18% GST
-      yearly: 3500 // Display yearly as the base price
+      quarterly: 12390, // ₹3500 * 3 months + 18% GST = ₹12,390
+      yearly: 3500 // Display yearly as the base price per month
     },
     yearlyDiscount: 15,
     features: [
@@ -137,7 +137,7 @@ const plans: PricingPlan[] = [
     description: "AI and ChatGPT bots",
     tagline: "Ultimate solution for large organizations",
     price: {
-      monthly: 0, // Custom pricing
+      quarterly: 0, // Custom pricing
       yearly: 0
     },
     features: [
@@ -227,7 +227,7 @@ export default function PricingPage() {
 
   const getCurrentPrice = (plan: PricingPlan) => {
     if (plan.id === 'enterprise') return 0;
-    return isYearly ? plan.price.yearly : plan.price.monthly;
+    return isYearly ? plan.price.yearly : plan.price.quarterly;
   };
 
   const handleSubscribe = async (planId: string) => {
@@ -266,7 +266,7 @@ export default function PricingPage() {
           notes: {
             plan_id: planId,
             plan_name: plan.name,
-            billing_cycle: isYearly ? 'yearly' : 'monthly',
+            billing_cycle: isYearly ? 'yearly' : 'quarterly',
             amount: amount
           }
         }),
@@ -280,7 +280,7 @@ export default function PricingPage() {
         amount: amount * 100,
         currency: 'INR',
         name: 'Zaptick',
-        description: `${plan.name} - ${isYearly ? 'yearly' : 'monthly'} subscription`,
+        description: `${plan.name} - ${isYearly ? 'yearly' : 'quarterly'} subscription`,
         order_id: orderId,
         handler: async function (response: any) {
           try {
@@ -306,7 +306,7 @@ export default function PricingPage() {
                 },
                 body: JSON.stringify({
                   plan_id: planId,
-                  billing_cycle: isYearly ? 'yearly' : 'monthly',
+                  billing_cycle: isYearly ? 'yearly' : 'quarterly',
                   payment_id: response.razorpay_payment_id,
                   order_id: response.razorpay_order_id,
                   amount: amount
@@ -376,7 +376,6 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      {/* ... existing header code ... */}
       <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -421,7 +420,7 @@ export default function PricingPage() {
             </p>
           </div>
 
-          {/* Billing Toggle - Fixed */}
+          {/* Billing Toggle - Updated */}
           <div className="flex items-center justify-center space-x-4 bg-white rounded-full p-1 border border-gray-200 w-fit mx-auto">
             <button
               onClick={() => setIsYearly(false)}
@@ -431,7 +430,7 @@ export default function PricingPage() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Monthly
+              Quarterly
             </button>
             <button
               onClick={() => setIsYearly(true)}
@@ -501,7 +500,7 @@ export default function PricingPage() {
                             ₹{getCurrentPrice(plan).toLocaleString()}
                           </span>
                           <span className="text-sm text-gray-600">
-                            /{isYearly ? 'month' : 'month'}
+                            {isYearly ? '/month' : '/quarter'}
                           </span>
                         </div>
                         <div className="text-xs text-gray-500">
@@ -515,7 +514,7 @@ export default function PricingPage() {
                               )}
                             </>
                           ) : (
-                            <span>(Billed monthly)</span>
+                            <span>(Billed quarterly)</span>
                           )}
                           <br />
                           Additional 18% GST chargeable
@@ -579,7 +578,7 @@ export default function PricingPage() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Why Choose Zaptick - Revamped */}
+        {/* Why Choose Zaptick */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}

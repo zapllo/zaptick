@@ -27,6 +27,15 @@ export default function PartnerBadges({
   };
 
   const badges = [
+     {
+      text: "Meta Business Partners",
+      bgColor: "bg-white -50",
+      textColor: "text-blue-700", 
+      borderColor: "border-blue-200",
+      icon: (
+      <img src='/meta.jpg' className="h-5"/>
+      )
+    },
     {
       text: "Powered by Official WhatsApp Business API",
       bgColor: "bg-green-50",
@@ -42,15 +51,7 @@ export default function PartnerBadges({
         </svg>
       )
     },
-    {
-      text: "Meta Business Partners",
-      bgColor: "bg-white -50",
-      textColor: "text-blue-700", 
-      borderColor: "border-blue-200",
-      icon: (
-      <img src='/meta.jpg' className="h-5"/>
-      )
-    }
+   
   ];
 
   const containerVariants = {
@@ -75,7 +76,7 @@ export default function PartnerBadges({
   };
 
   const content = (
-    <div className={`flex flex-col sm:flex-row items-center gap-3 ${className}`}>
+    <div className={`flex flex-col items-center gap-3 ${className}`}>
       {badges.map((badge, index) => (
         <motion.div
           key={index}

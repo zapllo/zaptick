@@ -57,19 +57,18 @@ export default function Header() {
   ];
 
   return (
-    <header className={`sticky top-0 z-50 w-full transition-all duration-200 ${
-      isScrolled 
-        ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100" 
-        : "bg-transparent"
-    }`}>
+    <header className={`sticky top-0 z-50 w-full transition-all duration-200 ${isScrolled
+      ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100"
+      : "bg-transparent"
+      }`}>
       <div className="container mx-auto py-4 px-4 md:px-8 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Link href="/">
-            <Image 
-              src="/zapzap.png" 
-              alt="ZapTick Logo" 
-              width={150} 
-              height={150} 
+            <Image
+              src="/zapzap.png"
+              alt="ZapTick Logo"
+              width={150}
+              height={150}
               className="hover:scale-105 transition-transform duration-200"
             />
           </Link>
@@ -85,7 +84,7 @@ export default function Header() {
             <DropdownMenuContent className="w-80 p-2">
               {products.map((product, index) => (
                 <DropdownMenuItem key={index} asChild className="p-0">
-                  <Link 
+                  <Link
                     href={product.href}
                     className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                   >
@@ -95,11 +94,10 @@ export default function Header() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-gray-900">{product.name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          product.badge === 'Free' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-blue-100 text-blue-700'
-                        }`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${product.badge === 'Free'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-blue-100 text-blue-700'
+                          }`}>
                           {product.badge}
                         </span>
                       </div>
@@ -110,25 +108,39 @@ export default function Header() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          
-          <button 
-            onClick={() => scrollToSection('features')} 
+
+          <button
+            onClick={() => scrollToSection('features')}
             className="text-sm hover:text-green-600 transition-colors cursor-pointer"
           >
             Features
           </button>
-          <button 
-            onClick={() => scrollToSection('integrations')} 
+          <Link href='/pricing'>
+            <button
+              className="block w-full cursor-pointer text-sm text-left py-2 text-gray-700 hover:text-green-600 transition-colors"
+            >
+              Pricing
+            </button>
+          </Link>
+          <button
+            onClick={() => scrollToSection('integrations')}
             className="text-sm hover:text-green-600 transition-colors cursor-pointer"
           >
             Integrations
           </button>
-          <button 
-            onClick={() => scrollToSection('testimonials')} 
+          <button
+            onClick={() => scrollToSection('testimonials')}
             className="text-sm hover:text-green-600 transition-colors cursor-pointer"
           >
             Testimonials
           </button>
+           <Link href='/partner-with-zaptick'>
+            <button
+              className="block w-full cursor-pointer text-sm text-left py-2 text-gray-700 hover:text-green-600 transition-colors"
+            >
+              Partner with us
+            </button>
+          </Link>
         </div>
 
         <div className="hidden md:flex items-center gap-4">
@@ -161,7 +173,7 @@ export default function Header() {
                   <h3 className="font-semibold text-gray-900 mb-3">Products</h3>
                   <div className="space-y-2">
                     {products.map((product, index) => (
-                      <Link 
+                      <Link
                         key={index}
                         href={product.href}
                         className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -172,11 +184,10 @@ export default function Header() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm">{product.name}</span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                              product.badge === 'Free' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-blue-100 text-blue-700'
-                            }`}>
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${product.badge === 'Free'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-blue-100 text-blue-700'
+                              }`}>
                               {product.badge}
                             </span>
                           </div>
@@ -187,20 +198,27 @@ export default function Header() {
                 </div>
 
                 <div className="border-t border-gray-200 pt-4">
-                  <button 
-                    onClick={() => scrollToSection('features')} 
+                  <button
+                    onClick={() => scrollToSection('features')}
                     className="block w-full text-left py-2 text-gray-700 hover:text-green-600 transition-colors"
                   >
                     Features
                   </button>
-                  <button 
-                    onClick={() => scrollToSection('integrations')} 
+                  <button
+                    onClick={() => scrollToSection('integrations')}
                     className="block w-full text-left py-2 text-gray-700 hover:text-green-600 transition-colors"
                   >
                     Integrations
                   </button>
-                  <button 
-                    onClick={() => scrollToSection('testimonials')} 
+                  <Link href='/pricing'>
+                    <button
+                      className="block w-full text-left py-2 text-gray-700 hover:text-green-600 transition-colors"
+                    >
+                      Pricing
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => scrollToSection('testimonials')}
                     className="block w-full text-left py-2 text-gray-700 hover:text-green-600 transition-colors"
                   >
                     Testimonials

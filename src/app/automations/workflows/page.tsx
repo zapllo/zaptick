@@ -49,6 +49,7 @@ import {
   Gauge,
   Timer,
   Network,
+  ArrowRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -151,6 +152,17 @@ interface Workflow {
   updatedAt: string;
 }
 
+
+interface WorkflowLimitInfo {
+  currentCount: number;
+  limit: number;
+  canCreateMore: boolean;
+  plan: string;
+  planName: string;
+  subscriptionStatus: string;
+  remainingSlots: number;
+}
+
 interface WabaAccount {
   wabaId: string;
   businessName: string;
@@ -176,7 +188,8 @@ export default function WorkflowsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
-
+  // ... existing state ...
+  const [workflowLimitInfo, setWorkflowLimitInfo] = useState<WorkflowLimitInfo | null>(null);
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -190,6 +203,7 @@ export default function WorkflowsPage() {
   useEffect(() => {
     if (selectedWabaId) {
       fetchWorkflows();
+      fetchWorkflowLimitInfo();
     }
   }, [selectedWabaId]);
 
@@ -241,6 +255,20 @@ export default function WorkflowsPage() {
       setIsLoading(false);
     }
   };
+  const fetchWorkflowLimitInfo = async () => {
+    if (!selectedWabaId) return;
+
+    try {
+      const response = await fetch(`/api/workflows/limit?wabaId=${selectedWabaId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setWorkflowLimitInfo(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching workflow limit info:', error);
+    }
+  };
 
   const handleCreateWorkflow = async () => {
     if (!formData.name.trim()) {
@@ -273,13 +301,49 @@ export default function WorkflowsPage() {
         });
         setIsCreateDialogOpen(false);
         resetForm();
+        fetchWorkflowLimitInfo(); // Refresh limit info
         router.push(`/automations/workflows/${data.workflow._id}/builder`);
       } else {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to create workflow",
-          variant: "destructive",
-        });
+        // Handle specific error codes
+        if (data.code === 'WORKFLOW_LIMIT_REACHED') {
+          toast({
+            title: "Workflow Limit Reached",
+            description: `You've reached the ${data.limit} workflow limit for your ${data.plan} plan. Upgrade to create more workflows.`,
+            variant: "destructive",
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/settings/billing'}
+                className="ml-2"
+              >
+                Upgrade Plan
+              </Button>
+            ),
+          });
+        } else if (data.code === 'SUBSCRIPTION_INACTIVE') {
+          toast({
+            title: "Subscription Required",
+            description: "Your subscription is not active. Please upgrade or renew your plan to create workflows.",
+            variant: "destructive",
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/settings/billing'}
+                className="ml-2"
+              >
+                View Billing
+              </Button>
+            ),
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || "Failed to create workflow",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error('Error creating workflow:', error);
@@ -290,6 +354,27 @@ export default function WorkflowsPage() {
       });
     }
   };
+
+  const getPlanColor = (plan: string) => {
+    switch (plan) {
+      case 'starter': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'growth': return 'text-purple-600 bg-purple-50 border-purple-200';
+      case 'advanced': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'enterprise': return 'text-green-600 bg-green-50 border-green-200';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  };
+
+  const getPlanIcon = (plan: string) => {
+    switch (plan) {
+      case 'starter': return <Zap className="h-4 w-4" />;
+      case 'growth': return <TrendingUp className="h-4 w-4" />;
+      case 'advanced': return <Sparkles className="h-4 w-4" />;
+      case 'enterprise': return <Crown className="h-4 w-4" />;
+      default: return <Activity className="h-4 w-4" />;
+    }
+  };
+
 
   const handleDeleteWorkflow = async () => {
     if (!selectedWorkflow) return;
@@ -477,14 +562,107 @@ export default function WorkflowsPage() {
                   Export
                 </Button> */}
                 <Button
-                  onClick={() => setIsCreateDialogOpen(true)}
+                  onClick={() => {
+                    if (workflowLimitInfo && !workflowLimitInfo.canCreateMore) {
+                      if (workflowLimitInfo.subscriptionStatus !== 'active') {
+                        toast({
+                          title: "Subscription Required",
+                          description: "Your subscription is not active. Please upgrade or renew your plan to create workflows.",
+                          variant: "destructive",
+                          action: (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.location.href = '/settings/billing'}
+                              className="ml-2"
+                            >
+                              View Billing
+                            </Button>
+                          ),
+                        });
+                      } else {
+                        toast({
+                          title: "Workflow Limit Reached",
+                          description: `You've reached the ${workflowLimitInfo.limit} workflow limit for your ${workflowLimitInfo.planName} plan. Upgrade to create more workflows.`,
+                          variant: "destructive",
+                          action: (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.location.href = '/settings/billing'}
+                              className="ml-2"
+                            >
+                              Upgrade Plan
+                            </Button>
+                          ),
+                        });
+                      }
+                      return;
+                    }
+                    setIsCreateDialogOpen(true);
+                  }}
                   className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-200"
+                  disabled={workflowLimitInfo && !workflowLimitInfo.canCreateMore}
                 >
                   <Plus className="h-4 w-4" />
                   Create Workflow
                 </Button>
               </div>
             </div>
+
+            {/* Workflow Limit Info Card */}
+            {workflowLimitInfo && (
+              <Card className="border-0 shadow-sm p-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${getPlanColor(workflowLimitInfo.plan)}`}>
+                        {getPlanIcon(workflowLimitInfo.plan)}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900">
+                          {workflowLimitInfo.planName} Plan - Workflows
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                          {workflowLimitInfo.limit === Infinity
+                            ? `${workflowLimitInfo.currentCount} workflows created (Unlimited)`
+                            : `${workflowLimitInfo.currentCount} of ${workflowLimitInfo.limit} workflows used`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {/* {workflowLimitInfo.limit !== Infinity && (
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-slate-700">
+                            {workflowLimitInfo.remainingSlots} slots remaining
+                          </div>
+                          <div className="w-32 bg-slate-200 rounded-full h-2 mt-1">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${(workflowLimitInfo.currentCount / workflowLimitInfo.limit) * 100}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )} */}
+                      {!workflowLimitInfo.canCreateMore && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.location.href = '/settings/billing'}
+                          className="border-blue-500/20 text-blue-600 hover:bg-blue-500/5"
+                        >
+                          Upgrade Plan
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
 
             {/* Stats Cards */}
