@@ -31,7 +31,8 @@ import {
   Crown,
   Users,
   Star,
-  Workflow
+  Workflow,
+  Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -184,9 +185,16 @@ export default function Sidebar({ user, userPermissions, isCollapsed, onCollapse
       description: "Manage your contacts"
     },
     {
+      title: "Broadcast Groups",
+      href: "/contact-groups",
+      icon: <Megaphone size={20} strokeWidth={1.5} />,
+      wabaRequired: true,
+      description: "Manage your broadcast groups"
+    },
+    {
       title: "Campaigns",
       href: "/campaigns",
-      icon: <Megaphone size={20} strokeWidth={1.5} />,
+      icon: <Target size={20} strokeWidth={1.5} />,
       wabaRequired: true,
       description: "Broadcast campaigns"
     },
