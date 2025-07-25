@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Contact from '@/models/Contact';
 import ContactCustomField from '@/models/ContactCustomField';
+import ContactGroup from '@/models/ContactGroup';
 
 export async function POST(req: NextRequest) {
   try {
@@ -172,12 +173,66 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    // Apply audience filters
+    /// Apply audience filters
     if (parsedFilters) {
-      const { tags, conditionGroups, groupOperator, whatsappOptedIn } = parsedFilters;
+      const { tags, conditionGroups, groupOperator, whatsappOptedIn, contactGroups } = parsedFilters;
 
       const allConditions = [];
 
+      // Apply contact groups filter - Enhanced version
+      if (contactGroups && contactGroups.length > 0) {
+        try {
+          // Get all contact IDs from selected groups with better error handling
+          const selectedGroups = await ContactGroup.find({
+            _id: {
+              $in: contactGroups.map((id: string) => {
+                // Handle both string and ObjectId formats
+                try {
+                  return mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+                } catch {
+                  return id;
+                }
+              })
+            },
+            userId: decoded.id,
+            companyId: user.companyId,
+            isActive: true
+          }).select('contacts name').lean();
+
+          console.log(`Found ${selectedGroups.length} contact groups for filtering`);
+
+          // Flatten all contact IDs from all selected groups
+          const contactIds = selectedGroups.reduce((acc: any[], group: any) => {
+            if (group.contacts && Array.isArray(group.contacts)) {
+              console.log(`Group "${group.name}" has ${group.contacts.length} contacts`);
+              return acc.concat(group.contacts);
+            }
+            return acc;
+          }, []);
+
+          // Remove duplicates and convert to proper ObjectIds
+          const uniqueContactIds = [...new Set(contactIds)].map(id => {
+            try {
+              return mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+            } catch {
+              return id;
+            }
+          });
+
+          console.log(`Total unique contact IDs from groups: ${uniqueContactIds.length}`);
+
+          if (uniqueContactIds.length > 0) {
+            allConditions.push({ _id: { $in: uniqueContactIds } });
+          } else {
+            // If no contacts found in selected groups, return empty result
+            console.log('No contacts found in selected groups, returning empty result');
+            allConditions.push({ _id: { $in: [] } });
+          }
+        } catch (error) {
+          console.error('Error processing contact groups filter:', error);
+          // On error, don't apply contact group filter
+        }
+      }
       // Apply tag filters
       if (tags && tags.length > 0) {
         allConditions.push({ tags: { $in: tags } });

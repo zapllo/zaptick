@@ -138,7 +138,7 @@ const AudienceFilter = ({
   tags = [],
   traitFields = [],
   eventFields = [],
-  contactGroups = [], // Add this
+  contactGroups = [],
   onApplyFilters,
   initialFilters
 }: AudienceFilterProps) => {
@@ -309,7 +309,7 @@ const AudienceFilter = ({
     }
   };
 
-  // Update the handleApplyFilters function
+  // Make sure the handleApplyFilters includes contact groups
   const handleApplyFilters = () => {
     const validGroups = conditionGroups
       .map(group => ({
@@ -329,7 +329,7 @@ const AudienceFilter = ({
       conditionGroups: validGroups,
       groupOperator,
       whatsappOptedIn,
-      contactGroups: selectedContactGroups // Add this
+      contactGroups: selectedContactGroups
     };
 
     console.log('AudienceFilter - Applying filters:', JSON.stringify(filtersToApply, null, 2));
@@ -337,6 +337,7 @@ const AudienceFilter = ({
     onApplyFilters(filtersToApply);
     setIsFiltersCollapsed(true);
   };
+
 
 
   // Update the handleClearAllFilters function

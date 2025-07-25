@@ -20,6 +20,20 @@ const robotoMono = Roboto_Mono({
 export const metadata: Metadata = {
   title: "Zaptick",
   description: "Zaptick transforms WhatsApp into a powerful platform for customer engagement, support, and commerce with enterprise-grade automation.",
+  openGraph: {
+    title: "Zaptick - Transform your WhatsApp into Revenue",
+    description: "Zaptick transforms WhatsApp into a powerful platform for customer engagement, support, and commerce with enterprise-grade automation",
+    url: "https://zaptick.io",
+    type: "website",
+    images: [
+      {
+        url: "https://zaptick.io/og.png",
+        width: 1200, // recommended width
+        height: 630, // recommended height
+        alt: "Image for Zaptick - Transform your WhatsApp into Revenue 🚀 ",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({

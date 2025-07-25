@@ -575,7 +575,7 @@ const ResponseHandlingSection = ({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="text">Text Message</SelectItem>
-                        
+
                         </SelectContent>
                       </Select>
                     </div>
@@ -913,7 +913,9 @@ const CreateCampaignPage = () => {
   const [templateButtons, setTemplateButtons] = useState<any[]>([]);
   const [selectedWabaId, setSelectedWabaId] = useState<string>("");
   const [wabaAccounts, setWabaAccounts] = useState<WabaAccount[]>([]);
-
+  // Add state for contact groups
+  const [contactGroups, setContactGroups] = useState<any[]>([]);
+  const [isLoadingContactGroups, setIsLoadingContactGroups] = useState(false);
 
 
   useEffect(() => {
@@ -943,6 +945,30 @@ const CreateCampaignPage = () => {
         description: "Failed to fetch WhatsApp accounts",
         variant: "destructive",
       });
+    }
+  };
+
+  // Add useEffect to fetch contact groups
+  useEffect(() => {
+    fetchContactGroups();
+  }, []);
+
+  // Add function to fetch contact groups
+  const fetchContactGroups = async () => {
+    setIsLoadingContactGroups(true);
+    try {
+      const response = await fetch('/api/contact-groups?includeContacts=false');
+      const data = await response.json();
+
+      if (data.success) {
+        setContactGroups(data.groups || []);
+      } else {
+        console.error('Failed to fetch contact groups:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching contact groups:', error);
+    } finally {
+      setIsLoadingContactGroups(false);
     }
   };
 
@@ -1342,10 +1368,31 @@ const CreateCampaignPage = () => {
     }
   };
 
-  // Apply audience filters locally
+  // Update the handleApplyFilters function to handle contact groups
   const handleApplyFilters = (filters: any) => {
+    console.log('Applying filters with contact groups:', filters);
+
     let filtered = [...contacts];
 
+    // If contact groups are selected, filter by them first
+    if (filters.contactGroups && filters.contactGroups.length > 0) {
+      // Get all contacts that belong to the selected groups
+      const selectedGroupContacts = new Set<string>();
+
+      filters.contactGroups.forEach((groupId: string) => {
+        const group = contactGroups.find(g => g.id === groupId);
+        if (group && group.contacts) {
+          group.contacts.forEach((contactId: string) => {
+            selectedGroupContacts.add(contactId);
+          });
+        }
+      });
+
+      // Filter contacts to only include those in selected groups
+      filtered = filtered.filter(contact => selectedGroupContacts.has(contact.id));
+    }
+
+    // Apply other existing filters on the already filtered set
     // Apply tag filters
     if (filters.tags && filters.tags.length > 0) {
       filtered = filtered.filter(contact => {
@@ -1354,68 +1401,126 @@ const CreateCampaignPage = () => {
         );
       });
     }
+
+    // Clear individual contact selection when using filters
     setSelectedContacts([]);
+
     // Apply WhatsApp opt-in filter
     if (filters.whatsappOptedIn) {
       filtered = filtered.filter(contact => contact.whatsappOptIn);
     }
 
-    // Apply conditions
-    if (filters.conditions && filters.conditions.length > 0) {
+    // Apply conditions (existing logic)
+    if (filters.conditionGroups && filters.conditionGroups.length > 0) {
       filtered = filtered.filter(contact => {
-        let meetsCriteria = filters.operator === "AND";
+        // Group evaluation logic
+        const groupResults = filters.conditionGroups.map((group: any) => {
+          const { conditions, operator } = group;
 
-        for (const condition of filters.conditions) {
-          let fieldValue;
+          if (conditions.length === 0) return true;
 
-          // Handle custom fields
-          if (condition.field.startsWith('customField.')) {
-            const fieldKey = condition.field.replace('customField.', '');
-            fieldValue = contact.customFields?.[fieldKey];
+          const conditionResults = conditions.map((condition: any) => {
+            let fieldValue;
+
+            // Handle custom fields
+            if (condition.field && condition.field.startsWith('customField.')) {
+              const fieldKey = condition.field.replace('customField.', '');
+              fieldValue = contact.customFields?.[fieldKey];
+            } else {
+              // Handle regular fields
+              fieldValue = contact[condition.field];
+            }
+
+            let conditionMet = false;
+
+            switch (condition.operator) {
+              case "equals":
+                conditionMet = fieldValue === condition.value;
+                break;
+              case "not_equals":
+                conditionMet = fieldValue !== condition.value;
+                break;
+              case "contains":
+                conditionMet = fieldValue && String(fieldValue).toLowerCase().includes(String(condition.value).toLowerCase());
+                break;
+              case "not_contains":
+                conditionMet = !fieldValue || !String(fieldValue).toLowerCase().includes(String(condition.value).toLowerCase());
+                break;
+              case "starts_with":
+                conditionMet = fieldValue && String(fieldValue).toLowerCase().startsWith(String(condition.value).toLowerCase());
+                break;
+              case "ends_with":
+                conditionMet = fieldValue && String(fieldValue).toLowerCase().endsWith(String(condition.value).toLowerCase());
+                break;
+              case "greater_than":
+                conditionMet = fieldValue > condition.value;
+                break;
+              case "less_than":
+                conditionMet = fieldValue < condition.value;
+                break;
+              case "is_unknown":
+                conditionMet = !fieldValue || fieldValue === null || fieldValue === undefined || fieldValue === '';
+                break;
+              case "has_any_value":
+                conditionMet = fieldValue && fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
+                break;
+              // Add date operators
+              case "after":
+              case "on":
+              case "before":
+              case "more_than":
+              case "exactly":
+              case "less_than":
+                // Handle date comparisons
+                if (fieldValue && condition.value) {
+                  const fieldDate = new Date(fieldValue);
+                  const conditionDate = typeof condition.value === 'number'
+                    ? new Date(Date.now() - (condition.value * 24 * 60 * 60 * 1000))
+                    : new Date(condition.value);
+
+                  switch (condition.operator) {
+                    case "after":
+                      conditionMet = fieldDate > conditionDate;
+                      break;
+                    case "on":
+                      conditionMet = fieldDate.toDateString() === conditionDate.toDateString();
+                      break;
+                    case "before":
+                      conditionMet = fieldDate < conditionDate;
+                      break;
+                    case "more_than":
+                      conditionMet = fieldDate < conditionDate;
+                      break;
+                    case "exactly":
+                      conditionMet = fieldDate.toDateString() === conditionDate.toDateString();
+                      break;
+                    case "less_than":
+                      conditionMet = fieldDate > conditionDate;
+                      break;
+                  }
+                }
+                break;
+              default:
+                conditionMet = false;
+            }
+
+            return conditionMet;
+          });
+
+          // Combine conditions within the group
+          if (operator === "OR") {
+            return conditionResults.some(result => result);
           } else {
-            // Handle regular fields
-            fieldValue = contact[condition.field];
+            return conditionResults.every(result => result);
           }
+        });
 
-          let conditionMet = false;
-
-          switch (condition.operator) {
-            case "equals":
-              conditionMet = fieldValue === condition.value;
-              break;
-            case "not_equals":
-              conditionMet = fieldValue !== condition.value;
-              break;
-            case "contains":
-              conditionMet = fieldValue && String(fieldValue).toLowerCase().includes(String(condition.value).toLowerCase());
-              break;
-            case "not_contains":
-              conditionMet = !fieldValue || !String(fieldValue).toLowerCase().includes(String(condition.value).toLowerCase());
-              break;
-            case "starts_with":
-              conditionMet = fieldValue && String(fieldValue).toLowerCase().startsWith(String(condition.value).toLowerCase());
-              break;
-            case "ends_with":
-              conditionMet = fieldValue && String(fieldValue).toLowerCase().endsWith(String(condition.value).toLowerCase());
-              break;
-            case "greater_than":
-              conditionMet = fieldValue > condition.value;
-              break;
-            case "less_than":
-              conditionMet = fieldValue < condition.value;
-              break;
-            default:
-              conditionMet = false;
-          }
-
-          if (filters.operator === "AND") {
-            meetsCriteria = meetsCriteria && conditionMet;
-          } else {
-            meetsCriteria = meetsCriteria || conditionMet;
-          }
+        // Combine groups
+        if (filters.groupOperator === "OR") {
+          return groupResults.some(result => result);
+        } else {
+          return groupResults.every(result => result);
         }
-
-        return meetsCriteria;
       });
     }
 
@@ -1438,7 +1543,6 @@ const CreateCampaignPage = () => {
       description: `Audience filtered to ${filtered.length} contacts`,
     });
   };
-
   // Select template
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
@@ -1821,16 +1925,16 @@ const CreateCampaignPage = () => {
                   <ArrowLeft className="h-5 w-5 text-slate-700" />
                 </Button>
                 <div>
-                     <div className="flex items-center gap-3 ">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-primary" />
+                  <div className="flex items-center gap-3 ">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-semibold text-slate-700">Create Campaign</h1>
+                      <p className="text-xs text-slate-500">Set up a new WhatsApp campaign</p>
+                    </div>
                   </div>
-                   <div>
-                  <h1 className="text-2xl font-semibold text-slate-700">Create Campaign</h1>
-                  <p className="text-xs text-slate-500">Set up a new WhatsApp campaign</p>
-                  </div>
-                  </div>
-                 
+
                 </div>
               </div>
 
@@ -1899,7 +2003,7 @@ const CreateCampaignPage = () => {
               </div>
               <div className="relative">
                 <Progress value={calculateProgress()} className="h-2" />
-              
+
               </div>
             </div>
           </div>
@@ -2046,6 +2150,7 @@ const CreateCampaignPage = () => {
                           </div>
 
                           {/* Audience Filter */}
+                          {/* Audience Filter */}
                           <Collapsible className="border rounded-lg">
                             <CollapsibleTrigger className="flex items-center justify-between w-full p-4">
                               <div className="flex items-center gap-2">
@@ -2061,6 +2166,12 @@ const CreateCampaignPage = () => {
                                   tags={tags}
                                   traitFields={traitFields}
                                   eventFields={eventFields}
+                                  contactGroups={contactGroups.map(group => ({
+                                    id: group.id,
+                                    name: group.name,
+                                    contactCount: group.contactCount,
+                                    color: group.color || '#3B82F6'
+                                  }))}
                                   onApplyFilters={handleApplyFilters}
                                   initialFilters={campaign.audience.filters}
                                 />

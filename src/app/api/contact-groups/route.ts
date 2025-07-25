@@ -98,7 +98,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Get all contact groups
+// ... existing imports ...
+
+// Update the GET function to optionally include full contact details
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -122,6 +124,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search');
     const includeContacts = searchParams.get('includeContacts') === 'true';
+    const includeContactDetails = searchParams.get('includeContactDetails') === 'true';
 
     // Build query
     const query: any = { 
@@ -139,10 +142,14 @@ export async function GET(req: NextRequest) {
 
     let groupsQuery = ContactGroup.find(query).sort({ createdAt: -1 });
 
-    if (includeContacts) {
+    if (includeContacts || includeContactDetails) {
+      const selectFields = includeContactDetails 
+        ? 'name phone email whatsappOptIn tags customFields lastMessageAt createdAt'
+        : 'name phone email whatsappOptIn tags';
+        
       groupsQuery = groupsQuery.populate({
         path: 'contacts',
-        select: 'name phone email whatsappOptIn tags'
+        select: selectFields
       });
     }
 
@@ -154,8 +161,20 @@ export async function GET(req: NextRequest) {
         id: group._id,
         name: group.name,
         description: group.description,
-        contacts: includeContacts ? group.contacts : undefined,
-        contactCount: group.contacts.length,
+        contacts: (includeContacts || includeContactDetails) ? (group.contacts || []).map((contact: any) => ({
+          id: contact._id,
+          name: contact.name,
+          phone: contact.phone,
+          email: contact.email,
+          whatsappOptIn: contact.whatsappOptIn,
+          tags: contact.tags || [],
+          ...(includeContactDetails && {
+            customFields: contact.customFields || {},
+            lastMessageAt: contact.lastMessageAt,
+            createdAt: contact.createdAt
+          })
+        })) : group.contacts?.map((id: any) => id.toString()) || [],
+        contactCount: group.contacts?.length || 0,
         color: group.color,
         createdAt: group.createdAt,
         updatedAt: group.updatedAt
@@ -169,3 +188,5 @@ export async function GET(req: NextRequest) {
     }, { status: 500 });
   }
 }
+
+// ... rest of existing code ...

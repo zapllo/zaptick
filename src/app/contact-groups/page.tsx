@@ -283,11 +283,62 @@ useEffect(() => {
 }, [contactSearchQuery, contacts, appliedFilters]); // Add contacts and appliedFilters as dependencies
 
 // Update the handleApplyFilters function to ensure it triggers re-fetch
-const handleApplyFilters = (filters: any) => {
-  console.log('ContactGroupsPage - Received filters:', JSON.stringify(filters, null, 2));
-  setAppliedFilters(filters);
-  // Force immediate fetch with the new filters
-  fetchFilteredContacts(filters);
+// Apply audience filters using API
+const handleApplyFilters = async (filters: any) => {
+  try {
+    setIsLoadingContacts(true);
+    
+    // Clear selected contacts when filters are applied
+    setSelectedContacts([]);
+    
+    // Build query parameters for the API
+    const queryParams = new URLSearchParams();
+    
+    // Add audience filters as a single parameter
+    if (filters) {
+      queryParams.append('audienceFilters', JSON.stringify(filters));
+    }
+    
+    // Fetch filtered contacts from API
+    const response = await fetch(`/api/contacts?${queryParams.toString()}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch filtered contacts');
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      const filteredContacts = data.contacts || [];
+      setFilteredContacts(filteredContacts);
+      setAudienceCount(filteredContacts.length);
+
+      // Update campaign audience
+      setCampaign(prev => ({
+        ...prev,
+        audience: {
+          filters,
+          count: filteredContacts.length,
+          selectedContacts: [] // Clear selected contacts when using filters
+        }
+      }));
+
+      toast({
+        title: "Success",
+        description: `Audience filtered to ${filteredContacts.length} contacts`,
+      });
+    } else {
+      throw new Error(data.error || 'Failed to filter contacts');
+    }
+  } catch (error) {
+    console.error('Error applying filters:', error);
+    toast({
+      title: "Error",
+      description: "Failed to apply audience filters",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoadingContacts(false);
+  }
 };
 
 // Update fetchFilteredContacts to handle the filter structure properly
