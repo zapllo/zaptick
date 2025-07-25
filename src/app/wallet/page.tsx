@@ -241,6 +241,9 @@ const WalletPage = () => {
         throw new Error(orderData.error || "Failed to create payment order");
       }
 
+      // Close the dialog before opening Razorpay
+      setShowAddFundsDialog(false);
+
       // Initialize Razorpay payment
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -292,7 +295,7 @@ const WalletPage = () => {
                   title: "Success",
                   description: `₹${amount.toFixed(2)} has been added to your wallet`,
                 });
-                setShowAddFundsDialog(false);
+                resetDialogValues();
                 loadWalletData(); // Refresh wallet data
               } else {
                 throw new Error(walletData.error || "Failed to add funds to wallet");
@@ -307,6 +310,8 @@ const WalletPage = () => {
               description: error instanceof Error ? error.message : "Payment processing failed",
               variant: "destructive",
             });
+            // Reopen the dialog on error
+            setShowAddFundsDialog(true);
           } finally {
             setIsPaymentProcessing(false);
             setPaymentInitiated(false);
@@ -321,16 +326,29 @@ const WalletPage = () => {
           color: "#378A4F", // Green primary color
         },
         modal: {
+          // Handle Razorpay modal dismissal
           ondismiss: function () {
             setIsPaymentProcessing(false);
             setPaymentInitiated(false);
-          }
+            // Reopen the dialog when Razorpay modal is dismissed
+            setTimeout(() => {
+              setShowAddFundsDialog(true);
+            }, 100);
+          },
+          // Set z-index higher than dialog
+          backdrop_close: true,
+          escape: true,
+          confirm_close: true
         }
       };
 
-      // Initialize Razorpay
-      const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
+      // Add a small delay to ensure dialog is closed
+      setTimeout(() => {
+        // Initialize Razorpay
+        const razorpay = new (window as any).Razorpay(options);
+        razorpay.open();
+      }, 200);
+
     } catch (error) {
       console.error("Error initiating payment:", error);
       toast({
@@ -340,6 +358,8 @@ const WalletPage = () => {
       });
       setIsPaymentProcessing(false);
       setPaymentInitiated(false);
+      // Keep dialog open on error
+      setShowAddFundsDialog(true);
     }
   };
 
@@ -627,7 +647,7 @@ const WalletPage = () => {
 
       {/* Add Funds Dialog */}
       <Dialog open={showAddFundsDialog} onOpenChange={handleDialogClose}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0 z-50">
           <DialogHeader className="px-6 py-4 border-b border-slate-200 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/20 flex items-center justify-center">
@@ -666,7 +686,7 @@ const WalletPage = () => {
                     <Input
                       id="amount"
                       type="number"
-                      min="1000"
+                      min="100"
                       value={amount}
                       onChange={(e) => setAmount(Number(e.target.value))}
                       className="pl-8 h-12 text-lg font-semibold bg-white border-green-300 focus:border-green-500 focus:ring-green-500/20"
@@ -675,7 +695,7 @@ const WalletPage = () => {
                   </div>
                   <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    Minimum amount: ₹1000
+                    Minimum amount: ₹100
                   </p>
                 </div>
               </div>
@@ -691,7 +711,7 @@ const WalletPage = () => {
 
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="grid grid-cols-3 gap-2">
-                    {suggestedAmounts.map((amt) => (
+                    {[100, 500, 1000, 2000, 5000, 10000].map((amt) => (
                       <Button
                         key={amt}
                         type="button"
