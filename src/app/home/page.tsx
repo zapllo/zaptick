@@ -196,7 +196,7 @@ export default function HomePage() {
         description:
           'Send bulk WhatsApp campaigns to 1000s of customers to re‑engage them and drive repeat orders',
         prerequisites: [
-          { label: 'Add your customers to Interakt', cta: 'Add Customers' },
+          { label: 'Add your customers to Zaptick', cta: 'Add Customers' },
           { label: 'Create a template & wait for its approval', cta: 'Create Template' },
         ],
         steps: [{ label: 'Create a new campaign', cta: 'Create Campaign' }],
@@ -707,6 +707,7 @@ export default function HomePage() {
         )}
 
 
+
         {/* Upgrade plan banner */}
         <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-8 shadow-sm">
           <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-center">
@@ -719,28 +720,32 @@ export default function HomePage() {
                   Unleash your potential with Pro plans
                 </h3>
                 <p className="text-gray-600 wark:text-gray-300">
-                  Get access to advanced features and unlimited messaging
+                  Get access to advanced features like automated ordering bot, API access, and team analytics
                 </p>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="flex items-center gap-1 text-primary font-medium">
                     <CheckCircle className="h-4 w-4" />
-                    Growth Plan
+                    Pro Plan
                   </span>
-                  <span className="text-gray-500">₹6,897/quarter</span>
+                  <span className="text-gray-500">₹3,500/month</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 wark:bg-green-900/30 wark:text-green-400">
                     <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                    Save 20%
+                    Save 15% on yearly
                   </span>
                 </div>
               </div>
             </div>
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <button className="rounded-xl bg-white border border-gray-200 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:text-gray-300">
-                Compare Plans
-              </button>
-              <button className="rounded-xl bg-gradient-to-r from-primary to-primary/90 px-6 py-3 text-sm font-medium text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
-                Upgrade Now
-              </button>
+              <Link href="/wallet/plans">
+                <button className="rounded-xl bg-white border border-gray-200 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200 wark:bg-gray-800 wark:border-gray-700 wark:text-gray-300">
+                  Compare Plans
+                </button>
+              </Link>
+              <Link href="/wallet/plans">
+                <button className="rounded-xl bg-gradient-to-r from-primary to-primary/90 px-6 py-3 text-sm font-medium text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
+                  Upgrade Now
+                </button>
+              </Link>
             </div>
           </div>
 
@@ -748,6 +753,7 @@ export default function HomePage() {
           <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/10" />
           <div className="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-primary/5" />
         </div>
+
 
         {/* Tabs */}
         <div className="space-y-6">

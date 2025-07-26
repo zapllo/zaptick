@@ -1123,6 +1123,27 @@ const CreateCampaignPage = () => {
     }
   }, [campaign, activeStep, responseHandling, steps]);
 
+
+
+  // Add this useEffect to debug contact data
+  useEffect(() => {
+    console.log('📊 Contact Debug Info:', {
+      totalContacts: contacts.length,
+      filteredContacts: filteredContacts.length,
+      selectedContacts: selectedContacts.length,
+      contactsWithWhatsappOptIn: contacts.filter(c => c.whatsappOptIn).length,
+      filteredContactsWithWhatsappOptIn: filteredContacts.filter(c => c.whatsappOptIn).length,
+      campaignAudienceFilters: campaign.audience.filters,
+      campaignAudienceCount: campaign.audience.count,
+      sampleContacts: contacts.slice(0, 3).map(c => ({
+        id: c.id,
+        name: c.name,
+        whatsappOptIn: c.whatsappOptIn,
+        tags: c.tags
+      }))
+    });
+  }, [contacts, filteredContacts, selectedContacts, campaign.audience]);
+
   // Fetch wallet balance
   const fetchWalletBalance = async () => {
     try {
@@ -1187,8 +1208,20 @@ const CreateCampaignPage = () => {
     return Math.round((completedRequiredSteps / totalRequiredSteps) * 100);
   };
 
-  // Add a function to toggle contact selection
+  // Complete updated toggleContactSelection function
   const toggleContactSelection = (contactId: string) => {
+    const contact = filteredContacts.find(c => (c._id || c.id) === contactId);
+
+    // Prevent selection of opted-out contacts
+    if (!contact?.whatsappOptIn) {
+      toast({
+        title: "Cannot Select Contact",
+        description: "This contact has opted out of WhatsApp communications and cannot receive campaigns.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelectedContacts(prev =>
       prev.includes(contactId)
         ? prev.filter(id => id !== contactId)
@@ -1207,20 +1240,23 @@ const CreateCampaignPage = () => {
           ...prev.audience,
           selectedContacts: newSelectedContacts,
           count: prev.audience.filters && Object.keys(prev.audience.filters).length > 0
-            ? filteredContacts.length
+            ? filteredContacts.filter(c => c.whatsappOptIn).length
             : newSelectedContacts.length
         }
       };
     });
   };
 
-  // Add a function to select/deselect all contacts
+  // Complete updated toggleSelectAll function
   const toggleSelectAll = () => {
-    if (selectedContacts.length === filteredContacts.length) {
+    // Only work with opted-in contacts
+    const optedInContacts = filteredContacts.filter(c => c.whatsappOptIn);
+    const optedInContactIds = optedInContacts.map(contact => contact._id || contact.id);
+
+    if (selectedContacts.length === optedInContactIds.length &&
+      optedInContactIds.every(id => selectedContacts.includes(id))) {
       // Deselect all
       setSelectedContacts([]);
-
-      // Update campaign audience count
       setCampaign(prev => ({
         ...prev,
         audience: {
@@ -1230,39 +1266,43 @@ const CreateCampaignPage = () => {
         }
       }));
     } else {
-      // Select all
-      const allContactIds = filteredContacts.map(contact => contact.id);
-      setSelectedContacts(allContactIds);
-
-      // Update campaign audience count
+      // Select all opted-in contacts
+      setSelectedContacts(optedInContactIds);
       setCampaign(prev => ({
         ...prev,
         audience: {
           ...prev.audience,
-          selectedContacts: allContactIds,
-          count: filteredContacts.length
+          selectedContacts: optedInContactIds,
+          count: optedInContactIds.length
         }
       }));
     }
+
+    // Show info if there are opted-out contacts
+    const optedOutCount = filteredContacts.length - optedInContacts.length;
+    if (optedOutCount > 0) {
+      toast({
+        title: "Selection Updated",
+        description: `Selected ${optedInContactIds.length} contacts. ${optedOutCount} opted-out contacts excluded.`,
+      });
+    }
   };
 
-  // Update selected contacts when filters change
+
+  // Update the useEffect that handles filter changes
   useEffect(() => {
     if (Object.keys(campaign.audience.filters).length > 0) {
-      // When filters are applied, reset selection
-      setSelectedContacts([]);
-
-      // Update campaign with filtered contacts
+      // When filters are applied, don't reset selection, just use filtered count
       setCampaign(prev => ({
         ...prev,
         audience: {
           ...prev.audience,
-          selectedContacts: [],
+          // Keep selectedContacts for when filters are removed
           count: filteredContacts.length
         }
       }));
     } else {
-      // When filters are reset, update campaign count based on selection
+      // When no filters, use selected contacts
       setCampaign(prev => ({
         ...prev,
         audience: {
@@ -1272,14 +1312,12 @@ const CreateCampaignPage = () => {
         }
       }));
     }
-  }, [campaign.audience.filters]);
+  }, [filteredContacts.length, selectedContacts.length]); // More specific dependencies
 
-
-  // Fetch all contacts
+  // Complete updated fetchContacts function
   const fetchContacts = async () => {
     setIsLoadingContacts(true);
     try {
-      // Fetch contacts from API
       const response = await fetch('/api/contacts');
       if (!response.ok) {
         throw new Error('Failed to fetch contacts');
@@ -1288,16 +1326,25 @@ const CreateCampaignPage = () => {
       const data = await response.json();
 
       if (data.success) {
-        setContacts(data.contacts || []);
-        setFilteredContacts(data.contacts || []);
-        setAudienceCount(data.contacts.length || 0);
+        const allContacts = data.contacts || [];
+        const optedInContacts = allContacts.filter(c => c.whatsappOptIn);
 
-        // Update campaign with initial audience count
+        setContacts(allContacts);
+        setFilteredContacts(allContacts); // Show all for visibility
+        setAudienceCount(optedInContacts.length); // But count only opted-in
+
+        console.log('📊 Contacts loaded:', {
+          total: allContacts.length,
+          optedIn: optedInContacts.length,
+          optedOut: allContacts.length - optedInContacts.length
+        });
+
+        // Update campaign with initial opted-in audience count
         setCampaign(prev => ({
           ...prev,
           audience: {
             ...prev.audience,
-            count: data.contacts.length || 0
+            count: optedInContacts.length
           }
         }));
       } else {
@@ -1368,17 +1415,33 @@ const CreateCampaignPage = () => {
     }
   };
 
-  // Update the handleApplyFilters function to handle contact groups
+  // Complete updated handleApplyFilters function
   const handleApplyFilters = (filters: any) => {
-    console.log('Applying filters with contact groups:', filters);
+    console.log('🎯 Applying filters:', filters);
 
     let filtered = [...contacts];
 
-    // If contact groups are selected, filter by them first
-    if (filters.contactGroups && filters.contactGroups.length > 0) {
-      // Get all contacts that belong to the selected groups
-      const selectedGroupContacts = new Set<string>();
+    // Log initial state
+    console.log('📊 Initial contacts:', {
+      total: filtered.length,
+      withWhatsappOptIn: filtered.filter(c => c.whatsappOptIn).length
+    });
 
+    // ALWAYS filter out opted-out contacts first (this should happen regardless of any checkbox)
+    const beforeOptOutFilter = filtered.length;
+    filtered = filtered.filter(contact => contact.whatsappOptIn === true);
+
+    console.log('📱 After removing opted-out contacts:', {
+      before: beforeOptOutFilter,
+      after: filtered.length,
+      removed: beforeOptOutFilter - filtered.length
+    });
+
+    // Apply contact groups filter
+    if (filters.contactGroups && filters.contactGroups.length > 0) {
+      console.log('👥 Applying contact groups filter:', filters.contactGroups);
+
+      const selectedGroupContacts = new Set<string>();
       filters.contactGroups.forEach((groupId: string) => {
         const group = contactGroups.find(g => g.id === groupId);
         if (group && group.contacts) {
@@ -1389,29 +1452,37 @@ const CreateCampaignPage = () => {
       });
 
       // Filter contacts to only include those in selected groups
-      filtered = filtered.filter(contact => selectedGroupContacts.has(contact.id));
+      const beforeGroupFilter = filtered.length;
+      filtered = filtered.filter(contact => selectedGroupContacts.has(contact._id || contact.id));
+
+      console.log('👥 After contact groups filter:', {
+        before: beforeGroupFilter,
+        after: filtered.length
+      });
     }
 
-    // Apply other existing filters on the already filtered set
     // Apply tag filters
     if (filters.tags && filters.tags.length > 0) {
+      console.log('🏷️ Applying tags filter:', filters.tags);
+      const beforeTagFilter = filtered.length;
+
       filtered = filtered.filter(contact => {
         return filters.tags.every((tag: string) =>
           contact.tags && contact.tags.includes(tag)
         );
       });
-    }
 
-    // Clear individual contact selection when using filters
-    setSelectedContacts([]);
-
-    // Apply WhatsApp opt-in filter
-    if (filters.whatsappOptedIn) {
-      filtered = filtered.filter(contact => contact.whatsappOptIn);
+      console.log('🏷️ After tags filter:', {
+        before: beforeTagFilter,
+        after: filtered.length
+      });
     }
 
     // Apply conditions (existing logic)
     if (filters.conditionGroups && filters.conditionGroups.length > 0) {
+      console.log('📋 Applying condition groups:', filters.conditionGroups);
+      const beforeConditionsFilter = filtered.length;
+
       filtered = filtered.filter(contact => {
         // Group evaluation logic
         const groupResults = filters.conditionGroups.map((group: any) => {
@@ -1522,17 +1593,41 @@ const CreateCampaignPage = () => {
           return groupResults.every(result => result);
         }
       });
+
+      console.log('📋 After conditions filter:', {
+        before: beforeConditionsFilter,
+        after: filtered.length
+      });
     }
 
-    // Update filtered contacts and audience count
+    console.log('🎯 Final filtered result:', {
+      totalFiltered: filtered.length,
+      allHaveWhatsappOptIn: filtered.every(c => c.whatsappOptIn),
+      sampleContacts: filtered.slice(0, 3).map(c => ({
+        id: c._id || c.id,
+        name: c.name,
+        whatsappOptIn: c.whatsappOptIn,
+        tags: c.tags
+      }))
+    });
+
+    // Clear individual contact selection when using filters
+    setSelectedContacts([]);
     setFilteredContacts(filtered);
     setAudienceCount(filtered.length);
 
-    // Update campaign audience
+    // Update campaign audience - DON'T send the whatsappOptedIn flag to backend
+    const filtersForBackend = {
+      ...filters
+      // Remove whatsappOptedIn from filters since we handle it automatically
+      // The backend will always filter for whatsappOptIn: true
+    };
+    delete filtersForBackend.whatsappOptedIn;
+
     setCampaign(prev => ({
       ...prev,
       audience: {
-        filters,
+        filters: filtersForBackend,
         count: filtered.length,
         selectedContacts: [] // Clear selected contacts when using filters
       }
@@ -1540,9 +1635,11 @@ const CreateCampaignPage = () => {
 
     toast({
       title: "Success",
-      description: `Audience filtered to ${filtered.length} contacts`,
+      description: `Audience filtered to ${filtered.length} contacts (opted-out contacts excluded)`,
     });
   };
+
+
   // Select template
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
@@ -1615,7 +1712,9 @@ const CreateCampaignPage = () => {
       contentRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
-  // Save campaign as draft
+
+
+  // Complete updated saveCampaignAsDraft function
   const saveCampaignAsDraft = async () => {
     if (!campaign.name) {
       toast({
@@ -1629,17 +1728,26 @@ const CreateCampaignPage = () => {
     try {
       setIsLoading(true);
 
-      // Add selected contacts to the audience object before saving
+      // Determine final audience based on filters vs selection
+      const finalAudience = {
+        ...campaign.audience,
+        selectedContacts: Object.keys(campaign.audience.filters).length > 0
+          ? [] // When using filters, don't send selectedContacts
+          : selectedContacts.filter(contactId => {
+            // Only include opted-in contacts
+            const contact = contacts.find(c => (c._id || c.id) === contactId);
+            return contact?.whatsappOptIn;
+          })
+      };
+
       const campaignToSave = {
         ...campaign,
         responseHandling,
-
-        audience: {
-          ...campaign.audience,
-          selectedContacts: selectedContacts
-        },
+        audience: finalAudience,
         status: 'draft'
       };
+
+      console.log('💾 Saving campaign with audience:', finalAudience);
 
       const response = await fetch('/api/campaigns', {
         method: 'POST',
@@ -1675,7 +1783,7 @@ const CreateCampaignPage = () => {
     }
   };
 
-  // Launch campaign (continued)
+  // Complete updated launchCampaign function
   const launchCampaign = async () => {
     // Validate required fields
     if (!campaign.name) {
@@ -1717,9 +1825,17 @@ const CreateCampaignPage = () => {
     try {
       setIsLoading(true);
 
-      // Calculate expected cost
+      // Calculate expected cost for opted-in contacts only
       const messagePrice = calculateMessagePrice(selectedTemplateCategory);
-      const totalCost = messagePrice.totalPrice * campaign.audience.count;
+      const eligibleContactsCount = Object.keys(campaign.audience.filters).length > 0
+        ? filteredContacts.filter(c => c.whatsappOptIn).length
+        : selectedContacts.filter(contactId => {
+          const contact = contacts.find(c => (c._id || c.id) === contactId);
+          return contact?.whatsappOptIn;
+        }).length;
+
+      const totalCost = messagePrice.totalPrice * eligibleContactsCount;
+
       // Check if wallet balance is sufficient
       if (walletBalance !== undefined && walletBalance < totalCost) {
         toast({
@@ -1731,15 +1847,26 @@ const CreateCampaignPage = () => {
         return;
       }
 
-      // Add selected contacts to the audience object before launching
+      // Determine final audience based on filters vs selection
+      const finalAudience = {
+        ...campaign.audience,
+        selectedContacts: Object.keys(campaign.audience.filters).length > 0
+          ? [] // When using filters, don't send selectedContacts
+          : selectedContacts.filter(contactId => {
+            // Only include opted-in contacts
+            const contact = contacts.find(c => (c._id || c.id) === contactId);
+            return contact?.whatsappOptIn;
+          }),
+        count: eligibleContactsCount // Update count to reflect only opted-in contacts
+      };
+
       const campaignToLaunch = {
         ...campaign,
         responseHandling,
-        audience: {
-          ...campaign.audience,
-          selectedContacts: selectedContacts
-        }
+        audience: finalAudience
       };
+
+      console.log('🚀 Launching campaign with audience:', finalAudience);
 
       const response = await fetch('/api/campaigns/launch', {
         method: 'POST',
@@ -1802,6 +1929,25 @@ const CreateCampaignPage = () => {
     }
   };
 
+  // Add this useEffect for debugging
+  useEffect(() => {
+    console.log('📊 Campaign Debug Info:', {
+      totalContacts: contacts.length,
+      filteredContacts: filteredContacts.length,
+      selectedContacts: selectedContacts.length,
+      contactsWithWhatsappOptIn: contacts.filter(c => c.whatsappOptIn).length,
+      filteredContactsWithWhatsappOptIn: filteredContacts.filter(c => c.whatsappOptIn).length,
+      campaignAudienceFilters: campaign.audience.filters,
+      campaignAudienceCount: campaign.audience.count,
+      hasFilters: Object.keys(campaign.audience.filters).length > 0,
+      sampleFilteredContacts: filteredContacts.slice(0, 3).map(c => ({
+        id: c._id || c.id,
+        name: c.name,
+        whatsappOptIn: c.whatsappOptIn,
+        tags: c.tags
+      }))
+    });
+  }, [contacts, filteredContacts, selectedContacts, campaign.audience]);
 
   // Cancel launched campaign function
   const cancelLaunchedCampaign = async () => {
@@ -1867,7 +2013,8 @@ const CreateCampaignPage = () => {
     router.push('/campaigns');
   };
 
-
+  // Add a function to get consistent contact ID
+  const getContactId = (contact: Contact) => contact._id || contact.id;
   // Get initials for avatar
   const getInitials = (name: string) => {
     if (!name) return "??";
@@ -1889,22 +2036,24 @@ const CreateCampaignPage = () => {
     }
   };
 
-  // Reset audience filters
+  // Complete updated resetAudienceFilters function
   const resetAudienceFilters = () => {
+    const optedInContacts = contacts.filter(c => c.whatsappOptIn);
+
     setFilteredContacts(contacts);
-    setAudienceCount(contacts.length);
+    setAudienceCount(optedInContacts.length);
     setCampaign(prev => ({
       ...prev,
       audience: {
         filters: {},
-        count: selectedContacts.length || 0,
+        count: selectedContacts.length || optedInContacts.length,
         selectedContacts: selectedContacts
       }
     }));
 
     toast({
       title: "Filters Reset",
-      description: "Showing all contacts",
+      description: `Showing all contacts (${optedInContacts.length} eligible for campaigns)`,
     });
   };
 
@@ -2274,47 +2423,52 @@ const CreateCampaignPage = () => {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {filteredContacts.map((contact) => (
-                                      <TableRow
-                                        key={contact.id}
-                                        className="group"
-                                      >
-                                        <TableCell>
-                                          {Object.keys(campaign.audience.filters).length > 0 ? (
-                                            <Avatar className="h-8 w-8">
-                                              <AvatarImage src={contact.avatar || undefined} />
-                                              <AvatarFallback>{getInitials(contact.name || 'Unknown')}</AvatarFallback>
-                                            </Avatar>
-                                          ) : (
-                                            <div className="flex items-center justify-center">
-                                              <Checkbox
-                                                checked={selectedContacts.includes(contact.id)}
-                                                onCheckedChange={() => toggleContactSelection(contact.id)}
-                                                aria-label={`Select ${contact.name}`}
-                                                className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                                              />
+                                    {filteredContacts.map((contact) => {
+                                      // Use a consistent ID - try both _id (MongoDB) and id (frontend)
+                                      const contactId = contact._id || contact.id;
+
+                                      return (
+                                        <TableRow
+                                          key={contactId}
+                                          className="group"
+                                        >
+                                          <TableCell>
+                                            {Object.keys(campaign.audience.filters).length > 0 ? (
+                                              <Avatar className="h-8 w-8">
+                                                <AvatarImage src={contact.avatar || undefined} />
+                                                <AvatarFallback>{getInitials(contact.name || 'Unknown')}</AvatarFallback>
+                                              </Avatar>
+                                            ) : (
+                                              <div className="flex items-center justify-center">
+                                                <Checkbox
+                                                  checked={selectedContacts.includes(contactId)}
+                                                  onCheckedChange={() => toggleContactSelection(contactId)}
+                                                  aria-label={`Select ${contact.name}`}
+                                                  className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                                />
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                          <TableCell>{contact.name || 'Unknown'}</TableCell>
+                                          <TableCell>{contact.phone || '-'}</TableCell>
+                                          <TableCell>{contact.email || '-'}</TableCell>
+                                          <TableCell>
+                                            <Badge variant={contact.whatsappOptIn ? "default" : "secondary"}>
+                                              {contact.whatsappOptIn ? "Subscribed" : "Unsubscribed"}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            <div className="flex flex-wrap gap-1">
+                                              {contact.tags?.map((tag: string) => (
+                                                <Badge key={tag} variant="outline" className="text-xs">
+                                                  {tag}
+                                                </Badge>
+                                              ))}
                                             </div>
-                                          )}
-                                        </TableCell>
-                                        <TableCell>{contact.name || 'Unknown'}</TableCell>
-                                        <TableCell>{contact.phone || '-'}</TableCell>
-                                        <TableCell>{contact.email || '-'}</TableCell>
-                                        <TableCell>
-                                          <Badge variant={contact.whatsappOptIn ? "default" : "secondary"}>
-                                            {contact.whatsappOptIn ? "Subscribed" : "Unsubscribed"}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          <div className="flex flex-wrap gap-1">
-                                            {contact.tags?.map((tag: string) => (
-                                              <Badge key={tag} variant="outline" className="text-xs">
-                                                {tag}
-                                              </Badge>
-                                            ))}
-                                          </div>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
                                   </TableBody>
                                 </Table>
                               </ScrollArea>
@@ -2331,11 +2485,13 @@ const CreateCampaignPage = () => {
                         </CardContent>
                         <CardFooter className="flex justify-end border-t bg-gray-50">
                           {/* Finally, update the Continue button to check for selection or filters */}
+
                           <Button
                             onClick={() => completeStep(1)}
                             disabled={
                               !campaign.name ||
-                              (Object.keys(campaign.audience.filters).length === 0 && selectedContacts.length === 0)
+                              (Object.keys(campaign.audience.filters).length === 0 && selectedContacts.length === 0) ||
+                              (Object.keys(campaign.audience.filters).length > 0 && filteredContacts.length === 0)
                             }
                           >
                             Continue to Message

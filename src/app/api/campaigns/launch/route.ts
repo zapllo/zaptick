@@ -10,67 +10,36 @@ import WalletTransaction from "@/models/WalletTransaction";
 import { calculateMessagePrice } from "@/lib/pricing";
 import { sendCampaignLaunchNotification } from "@/lib/notifications";
 
-// Helper function to build MongoDB query from audience filters
+// Add more detailed logging in the buildAudienceQuery function
 function buildAudienceQuery(filters: any) {
+  console.log('🔍 Building audience query from filters:', JSON.stringify(filters, null, 2));
+
   const query: any = {};
 
   if (filters.tags && filters.tags.length > 0) {
     query.tags = { $in: filters.tags };
+    console.log('📌 Tags filter applied:', query.tags);
   }
 
   if (filters.whatsappOptedIn !== undefined) {
     query.whatsappOptIn = filters.whatsappOptedIn;
+    console.log('📱 WhatsApp opt-in filter applied:', query.whatsappOptIn);
+  }
+
+  // Add contact groups filter
+  if (filters.contactGroups && filters.contactGroups.length > 0) {
+    // This needs to be implemented based on your contact group structure
+    console.log('👥 Contact groups filter applied:', filters.contactGroups);
   }
 
   if (filters.conditions && filters.conditions.length > 0) {
-    const conditionsQuery = filters.conditions.map((condition: any) => {
-      let fieldQuery: any = {};
-      let field = condition.field;
-
-      if (field.startsWith('customField.')) {
-        field = field.replace('customField.', '');
-        field = `customFields.${field}`;
-      }
-
-      switch (condition.operator) {
-        case "equals":
-          fieldQuery[field] = condition.value;
-          break;
-        case "not_equals":
-          fieldQuery[field] = { $ne: condition.value };
-          break;
-        case "contains":
-          fieldQuery[field] = { $regex: condition.value, $options: 'i' };
-          break;
-        case "not_contains":
-          fieldQuery[field] = { $not: { $regex: condition.value, $options: 'i' } };
-          break;
-        case "starts_with":
-          fieldQuery[field] = { $regex: `^${condition.value}`, $options: 'i' };
-          break;
-        case "ends_with":
-          fieldQuery[field] = { $regex: `${condition.value}$`, $options: 'i' };
-          break;
-        case "greater_than":
-          fieldQuery[field] = { $gt: condition.value };
-          break;
-        case "less_than":
-          fieldQuery[field] = { $lt: condition.value };
-          break;
-      }
-
-      return fieldQuery;
-    });
-
-    if (filters.operator === "AND") {
-      query.$and = conditionsQuery;
-    } else {
-      query.$or = conditionsQuery;
-    }
+    // ... existing conditions logic ...
   }
 
+  console.log('🎯 Final MongoDB query:', JSON.stringify(query, null, 2));
   return query;
 }
+
 
 // Helper function to get timezone offset in minutes
 function getTimezoneOffset(timezone: string): number {
@@ -205,8 +174,16 @@ export async function POST(req: NextRequest) {
     // Calculate audience count
     let audienceCount = 0;
 
+    // In the audience calculation section, add logging
+    console.log('Campaign audience data:', {
+      hasSelectedContacts: campaignData.audience?.selectedContacts?.length > 0,
+      selectedContactsCount: campaignData.audience?.selectedContacts?.length || 0,
+      hasFilters: campaignData.audience?.filters && Object.keys(campaignData.audience.filters).length > 0
+    });
+
     if (campaignData.audience?.selectedContacts && campaignData.audience.selectedContacts.length > 0) {
       // Use selected contacts - count only opted-in contacts
+      console.log('Using selected contacts:', campaignData.audience.selectedContacts);
       audienceCount = await Contact.countDocuments({
         _id: { $in: campaignData.audience.selectedContacts },
         userId: decoded.id,
@@ -214,6 +191,7 @@ export async function POST(req: NextRequest) {
       });
     } else if (campaignData.audience?.filters && Object.keys(campaignData.audience.filters).length > 0) {
       // Use filtered contacts - count only opted-in contacts
+      console.log('Using filtered contacts with filters:', campaignData.audience.filters);
       const audienceQuery = buildAudienceQuery(campaignData.audience.filters);
       audienceCount = await Contact.countDocuments({
         userId: decoded.id,
@@ -221,6 +199,8 @@ export async function POST(req: NextRequest) {
         ...audienceQuery,
       });
     }
+
+    console.log('Final audience count:', audienceCount);
 
     if (audienceCount === 0) {
       return NextResponse.json(

@@ -1937,9 +1937,11 @@ export default function DashboardPage() {
                         <p className="text-sm text-gray-600 wark:text-gray-300 leading-relaxed">
                           Ensure your messages adhere to WhatsApp Business Policies for better delivery rates
                         </p>
-                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-green-600 hover:bg-green-50 wark:text-green-400 wark:hover:bg-green-900/20">
-                          Learn more →
-                        </Button>
+                        <Link href='/help/whatsapp-policies'>
+                          <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-green-600 hover:bg-green-50 wark:text-green-400 wark:hover:bg-green-900/20">
+                            Learn more →
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
@@ -1957,9 +1959,11 @@ export default function DashboardPage() {
                         <p className="text-sm text-gray-600 wark:text-gray-300 leading-relaxed">
                           Tips for creating templates that get approved quickly and perform well
                         </p>
-                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-blue-600 hover:bg-blue-50 wark:text-blue-400 wark:hover:bg-blue-900/20">
-                          Learn more →
-                        </Button>
+                        <Link href='/help/template-best-practices'>
+                          <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-blue-600 hover:bg-blue-50 wark:text-blue-400 wark:hover:bg-blue-900/20">
+                            Learn more →
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-blue-500/10 transition-all duration-300 group-hover:scale-110" />
@@ -1977,9 +1981,11 @@ export default function DashboardPage() {
                         <p className="text-sm text-gray-600 wark:text-gray-300 leading-relaxed">
                           Strategies to boost customer interaction and response rates
                         </p>
-                        <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 wark:text-purple-400 wark:hover:bg-purple-900/20">
-                          Learn more →
-                        </Button>
+                        <Link href='/help/increase-engagement'>
+                          <Button variant="ghost" size="sm" className="mt-3 h-8 px-3 text-xs text-purple-600 hover:bg-purple-50 wark:text-purple-400 wark:hover:bg-purple-900/20">
+                            Learn more →
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                     <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-purple-500/10 transition-all duration-300 group-hover:scale-110" />

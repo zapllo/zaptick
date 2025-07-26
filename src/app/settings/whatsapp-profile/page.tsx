@@ -32,12 +32,17 @@ import {
   User,
   MessageCircle,
   Video,
-  MoreVertical
+  MoreVertical,
+  ExternalLink,
+  CheckCircle,
+  Crown,
+  Star
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { FaWhatsapp } from "react-icons/fa";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ProfileData {
   about: string;
@@ -74,7 +79,10 @@ export default function WhatsAppProfileSettings() {
     message: string;
   }>({ type: null, message: "" });
   const [activeField, setActiveField] = useState<string | null>(null);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationLoading, setVerificationLoading] = useState(false);
   const { toast } = useToast();
+
 
   // Load profile data and user's WABA accounts on mount
   useEffect(() => {
@@ -320,7 +328,118 @@ export default function WhatsAppProfileSettings() {
     { value: "RESTAURANT", label: "🍽️ Restaurant" },
     { value: "OTHER", label: "📦 Other" },
   ];
+  // Add this function to handle verification payment
+  const handleVerificationPayment = async () => {
+    setShowVerificationDialog(false);
+    setVerificationLoading(true);
+    try {
+      const amount = 25000; // ₹25,000
 
+      // Create Razorpay order
+      const orderResponse = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amount * 100, // Razorpay expects amount in paise
+          currency: 'INR',
+          receipt: `verification_${Date.now()}`,
+          notes: {
+            service: 'whatsapp_verification',
+            amount: amount,
+            description: 'WhatsApp Business Account Verification Service'
+          }
+        }),
+      });
+
+      const { orderId } = await orderResponse.json();
+
+      // Initialize Razorpay
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: amount * 100,
+        currency: 'INR',
+        name: 'Zaptick',
+        description: 'WhatsApp Business Account Verification Service',
+        order_id: orderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            const verifyResponse = await fetch('/api/verify-payment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyResult = await verifyResponse.json();
+
+            if (verifyResult.success) {
+              // Record the verification purchase
+              await fetch('/api/verification/purchase', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  payment_id: response.razorpay_payment_id,
+                  order_id: response.razorpay_order_id,
+                  amount: amount,
+                  service: 'whatsapp_verification'
+                }),
+              });
+
+              toast({
+                title: "Payment Successful!",
+                description: "Your verification request has been submitted. Our team will contact you within 24 hours.",
+              });
+
+              setShowVerificationDialog(false);
+            } else {
+              throw new Error('Payment verification failed');
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            toast({
+              title: "Payment Error",
+              description: "There was an issue verifying your payment. Please contact support.",
+              variant: "destructive",
+            });
+          }
+        },
+        prefill: {
+          name: 'Customer',
+          email: 'customer@example.com',
+        },
+        theme: {
+          color: '#1D4B3E',
+        },
+        modal: {
+          ondismiss: function () {
+            setVerificationLoading(false);
+          }
+        }
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error('Verification payment error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initiate verification payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 wark:from-gray-900 wark:via-gray-800 wark:to-gray-900">
@@ -667,8 +786,15 @@ export default function WhatsAppProfileSettings() {
                                     {profileData.businessDescription?.charAt(0).toUpperCase() || "B"}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                                  <Check className="h-3 w-3 text-green-200" />
+                                <div className="absolute -bottom-1 -right-1 w-6 h-6  rounded-full flex cursor-pointer items-center justify-center" onClick={() => setShowVerificationDialog(true)}>
+
+                                  <img src='/icons/verified.png' className="object-fill w-full h-full animate-pulse 00" />
+                                </div>
+                                <div className="absolute top-[75px] -right-8 w-8 h-8 rounded-full flex cursor-pointer items-center justify-center" onClick={() => setShowVerificationDialog(true)}>
+                                  <img
+                                    src='/icons/finger.png'
+                                    className="object-fill w-full h-full -rotate-[30deg] scale-125 animate-bounce"
+                                  />
                                 </div>
                               </div>
 
@@ -797,6 +923,140 @@ export default function WhatsAppProfileSettings() {
             </div>
           </div>
 
+          <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+            <DialogContent className="m-auto h-fit max-h-screen overflow-y-scroll max-w-3xl w-full">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-xl">
+                  <Crown className="h-6 w-6 text-amber-500" />
+                  Get Your Business Verified
+                </DialogTitle>
+                <DialogDescription>
+                  Professional WhatsApp Business verification service by our experts
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Pricing Section */}
+                <div className="relative overflow-hidden rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-6">
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-5 w-5 text-amber-500" />
+                        <span className="font-semibold text-lg">Professional Verification Service</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-primary">₹25,000</div>
+                        <div className="text-sm text-gray-600">One-time fee</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Complete documentation assistance</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Direct submission to Meta</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Expert guidance throughout the process</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>24/7 support until verification</span>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-gray-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <strong>Note:</strong> This is a professional service fee. The actual verification is done by Meta and typically takes 1-3 business days.
+                    </div>
+                  </div>
+
+                  {/* Decorative elements */}
+                  <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/10" />
+                  <div className="absolute -left-4 -bottom-4 h-16 w-16 rounded-full bg-amber-500/10" />
+                </div>
+
+                {/* Benefits Section */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex gap-3">
+                    <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-blue-900">Why get verified?</h4>
+                      <ul className="text-sm text-blue-800 space-y-1">
+                        <li>• Build customer trust with a verified badge</li>
+                        <li>• Increase message delivery rates</li>
+                        <li>• Access to advanced business features</li>
+                        <li>• Professional appearance in chats</li>
+                        <li>• Higher customer engagement rates</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Process Section */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900">Our verification process:</h4>
+                  <ol className="text-sm text-gray-600 space-y-2">
+                    <li className="flex gap-2">
+                      <span className="flex-shrink-0 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-medium">1</span>
+                      <span>Payment confirmation and document collection</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="flex-shrink-0 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-medium">2</span>
+                      <span>Expert review and preparation of your application</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="flex-shrink-0 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-medium">3</span>
+                      <span>Direct submission to Meta for verification</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="flex-shrink-0 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-medium">4</span>
+                      <span>Follow-up and status updates until completion</span>
+                    </li>
+                  </ol>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowVerificationDialog(false)}
+                    className="flex-1"
+                    disabled={verificationLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleVerificationPayment}
+                    disabled={verificationLoading}
+                    className="flex-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    {verificationLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Pay ₹25,000 & Get Verified
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Additional Info */}
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    Secure payment powered by Razorpay • Money-back guarantee if verification fails due to our service
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           {/* Enhanced Help Section */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tips Card */}

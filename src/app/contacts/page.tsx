@@ -149,6 +149,15 @@ interface CustomField {
   createdAt: string;
 }
 
+interface ContactGroup {
+  id: string;
+  name: string;
+  description?: string;
+  contactCount: number;
+  color: string;
+  createdAt: string;
+}
+
 interface Contact {
   id: string;
   name: string;
@@ -221,6 +230,10 @@ export default function ContactsPage() {
   const [isAudienceFilterVisible, setIsAudienceFilterVisible] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
+  // Add these new state variables
+  const [contactGroups, setContactGroups] = useState<ContactGroup[]>([]);
+  const [isAddToGroupDialogOpen, setIsAddToGroupDialogOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
 
   const [newContact, setNewContact] = useState({
     name: "",
@@ -341,74 +354,6 @@ export default function ContactsPage() {
       });
     }
   };
-
-  // const fetchContacts = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     const params = new URLSearchParams();
-  //     if (selectedWabaId) params.append('wabaId', selectedWabaId);
-  //     if (searchQuery) params.append('search', searchQuery);
-
-  //     // Add custom field filters to params
-  //     Object.entries(customFieldFilters).forEach(([key, value]) => {
-  //       if (value !== undefined && value !== null && value !== '') {
-  //         params.append(`customField.${key}`, String(value));
-  //       }
-  //     });
-
-  //     const response = await fetch(`/api/contacts?${params}`);
-  //     const data = await response.json();
-
-  //     if (data.success) {
-  //       let filteredContacts = data.contacts;
-
-  //       // Apply status filter
-  //       if (statusFilter !== "all") {
-  //         filteredContacts = data.contacts.filter((contact: Contact) => {
-  //           switch (statusFilter) {
-  //             case "subscribed":
-  //               return contact.whatsappOptIn;
-  //             case "unsubscribed":
-  //               return !contact.whatsappOptIn;
-  //             case "recent":
-  //               return contact.lastMessageAt &&
-  //                 new Date(contact.lastMessageAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  //             case "inactive":
-  //               return !contact.lastMessageAt ||
-  //                 new Date(contact.lastMessageAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  //             default:
-  //               return true;
-  //           }
-  //         });
-  //       }
-
-  //       // Apply tag filter
-  //       if (tagFilter.length > 0) {
-  //         filteredContacts = filteredContacts.filter((contact: Contact) => {
-  //           return tagFilter.some(tag => contact.tags.includes(tag));
-  //         });
-  //       }
-
-  //       setContacts(filteredContacts);
-  //     } else {
-  //       toast({
-  //         title: "Error",
-  //         description: data.error || "Failed to fetch contacts",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error('Error fetching contacts:', error);
-  //     toast({
-  //       title: "Error",
-  //       description: "Failed to fetch contacts",
-  //       variant: "destructive",
-  //     });
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
 
   const handleAddContact = async () => {
     if (!newContact.name || !newContact.phone || !selectedWabaId) {
@@ -1155,6 +1100,75 @@ export default function ContactsPage() {
       setIsLoading(false);
     }
   };
+  // Add this new useEffect to fetch contact groups
+  useEffect(() => {
+    fetchContactGroups();
+  }, []);
+
+  // Add this function to fetch contact groups
+  const fetchContactGroups = async () => {
+    try {
+      const response = await fetch('/api/contact-groups');
+      const data = await response.json();
+
+      if (data.success) {
+        setContactGroups(data.groups);
+      }
+    } catch (error) {
+      console.error('Error fetching contact groups:', error);
+    }
+  };
+
+  // Add this function to handle adding contacts to a group
+  const handleAddToGroup = async () => {
+    if (!selectedGroupId || selectedContacts.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select a group and contacts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/contact-groups/${selectedGroupId}/contacts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactIds: selectedContacts
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: `${selectedContacts.length} contact${selectedContacts.length > 1 ? 's' : ''} added to group successfully`,
+        });
+        setIsAddToGroupDialogOpen(false);
+        setSelectedGroupId("");
+        setSelectedContacts([]);
+        // Optionally refresh contact groups to update contact counts
+        fetchContactGroups();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to add contacts to group",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error adding contacts to group:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add contacts to group",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Calculate stats
   const totalContacts = contacts.length;
@@ -1670,6 +1684,10 @@ export default function ContactsPage() {
                               <Tag className="mr-2 h-4 w-4" />
                               Add Tag
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsAddToGroupDialogOpen(true)}>
+                              <Users className="mr-2 h-4 w-4" />
+                              Add to Group
+                            </DropdownMenuItem>
                             <DropdownMenuItem>
                               <MessageSquare className="mr-2 h-4 w-4" />
                               Message Selected
@@ -1922,6 +1940,15 @@ export default function ContactsPage() {
                     <Card className="border-0  p-0 shadow-sm bg-white/80 backdrop-blur-sm">
                       <CardContent className="p-0">
                         <div className="overflow-x-auto  p-0">
+                          <div className='p-0 -mt-2'>
+                            {selectedContacts.length > 0 && (
+                              <div className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0] font-medium p-2 mt-2 mb-2  border '>
+                                {selectedContacts.length} {' '}
+                                contacts selected
+                              </div>
+                            )}
+
+                          </div>
                           <Table>
                             <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
                               <TableRow className="">
@@ -2834,7 +2861,146 @@ export default function ContactsPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+<Dialog open={isAddToGroupDialogOpen} onOpenChange={setIsAddToGroupDialogOpen}>
+                <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/20 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold text-slate-900">
+                          Add to Contact Group
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-600">
+                          Add {selectedContacts.length} selected contact{selectedContacts.length > 1 ? 's' : ''} to an existing group
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
 
+                  <div className="flex-1 overflow-y-auto px-6 py-6">
+                    <div className="space-y-6">
+                      {/* Group Selection */}
+                      <div className="space-y-3">
+                        <Label htmlFor="group-select" className="text-sm font-medium text-slate-700">
+                          Select Contact Group
+                        </Label>
+                        
+                        {contactGroups.length > 0 ? (
+                          <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                            <SelectTrigger id="group-select" className="bg-white border-slate-200">
+                              <SelectValue placeholder="Choose a contact group" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60">
+                              {contactGroups.map((group) => (
+                                <SelectItem key={group.id} value={group.id}>
+                                  <div className="flex items-center gap-3 w-full">
+                                    <div 
+                                      className="w-3 h-3 rounded-full" 
+                                      style={{ backgroundColor: group.color }}
+                                    />
+                                    <div className="flex-1">
+                                      <div className="font-medium">{group.name}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {group.contactCount} contacts
+                                        {group.description && ` • ${group.description}`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p className="font-medium">No contact groups found</p>
+                            <p className="text-sm">Create a contact group first to organize your contacts</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Selected Group Preview */}
+                      {selectedGroupId && (
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-slate-700">
+                            Selected Group
+                          </Label>
+                          {(() => {
+                            const selectedGroup = contactGroups.find(g => g.id === selectedGroupId);
+                            return selectedGroup ? (
+                              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <div 
+                                    className="w-4 h-4 rounded-full" 
+                                    style={{ backgroundColor: selectedGroup.color }}
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-medium text-green-900">{selectedGroup.name}</div>
+                                    <div className="text-sm text-green-700">
+                                      Currently has {selectedGroup.contactCount} contacts
+                                      {selectedGroup.description && ` • ${selectedGroup.description}`}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Selected Contacts Summary */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-slate-700">
+                          Contacts to Add ({selectedContacts.length})
+                        </Label>
+                        <div className="max-h-32 overflow-y-auto p-4 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="space-y-2">
+                            {contacts
+                              .filter(contact => selectedContacts.includes(contact.id))
+                              .slice(0, 5)
+                              .map((contact) => (
+                                <div key={contact.id} className="flex items-center gap-3 text-sm">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                      {contact.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-medium">{contact.name}</span>
+                                  <span className="text-muted-foreground">{contact.phone}</span>
+                                </div>
+                              ))}
+                            {selectedContacts.length > 5 && (
+                              <div className="text-center text-sm text-muted-foreground mt-2">
+                                and {selectedContacts.length - 5} more contacts...
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAddToGroupDialogOpen(false)}
+                      className="hover:bg-slate-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddToGroup}
+                      disabled={!selectedGroupId || selectedContacts.length === 0 || contactGroups.length === 0}
+                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Add to Group
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               {/* View Contact Dialog */}
               <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>

@@ -440,12 +440,24 @@ const AudienceFilter = ({
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
-              selected={condition.value ? new Date(condition.value) : undefined}
-              onSelect={(date) =>
-                updateConditionInGroup(groupId, condition.id, {
-                  value: date ? date.toISOString().split('T')[0] : ''
-                })
-              }
+              selected={condition.value ? new Date(condition.value + 'T00:00:00') : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  // Format the date as YYYY-MM-DD in local timezone to avoid UTC issues
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  const localDateString = `${year}-${month}-${day}`;
+
+                  updateConditionInGroup(groupId, condition.id, {
+                    value: localDateString
+                  });
+                } else {
+                  updateConditionInGroup(groupId, condition.id, {
+                    value: ''
+                  });
+                }
+              }}
               initialFocus
             />
           </PopoverContent>

@@ -664,7 +664,7 @@ export default function Layout({ children }: LayoutProps) {
                           <div className="bg-gradient-to-br from-teal-500/20 to-teal-600/10 p-3 rounded-xl group-hover:from-teal-500/30 group-hover:to-teal-600/20 transition-colors">
                             <Tags className="h-5 w-5 text-teal-600" />
                           </div>
-                          <span className="text-xs font-medium text-center">Tags</span>
+                          <span className="text-xs font-medium text-center">Custom Fields</span>
                         </button>
 
                         <PermissionCheck resource="settings" action="manage" fallback={null}>

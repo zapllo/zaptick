@@ -43,7 +43,8 @@ import {
   X,
   Gauge,
   BarChart3,
-  ArrowUpRight
+  ArrowUpRight,
+  BookOpen
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -73,13 +74,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { 
-  Card, 
-  CardContent, 
-  CardFooter, 
+import {
+  Card,
+  CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription 
+  CardDescription
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -420,29 +421,29 @@ export default function TemplatesPage() {
   // Get status display with styled badges
   const getStatusDisplay = (status: string) => {
     const statusConfig = {
-      'approved': { 
-        variant: "default" as const, 
-        className: "bg-green-100 text-green-700 border-green-200", 
+      'approved': {
+        variant: "default" as const,
+        className: "bg-green-100 text-green-700 border-green-200",
         icon: CheckCircle,
-        label: 'Approved' 
+        label: 'Approved'
       },
-      'pending': { 
-        variant: "secondary" as const, 
-        className: "bg-yellow-100 text-yellow-700 border-yellow-200", 
+      'pending': {
+        variant: "secondary" as const,
+        className: "bg-yellow-100 text-yellow-700 border-yellow-200",
         icon: Clock,
-        label: 'Pending' 
+        label: 'Pending'
       },
-      'rejected': { 
-        variant: "destructive" as const, 
-        className: "bg-red-100 text-red-700 border-red-200", 
+      'rejected': {
+        variant: "destructive" as const,
+        className: "bg-red-100 text-red-700 border-red-200",
         icon: XCircle,
-        label: 'Rejected' 
+        label: 'Rejected'
       },
-      'deleted': { 
-        variant: "outline" as const, 
-        className: "bg-gray-100 text-gray-600 border-gray-200", 
+      'deleted': {
+        variant: "outline" as const,
+        className: "bg-gray-100 text-gray-600 border-gray-200",
         icon: Archive,
-        label: 'Deleted' 
+        label: 'Deleted'
       }
     };
 
@@ -550,10 +551,19 @@ export default function TemplatesPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => router.push('/templates/library')}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Template Library
+                  </Button>
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="gap-2"
                     onClick={() => {
@@ -563,7 +573,7 @@ export default function TemplatesPage() {
                     <Download className="h-4 w-4" />
                     Export
                   </Button>
-                  
+
                   <PermissionCheck resource="templates" action="write" fallback={null}>
                     <Button
                       onClick={() => router.push('/templates/create')}
@@ -758,7 +768,7 @@ export default function TemplatesPage() {
                         </Badge>
                       )}
 
-                   {showDeleted && (
+                      {showDeleted && (
                         <Badge variant="secondary" className="flex items-center gap-1 bg-white">
                           <Archive className="h-3 w-3" />
                           Deleted Templates
@@ -796,7 +806,7 @@ export default function TemplatesPage() {
                           className="pl-10 bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                         />
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                           <SelectTrigger className="w-36 bg-white">
@@ -809,7 +819,7 @@ export default function TemplatesPage() {
                             <SelectItem value="REJECTED">Rejected</SelectItem>
                           </SelectContent>
                         </Select>
-                        
+
                         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                           <SelectTrigger className="w-40 bg-white">
                             <SelectValue />
@@ -850,7 +860,7 @@ export default function TemplatesPage() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -871,7 +881,7 @@ export default function TemplatesPage() {
                         </TooltipTrigger>
                         <TooltipContent>Sync templates from WhatsApp</TooltipContent>
                       </Tooltip>
-                      
+
                       <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
                         <Button
                           variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -959,7 +969,7 @@ export default function TemplatesPage() {
                           <Sparkles className="h-4 w-4 text-white" />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-3">
                         <h3 className="text-2xl font-bold text-slate-900">
                           {searchQuery || selectedStatus !== "ANY" || selectedCategory !== "all" || showDeleted
@@ -978,7 +988,7 @@ export default function TemplatesPage() {
                       {!searchQuery && selectedStatus === "ANY" && selectedCategory === "all" && !showDeleted && (
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                           <PermissionCheck resource="templates" action="write" fallback={null}>
-                            <Button 
+                            <Button
                               onClick={() => router.push('/templates/create')}
                               disabled={wabaAccounts.length === 0}
                               className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200"
@@ -988,9 +998,9 @@ export default function TemplatesPage() {
                               Create Your First Template
                             </Button>
                           </PermissionCheck>
-                          
-                          <Button 
-                            variant="outline" 
+
+                          <Button
+                            variant="outline"
                             size="lg"
                             className="gap-2"
                             onClick={handleSyncTemplates}
@@ -1013,8 +1023,8 @@ export default function TemplatesPage() {
                   {viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {filteredTemplates.map((template) => (
-                        <Card 
-                          key={template.id} 
+                        <Card
+                          key={template.id}
                           className="border-0 shadow-sm bg-white/80 backdrop-blur-sm hover:shadow-md transition-all duration-200 group overflow-hidden"
                         >
                           <CardHeader className="pb-3">
@@ -1031,8 +1041,8 @@ export default function TemplatesPage() {
                               </div>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
+                                  <Button
+                                    variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                   >
@@ -1075,9 +1085,9 @@ export default function TemplatesPage() {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
-                            
+
                             <div className="space-y-2">
-                              <CardTitle 
+                              <CardTitle
                                 className="text-lg font-semibold text-slate-900 group-hover:text-primary transition-colors cursor-pointer line-clamp-1"
                                 onClick={() => handleViewTemplate(template.id)}
                               >
@@ -1094,7 +1104,7 @@ export default function TemplatesPage() {
                               </div>
                             </div>
                           </CardHeader>
-                          
+
                           <CardContent className="space-y-4 pb-4">
                             <div className="space-y-2">
                               <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
@@ -1133,7 +1143,7 @@ export default function TemplatesPage() {
                               </div>
                             )}
                           </CardContent>
-                          
+
                           <CardFooter className="pt-0">
                             <div className="flex items-center justify-between text-xs text-muted-foreground w-full">
                               <span>Created {new Date(template.createdAt).toLocaleDateString()}</span>
@@ -1150,7 +1160,7 @@ export default function TemplatesPage() {
                       <CardContent className="p-0">
                         <div className="overflow-x-auto">
                           <Table>
-                          <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
+                            <TableHeader className='bg-[#DAE9E0] -50/80 hover:bg-[#DAE9E0]  p-0 border '>
                               <TableRow className="">
                                 <TableHead className="w-12">
                                   <Checkbox
@@ -1190,7 +1200,7 @@ export default function TemplatesPage() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="space-y-1">
-                                      <div 
+                                      <div
                                         className="font-medium text-slate-900 hover:text-primary cursor-pointer transition-colors"
                                         onClick={() => handleViewTemplate(template.id)}
                                       >
@@ -1237,9 +1247,9 @@ export default function TemplatesPage() {
                                             {new Date(template.lastUsed).toLocaleDateString()}
                                           </div>
                                           <div className="text-muted-foreground">
-                                            {new Date(template.lastUsed).toLocaleTimeString([], { 
-                                              hour: '2-digit', 
-                                              minute: '2-digit' 
+                                            {new Date(template.lastUsed).toLocaleTimeString([], {
+                                              hour: '2-digit',
+                                              minute: '2-digit'
                                             })}
                                           </div>
                                         </>
@@ -1263,7 +1273,7 @@ export default function TemplatesPage() {
                                         </TooltipTrigger>
                                         <TooltipContent>View Template</TooltipContent>
                                       </Tooltip>
-                                      
+
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -1277,7 +1287,7 @@ export default function TemplatesPage() {
                                         </TooltipTrigger>
                                         <TooltipContent>Duplicate Template</TooltipContent>
                                       </Tooltip>
-                                      
+
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                           <Button
@@ -1344,7 +1354,7 @@ export default function TemplatesPage() {
                       This action cannot be undone. The template will be permanently deleted and cannot be used for sending messages.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
-                  
+
                   {templateToDelete && (
                     <div className="py-4">
                       <div className="flex items-center gap-3 p-4 rounded-lg bg-slate-50 border">
@@ -1358,7 +1368,7 @@ export default function TemplatesPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {templateToDelete.status === 'approved' && (
                         <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
                           <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -1372,7 +1382,7 @@ export default function TemplatesPage() {
                       )}
                     </div>
                   )}
-                  
+
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction

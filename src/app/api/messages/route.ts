@@ -14,7 +14,7 @@ const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 function buildTemplateComponents(template: any, variables: any = {}) {
   console.log('🔧 buildTemplateComponents called with variables:', variables);
   console.log('🔧 Template components:', JSON.stringify(template.components, null, 2));
-  
+
   const components = [];
 
   if (!template.components) return components;
@@ -35,7 +35,7 @@ function buildTemplateComponents(template: any, variables: any = {}) {
             text: variables[paramIndex] || variables[varName] || `[${varName}]`
           });
         });
-        
+
         if (headerParams.length > 0) {
           components.push({
             type: 'header',
@@ -45,34 +45,34 @@ function buildTemplateComponents(template: any, variables: any = {}) {
       } else if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
         // Handle media headers - use mediaUrl from template
         console.log('🔧 Found media header:', component.format, 'mediaUrl:', component.mediaUrl);
-        
+
         if (component.mediaUrl) {
           let mediaParam;
-          
+
           if (component.format === 'IMAGE') {
             mediaParam = {
               type: 'image',
-              image: { 
-                link: component.mediaUrl 
+              image: {
+                link: component.mediaUrl
               }
             };
           } else if (component.format === 'VIDEO') {
             mediaParam = {
               type: 'video',
-              video: { 
-                link: component.mediaUrl 
+              video: {
+                link: component.mediaUrl
               }
             };
           } else if (component.format === 'DOCUMENT') {
             mediaParam = {
               type: 'document',
-              document: { 
+              document: {
                 link: component.mediaUrl,
                 filename: component.text || 'document.pdf'
               }
             };
           }
-          
+
           if (mediaParam) {
             console.log('🔧 Adding media parameter:', JSON.stringify(mediaParam, null, 2));
             components.push({
@@ -96,7 +96,7 @@ function buildTemplateComponents(template: any, variables: any = {}) {
           text: variables[paramIndex] || variables[varName] || `[${varName}]`
         });
       });
-      
+
       if (bodyParams.length > 0) {
         components.push({
           type: 'body',
@@ -106,12 +106,12 @@ function buildTemplateComponents(template: any, variables: any = {}) {
     } else if (component.type === 'BUTTONS' && component.buttons) {
       // Handle BUTTONS with URL variables
       const buttonComponents = [];
-      
+
       component.buttons.forEach((button: any, buttonIndex: number) => {
         if (button.type === 'URL' && button.url?.includes('{{')) {
           const matches = button.url.match(/\{\{[^}]+\}\}/g) || [];
           const buttonParams: any[] = [];
-          
+
           matches.forEach((match: string, index: number) => {
             const varName = match.replace(/\{\{|\}\}/g, '').trim();
             const paramIndex = (index + 1).toString();
@@ -120,7 +120,7 @@ function buildTemplateComponents(template: any, variables: any = {}) {
               text: variables[paramIndex] || variables[varName] || `[${varName}]`
             });
           });
-          
+
           if (buttonParams.length > 0) {
             buttonComponents.push({
               type: 'button',
@@ -131,7 +131,7 @@ function buildTemplateComponents(template: any, variables: any = {}) {
           }
         }
       });
-      
+
       // Add all button components
       buttonComponents.forEach(buttonComp => {
         components.push(buttonComp);
@@ -209,6 +209,34 @@ export async function POST(req: NextRequest) {
       if (!template) {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
+
+      // Check if template is approved
+      if (template.status !== 'APPROVED') {
+        return NextResponse.json({
+          error: 'Template not approved',
+          message: 'Only approved templates can be sent to contacts.'
+        }, { status: 400 });
+      }
+
+      // Check if template was approved less than 10 minutes ago
+      if (template.approvedAt) {
+        const approvalTime = new Date(template.approvedAt).getTime();
+        const currentTime = new Date().getTime();
+        const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+        const timeSinceApproval = currentTime - approvalTime;
+
+        if (timeSinceApproval < tenMinutesInMs) {
+          const remainingMinutes = Math.ceil((tenMinutesInMs - timeSinceApproval) / (60 * 1000));
+
+          return NextResponse.json({
+            error: 'Template recently approved',
+            message: `This template was recently approved and needs to settle in WhatsApp's system. Please wait ${remainingMinutes} more minute(s) before sending. This helps maintain a healthy messaging ecosystem and ensures optimal delivery rates.`,
+            remainingMinutes,
+            approvedAt: template.approvedAt
+          }, { status: 429 }); // 429 Too Many Requests status code
+        }
+      }
+
       // console.log('🔍 Template found:', template.name, 'with components:', template.components.length);
     }
 
@@ -227,16 +255,16 @@ export async function POST(req: NextRequest) {
     // Render template locally so the chat can show it later
     let renderedBody = message;
     let headerMedia = {};
- 
+
     if (messageType === 'template' && template) {
       console.log('🔧 Building template components with variables:', variables);
-      
+
       // Build template components automatically with variables
       // This now properly uses mediaUrl from the template itself
       const finalComponents = templateComponents || buildTemplateComponents(template, variables);
-      
+
       console.log('🔧 Final components built:', JSON.stringify(finalComponents, null, 2));
-      
+
       // Basic template structure
       whatsappPayload = {
         messaging_product: "whatsapp",
