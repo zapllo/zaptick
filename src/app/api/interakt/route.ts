@@ -15,6 +15,7 @@ import AutoReply from '@/models/AutoReply';
 import Workflow from '@/models/Workflow';
 import WorkflowEngine from '@/lib/workflowEngine';
 import Campaign from '@/models/Campaign';
+import Template from '@/models/Template';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -705,26 +706,40 @@ async function checkAndContinueWorkflow(
 ) {
   try {
     console.log(`🔄 Checking for workflow continuation: buttonId="${buttonId}", title="${buttonTitle}"`);
+    console.log(`   Contact ID: ${contact._id}`);
+    console.log(`   WABA ID: ${wabaAcc.wabaId}`);
 
     const workflowEngine = WorkflowEngine.getInstance();
 
-    // Find any running workflow execution for this contact
-    const runningExecution = workflowEngine.getAllExecutions()
-      .find(exec =>
-        exec.contactId === contact._id.toString() &&
-        exec.status === 'running'
-      );
+    // Get all executions for debugging
+    const allExecutions = workflowEngine.getAllExecutions();
+    console.log(`📋 Total executions in engine: ${allExecutions.length}`);
+    
+    // Find any execution for this contact (running or paused)
+    const contactExecutions = allExecutions.filter(exec => 
+      exec.contactId === contact._id.toString()
+    );
+    
+    console.log(`👤 Executions for this contact: ${contactExecutions.length}`);
+    contactExecutions.forEach((exec, index) => {
+      console.log(`   Execution ${index + 1}: WorkflowID=${exec.workflowId}, Status=${exec.status}, LastActivity=${exec.lastActivity}`);
+    });
 
-    if (!runningExecution) {
-      console.log('❌ No running workflow execution found for this contact');
+    // Find the most recent execution for this contact
+    const recentExecution = contactExecutions
+      .filter(exec => exec.status === 'running' || exec.status === 'paused')
+      .sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime())[0];
+
+    if (!recentExecution) {
+      console.log('❌ No running/paused workflow execution found for this contact');
       return;
     }
 
-    console.log(`✅ Found running workflow execution: ${runningExecution.workflowId}`);
+    console.log(`✅ Found workflow execution: ${recentExecution.workflowId} (${recentExecution.status})`);
 
     // Continue the workflow with the button response
     await workflowEngine.continueWorkflow(
-      runningExecution.workflowId,
+      recentExecution.workflowId,
       contact._id.toString(),
       {
         buttonId,
@@ -735,13 +750,12 @@ async function checkAndContinueWorkflow(
       }
     );
 
-    console.log(`✅ Workflow continued with button click: ${buttonId}`);
+    console.log(`✅ Workflow continuation attempted for button click: ${buttonId}`);
 
   } catch (error) {
     console.error('❌ Error continuing workflow:', error);
   }
 }
-
 // Update the checkAndTriggerWorkflows function
 async function checkAndTriggerWorkflows(
   messageContent: string,
