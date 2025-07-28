@@ -2005,14 +2005,26 @@ function WorkflowBuilderContent() {
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <Label htmlFor="list-button-text" className="text-sm font-medium text-slate-700">
-                                    Button Text <span className="text-red-500">*</span>
-                                  </Label>
+                                  <Label className="text-xs font-medium text-slate-600">Button Text</Label>
                                   <Input
-                                    id="list-button-text"
-                                    placeholder="Select"
-                                    value={selectedNode.data.config?.buttonText || ''}
+                                    placeholder="Button text"
+                                    value={button.text || ''}
                                     onChange={(e) => {
+                                      const newButtons = [...(selectedNode.data.config?.buttons || [])];
+                                      // Generate a more reliable button ID
+                                      const buttonText = e.target.value.trim();
+                                      const buttonId = buttonText ?
+                                        buttonText.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || `btn_${index + 1}` :
+                                        `btn_${index + 1}`;
+
+                                      newButtons[index] = {
+                                        ...button,
+                                        text: buttonText,
+                                        id: buttonId
+                                      };
+
+                                      console.log(`Setting button ${index} - Text: "${buttonText}", ID: "${buttonId}"`);
+
                                       setNodes((nds) =>
                                         nds.map((node) =>
                                           node.id === selectedNode.id
@@ -2022,7 +2034,7 @@ function WorkflowBuilderContent() {
                                                 ...node.data,
                                                 config: {
                                                   ...node.data.config,
-                                                  buttonText: e.target.value
+                                                  buttons: newButtons
                                                 }
                                               }
                                             }
@@ -2032,6 +2044,12 @@ function WorkflowBuilderContent() {
                                     }}
                                     className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                   />
+                                  <p className="text-xs text-slate-500">
+                                    Button ID will be: {button.text ?
+                                      button.text.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || `btn_${index + 1}` :
+                                      `btn_${index + 1}`
+                                    }
+                                  </p>
                                 </div>
                                 <div className="space-y-3">
                                   <Label className="text-sm font-medium text-slate-700">List Sections</Label>
