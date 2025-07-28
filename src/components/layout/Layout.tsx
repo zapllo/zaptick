@@ -1047,7 +1047,7 @@ useEffect(() => {
               </div>
               <h3 className="font-semibold text-lg mb-2">No results found</h3>
               <p className="text-sm text-muted-foreground text-center max-w-sm">
-                Try searching for pages, features, or actions. Use keywords like "template", "chat", "analytics", etc.
+                Try searching for pages, features, or actions. Use keywords like &quot;template&quot;, &quot;chat&quot;, &quot;analytics&quot;, etc.
               </p>
             </div>
           </CommandEmpty>
