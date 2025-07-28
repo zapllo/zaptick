@@ -696,7 +696,6 @@ async function checkForWorkflowContinuation(
 }
 
 
-
 async function checkAndContinueWorkflow(
   contact: any,
   buttonId: string,
@@ -721,7 +720,7 @@ async function checkAndContinueWorkflow(
     if (pausedExecution) {
       console.log(`✅ Found paused workflow execution waiting for input: ${pausedExecution.workflowId}`);
       console.log(`   Current node: ${pausedExecution.currentNodeId}`);
-      console.log(`   Waiting for: ${pausedExecution.variables.waitingForButtonClick ? 'button click' : 'list selection'}`); // Fixed the typo here
+      console.log(`   Waiting for: ${exec.variables.waitingForButtonClick ? 'button click' : 'list selection'}`);
 
       // Determine message type based on what we're waiting for
       const messageType = pausedExecution.variables.waitingForButtonClick ? 'button_click' : 'list_selection';
@@ -772,29 +771,11 @@ async function checkAndContinueWorkflow(
     }
 
     console.log('❌ No workflow execution found for this contact');
-    
-    // Add debug info
-    const allExecutions = workflowEngine.getAllExecutions();
-    console.log(`📊 All active executions (${allExecutions.length}):`, 
-      allExecutions.map(exec => ({
-        workflowId: exec.workflowId,
-        contactId: exec.contactId,
-        status: exec.status,
-        currentNode: exec.currentNodeId,
-        waitingFor: {
-          buttonClick: !!exec.variables.waitingForButtonClick,
-          listSelection: !!exec.variables.waitingForListSelection,
-          condition: !!exec.variables.waitingForCondition
-        }
-      }))
-    );
 
   } catch (error) {
     console.error('❌ Error continuing workflow:', error);
   }
 }
-
-
 
 
 // Update the checkAndTriggerWorkflows function

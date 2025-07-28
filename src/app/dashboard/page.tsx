@@ -857,7 +857,7 @@ export default function DashboardPage() {
               </Card>
 
               <Card className="group h-fit cursor-pointer hover:shadow-md rounded-xl transition-all duration-200 hover:-translate-y-1 border-2 hover:border-amber-200 bg-gradient-to-br from-white to-amber-50/30 wark:from-muted/40 wark:to-amber-900/10">
-                <a href="/contacts/import">
+                <a href="/automations/workflows">
                   <CardContent className="p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg group-hover:scale-110 transition-transform duration-200">
