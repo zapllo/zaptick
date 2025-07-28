@@ -1614,7 +1614,7 @@ function WorkflowBuilderContent() {
                                             value={button.text || ''}
                                             onChange={(e) => {
                                               const newButtons = [...(selectedNode.data.config?.buttons || [])];
-                                              const buttonId = button.id || e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '_') || `btn_${index + 1}`;
+                                              const buttonId = e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '_') || `btn_${index + 1}`;
                                               newButtons[index] = {
                                                 ...button,
                                                 text: e.target.value,
@@ -1639,6 +1639,17 @@ function WorkflowBuilderContent() {
                                             }}
                                             className="bg-white border-slate-200 focus:border-primary/50 focus:ring-primary/20"
                                           />
+                                        </div>
+
+                                        {/* Show visual button preview */}
+                                        <div className="bg-white border border-slate-300 rounded-lg p-3">
+                                          <div className="text-xs text-slate-500 mb-2">Button Preview:</div>
+                                          <div className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm font-medium inline-block">
+                                            {button.text || `Button ${index + 1}`}
+                                          </div>
+                                          <div className="text-xs text-slate-500 mt-1">
+                                            ID: {button.id || `btn_${index + 1}`}
+                                          </div>
                                         </div>
 
                                         {button.type === 'URL' && (
@@ -1740,6 +1751,7 @@ function WorkflowBuilderContent() {
                                 </div>
                               </div>
                             )}
+
 
                             {/* Send Media Configuration */}
                             {selectedNode.data.config?.actionType === 'send_media' && (

@@ -223,6 +223,11 @@ export default function AnalyticsPage() {
     }
   };
 
+
+
+
+
+  
   // Fetch analytics when dependencies change
   useEffect(() => {
     if (selectedWaba) {
@@ -271,7 +276,7 @@ export default function AnalyticsPage() {
     const ChangeIcon = change && parseFloat(change) > 0 ? ArrowUpRight : ArrowDownRight;
 
     return (
-      <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+      <Card className="group rounded-lg hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
@@ -374,66 +379,85 @@ export default function AnalyticsPage() {
   return (
     <Layout>
       <div className="space-y-8 p-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
-            <p className="text-muted-foreground">
-              Comprehensive insights into your WhatsApp Business performance
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {/* WABA Selector */}
-            <Select value={selectedWaba} onValueChange={setSelectedWaba}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select WhatsApp Account" />
-              </SelectTrigger>
-              <SelectContent>
-                {user?.wabaAccounts?.map((account) => (
-                  <SelectItem key={account.wabaId} value={account.wabaId}>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{account.phoneNumber || account.businessName}</span>
+      {/* Clean Header */}
+          <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    <BarChart3 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold">
+                        BETA
+                      </Badge>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    <p className="text-gray-600">Comprehensive insights into your WhatsApp Business performance</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* WABA Selector */}
+                {/* <Select value={selectedWaba} onValueChange={setSelectedWaba}>
+                  <SelectTrigger className="w-[220px] border-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <SelectValue placeholder="Select WhatsApp Account" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {user?.wabaAccounts?.map((account) => (
+                      <SelectItem key={account.wabaId} value={account.wabaId}>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          <span>{account.phoneNumber || account.businessName}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select> */}
 
-            {/* Time Range Selector */}
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {timeRanges?.map((range) => (
-                  <SelectItem key={range.value} value={range.value}>
-                    {range.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                {/* Time Range Selector */}
+                <Select value={timeRange} onValueChange={setTimeRange}>
+                  <SelectTrigger className="w-[160px] border-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <SelectValue />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeRanges?.map((range) => (
+                      <SelectItem key={range.value} value={range.value}>
+                        {range.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            {/* Refresh Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchAnalytics}
-              disabled={refreshing}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+                {/* Action Buttons */}
+                <Button
+                  variant="outline"
+                  onClick={fetchAnalytics}
+                  disabled={refreshing}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
 
-            {/* Export Button */}
-            <Button size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+                {/* <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
+                  <Download className="h-4 w-4" />
+                  Export
+                  <Badge variant="secondary" className="ml-1 text-xs bg-blue-100 text-blue-800">
+                    Beta
+                  </Badge>
+                </Button> */}
+              </div>
+            </div>
           </div>
-        </div>
 
         {/* Key Metrics */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -708,9 +732,11 @@ export default function AnalyticsPage() {
                         <p className="text-sm font-medium">{template.readRate}%</p>
                         <p className="text-xs text-muted-foreground">Read</p>
                       </div>
+                      {/* 
                       <Button variant="outline" size="sm">
                         View Details
-                      </Button>
+                      </Button> 
+                      */}
                     </div>
                   </div>
                 ))

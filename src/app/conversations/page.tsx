@@ -469,6 +469,17 @@ function ConversationsPageContent() {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [uploadType, setUploadType] = useState<'IMAGE' | 'VIDEO' | 'DOCUMENT'>('IMAGE');
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+
+
+  // Add more specific state for scroll management
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
+  const [lastMessageCount, setLastMessageCount] = useState(0);
+  const [scrollLocked, setScrollLocked] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true); // This should already exist in your code
+
+
+
   const [templateContactInfo, setTemplateContactInfo] = useState<{
     contactId: string;
     wabaId: string;
@@ -876,14 +887,15 @@ function ConversationsPageContent() {
   };
 
   // Add function to refresh data
-  // Update the refresh function
+  // Update refresh to preserve scroll position
   const refreshData = async () => {
     setIsRefreshing(true);
     try {
       await fetchConversations();
       await fetchContacts();
       if (activeConversation) {
-        await fetchMessages(activeConversation.id, false); // Don't scroll on refresh
+        // Use preserve mode during refresh
+        await fetchMessages(activeConversation.id, 'preserve');
       }
       toast({ title: "Data refreshed successfully" });
     } catch (error) {
@@ -897,6 +909,7 @@ function ConversationsPageContent() {
       setIsRefreshing(false);
     }
   };
+
 
 
 
@@ -949,8 +962,8 @@ function ConversationsPageContent() {
       default: return <Clock className={cn(iconClass, "text-muted-foreground")} />; // Clock for pending
     }
   };
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  // Debounced scroll handler to better detect user intent
+  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showAddTagDialog, setShowAddTagDialog] = useState(false);
   const [newTag, setNewTag] = useState("");
@@ -978,23 +991,48 @@ function ConversationsPageContent() {
     clearSelection();
   };
   // Update the handleScroll function to work with regular div
+  // Update scroll handler to be more responsive
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const target = event.target as HTMLDivElement;
     const { scrollTop, scrollHeight, clientHeight } = target;
 
-    // Check if user is near the bottom (within 100px)
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const isNearBottom = distanceFromBottom < 100;
+    const isScrolledUp = distanceFromBottom > 150;
 
-    setShouldAutoScroll(isNearBottom);
-
-    // Detect if user is actively scrolling
+    // Immediately set scroll lock to prevent any auto-scrolling
+    setScrollLocked(true);
     setIsUserScrolling(true);
 
-    // Clear scrolling state after a delay
-    setTimeout(() => {
+    // Update scroll states
+    setUserScrolledUp(isScrolledUp);
+    setShouldAutoScroll(isNearBottom);
+
+    console.log('User scrolling:', { distanceFromBottom, isScrolledUp, isNearBottom });
+
+    // Clear previous timeout
+    if (scrollTimeout) {
+      clearTimeout(scrollTimeout);
+    }
+
+    // Longer timeout to ensure user has really stopped scrolling
+    const newTimeout = setTimeout(() => {
+      console.log('User stopped scrolling, unlocking');
+      setScrollLocked(false);
       setIsUserScrolling(false);
-    }, 150);
-  }, []);
+    }, 1500); // Increased to 1.5 seconds
+
+    setScrollTimeout(newTimeout);
+  }, [scrollTimeout]);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+    };
+  }, [scrollTimeout]);
 
   // Update the scrollToBottom function
   const scrollToBottom = useCallback(() => {
@@ -1466,13 +1504,34 @@ function ConversationsPageContent() {
     }
   };
 
-  useEffect(() => {
-    if (!activeConversation) return;
-    const within = compute24hWindow(messages);
-    setActiveConversation(cv =>
-      cv ? { ...cv, isWithin24Hours: within } : cv);
-  }, [messages]);
-
+useEffect(() => {
+  if (!activeConversation || messages.length === 0) return;
+  
+  const within = compute24hWindow(messages);
+  
+  // Update the conversation in the conversations list instead
+  if (activeConversation.isWithin24Hours !== within) {
+    setConversations(prevConversations =>
+      prevConversations.map(conv =>
+        conv.id === activeConversation.id
+          ? { ...conv, isWithin24Hours: within }
+          : conv
+      )
+    );
+    
+    // Update filtered conversations too
+    setFilteredConversations(prevFiltered =>
+      prevFiltered.map(conv =>
+        conv.id === activeConversation.id
+          ? { ...conv, isWithin24Hours: within }
+          : conv
+      )
+    );
+    
+    // Update active conversation without triggering the conversation change effect
+    setActiveConversation(prev => prev ? { ...prev, isWithin24Hours: within } : prev);
+  }
+}, [messages]);
 
   // Update your fetchConversations function
   const fetchConversations = async () => {
@@ -1506,26 +1565,100 @@ function ConversationsPageContent() {
     }
   };
 
-  const fetchMessages = async (conversationId: string, shouldScrollToBottom = false) => {
+  // Update the fetchMessages function to be more conservative about auto-scrolling
+  const fetchMessages = async (conversationId: string, scrollBehavior: 'auto' | 'force-bottom' | 'preserve' | 'none' = 'auto') => {
     try {
-      setIsLoadingMessages(true); // Set loading state
+      setIsLoadingMessages(true);
+
+      // Get REAL current scroll position instead of relying on state
+      const scrollContainer = scrollAreaRef.current;
+      let wasActuallyAtBottom = false;
+      let currentScrollTop = 0;
+      let currentScrollHeight = 0;
+
+      if (scrollContainer) {
+        currentScrollTop = scrollContainer.scrollTop;
+        currentScrollHeight = scrollContainer.scrollHeight;
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        wasActuallyAtBottom = distanceFromBottom < 50; // User is actually at bottom
+      }
+
       const response = await fetch(`/api/conversations/${conversationId}/messages`);
       const data = await response.json();
+
       if (data.success) {
-        setMessages(data.conversation.messages || []);
-        if (shouldScrollToBottom) {
-          scrollToBottom();
-        }
+        const newMessages = data.conversation.messages || [];
+        const hasNewMessages = newMessages.length > lastMessageCount;
+
+        setMessages(newMessages);
+        setLastMessageCount(newMessages.length);
+
+        // Handle scrolling based on behavior and ACTUAL scroll position
+        setTimeout(() => {
+          if (scrollLocked || isUserScrolling) {
+            // NEVER interfere if user is actively scrolling
+            console.log('User is scrolling, skipping auto-scroll');
+            return;
+          }
+
+          switch (scrollBehavior) {
+            case 'force-bottom':
+              // Always scroll to bottom (user sent message, conversation change)
+              console.log('Force scrolling to bottom');
+              scrollToBottom();
+              setUserScrolledUp(false);
+              setShouldAutoScroll(true);
+              break;
+
+            case 'preserve':
+              // NEVER auto-scroll, always preserve position
+              console.log('Preserving scroll position');
+              if (scrollContainer && hasNewMessages) {
+                // Try to maintain the same relative position
+                const newScrollHeight = scrollContainer.scrollHeight;
+                const heightDiff = newScrollHeight - currentScrollHeight;
+                if (heightDiff > 0) {
+                  scrollContainer.scrollTop = currentScrollTop + heightDiff;
+                }
+              }
+              break;
+
+            case 'none':
+              // Do absolutely nothing
+              console.log('No scroll action');
+              break;
+
+            case 'auto':
+            default:
+              // Only auto-scroll if user was ACTUALLY at bottom AND there are new messages
+              if (wasActuallyAtBottom && hasNewMessages && !userScrolledUp) {
+                console.log('User was at bottom, auto-scrolling to show new messages');
+                scrollToBottom();
+                setShouldAutoScroll(true);
+              } else if (hasNewMessages && userScrolledUp) {
+                // User is scrolled up, maintain their position
+                console.log('User scrolled up, maintaining position despite new messages');
+                if (scrollContainer) {
+                  const newScrollHeight = scrollContainer.scrollHeight;
+                  const heightDiff = newScrollHeight - currentScrollHeight;
+                  if (heightDiff > 0) {
+                    scrollContainer.scrollTop = currentScrollTop + heightDiff;
+                  }
+                }
+              } else {
+                console.log('No auto-scroll needed');
+              }
+              break;
+          }
+        }, 50);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
-      setIsLoadingMessages(false); // Clear loading state
+      setIsLoadingMessages(false);
     }
   };
-
-
-
   // Add this function inside the ConversationsPageContent component
   const markConversationAsRead = async (conversationId: string) => {
     try {
@@ -1607,18 +1740,40 @@ function ConversationsPageContent() {
   }, [selectedWabaId]);
 
   // Update the useEffect that calls fetchMessages on conversation change
+  // Update useEffect for conversation changes
   useEffect(() => {
     if (activeConversation) {
-      fetchMessages(activeConversation.id, true); // Only scroll on initial load
+      // Reset all scroll states for new conversation
+      setUserScrolledUp(false);
+      setScrollLocked(false);
+      setIsUserScrolling(false);
+      setShouldAutoScroll(true);
+      // Force scroll to bottom for new conversations
+      fetchMessages(activeConversation.id, 'force-bottom');
       setSelectedContact(null);
-
-      // Ensure contact details are available for sending messages
       if (!activeConversation.contact) {
-        // If for some reason contact details are missing, fetch them
         fetchConversationDetails(activeConversation.id);
       }
     }
   }, [activeConversation]);
+
+
+  // Update periodic message fetching with better logic
+  useEffect(() => {
+    if (!activeConversation) return;
+
+    const interval = setInterval(async () => {
+      // Don't fetch if user is actively scrolling
+      if (scrollLocked || isUserScrolling) {
+        return;
+      }
+
+      // Use auto mode for periodic updates - respects user position
+      await fetchMessages(activeConversation.id, 'auto');
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeConversation, scrollLocked, isUserScrolling]);
 
 
   // Also make sure the fetchConversationDetails function is working properly
@@ -1808,21 +1963,21 @@ function ConversationsPageContent() {
       console.log('Send message response:', data);
 
       if (data.success) {
-        // If this was a new conversation, fetch the created conversation and set as active
         if (!activeConversation && data.conversationId) {
-          console.log('Fetching new conversation:', data.conversationId);
           const convResponse = await fetch(`/api/conversations/${data.conversationId}`);
           const convData = await convResponse.json();
           if (convData.success) {
             setActiveConversation(convData.conversation);
-            setSelectedContact(null); // Clear selected contact since we now have a conversation
-            // Refresh the conversations list
+            setSelectedContact(null);
             fetchConversations();
           }
         } else if (activeConversation) {
-          // For existing conversations, just fetch updated messages
-          fetchMessages(activeConversation.id, false);
-          // Also refresh conversations list to update last message
+          // User sent message - reset scroll state and force to bottom
+          setUserScrolledUp(false);
+          setScrollLocked(false);
+          setTimeout(() => {
+            fetchMessages(activeConversation.id, 'force-bottom');
+          }, 100);
           fetchConversations();
         }
 
@@ -1866,7 +2021,7 @@ function ConversationsPageContent() {
 
     const data = await res.json();
     if (data.success) {
-      fetchMessages(activeConversation.id); // Refresh messages
+      // fetchMessages(activeConversation.id); // Refresh messages
     } else {
       toast({ title: 'Failed to send reply', variant: 'destructive' });
     }
@@ -1982,7 +2137,7 @@ function ConversationsPageContent() {
             fetchConversations();
           }
         } else if (activeConversation) {
-          fetchMessages(activeConversation.id);
+          // fetchMessages(activeConversation.id);
           fetchConversations();
         }
 
@@ -3853,13 +4008,14 @@ function ConversationsPageContent() {
                   </div>
                 </div>
 
-                {/* Scroll to bottom button */}
                 {!shouldAutoScroll && (
                   <div className="absolute bottom-16 right-4 z-10">
                     <Button
                       onClick={() => {
-                        scrollToBottom();
+                        setUserScrolledUp(false);
+                        setScrollLocked(false);
                         setShouldAutoScroll(true);
+                        scrollToBottom();
                       }}
                       className="rounded-full h-8 w-8 shadow-lg bg-primary/90 hover:bg-primary text-primary-foreground"
                     >

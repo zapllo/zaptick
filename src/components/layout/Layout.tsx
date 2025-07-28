@@ -21,7 +21,32 @@ import {
   File,
   ImageIcon,
   Video,
-  FileText
+  FileText,
+  Bot,
+  Zap,
+  BarChart3,
+  Calendar,
+  Clock,
+  Globe,
+  Hash,
+  History,
+  Inbox,
+  Mail,
+  Phone,
+  PlayCircle,
+  Send,
+  Star,
+  Target,
+  Trash2,
+  Upload,
+  Workflow,
+  BookOpen,
+  FileSpreadsheet,
+  Headphones,
+  Building,
+  ChevronRight,
+  Command,
+  Filter
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -76,7 +101,6 @@ interface UserPermissions {
   }[];
 }
 
-
 interface UnreadMessage {
   id: string;
   conversationId: string;
@@ -87,6 +111,198 @@ interface UnreadMessage {
   contactId: string;
 }
 
+// Update the command items to only include existing pages
+const commandItems = [
+  // Quick Actions
+  {
+    group: 'Quick Actions',
+    items: [
+      {
+        icon: MessageSquare,
+        label: 'New Conversation',
+        description: 'Start a new WhatsApp conversation',
+        path: '/conversations',
+        shortcut: 'C',
+        keywords: ['chat', 'message', 'talk', 'conversation', 'whatsapp', 'new chat']
+      },
+      {
+        icon: User,
+        label: 'Add Contact',
+        description: 'Create a new contact',
+        path: '/contacts',
+        shortcut: 'N',
+        keywords: ['contact', 'person', 'customer', 'client', 'add', 'new contact']
+      },
+      {
+        icon: FileText,
+        label: 'Create Template',
+        description: 'Design a new message template',
+        path: '/templates',
+        shortcut: 'T',
+        keywords: ['template', 'message', 'create', 'design', 'new template', 'message template', 'whatsapp template']
+      },
+      {
+        icon: Bot,
+        label: 'New Workflow',
+        description: 'Build an automation workflow',
+        path: '/automations/workflows',
+        shortcut: 'W',
+        keywords: ['workflow', 'automation', 'bot', 'flow', 'new workflow']
+      },
+      {
+        icon: Upload,
+        label: 'Broadcast Message',
+        description: 'Send message to multiple contacts',
+        path: '/broadcast',
+        shortcut: 'B',
+        keywords: ['broadcast', 'bulk', 'mass', 'multiple', 'send', 'campaign']
+      }
+    ]
+  },
+  // Navigation
+  {
+    group: 'Navigation',
+    items: [
+      {
+        icon: LayoutDashboard,
+        label: 'Dashboard',
+        description: 'Analytics and overview',
+        path: '/dashboard',
+        keywords: ['dashboard', 'home', 'overview', 'analytics', 'stats', 'main']
+      },
+      {
+        icon: MessageSquare,
+        label: 'Conversations',
+        description: 'WhatsApp conversations',
+        path: '/conversations',
+        keywords: ['conversations', 'chats', 'messages', 'inbox', 'whatsapp']
+      },
+      {
+        icon: Users,
+        label: 'Contacts',
+        description: 'Manage your contacts',
+        path: '/contacts',
+        keywords: ['contacts', 'customers', 'people', 'directory', 'clients']
+      },
+      {
+        icon: FileText,
+        label: 'Templates',
+        description: 'Message templates library',
+        path: '/templates',
+        keywords: ['templates', 'messages', 'saved', 'library', 'message templates', 'whatsapp templates', 'template manager']
+      },
+      {
+        icon: Upload,
+        label: 'Broadcast',
+        description: 'Bulk messaging campaigns',
+        path: '/broadcast',
+        keywords: ['broadcast', 'bulk', 'campaigns', 'mass messaging', 'bulk send']
+      },
+      {
+        icon: BarChart3,
+        label: 'Analytics',
+        description: 'Performance metrics and reports',
+        path: '/analytics',
+        keywords: ['analytics', 'metrics', 'reports', 'statistics', 'performance', 'insights']
+      }
+    ]
+  },
+  // Automations
+  {
+    group: 'Automations',
+    items: [
+      {
+        icon: Bot,
+        label: 'Workflows',
+        description: 'Automation workflows',
+        path: '/automations/workflows',
+        keywords: ['workflows', 'automation', 'bots', 'flows', 'automated responses']
+      },
+      {
+        icon: Zap,
+        label: 'Chatbots',
+        description: 'AI-powered chatbots',
+        path: '/automations/chatbots',
+        keywords: ['chatbots', 'ai', 'automation', 'bots', 'artificial intelligence']
+      }
+    ]
+  },
+  // Settings & Management
+  {
+    group: 'Settings & Management',
+    items: [
+      {
+        icon: User,
+        label: 'Account Settings',
+        description: 'Personal account settings',
+        path: '/settings/account',
+        keywords: ['account', 'profile', 'personal', 'settings', 'user settings']
+      },
+      {
+        icon: MessageCircle,
+        label: 'WhatsApp Profile',
+        description: 'Business profile settings',
+        path: '/settings/whatsapp-profile',
+        keywords: ['whatsapp', 'profile', 'business', 'settings', 'business profile']
+      },
+      {
+        icon: Users,
+        label: 'Team Management',
+        description: 'Manage team members',
+        path: '/settings/agents',
+        keywords: ['team', 'agents', 'members', 'users', 'staff', 'employees']
+      },
+      {
+        icon: Shield,
+        label: 'Roles & Permissions',
+        description: 'Access control settings',
+        path: '/settings/roles',
+        keywords: ['roles', 'permissions', 'access', 'security', 'user roles']
+      },
+      {
+        icon: Code2,
+        label: 'Developer Settings',
+        description: 'API and webhook settings',
+        path: '/settings/developer',
+        keywords: ['developer', 'api', 'webhook', 'integration', 'dev settings']
+      },
+      {
+        icon: Tags,
+        label: 'Contact Fields',
+        description: 'Custom contact fields',
+        path: '/settings/contacts',
+        keywords: ['custom fields', 'contacts', 'fields', 'tags', 'contact fields']
+      }
+    ]
+  },
+  // Billing & Account
+  {
+    group: 'Billing & Account',
+    items: [
+      {
+        icon: Wallet,
+        label: 'Wallet',
+        description: 'Account balance and credits',
+        path: '/wallet',
+        keywords: ['wallet', 'balance', 'credits', 'money', 'funds']
+      },
+      {
+        icon: CreditCard,
+        label: 'Billing Plans',
+        description: 'Subscription and pricing',
+        path: '/wallet/plans',
+        keywords: ['billing', 'plans', 'subscription', 'pricing', 'upgrade', 'payment']
+      },
+      {
+        icon: History,
+        label: 'Transaction History',
+        description: 'Payment history',
+        path: '/wallet/transactions',
+        keywords: ['transactions', 'history', 'payments', 'billing', 'payment history']
+      }
+    ]
+  }
+];
 
 export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -96,6 +312,8 @@ export default function Layout({ children }: LayoutProps) {
   const [user, setUser] = useState<UserData | null>(null);
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
+  const [commandQuery, setCommandQuery] = useState('');
+  const [recentCommands, setRecentCommands] = useState<string[]>([]);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -110,26 +328,102 @@ export default function Layout({ children }: LayoutProps) {
     isLoading: true
   });
 
-  // Fetch user permissions
-  useEffect(() => {
-    const fetchUserPermissions = async () => {
-      try {
-        const response = await fetch('/api/');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setUserPermissions(data.permissions);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching permissions:', error);
-      }
-    };
+  // Helper function to check if user has permission
+  const hasPermission = (resource: string, action: string = 'read') => {
+    if (!userPermissions) return false;
+    if (userPermissions.role === 'admin') return true;
+    const permission = userPermissions.permissions.find(p => p.resource === resource);
+    return permission ? permission.actions.includes(action) : false;
+  };
 
-    if (user) {
-      fetchUserPermissions();
+  // Filter command items based on permissions and search query
+  const getFilteredCommands = () => {
+    return commandItems.map(group => ({
+      ...group,
+      items: group.items.filter(item => {
+        // Check permissions
+        if (item.resource && item.action ) {
+          return false;
+        }
+
+        // Check search query
+        if (commandQuery.trim()) {
+          const query = commandQuery.toLowerCase();
+          const matchesLabel = item.label.toLowerCase().includes(query);
+          const matchesDescription = item.description?.toLowerCase().includes(query);
+          const matchesKeywords = item.keywords?.some(keyword =>
+            keyword.toLowerCase().includes(query)
+          );
+          return matchesLabel || matchesDescription || matchesKeywords;
+        }
+
+        return true;
+      })
+    })).filter(group => group.items.length > 0);
+  };
+
+
+
+  // Handle command selection
+  const handleCommandSelect = (item: any) => {
+    if (item.path) {
+      router.push(item.path);
+
+      // Add to recent commands
+      const newRecent = [item.label, ...recentCommands.filter(cmd => cmd !== item.label)].slice(0, 5);
+      setRecentCommands(newRecent);
+      localStorage.setItem('recentCommands', JSON.stringify(newRecent));
     }
-  }, [user]);
+    setCommandOpen(false);
+    setCommandQuery('');
+  };
+
+  // Load recent commands from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('recentCommands');
+    if (saved) {
+      try {
+        setRecentCommands(JSON.parse(saved));
+      } catch (error) {
+        console.error('Error loading recent commands:', error);
+      }
+    }
+  }, []);
+
+  // Add this temporarily to debug the search
+useEffect(() => {
+  if (commandQuery.trim()) {
+    console.log('Search query:', commandQuery);
+    const filtered = getFilteredCommands();
+    console.log('Filtered results:', filtered);
+    
+    // Check specifically for template matches
+    const templateMatches = commandItems.flatMap(group => 
+      group.items.filter(item => {
+        const query = commandQuery.toLowerCase().trim();
+        const matchesLabel = item.label.toLowerCase().includes(query);
+        const matchesDescription = item.description?.toLowerCase().includes(query);
+        const matchesKeywords = item.keywords?.some(keyword => 
+          keyword.toLowerCase().includes(query)
+        );
+        return matchesLabel || matchesDescription || matchesKeywords;
+      })
+    );
+    console.log('Template matches:', templateMatches);
+  }
+}, [commandQuery]);
+
+  // Get recent command items
+  const getRecentCommandItems = () => {
+    return recentCommands.map(label => {
+      for (const group of commandItems) {
+        const item = group.items.find(i => i.label === label);
+        if (item) return item;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
 
 
   // Add function to fetch unread messages
@@ -292,16 +586,6 @@ export default function Layout({ children }: LayoutProps) {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Helper function to check if user has permission
-  const hasPermission = (resource: string, action: string = 'read') => {
-    if (!userPermissions) return false;
-
-    if (userPermissions.role === 'admin') return true;
-
-    const permission = userPermissions.permissions.find(p => p.resource === resource);
-    return permission ? permission.actions.includes(action) : false;
-  };
-
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-background via-background to-muted/30">
@@ -364,18 +648,22 @@ export default function Layout({ children }: LayoutProps) {
               <span className="sr-only">Open menu</span>
             </Button>
 
-            {/* Command palette button */}
+            {/* Enhanced Command palette button */}
             <Button
               variant="outline"
               size="sm"
-              className="hidden md:flex items-center w-[320px] h-10 gap-3 pl-4 pr-3 text-muted-foreground border-muted/50 hover:border-muted transition-colors bg-muted/30"
+              className="hidden md:flex items-center w-[380px] h-11 gap-3 pl-4 pr-3 text-muted-foreground border-muted/40 hover:border-primary/30 transition-all duration-200 bg-gradient-to-r from-muted/20 to-muted/30 hover:from-muted/30 hover:to-muted/40 backdrop-blur-sm shadow-sm hover:shadow-md"
               onClick={() => setCommandOpen(true)}
             >
-              <Search className="h-4 w-4" />
-              <span className="text-sm">Search anything...</span>
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-md bg-primary/10">
+                  <Search className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-medium">Search commands, pages & features...</span>
+              </div>
               <div className="ml-auto flex items-center gap-1">
-                <kbd className="pointer-events-none inline-flex h-6 select-none items-center gap-1 rounded border bg-background px-2 font-mono text-[11px] font-medium text-muted-foreground">
-                  <span className="text-xs">⌘</span>K
+                <kbd className="pointer-events-none inline-flex h-6 select-none items-center gap-1 rounded border bg-background/80 px-2 font-mono text-[10px] font-medium text-muted-foreground shadow-sm">
+                  <Command className="h-3 w-3" />K
                 </kbd>
               </div>
             </Button>
@@ -423,7 +711,6 @@ export default function Layout({ children }: LayoutProps) {
             {/* Right actions */}
             <div className="ml-auto flex items-center gap-2">
               {/* Wallet Balance */}
-              <PermissionCheck resource="settings" action="read" fallback={null}>
                 <Button
                   variant="ghost"
                   className="relative h-10 rounded-xl px-4 hidden lg:flex items-center gap-3 hover:bg-muted/50 transition-colors"
@@ -449,20 +736,7 @@ export default function Layout({ children }: LayoutProps) {
                     )}
                   </div>
                 </Button>
-              </PermissionCheck>
-
-              {/* Quick Actions
-              <PermissionCheck resource="conversations" action="write" fallback={null}>
-                <Button
-                  size="sm"
-                  className="hidden sm:flex items-center gap-2 h-10 rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all duration-200"
-                  onClick={() => router.push('/conversations')}
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden lg:inline">New Chat</span>
-                </Button>
-              </PermissionCheck> */}
-
+      
 
               {/* Updated Notifications Dropdown */}
               <DropdownMenu>
@@ -583,7 +857,6 @@ export default function Layout({ children }: LayoutProps) {
               </DropdownMenu>
 
               {/* Settings Dropdown */}
-              <PermissionCheck resource="settings" action="read" fallback={null}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -611,7 +884,6 @@ export default function Layout({ children }: LayoutProps) {
                           <span className="text-xs font-medium text-center">WhatsApp Profile</span>
                         </button>
 
-                        <PermissionCheck resource="settings" action="manage" fallback={null}>
                           <button
                             className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
                             onClick={() => router.push('/settings/developer')}
@@ -621,9 +893,7 @@ export default function Layout({ children }: LayoutProps) {
                             </div>
                             <span className="text-xs font-medium text-center">Developer</span>
                           </button>
-                        </PermissionCheck>
 
-                        <PermissionCheck resource="settings" action="manage" fallback={null}>
                           <button
                             className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
                             onClick={() => router.push('/settings/agents')}
@@ -633,7 +903,7 @@ export default function Layout({ children }: LayoutProps) {
                             </div>
                             <span className="text-xs font-medium text-center">Team</span>
                           </button>
-                        </PermissionCheck>
+
 
                         <button
                           className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
@@ -645,7 +915,6 @@ export default function Layout({ children }: LayoutProps) {
                           <span className="text-xs font-medium text-center">Contacts</span>
                         </button>
 
-                        <PermissionCheck resource="settings" action="manage" fallback={null}>
                           <button
                             className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
                             onClick={() => router.push('/settings/roles')}
@@ -655,7 +924,6 @@ export default function Layout({ children }: LayoutProps) {
                             </div>
                             <span className="text-xs font-medium text-center">Roles</span>
                           </button>
-                        </PermissionCheck>
 
                         <button
                           className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
@@ -667,7 +935,6 @@ export default function Layout({ children }: LayoutProps) {
                           <span className="text-xs font-medium text-center">Custom Fields</span>
                         </button>
 
-                        <PermissionCheck resource="settings" action="manage" fallback={null}>
                           <button
                             className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
                             onClick={() => router.push('/wallet/plans')}
@@ -677,12 +944,11 @@ export default function Layout({ children }: LayoutProps) {
                             </div>
                             <span className="text-xs font-medium text-center">Billing</span>
                           </button>
-                        </PermissionCheck>
                       </div>
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </PermissionCheck>
+
 
               {/* User Profile Dropdown */}
               <DropdownMenu>
@@ -696,11 +962,6 @@ export default function Layout({ children }: LayoutProps) {
                     </Avatar>
                     <div className="hidden md:block text-left">
                       <p className="text-sm font-semibold leading-none">{user.name}</p>
-                      {/* <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs px-2 py-0 h-5">
-                          {user.role === 'owner' ? 'Owner' : user.role === 'admin' ? 'Admin' : 'Agent'}
-                        </Badge>
-                      </div> */}
                     </div>
                     <ChevronDown className="hidden md:block h-4 w-4 text-muted-foreground" />
                   </Button>
@@ -725,18 +986,15 @@ export default function Layout({ children }: LayoutProps) {
                       <User className="mr-3 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
-                    <PermissionCheck resource="settings" action="read" fallback={null}>
                       <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/settings/whatsapp-profile')}>
                         <Settings className="mr-3 h-4 w-4" />
                         <span>Settings</span>
                       </DropdownMenuItem>
-                    </PermissionCheck>
-                    <PermissionCheck resource="settings" action="read" fallback={null}>
                       <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/wallet/plans')}>
                         <CreditCard className="mr-3 h-4 w-4" />
                         <span>Billing</span>
                       </DropdownMenuItem>
-                    </PermissionCheck>
+
                   </div>
                   <div className="p-2 border-t">
                     <DropdownMenuItem
@@ -761,77 +1019,193 @@ export default function Layout({ children }: LayoutProps) {
         </main>
       </div>
 
-      {/* Command palette */}
+      {/* Enhanced Command palette */}
       <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
-        <div className="border-b px-4 py-3">
-          <CommandInput placeholder="Type a command or search..." className="border-none shadow-none focus:ring-0" />
+        <div className="border-b px-4 py-4 bg-gradient-to-r from-background to-muted/30">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Command className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Command Palette</h3>
+              <p className="text-sm text-muted-foreground">Navigate anywhere, execute any action</p>
+            </div>
+          </div>
+          <CommandInput
+            placeholder="Type a command, search pages, or find features..."
+            className="border-none shadow-none focus:ring-0 bg-background/50 text-base h-12 rounded-xl"
+            value={commandQuery}
+            onValueChange={setCommandQuery}
+          />
         </div>
-        <CommandList className="max-h-96">
+
+        <CommandList className="max-h-[70vh] overflow-y-auto">
           <CommandEmpty>
-            <div className="flex flex-col items-center justify-center py-8">
-              <Search className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No results found</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="p-4 rounded-full bg-muted mb-4">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">No results found</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-sm">
+                Try searching for pages, features, or actions. Use keywords like "template", "chat", "analytics", etc.
+              </p>
             </div>
           </CommandEmpty>
-          <CommandGroup heading="Quick Actions">
-            <PermissionCheck resource="conversations" action="write" fallback={null}>
-              <CommandItem onSelect={() => router.push('/conversations')} className="cursor-pointer">
-                <MessageSquare className="mr-3 h-4 w-4" />
-                <span>New conversation</span>
-              </CommandItem>
-            </PermissionCheck>
-            <PermissionCheck resource="contacts" action="write" fallback={null}>
-              <CommandItem onSelect={() => router.push('/contacts')} className="cursor-pointer">
-                <User className="mr-3 h-4 w-4" />
-                <span>Add contact</span>
-              </CommandItem>
-            </PermissionCheck>
-            <CommandItem className="cursor-pointer">
-              <File className="mr-3 h-4 w-4" />
-              <span>New Template</span>
-            </CommandItem>
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Navigation">
-            <PermissionCheck resource="dashboard" action="read" fallback={null}>
-              <CommandItem onSelect={() => router.push('/dashboard')} className="cursor-pointer">
-                <LayoutDashboard className="mr-3 h-4 w-4" />
-                <span>Dashboard</span>
-              </CommandItem>
-            </PermissionCheck>
-            <PermissionCheck resource="conversations" action="read" fallback={null}>
-              <CommandItem onSelect={() => router.push('/conversations')} className="cursor-pointer">
-                <MessageSquare className="mr-3 h-4 w-4" />
-                <span>Conversations</span>
-              </CommandItem>
-            </PermissionCheck>
-            <PermissionCheck resource="contacts" action="read" fallback={null}>
-              <CommandItem onSelect={() => router.push('/contacts')} className="cursor-pointer">
-                <User className="mr-3 h-4 w-4" />
-                <span>Contacts</span>
-              </CommandItem>
-            </PermissionCheck>
-            <PermissionCheck resource="settings" action="read" fallback={null}>
-              <CommandItem onSelect={() => router.push('/settings/account')} className="cursor-pointer">
-                <Settings className="mr-3 h-4 w-4" />
-                <span>Settings</span>
-              </CommandItem>
-            </PermissionCheck>
-          </CommandGroup>
-          {Array.isArray(user.wabaAccounts) && user.wabaAccounts.length > 0 && (
+
+          {/* Recent Commands (only show when no search query) */}
+          {!commandQuery.trim() && recentCommands.length > 0 && (
             <>
-              <CommandSeparator />
-              <CommandGroup heading="WhatsApp Business Accounts">
+              <CommandGroup heading="Recent">
+                {getRecentCommandItems().slice(0, 5).map((item, index) => (
+                  <CommandItem
+                    key={`recent-${index}`}
+                    onSelect={() => handleCommandSelect(item)}
+                    className="cursor-pointer flex items-center gap-3 px-4 py-3 hover:bg-muted/50 rounded-lg mx-2 mb-1"
+                  >
+                    <div className="p-1.5 rounded-md bg-primary/10">
+                      <item.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{item.label}</div>
+                      <div className="text-xs text-muted-foreground truncate">{item.description}</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      {item.shortcut && (
+                        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                          {item.shortcut}
+                        </kbd>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator className="mx-4" />
+            </>
+          )}
+
+          {/* Filtered Command Groups */}
+          {getFilteredCommands().map((group, groupIndex) => (
+            <div key={group.group}>
+              <CommandGroup
+                heading={
+                  <div className="flex items-center gap-2 py-2">
+                    <Filter className="h-3 w-3 text-muted-foreground" />
+                    <span className="font-medium">{group.group}</span>
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      {group.items.length}
+                    </Badge>
+                  </div>
+                }
+              >
+                {group.items.map((item, itemIndex) => (
+                  <CommandItem
+                    key={`${group.group}-${itemIndex}`}
+                    onSelect={() => handleCommandSelect(item)}
+                    className="cursor-pointer flex items-center gap-3 px-4 py-3 hover:bg-muted/50 rounded-lg mx-2 mb-1 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-md bg-gradient-to-br from-primary/10 to-primary/5">
+                      <item.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm flex items-center gap-2">
+                        {item.label}
+                        {item.resource && !hasPermission(item.resource, item.action) && (
+                          <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                            Limited Access
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">
+                        {item.description}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {item.shortcut && (
+                        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                          {item.shortcut}
+                        </kbd>
+                      )}
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              {groupIndex < getFilteredCommands().length - 1 && (
+                <CommandSeparator className="mx-4 my-2" />
+              )}
+            </div>
+          ))}
+
+          {/* WhatsApp Business Accounts */}
+          {Array.isArray(user.wabaAccounts) && user.wabaAccounts.length > 0 && !commandQuery.trim() && (
+            <>
+              <CommandSeparator className="mx-4 my-2" />
+              <CommandGroup
+                heading={
+                  <div className="flex items-center gap-2 py-2">
+                    <FaWhatsapp className="h-3 w-3 text-green-600" />
+                    <span className="font-medium">WhatsApp Business Accounts</span>
+                    <Badge variant="outline" className="ml-auto text-xs bg-green-50 text-green-700 border-green-200">
+                      {user.wabaAccounts.length}
+                    </Badge>
+                  </div>
+                }
+              >
                 {user.wabaAccounts.map((account, i) => (
-                  <CommandItem key={i} onSelect={() => router.push(`/settings/whatsapp-profile`)} className="cursor-pointer">
-                    <FaWhatsapp className="mr-3 h-4 w-4" />
-                    <span>{account.name || `WhatsApp Profile ${i + 1}`}</span>
+                  <CommandItem
+                    key={i}
+                    onSelect={() => router.push(`/settings/whatsapp-profile`)}
+                    className="cursor-pointer flex items-center gap-3 px-4 py-3 hover:bg-muted/50 rounded-lg mx-2 mb-1"
+                  >
+                    <div className="p-1.5 rounded-md bg-green-100">
+                      <FaWhatsapp className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">
+                        {account.name || `WhatsApp Profile ${i + 1}`}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Business account settings
+                      </div>
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
                   </CommandItem>
                 ))}
               </CommandGroup>
             </>
           )}
         </CommandList>
+
+        {/* Command Palette Footer */}
+        <div className="border-t bg-muted/30 px-4 py-3">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium">
+                  ↑↓
+                </kbd>
+                <span>Navigate</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium">
+                  ↵
+                </kbd>
+                <span>Select</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-background px-1.5 font-mono text-[10px] font-medium">
+                  esc
+                </kbd>
+                <span>Close</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-3 w-3" />
+              <span>ZapTick Command Palette</span>
+            </div>
+          </div>
+        </div>
       </CommandDialog>
     </div>
   );

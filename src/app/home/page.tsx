@@ -196,10 +196,10 @@ export default function HomePage() {
         description:
           'Send bulk WhatsApp campaigns to 1000s of customers to re‑engage them and drive repeat orders',
         prerequisites: [
-          { label: 'Add your customers to Zaptick', cta: 'Add Customers' },
-          { label: 'Create a template & wait for its approval', cta: 'Create Template' },
+          { label: 'Add your customers to Zaptick', cta: 'Add Customers', href: '/contacts' },
+          { label: 'Create a template & wait for its approval', cta: 'Create Template', href: '/templates' },
         ],
-        steps: [{ label: 'Create a new campaign', cta: 'Create Campaign' }],
+        steps: [{ label: 'Create a new campaign', cta: 'Create Campaign', href: '/campaigns' }],
       },
       phoneShot: '/mock-phone.png', // place a 320×640 shot in public folder
     },
@@ -210,11 +210,11 @@ export default function HomePage() {
         description:
           'Trigger order, payment & delivery notifications automatically and keep users informed throughout their journey.',
         prerequisites: [
-          { label: 'Integrate your store / backend', cta: 'Explore Integrations' },
-          { label: 'Map each event with an approved template', cta: 'Map Templates' },
+          { label: 'Integrate your store / backend', cta: 'Explore Integrations', href: '/integrations' },
+          { label: 'Map each event with an approved template', cta: 'Map Templates', href: '/templates' },
         ],
         steps: [
-          { label: 'Enable notification workflow', cta: 'Enable Now' },
+          { label: 'Enable notification workflow', cta: 'Enable Now', href: '/automation' },
         ],
       },
       phoneShot: '/mock-phone.png',
@@ -226,9 +226,9 @@ export default function HomePage() {
         description:
           'Set up keyword triggers & canned responses so visitors get instant answers without waiting for an agent.',
         prerequisites: [
-          { label: 'Create canned responses', cta: 'Create Response' },
+          { label: 'Create canned responses', cta: 'Create Response', href: '/automation/faq' },
         ],
-        steps: [{ label: 'Enable FAQ bot', cta: 'Enable Bot' }],
+        steps: [{ label: 'Enable FAQ bot', cta: 'Enable Bot', href: '/automation/faq' }],
       },
       phoneShot: '/mock-phone.png',
     },
@@ -239,10 +239,10 @@ export default function HomePage() {
         description:
           'Let visitors explore your product catalogue inside WhatsApp itself and add items to cart in one tap.',
         prerequisites: [
-          { label: 'Upload product catalogue', cta: 'Upload Catalogue' },
+          { label: 'Upload product catalogue', cta: 'Upload Catalogue', href: '/catalog' },
         ],
         steps: [
-          { label: 'Turn on catalogue bot', cta: 'Enable Bot' },
+          { label: 'Turn on catalogue bot', cta: 'Enable Bot', href: '/automation/catalog' },
         ],
       },
       phoneShot: '/mock-phone.png',
@@ -254,9 +254,9 @@ export default function HomePage() {
         description:
           'Allow users to complete the entire checkout on WhatsApp with payment links & order confirmation.',
         prerequisites: [
-          { label: 'Configure payment provider', cta: 'Configure' },
+          { label: 'Configure payment provider', cta: 'Configure', href: '/settings/payments' },
         ],
-        steps: [{ label: 'Enable checkout flow', cta: 'Enable Now' }],
+        steps: [{ label: 'Enable checkout flow', cta: 'Enable Now', href: '/automation/checkout' }],
       },
       phoneShot: '/mock-phone.png',
     },
@@ -335,13 +335,11 @@ export default function HomePage() {
           </button>
         </li>
       ))}
-      <li>
-        <button className="w-full rounded-md bg-muted py-2 text-sm hover:bg-muted/70">View more ↓</button>
-      </li>
+
     </ul>
   );
 
-  const WhatsAppDetails = () => {
+const WhatsAppDetails = () => {
     const feat = whatsAppFeatures[activeWhatsAppFeature];
     return (
       <div className="flex flex-col gap-6 rounded-md border p-6">
@@ -354,9 +352,11 @@ export default function HomePage() {
               <li key={p.label} className="flex items-start gap-2">
                 <CheckCircle className="mt-0.5 h-4 w-4 text-primary" />
                 <span className="flex-1 text-sm">{p.label}</span>
-                <button className="rounded-md bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20">
-                  {p.cta}
-                </button>
+                <Link href={p.href}>
+                  <button className="rounded-md bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors">
+                    {p.cta}
+                  </button>
+                </Link>
               </li>
             ))}
           </ul>
@@ -369,9 +369,11 @@ export default function HomePage() {
               <li key={s.label} className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <span className="flex-1 text-sm">{s.label}</span>
-                <button className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700">
-                  {s.cta}
-                </button>
+                <Link href={s.href}>
+                  <button className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">
+                    {s.cta}
+                  </button>
+                </Link>
               </li>
             ))}
           </ul>

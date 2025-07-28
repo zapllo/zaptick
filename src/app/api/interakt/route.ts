@@ -15,6 +15,7 @@ import AutoReply from '@/models/AutoReply';
 import Workflow from '@/models/Workflow';
 import WorkflowEngine from '@/lib/workflowEngine';
 import Campaign from '@/models/Campaign';
+import Template from '@/models/Template';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -357,14 +358,14 @@ async function processMessage(
         }
 
 
-        // Add button message handling (this was missing!)
+        // Update the button handling section
         case 'button': {
           newMsg.messageType = 'interactive';
           const buttonData = m.button;
           newMsg.content = buttonData?.text || 'Button clicked';
           newMsg.interactiveData = {
             type: 'button_reply',
-            id: buttonData?.payload || buttonData?.text, // Use payload first, then text
+            id: buttonData?.payload || buttonData?.text,
             title: buttonData?.text
           };
 
@@ -377,7 +378,7 @@ async function processMessage(
             buttonData?.text,
             wabaAcc,
             userId,
-            m.context?.id // The message ID this is replying to
+            m.context?.id
           );
           break;
         }
@@ -404,7 +405,7 @@ async function processMessage(
               buttonReply.title,
               wabaAcc,
               userId,
-              m.context?.id // The message ID this is replying to
+              m.context?.id
             );
 
           } else if (m.interactive?.type === 'list_reply') {
@@ -694,7 +695,7 @@ async function checkForWorkflowContinuation(
   }
 }
 
-// New function to handle workflow continuation based on button/list interactions
+// Update the checkAndContinueWorkflow function
 async function checkAndContinueWorkflow(
   contact: any,
   buttonId: string,
@@ -721,6 +722,7 @@ async function checkAndContinueWorkflow(
     }
 
     console.log(`✅ Found running workflow execution: ${runningExecution.workflowId}`);
+    console.log(`   Current node: ${runningExecution.currentNodeId}`);
 
     // Continue the workflow with the button response
     await workflowEngine.continueWorkflow(
@@ -1296,7 +1298,7 @@ async function handleOptOutRequest(
           whatsappOptIn: false,
           optOutDate: new Date(),
           optOutReason: `Campaign response - ${campaign.name}`,
-          tags: [...(contact.tags || []).filter(tag => tag !== 'opted-out'), 'opted-out']
+          tags: [...(contact.tags || []).filter((tag: string) => tag !== 'opted-out'), 'opted-out']
         },
         { new: true }
       );

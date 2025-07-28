@@ -1,13 +1,13 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { 
-  Send, 
-  Settings, 
-  Type, 
-  MousePointer, 
-  Image, 
-  Video, 
-  List, 
+import {
+  Send,
+  Settings,
+  Type,
+  MousePointer,
+  Image,
+  Video,
+  List,
   Users,
   CheckCircle,
   Clock,
@@ -58,8 +58,8 @@ const getActionColor = (actionType?: string, customColor?: string) => {
 const getActionPreview = (actionType?: string, config?: any) => {
   switch (actionType) {
     case 'send_message':
-      return config?.message ? 
-        `"${config.message.substring(0, 30)}${config.message.length > 30 ? '...' : ''}"` : 
+      return config?.message ?
+        `"${config.message.substring(0, 30)}${config.message.length > 30 ? '...' : ''}"` :
         'No message set';
     case 'send_button':
       const buttonCount = config?.buttons?.length || 0;
@@ -74,8 +74,8 @@ const getActionPreview = (actionType?: string, config?: any) => {
       return config?.videoUrl ? 'Video file ready' : 'No video selected';
     case 'send_list':
       const sectionCount = config?.sections?.length || 0;
-      return sectionCount > 0 ? 
-        `${sectionCount} section${sectionCount !== 1 ? 's' : ''} configured` : 
+      return sectionCount > 0 ?
+        `${sectionCount} section${sectionCount !== 1 ? 's' : ''} configured` :
         'No sections configured';
     case 'assign_conversation':
       return config?.assignedTo ? 'User assigned' : 'No user selected';
@@ -88,7 +88,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
   const actionType = data.config?.actionType || 'send_message';
   const Icon = data.type === 'webhook' ? Webhook : getActionIcon(actionType);
   const colorClass = getActionColor(actionType, data.color);
-  const preview = data.type === 'webhook' 
+  const preview = data.type === 'webhook'
     ? (data.config?.webhookUrl ? 'Webhook configured' : 'No URL set')
     : getActionPreview(actionType, data.config);
   const hasConfig = data.config && Object.keys(data.config).length > 1;
@@ -144,7 +144,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           <p className="text-xs text-gray-600 leading-relaxed mb-2">
             {preview}
           </p>
-          
+
           {/* Configuration Status */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-xs">
@@ -166,15 +166,15 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           </div>
         </CardContent>
       </Card>
-{/* Output Handles - Special handling for button actions */}
+      {/* Output Handles - Special handling for button actions */}
       {actionType === 'send_button' && data.config?.buttons?.length > 0 ? (
         <div className="relative">
           {/* Button handle container */}
-          <div className="absolute top-0 left-0 right-0 h-4" style={{ top: '-20%' }}>
+          <div className="absolute top-0 left-0 right-0 h-4" style={{ top: '100%' }}>
             {data.config.buttons.map((button: any, index: number) => {
               const buttonId = button.id || `btn_${index + 1}`;
               const totalButtons = data.config.buttons.length;
-              
+
               // Calculate precise positioning
               let leftPosition;
               if (totalButtons === 1) {
@@ -185,15 +185,15 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                 const availableWidth = 100 - (2 * padding);
                 leftPosition = padding + (index * availableWidth / (totalButtons - 1));
               }
-              
+
               return (
                 <div
                   key={buttonId}
                   className="absolute"
-                  style={{ 
+                  style={{
                     left: `${leftPosition}%`,
                     transform: 'translateX(-50%)',
-                    top: '0px'
+                    top: '8px'
                   }}
                 >
                   {/* Visual button indicator */}
@@ -201,9 +201,9 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                     {/* Handle */}
                     <Handle
                       type="source"
-                      position={Position.left}
+                      position={Position.Bottom}
                       id={buttonId}
-                      style={{ 
+                      style={{
                         position: 'relative',
                         left: 'auto',
                         top: 'auto',
@@ -212,10 +212,10 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                       }}
                       className="w-4 h-4 bg-blue-500 border-2 border-white hover:bg-blue-600 transition-colors shadow-lg relative z-10"
                     />
-                    
+
                     {/* Connector line */}
                     <div className="w-0.5 h-3 bg-blue-400"></div>
-                    
+
                     {/* Button label */}
                     <div className="bg-blue-100 border border-blue-300 rounded px-2 py-1 shadow-sm mt-1">
                       <span className="text-xs text-blue-700 font-medium whitespace-nowrap">
@@ -227,7 +227,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
               );
             })}
           </div>
-          
+
           {/* Spacer to account for labels below */}
           <div className="h-12"></div>
         </div>
@@ -235,12 +235,12 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         <div className="relative">
           {/* List handle container */}
           <div className="absolute top-0 left-0 right-0 h-4" style={{ top: '100%' }}>
-            {data.config.sections.flatMap((section: any, sectionIndex: number) => 
+            {data.config.sections.flatMap((section: any, sectionIndex: number) =>
               section.rows?.map((row: any, rowIndex: number) => {
                 const rowId = row.id || `list_${sectionIndex}_${rowIndex}`;
                 const totalRows = data.config.sections.reduce((acc: number, s: any) => acc + (s.rows?.length || 0), 0);
                 const currentRowIndex = data.config.sections.slice(0, sectionIndex).reduce((acc: number, s: any) => acc + (s.rows?.length || 0), 0) + rowIndex;
-                
+
                 let leftPosition;
                 if (totalRows === 1) {
                   leftPosition = 50;
@@ -249,24 +249,24 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                   const availableWidth = 100 - (2 * padding);
                   leftPosition = padding + (currentRowIndex * availableWidth / (totalRows - 1));
                 }
-                
+
                 return (
                   <div
                     key={rowId}
                     className="absolute"
-                    style={{ 
+                    style={{
                       left: `${leftPosition}%`,
                       transform: 'translateX(-50%)',
-                      top: '0px'
+                      top: '8px'
                     }}
                   >
                     <div className="flex flex-col items-center">
                       {/* Handle */}
                       <Handle
                         type="source"
-                        position={Position.Right}
+                        position={Position.Bottom}
                         id={rowId}
-                        style={{ 
+                        style={{
                           position: 'relative',
                           left: 'auto',
                           top: 'auto',
@@ -275,10 +275,10 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
                         }}
                         className="w-4 h-4 bg-orange-500 border-2 border-white hover:bg-orange-600 transition-colors shadow-lg relative z-10"
                       />
-                      
+
                       {/* Connector line */}
                       <div className="w-0.5 h-3 bg-orange-400"></div>
-                      
+
                       {/* Row label */}
                       <div className="bg-orange-100 border border-orange-300 rounded px-2 py-1 shadow-sm mt-1">
                         <span className="text-xs text-orange-700 font-medium whitespace-nowrap max-w-20 truncate block">
@@ -291,7 +291,7 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
               }) || []
             )}
           </div>
-          
+
           {/* Spacer to account for labels below */}
           <div className="h-12"></div>
         </div>

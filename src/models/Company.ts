@@ -11,6 +11,7 @@ export interface ICompany extends Document {
   phone?: string; // Add phone field
   countryCode?: string; // Add country code field
   walletBalance: number;
+  aiCredits: number; // Add AI credits field
   currency?: string;
   subscriptionPlan?: string;
   subscriptionStatus?: 'active' | 'expired' | 'cancelled';
@@ -95,39 +96,44 @@ const CompanySchema = new Schema<ICompany>(
       default: 'INR'
     },
     walletBalance: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  subscriptionPlan: {
-    type: String,
-    enum: ['free', 'starter', 'growth', 'advanced', 'enterprise'],
-    default: 'free'
-  },
-  subscriptionStatus: {
-    type: String,
-    enum: ['active', 'expired', 'cancelled'],
-    default: 'expired'
-  },
-  subscriptionStartDate: {
-    type: Date
-  },
-  subscriptionEndDate: {
-    type: Date
-  },
-  billingCycle: {
-    type: String,
-    enum: ['monthly', 'quarterly', 'yearly']
-  },
-  lastPaymentId: {
-    type: String
-  },
-  lastPaymentAmount: {
-    type: Number
-  },
-  lastPaymentDate: {
-    type: Date
-  },
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    aiCredits: {
+      type: Number,
+      default: 10, // Give 10 free AI credits to start
+      min: 0
+    },
+    subscriptionPlan: {
+      type: String,
+      enum: ['free', 'starter', 'growth', 'advanced', 'enterprise'],
+      default: 'free'
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ['active', 'expired', 'cancelled'],
+      default: 'expired'
+    },
+    subscriptionStartDate: {
+      type: Date
+    },
+    subscriptionEndDate: {
+      type: Date
+    },
+    billingCycle: {
+      type: String,
+      enum: ['monthly', 'quarterly', 'yearly']
+    },
+    lastPaymentId: {
+      type: String
+    },
+    lastPaymentAmount: {
+      type: Number
+    },
+    lastPaymentDate: {
+      type: Date
+    },
     whatsappProfile: {
       about: String,
       profilePictureUrl: String,

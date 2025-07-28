@@ -27,7 +27,11 @@ import {
     BookOpen,
     Send,
     ExternalLink,
-    Phone
+    Phone,
+    CheckCircle,
+    CreditCard,
+    ArrowRight,
+    AlertCircle
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -92,6 +96,159 @@ export default function TemplatesLibraryPage() {
     const [aiPrompt, setAiPrompt] = useState("");
     const [generatingAi, setGeneratingAi] = useState(false);
     const [aiGeneratedTemplate, setAiGeneratedTemplate] = useState<LibraryTemplate | null>(null);
+
+    const [aiCredits, setAiCredits] = useState(0);
+    const [showBuyCreditsDialog, setShowBuyCreditsDialog] = useState(false);
+    const [creditsAmount, setCreditsAmount] = useState(50);
+    const [isPurchasing, setIsPurchasing] = useState(false);
+
+
+ const purchaseAiCredits = async () => {
+        if (creditsAmount < 10) {
+            toast.error('Please select at least 10 credits');
+            return;
+        }
+
+        const costPerCredit = 2;
+        const baseAmount = creditsAmount * costPerCredit;
+        const { gst, total } = calculateGST(baseAmount);
+
+        try {
+            setIsPurchasing(true);
+
+            // Create order on server
+            const orderResponse = await fetch("/api/create-order", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    amount: total * 100, // Razorpay expects amount in paise
+                    currency: "INR",
+                    receipt: `ai-credits-${Date.now()}`,
+                    notes: {
+                        purpose: "AI Credits Purchase",
+                        creditsAmount: creditsAmount,
+                        baseAmount: baseAmount,
+                        gst: gst,
+                        totalAmount: total,
+                    },
+                }),
+            });
+
+            const orderData = await orderResponse.json();
+
+            if (!orderData.orderId) {
+                throw new Error(orderData.error || "Failed to create payment order");
+            }
+
+            // Close the dialog before opening Razorpay
+            setShowBuyCreditsDialog(false);
+
+            // Initialize Razorpay payment
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                amount: total * 100,
+                currency: "INR",
+                name: "Zapllo AI - Credits Purchase",
+                description: `${creditsAmount} AI Credits (including 18% GST)`,
+                order_id: orderData.orderId,
+                handler: async function (response: any) {
+                    try {
+                        // Verify payment with your server
+                        const verifyResponse = await fetch("/api/verify-payment", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature,
+                            }),
+                        });
+
+                        const verifyData = await verifyResponse.json();
+
+                        if (verifyData.success) {
+                            // If verification successful, add AI credits
+                            const creditsResponse = await fetch("/api/wallet", {
+                                method: "PATCH",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    creditsAmount,
+                                    paymentId: response.razorpay_payment_id,
+                                    totalPaid: total,
+                                    gst: gst,
+                                }),
+                            });
+
+                            const creditsData = await creditsResponse.json();
+
+                            if (creditsData.success) {
+                                setAiCredits(creditsData.newAiCredits);
+                                toast.success(`Successfully purchased ${creditsAmount} AI credits!`);
+                            } else {
+                                throw new Error(creditsData.error || "Failed to add AI credits");
+                            }
+                        } else {
+                            throw new Error(verifyData.error || "Payment verification failed");
+                        }
+                    } catch (error) {
+                        console.error("Payment process error:", error);
+                        toast.error(error instanceof Error ? error.message : "Payment processing failed");
+                        // Reopen the dialog on error
+                        setShowBuyCreditsDialog(true);
+                    } finally {
+                        setIsPurchasing(false);
+                    }
+                },
+                prefill: {
+                    name: "User",
+                    email: "user@example.com",
+                    contact: "",
+                },
+                theme: {
+                    color: "#9333ea", // Purple color for AI credits
+                },
+                modal: {
+                    ondismiss: function () {
+                        setIsPurchasing(false);
+                        // Reopen the dialog when Razorpay modal is dismissed
+                        setTimeout(() => {
+                            setShowBuyCreditsDialog(true);
+                        }, 100);
+                    },
+                    backdrop_close: true,
+                    escape: true,
+                    confirm_close: true
+                }
+            };
+
+            // Add a small delay to ensure dialog is closed
+            setTimeout(() => {
+                const razorpay = new (window as any).Razorpay(options);
+                razorpay.open();
+            }, 200);
+
+        } catch (error) {
+            console.error("Error initiating credits purchase:", error);
+            toast.error(error instanceof Error ? error.message : "Failed to initiate payment");
+            setIsPurchasing(false);
+            setShowBuyCreditsDialog(true);
+        }
+    };
+
+    // Helper function to calculate GST
+    const calculateGST = (amount: number) => {
+        const gst = Math.round(amount * 0.18 * 100) / 100; // 18% GST
+        const total = amount + gst;
+        return { gst, total };
+    };
+
+
 
     useEffect(() => {
         fetchLibraryTemplates();
@@ -237,41 +394,56 @@ export default function TemplatesLibraryPage() {
                         </Button>
                     </div>
 
-                    <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="space-y-6">
+                    <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="space-y-8">
                         {/* Category Tabs */}
-                        <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4">
-                            <TabsTrigger value="all" className="gap-2">
+                        <TabsList className="h-12 p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl border border-slate-200/50 w-fit">
+                            <TabsTrigger
+                                value="all"
+                                className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all duration-200 flex items-center gap-2"
+                            >
                                 <BookOpen className="h-4 w-4" />
                                 All Templates
-                                <Badge variant="secondary" className="ml-1">
+                                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-slate-200/80 text-slate-600 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                                     {categoryStats.all}
                                 </Badge>
                             </TabsTrigger>
-                            <TabsTrigger value="marketing" className="gap-2">
-                                <TrendingUp className="h-4 w-4" />
+
+                            <TabsTrigger
+                                value="marketing"
+                                className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all duration-200 flex items-center gap-2"
+                            >
+                                <TrendingUp className="h-4 w-4 text-blue-600" />
                                 Marketing
-                                <Badge variant="secondary" className="ml-1">
+                                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-slate-200/80 text-slate-600">
                                     {categoryStats.marketing}
                                 </Badge>
                             </TabsTrigger>
-                            <TabsTrigger value="utility" className="gap-2">
-                                <Settings className="h-4 w-4" />
+
+                            <TabsTrigger
+                                value="utility"
+                                className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all duration-200 flex items-center gap-2"
+                            >
+                                <Settings className="h-4 w-4 text-green-600" />
                                 Utility
-                                <Badge variant="secondary" className="ml-1">
+                                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-slate-200/80 text-slate-600">
                                     {categoryStats.utility}
                                 </Badge>
                             </TabsTrigger>
-                            <TabsTrigger value="authentication" className="gap-2">
-                                <ShieldCheck className="h-4 w-4" />
+
+                            <TabsTrigger
+                                value="authentication"
+                                className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all duration-200 flex items-center gap-2"
+                            >
+                                <ShieldCheck className="h-4 w-4 text-purple-600" />
                                 Authentication
-                                <Badge variant="secondary" className="ml-1">
+                                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-slate-200/80 text-slate-600">
                                     {categoryStats.authentication}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
 
                         {/* Search and Filters */}
-                        <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                        <Card className="border-0 p-0 shadow-sm bg-white/80 backdrop-blur-sm">
                             <CardContent className="p-4">
                                 <div className="flex flex-col sm:flex-row gap-4 items-center">
                                     <div className="relative flex-1">
@@ -707,6 +879,25 @@ export default function TemplatesLibraryPage() {
                                         </DialogDescription>
                                     </div>
                                 </div>
+                                 <div className="flex items-center jub mt-4 gap-2 bg-gradient-to-r from-purple-50 to-pink-50 px-3 py-2 rounded-lg border border-purple-200">
+                                <Sparkles className="h-4 w-4 text-purple-600" />
+                                <div className="text-sm">
+                                    <div className="font-semibold text-purple-800">{aiCredits} Credits</div>
+                                    <div className="text-xs text-purple-600">5 credits per generation</div>
+                                </div>
+                                {aiCredits < 5 && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setShowBuyCreditsDialog(true)}
+                                        className=" h-7 justify-end flex px-2 text-xs border-purple-300 ml-auto text-purple-700 hover:bg-purple-100"
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Buy Credits
+                                    </Button>
+                                )}
+                            </div>
+                                
                             </DialogHeader>
 
                             <div className="flex-1 overflow-y-auto px-6 py-6">
@@ -873,53 +1064,262 @@ export default function TemplatesLibraryPage() {
                                 </div>
                             </div>
 
-                            <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        setIsAiDialogOpen(false);
-                                        setAiGeneratedTemplate(null);
-                                        setAiPrompt("");
-                                    }}
-                                    className="hover:bg-slate-50"
-                                >
-                                    Cancel
-                                </Button>
-                                {aiGeneratedTemplate ? (
-                                    <Button
-                                        onClick={() => {
-                                            applyTemplate(aiGeneratedTemplate);
-                                            setIsAiDialogOpen(false);
-                                        }}
-                                        className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg hover:shadow-xl transition-all duration-200 gap-2"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Use Generated Template
-                                    </Button>
+                           <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsAiDialogOpen(false);
+                                setAiGeneratedTemplate(null);
+                                setAiPrompt("");
+                            }}
+                            className="hover:bg-slate-50"
+                        >
+                            Cancel
+                        </Button>
+                        {aiGeneratedTemplate ? (
+                            <Button
+                                onClick={() => {
+                                    applyTemplate(aiGeneratedTemplate);
+                                    setIsAiDialogOpen(false);
+                                }}
+                                className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg hover:shadow-xl transition-all duration-200 gap-2"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Use Generated Template
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={generateAiTemplate}
+                                disabled={!aiPrompt.trim() || generatingAi || aiCredits < 5}
+                                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-200 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {generatingAi ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Generating Template...
+                                    </>
+                                ) : aiCredits < 5 ? (
+                                    <>
+                                        <AlertCircle className="h-4 w-4" />
+                                        Insufficient Credits
+                                    </>
                                 ) : (
-                                    <Button
-                                        onClick={generateAiTemplate}
-                                        disabled={!aiPrompt.trim() || generatingAi}
-                                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-200 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {generatingAi ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                Generating Template...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Sparkles className="h-4 w-4" />
-                                                Generate Template
-                                            </>
-                                        )}
-                                    </Button>
+                                    <>
+                                        <Sparkles className="h-4 w-4" />
+                                        Generate Template (5 Credits)
+                                    </>
                                 )}
-                            </DialogFooter>
+                            </Button>
+                        )}
+                    </DialogFooter>
                         </DialogContent>
                     </Dialog>
                 </div>
             </div>
+
+             {/* Buy AI Credits Dialog - Updated */}
+            <Dialog open={showBuyCreditsDialog} onOpenChange={(open) => {
+                if (!open && !isPurchasing) {
+                    setShowBuyCreditsDialog(false);
+                }
+            }}>
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0">
+                    <DialogHeader className="px-6 py-4 border-b border-slate-200 flex-shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/20 flex items-center justify-center">
+                                <Sparkles className="h-5 w-5 text-purple-600" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-xl font-semibold text-slate-900">
+                                    Purchase AI Credits
+                                </DialogTitle>
+                                <DialogDescription className="text-slate-600 mt-1">
+                                    Buy AI credits to generate templates. Each generation costs 5 credits.
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto px-6 py-6">
+                        <div className="space-y-6">
+                            {/* Current Credits Display */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                        Current Balance
+                                    </h3>
+                                </div>
+                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-purple-800">Current AI Credits</p>
+                                            <p className="text-xs text-purple-600">Available for template generation</p>
+                                        </div>
+                                        <div className="text-2xl font-bold text-purple-900">{aiCredits}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Credits Amount Selection */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                        Choose Credits Amount
+                                    </h3>
+                                </div>
+                                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[25, 50, 100, 200, 500, 1000].map((amount) => (
+                                            <Button
+                                                key={amount}
+                                                variant={creditsAmount === amount ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setCreditsAmount(amount)}
+                                                className={cn(
+                                                    "flex flex-col h-auto py-3 transition-all duration-200",
+                                                    creditsAmount === amount
+                                                        ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg scale-105 border-blue-600"
+                                                        : "bg-white hover:bg-blue-50 border-blue-300 text-blue-700 hover:border-blue-400"
+                                                )}
+                                            >
+                                                <span className="font-semibold">{amount}</span>
+                                                <span className="text-xs opacity-70">₹{amount * 2}</span>
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-blue-700 mt-2">
+                                        💡 Tip: 100 credits = 20 template generations
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Payment Breakdown */}
+                            {creditsAmount >= 10 && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                            Payment Breakdown
+                                        </h3>
+                                    </div>
+
+                                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-green-200">
+                                                <span className="text-sm font-medium text-green-800 flex items-center gap-2">
+                                                    <Sparkles className="h-4 w-4" />
+                                                    AI Credits ({creditsAmount})
+                                                </span>
+                                                <span className="text-sm font-semibold text-green-900">
+                                                    ₹{(creditsAmount * 2).toLocaleString()}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-green-200">
+                                                <span className="text-sm text-green-700 flex items-center gap-2">
+                                                    <CreditCard className="h-4 w-4" />
+                                                    GST (18%)
+                                                </span>
+                                                <span className="text-sm font-medium text-green-800">
+                                                    ₹{calculateGST(creditsAmount * 2).gst.toFixed(2)}
+                                                </span>
+                                            </div>
+
+                                            <div className="h-px bg-green-200 my-2" />
+
+                                            <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-100 to-green-200 rounded-lg border border-green-300">
+                                                <span className="text-sm font-semibold text-green-900 flex items-center gap-2">
+                                                    <ArrowRight  className="h-4 w-4" />
+                                                    Total Amount to Pay
+                                                </span>
+                                                <span className="text-lg font-bold text-green-900">
+                                                    ₹{calculateGST(creditsAmount * 2).total.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Security Notice */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                                        Secure Payment
+                                    </h3>
+                                </div>
+
+                                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                                    <div className="flex items-start gap-3">
+                                        <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <CreditCard className="h-4 w-4 text-emerald-600" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-emerald-800 mb-1">
+                                                Secure Payment Gateway
+                                            </h4>
+                                            <p className="text-sm text-emerald-700 leading-relaxed">
+                                                Your payment will be processed securely through Razorpay. AI credits are added instantly after successful payment.
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <CheckCircle className="h-3 w-3 text-emerald-600" />
+                                                <span className="text-xs text-emerald-600 font-medium">
+                                                    256-bit SSL Encrypted
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+                        <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Sparkles className="h-4 w-4" />
+                                <span>
+                                    {creditsAmount >= 10
+                                        ? `${creditsAmount} credits will be added to your account`
+                                        : 'Select credits amount to continue'
+                                    }
+                                </span>
+                            </div>
+                            <div className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowBuyCreditsDialog(false)}
+                                    disabled={isPurchasing}
+                                    className="hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={purchaseAiCredits}
+                                    className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                                    disabled={creditsAmount < 10 || isPurchasing}
+                                >
+                                    {isPurchasing ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Processing Payment...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CreditCard className="h-4 w-4" />
+                                            Pay ₹{creditsAmount >= 10 ? calculateGST(creditsAmount * 2).total.toFixed(2) : '0.00'}
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </Layout>
     );
 }
