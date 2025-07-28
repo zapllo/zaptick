@@ -335,7 +335,6 @@ class WorkflowEngine {
     return await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, messageContent, messageType, user, node, workflow);
   }
 
-  // Update the executeSendButton method to ensure proper button ID handling
   private async executeSendButton(
     execution: WorkflowExecution,
     node: any,
@@ -398,14 +397,19 @@ class WorkflowEngine {
       }
     };
 
-    // After sending the message, we should NOT automatically proceed to next node
-    // Instead, we wait for user button click to determine which path to take
-    const success = await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, text, 'interactive', user, node, workflow);
+    // Send the message
+    const messageResult = await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, text, 'interactive', user, node, workflow);
 
-    if (success) {
-      // For button messages, we don't return a next node ID
-      // The execution will continue when user clicks a button
-      console.log(`🔘 Button message sent, waiting for user interaction`);
+    if (messageResult) {
+      console.log(`🔘 Button message sent successfully, execution will pause and wait for user button click`);
+
+      // Mark execution as waiting for button input
+      execution.status = 'paused';
+      execution.variables.waitingForButtonClick = node.id;
+      execution.variables.availableButtons = buttons.map((b: any) => b.id || `btn_${buttons.indexOf(b) + 1}`);
+      execution.lastActivity = new Date();
+
+      // Return null to pause execution here
       return null;
     } else {
       console.error('❌ Failed to send button message');
@@ -537,8 +541,30 @@ class WorkflowEngine {
       }
     };
 
-    return await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, text, 'interactive', user, node, workflow);
+    // Send the message
+    const messageResult = await this.sendWhatsAppMessage(execution, whatsappPayload, contact, wabaAccount, text, 'interactive', user, node, workflow);
+
+    if (messageResult) {
+      console.log(`📋 List message sent successfully, execution will pause and wait for user list selection`);
+
+      // Mark execution as waiting for list input
+      execution.status = 'paused';
+      execution.variables.waitingForListSelection = node.id;
+      execution.variables.availableListItems = sections.flatMap((section: any) =>
+        section.rows?.map((row: any) => row.id) || []
+      );
+      execution.lastActivity = new Date();
+
+      // Return null to pause execution here
+      return null;
+    } else {
+      console.error('❌ Failed to send list message');
+      return null;
+    }
   }
+
+
+
 
   private async executeAssignConversation(
     execution: WorkflowExecution,
@@ -602,6 +628,9 @@ class WorkflowEngine {
     }
   }
 
+
+
+  // Update the sendWhatsAppMessage method to return boolean
   private async sendWhatsAppMessage(
     execution: WorkflowExecution,
     whatsappPayload: any,
@@ -612,71 +641,70 @@ class WorkflowEngine {
     user: any,
     node: any,
     workflow: any
-  ): Promise<string | null> {
+  ): Promise<boolean> {
     console.log('🚀 Workflow sending message payload:', JSON.stringify(whatsappPayload, null, 2));
 
     // Validate required environment variables
     if (!INT_TOKEN) {
       console.error('❌ INTERAKT_API_TOKEN is not set');
-      return null;
+      return false;
     }
 
     console.log('🔐 API Token found, making request...');
 
-    // Send message via Interakt API
-    const interaktResponse = await fetch(
-      `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'x-access-token': INT_TOKEN,
-          'x-waba-id': contact.wabaId,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(whatsappPayload)
-      }
-    );
-
-    console.log('📡 Interakt API response status:', interaktResponse.status);
-
-    const responseText = await interaktResponse.text();
-    console.log('📡 Interakt API response:', responseText);
-
-    if (!interaktResponse.ok) {
-      console.error('❌ Failed to send workflow message:', responseText);
-      return null;
-    }
-
-    let interaktData;
     try {
-      interaktData = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('❌ Failed to parse workflow message response:', parseError);
-      return null;
+      // Send message via Interakt API
+      const interaktResponse = await fetch(
+        `https://amped-express.interakt.ai/api/v17.0/${wabaAccount.phoneNumberId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'x-access-token': INT_TOKEN,
+            'x-waba-id': contact.wabaId,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(whatsappPayload)
+        }
+      );
+
+      console.log('📡 Interakt API response status:', interaktResponse.status);
+
+      const responseText = await interaktResponse.text();
+      console.log('📡 Interakt API response:', responseText);
+
+      if (!interaktResponse.ok) {
+        console.error('❌ Failed to send workflow message:', responseText);
+        return false;
+      }
+
+      let interaktData;
+      try {
+        interaktData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse workflow message response:', parseError);
+        return false;
+      }
+
+      console.log('✅ Message sent successfully, recording in conversation...');
+
+      // Record the message in conversation
+      await this.recordMessageInConversation(
+        contact,
+        messageContent,
+        messageType,
+        interaktData.messages?.[0]?.id,
+        user.name || 'Workflow',
+        node.data.config?.templateName
+      );
+
+      console.log('✅ Workflow message recorded in conversation');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error sending workflow message:', error);
+      return false;
     }
-
-    console.log('✅ Message sent successfully, recording in conversation...');
-
-    // Record the message in conversation
-    await this.recordMessageInConversation(
-      contact,
-      messageContent,
-      messageType,
-      interaktData.messages?.[0]?.id,
-      user.name || 'Workflow',
-      node.data.config?.templateName
-    );
-
-    console.log('✅ Workflow message recorded in conversation');
-
-    // Find next node
-    const nextEdge = workflow.edges.find((edge: any) => edge.source === node.id);
-    const nextNodeId = nextEdge?.target || null;
-
-    console.log(`🔄 Next node: ${nextNodeId}`);
-
-    return nextNodeId;
   }
 
   private async executeConditionNode(
@@ -917,8 +945,7 @@ class WorkflowEngine {
     }
   }
 
-  // Updated method to continue workflow based on user input
-  // Update the continueWorkflow method to properly handle button routing
+  // Update the continueWorkflow method
   async continueWorkflow(
     workflowId: string,
     contactId: string,
@@ -976,64 +1003,112 @@ class WorkflowEngine {
         return;
       }
 
-      // Handle button/list interactions
-      if (execution.status === 'running' &&
-        (userInput.messageType === 'button_click' || userInput.messageType === 'list_selection')) {
+      // Handle button clicks for paused button nodes
+      if (execution.status === 'paused' &&
+        execution.variables.waitingForButtonClick &&
+        userInput.messageType === 'button_click') {
 
-        // Find the current node
+        console.log(`🔘 Resuming paused workflow with button click: "${userInput.buttonId}"`);
+
+        // Find the current node (which should be the button node)
         const currentNode = workflow.nodes.find((node: any) => node.id === execution.currentNodeId);
         if (!currentNode) {
-          throw new Error('Current node not found');
+          throw new Error('Current button node not found');
         }
 
-        console.log(`🔘 Processing ${userInput.messageType} for node: ${currentNode.id}`);
-        console.log(`   Button/List ID: ${userInput.buttonId}`);
+        // Find the specific edge that matches this button ID
+        const matchingEdge = workflow.edges.find((edge: any) =>
+          edge.source === currentNode.id &&
+          edge.sourceHandle === userInput.buttonId
+        );
 
-        // Find the specific edge that matches this button/list selection
-        let nextNodeId: string | null = null;
+        if (matchingEdge) {
+          console.log(`✅ Found matching edge for button ${userInput.buttonId}: ${currentNode.id} -> ${matchingEdge.target}`);
 
-        if (currentNode.type === 'action') {
-          const actionType = currentNode.data.config?.actionType;
+          // Clear waiting state
+          delete execution.variables.waitingForButtonClick;
+          delete execution.variables.availableButtons;
 
-          if (actionType === 'send_button' || actionType === 'send_list') {
-            // Look for an edge that has the matching sourceHandle (button/list ID)
-            const matchingEdge = workflow.edges.find((edge: any) =>
-              edge.source === currentNode.id &&
-              edge.sourceHandle === userInput.buttonId
-            );
-
-            if (matchingEdge) {
-              nextNodeId = matchingEdge.target;
-              console.log(`✅ Found matching edge for ${userInput.buttonId}: ${currentNode.id} -> ${nextNodeId}`);
-            } else {
-              console.log(`❌ No edge found for button/list ID: ${userInput.buttonId}`);
-              console.log(`   Available edges from ${currentNode.id}:`,
-                workflow.edges
-                  .filter((e: any) => e.source === currentNode.id)
-                  .map((e: any) => ({ target: e.target, sourceHandle: e.sourceHandle }))
-              );
-            }
-          }
-        }
-
-        if (nextNodeId) {
-          console.log(`➡️ Moving to next node: ${nextNodeId}`);
-          execution.currentNodeId = nextNodeId;
-          execution.executionPath.push(nextNodeId);
+          // Move to the next node
+          execution.currentNodeId = matchingEdge.target;
+          execution.executionPath.push(matchingEdge.target);
+          execution.status = 'running';
           execution.lastActivity = new Date();
 
           // Continue execution from the new node
           const executionId = Array.from(this.executions.entries())
             .find(([_, exec]) => exec === execution)?.[0];
+
           if (executionId) {
             await this.executeNextNode(executionId);
           }
         } else {
-          console.log('🏁 No next node found for this button/list selection, completing execution');
+          console.log(`❌ No edge found for button ID: ${userInput.buttonId}`);
+          console.log(`   Available edges from ${currentNode.id}:`,
+            workflow.edges
+              .filter((e: any) => e.source === currentNode.id)
+              .map((e: any) => ({ target: e.target, sourceHandle: e.sourceHandle }))
+          );
+
+          // Complete execution if no matching edge found
           execution.status = 'completed';
           execution.completedAt = new Date();
         }
+
+        return;
       }
+
+      // Handle list selections for paused list nodes
+      if (execution.status === 'paused' &&
+        execution.variables.waitingForListSelection &&
+        userInput.messageType === 'list_selection') {
+
+        console.log(`📝 Resuming paused workflow with list selection: "${userInput.buttonId}"`);
+
+        // Find the current node (which should be the list node)
+        const currentNode = workflow.nodes.find((node: any) => node.id === execution.currentNodeId);
+        if (!currentNode) {
+          throw new Error('Current list node not found');
+        }
+
+        // Find the specific edge that matches this list selection ID
+        const matchingEdge = workflow.edges.find((edge: any) =>
+          edge.source === currentNode.id &&
+          edge.sourceHandle === userInput.buttonId
+        );
+
+        if (matchingEdge) {
+          console.log(`✅ Found matching edge for list selection ${userInput.buttonId}: ${currentNode.id} -> ${matchingEdge.target}`);
+
+          // Clear waiting state
+          delete execution.variables.waitingForListSelection;
+          delete execution.variables.availableListItems;
+
+          // Move to the next node
+          execution.currentNodeId = matchingEdge.target;
+          execution.executionPath.push(matchingEdge.target);
+          execution.status = 'running';
+          execution.lastActivity = new Date();
+
+          // Continue execution from the new node
+          const executionId = Array.from(this.executions.entries())
+            .find(([_, exec]) => exec === execution)?.[0];
+
+          if (executionId) {
+            await this.executeNextNode(executionId);
+          }
+        } else {
+          console.log(`❌ No edge found for list selection ID: ${userInput.buttonId}`);
+
+          // Complete execution if no matching edge found
+          execution.status = 'completed';
+          execution.completedAt = new Date();
+        }
+
+        return;
+      }
+
+      console.log(`⚠️ Unhandled workflow continuation scenario - status: ${execution.status}, messageType: ${userInput.messageType}`);
 
     } catch (error) {
       console.error('❌ Error continuing workflow:', error);
@@ -1041,6 +1116,7 @@ class WorkflowEngine {
       execution.variables.error = error instanceof Error ? error.message : 'Unknown error';
     }
   }
+
   // Helper method to find next node based on button click
   private findNextNodeForButtonClick(
     workflow: any,

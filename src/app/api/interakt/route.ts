@@ -695,6 +695,8 @@ async function checkForWorkflowContinuation(
   }
 }
 
+// ... existing code ...
+
 // Update the checkAndContinueWorkflow function
 async function checkAndContinueWorkflow(
   contact: any,
@@ -709,40 +711,74 @@ async function checkAndContinueWorkflow(
 
     const workflowEngine = WorkflowEngine.getInstance();
 
-    // Find any running workflow execution for this contact
+    // Find any paused workflow execution waiting for button input for this contact
+    const pausedExecution = workflowEngine.getAllExecutions()
+      .find(exec =>
+        exec.contactId === contact._id.toString() &&
+        exec.status === 'paused' &&
+        (exec.variables.waitingForButtonClick || exec.variables.waitingForListSelection)
+      );
+
+    if (pausedExecution) {
+      console.log(`✅ Found paused workflow execution waiting for input: ${pausedExecution.workflowId}`);
+      console.log(`   Current node: ${pausedExecution.currentNodeId}`);
+      console.log(`   Waiting for: ${exec.variables.waitingForButtonClick ? 'button click' : 'list selection'}`);
+
+      // Determine message type based on what we're waiting for
+      const messageType = pausedExecution.variables.waitingForButtonClick ? 'button_click' : 'list_selection';
+
+      // Continue the workflow with the button/list response
+      await workflowEngine.continueWorkflow(
+        pausedExecution.workflowId,
+        contact._id.toString(),
+        {
+          buttonId,
+          buttonTitle,
+          contextMessageId,
+          messageType,
+          timestamp: new Date()
+        }
+      );
+
+      console.log(`✅ Paused workflow continued with ${messageType}: ${buttonId}`);
+      return;
+    }
+
+    // If no paused execution, check for running executions (fallback)
     const runningExecution = workflowEngine.getAllExecutions()
       .find(exec =>
         exec.contactId === contact._id.toString() &&
         exec.status === 'running'
       );
 
-    if (!runningExecution) {
-      console.log('❌ No running workflow execution found for this contact');
+    if (runningExecution) {
+      console.log(`⚠️ Found running workflow execution (not paused): ${runningExecution.workflowId}`);
+      console.log(`   This might be unexpected - button clicks should pause workflows`);
+      
+      // Still try to continue it
+      await workflowEngine.continueWorkflow(
+        runningExecution.workflowId,
+        contact._id.toString(),
+        {
+          buttonId,
+          buttonTitle,
+          contextMessageId,
+          messageType: 'button_click',
+          timestamp: new Date()
+        }
+      );
+
+      console.log(`✅ Running workflow continued with button click: ${buttonId}`);
       return;
     }
 
-    console.log(`✅ Found running workflow execution: ${runningExecution.workflowId}`);
-    console.log(`   Current node: ${runningExecution.currentNodeId}`);
-
-    // Continue the workflow with the button response
-    await workflowEngine.continueWorkflow(
-      runningExecution.workflowId,
-      contact._id.toString(),
-      {
-        buttonId,
-        buttonTitle,
-        contextMessageId,
-        messageType: 'button_click',
-        timestamp: new Date()
-      }
-    );
-
-    console.log(`✅ Workflow continued with button click: ${buttonId}`);
+    console.log('❌ No workflow execution found for this contact');
 
   } catch (error) {
     console.error('❌ Error continuing workflow:', error);
   }
 }
+
 
 // Update the checkAndTriggerWorkflows function
 async function checkAndTriggerWorkflows(
