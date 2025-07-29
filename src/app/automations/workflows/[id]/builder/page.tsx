@@ -628,21 +628,21 @@ function WorkflowBuilderContent() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', type);
+      formData.append('type', type.toUpperCase()); // Convert to uppercase to match API expectations
 
-      const response = await fetch('/api/media-handle', {
+      const response = await fetch('/api/upload', { // Use your existing upload API
         method: 'POST',
         body: formData,
       });
 
       const data = await response.json();
 
-      if (response.ok && data.h) {
+      if (response.ok && data.url) {
         toast({
           title: "Media Uploaded",
-          description: "Media file uploaded successfully",
+          description: `${type.charAt(0).toUpperCase() + type.slice(1)} file uploaded successfully`,
         });
-        return data.h;
+        return data.url; // Return the direct URL
       } else {
         throw new Error(data.error || 'Failed to upload media');
       }
@@ -650,7 +650,7 @@ function WorkflowBuilderContent() {
       console.error('Error uploading media:', error);
       toast({
         title: "Upload Failed",
-        description: "Failed to upload media file",
+        description: `Failed to upload ${type} file`,
         variant: "destructive",
       });
       return null;
@@ -659,6 +659,32 @@ function WorkflowBuilderContent() {
     }
   }, [toast]);
 
+  // Add file type validation function
+  const validateFileType = (file: File, expectedType: string): boolean => {
+    const documentTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/csv',
+      'application/rtf'
+    ];
+
+    switch (expectedType) {
+      case 'image':
+        return file.type.startsWith('image/');
+      case 'video':
+        return file.type.startsWith('video/');
+      case 'document':
+        return documentTypes.includes(file.type);
+      default:
+        return true;
+    }
+  };
   const selectedNode = nodes.find(node => node.id === selectedNodeId);
 
   if (isLoading) {
@@ -1740,18 +1766,64 @@ function WorkflowBuilderContent() {
                                 </div>
                               </div>
                             )}
-
-                            {/* Send Media Configuration */}
                             {selectedNode.data.config?.actionType === 'send_media' && (
                               <div className="space-y-4">
+                                {/* Media Type Selection */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium text-slate-700">
+                                    Media Type <span className="text-red-500">*</span>
+                                  </Label>
+                                  <div className="flex gap-2">
+                                    {['image', 'video', 'document'].map((type) => (
+                                      <Button
+                                        key={type}
+                                        variant={selectedNode.data.config?.mediaType === type ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => {
+                                          setNodes((nds) =>
+                                            nds.map((node) =>
+                                              node.id === selectedNode.id
+                                                ? {
+                                                  ...node,
+                                                  data: {
+                                                    ...node.data,
+                                                    config: {
+                                                      ...node.data.config,
+                                                      mediaType: type,
+                                                      // Clear mediaUrl when type changes
+                                                      mediaUrl: ''
+                                                    }
+                                                  }
+                                                }
+                                                : node
+                                            )
+                                          );
+                                        }}
+                                        className="capitalize"
+                                      >
+                                        {type === 'image' && <Image className="h-3 w-3 mr-1" />}
+                                        {type === 'video' && <Video className="h-3 w-3 mr-1" />}
+                                        {type === 'document' && <FileText className="h-3 w-3 mr-1" />}
+                                        {type}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+
                                 <div className="space-y-2">
                                   <Label htmlFor="media-url" className="text-sm font-medium text-slate-700">
-                                    Media URL or Handle <span className="text-red-500">*</span>
+                                    Media URL or Upload <span className="text-red-500">*</span>
                                   </Label>
                                   <div className="flex gap-2">
                                     <Input
                                       id="media-url"
-                                      placeholder="https://example.com/image.jpg or media handle"
+                                      placeholder={
+                                        selectedNode.data.config?.mediaType === 'document'
+                                          ? "https://example.com/document.pdf or upload file"
+                                          : selectedNode.data.config?.mediaType === 'video'
+                                            ? "https://example.com/video.mp4 or upload file"
+                                            : "https://example.com/image.jpg or upload file"
+                                      }
                                       value={selectedNode.data.config?.mediaUrl || ''}
                                       onChange={(e) => {
                                         setNodes((nds) =>
@@ -1779,12 +1851,39 @@ function WorkflowBuilderContent() {
                                       onClick={() => {
                                         const input = document.createElement('input');
                                         input.type = 'file';
-                                        input.accept = 'image/*';
+
+                                        // Set accept attribute based on media type
+                                        const mediaType = selectedNode.data.config?.mediaType || 'image';
+                                        switch (mediaType) {
+                                          case 'image':
+                                            input.accept = 'image/*';
+                                            break;
+                                          case 'video':
+                                            input.accept = 'video/*';
+                                            break;
+                                          case 'document':
+                                            input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf';
+                                            break;
+                                          default:
+                                            input.accept = '*/*';
+                                        }
+
                                         input.onchange = async (e) => {
                                           const file = (e.target as HTMLInputElement).files?.[0];
                                           if (file) {
-                                            const mediaHandle = await uploadMediaFile(file, 'image');
-                                            if (mediaHandle) {
+                                            // Validate file type
+                                            const isValidType = validateFileType(file, mediaType);
+                                            if (!isValidType) {
+                                              toast({
+                                                title: "Invalid File Type",
+                                                description: `Please select a valid ${mediaType} file`,
+                                                variant: "destructive",
+                                              });
+                                              return;
+                                            }
+
+                                            const mediaUrl = await uploadMediaFile(file, mediaType);
+                                            if (mediaUrl) {
                                               setNodes((nds) =>
                                                 nds.map((node) =>
                                                   node.id === selectedNode.id
@@ -1794,7 +1893,9 @@ function WorkflowBuilderContent() {
                                                         ...node.data,
                                                         config: {
                                                           ...node.data.config,
-                                                          mediaUrl: mediaHandle
+                                                          mediaUrl: mediaUrl,
+                                                          // Store original filename for documents
+                                                          originalFilename: mediaType === 'document' ? file.name : undefined
                                                         }
                                                       }
                                                     }
@@ -1806,7 +1907,7 @@ function WorkflowBuilderContent() {
                                         };
                                         input.click();
                                       }}
-                                      disabled={isUploadingMedia}
+                                      disabled={isUploadingMedia || !selectedNode.data.config?.mediaType}
                                       className="border-slate-200 hover:bg-slate-50"
                                     >
                                       {isUploadingMedia ? (
@@ -1816,14 +1917,41 @@ function WorkflowBuilderContent() {
                                       )}
                                     </Button>
                                   </div>
+                                  <p className="text-xs text-slate-500">
+                                    {selectedNode.data.config?.mediaType === 'document' &&
+                                      "Supported: PDF, DOC, XLS, PPT, TXT, CSV (max 100MB)"
+                                    }
+                                    {selectedNode.data.config?.mediaType === 'image' &&
+                                      "Supported: JPG, PNG, GIF, WebP (max 5MB)"
+                                    }
+                                    {selectedNode.data.config?.mediaType === 'video' &&
+                                      "Supported: MP4, MOV, AVI (max 16MB)"
+                                    }
+                                  </p>
                                 </div>
+
+                                {/* Show filename for documents */}
+                                {selectedNode.data.config?.mediaType === 'document' &&
+                                  selectedNode.data.config?.originalFilename && (
+                                    <div className="p-2 bg-slate-50 rounded border border-slate-200">
+                                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                                        <FileText className="h-4 w-4" />
+                                        <span>File: {selectedNode.data.config.originalFilename}</span>
+                                      </div>
+                                    </div>
+                                  )}
+
                                 <div className="space-y-2">
                                   <Label htmlFor="media-caption" className="text-sm font-medium text-slate-700">
                                     Caption (Optional)
                                   </Label>
                                   <Textarea
                                     id="media-caption"
-                                    placeholder="Enter caption for the media..."
+                                    placeholder={
+                                      selectedNode.data.config?.mediaType === 'document'
+                                        ? "Enter description for the document..."
+                                        : "Enter caption for the media..."
+                                    }
                                     value={selectedNode.data.config?.caption || ''}
                                     onChange={(e) => {
                                       setNodes((nds) =>
@@ -1847,6 +1975,47 @@ function WorkflowBuilderContent() {
                                     rows={3}
                                   />
                                 </div>
+
+                                {/* Media Preview */}
+                                {selectedNode.data.config?.mediaUrl && (
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-slate-700">Preview</Label>
+                                    <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                                      {selectedNode.data.config?.mediaType === 'image' && (
+                                        <img
+                                          src={selectedNode.data.config.mediaUrl}
+                                          alt="Preview"
+                                          className="max-w-full h-32 object-cover rounded"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                          }}
+                                        />
+                                      )}
+                                      {selectedNode.data.config?.mediaType === 'video' && (
+                                        <video
+                                          src={selectedNode.data.config.mediaUrl}
+                                          className="max-w-full h-32 rounded"
+                                          controls
+                                        />
+                                      )}
+                                      {selectedNode.data.config?.mediaType === 'document' && (
+                                        <div className="flex items-center gap-2 text-slate-600">
+                                          <FileText className="h-8 w-8" />
+                                          <div>
+                                            <p className="font-medium">Document uploaded</p>
+                                            <p className="text-sm text-slate-500">
+                                              {selectedNode.data.config?.originalFilename || 'Document file'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                      <div className="hidden text-slate-500 text-sm">
+                                        Failed to load preview
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
 

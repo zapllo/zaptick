@@ -1,51 +1,81 @@
-"use client";
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { X, Upload, File, Image, Video } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Upload, X, FileText, Image, Video, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { toast } from '@/hooks/use-toast';
 
 interface FileUploadProps {
-  onFileSelect: (file: File, type: string) => void;
-  onUploadComplete: (url: string, type: string, caption?: string) => void;
-  accept: string;
-  maxSize?: number;
+  onFileSelect?: (file: File) => void;
+  onUploadComplete: (url: string, type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => void;
+  accept?: string;
   type: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  maxSize?: number; // in MB
 }
 
 export default function FileUpload({ 
   onFileSelect, 
   onUploadComplete, 
   accept, 
-  maxSize = 16 * 1024 * 1024, // 16MB
-  type 
+  type,
+  maxSize = 10 
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [caption, setCaption] = useState("");
-  const { toast } = useToast();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const getAcceptedFileTypes = () => {
+    if (accept) return accept;
+    
+    switch (type) {
+      case 'IMAGE':
+        return 'image/*';
+      case 'VIDEO':
+        return 'video/*';
+      case 'DOCUMENT':
+        return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt';
+      default:
+        return '*/*';
+    }
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) return <Image className="h-8 w-8 text-blue-500" />;
+    if (file.type.startsWith('video/')) return <Video className="h-8 w-8 text-purple-500" />;
+    return <FileText className="h-8 w-8 text-orange-500" />;
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
     if (!file) return;
 
-    if (file.size > maxSize) {
+    // Check file size
+    const fileSizeInMB = file.size / (1024 * 1024);
+    if (fileSizeInMB > maxSize) {
       toast({
         title: "File too large",
-        description: `File size must be less than ${maxSize / (1024 * 1024)}MB`,
+        description: `File size must be less than ${maxSize}MB`,
         variant: "destructive"
       });
       return;
     }
 
     setSelectedFile(file);
-    onFileSelect(file, type);
-  };
+    if (onFileSelect) {
+      onFileSelect(file);
+    }
+  }, [onFileSelect, maxSize]);
 
-  const handleUpload = async () => {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      [getAcceptedFileTypes()]: []
+    },
+    multiple: false,
+    maxSize: maxSize * 1024 * 1024 // Convert MB to bytes
+  });
+
+  const uploadFile = async () => {
     if (!selectedFile) return;
 
     setUploading(true);
@@ -54,132 +84,154 @@ export default function FileUpload({
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('type', type);
+      formData.append('type', type.toLowerCase());
 
-      const response = await fetch('/api/upload-media', {
-        method: 'POST',
-        body: formData,
+      const xhr = new XMLHttpRequest();
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded * 100) / event.total);
+          setUploadProgress(progress);
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      
-      setUploadProgress(100);
-      onUploadComplete(data.url, type, caption);
-      
-      toast({
-        title: "File uploaded successfully",
-        description: "Your file is ready to send"
+      // Handle upload completion
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            if (response.success) {
+              onUploadComplete(response.url, type);
+              toast({
+                title: "Upload successful",
+                description: `${type.toLowerCase()} uploaded successfully`
+              });
+            } else {
+              throw new Error(response.error || 'Upload failed');
+            }
+          } catch (error) {
+            toast({
+              title: "Upload failed",
+              description: "Failed to parse upload response",
+              variant: "destructive"
+            });
+          }
+        } else {
+          toast({
+            title: "Upload failed",
+            description: `Server error: ${xhr.status}`,
+            variant: "destructive"
+          });
+        }
+        setUploading(false);
       });
 
-      // Reset
-      setSelectedFile(null);
-      setCaption("");
-      setUploadProgress(0);
+      // Handle upload errors
+      xhr.addEventListener('error', () => {
+        toast({
+          title: "Upload failed",
+          description: "Network error occurred",
+          variant: "destructive"
+        });
+        setUploading(false);
+      });
+
+      // Start upload
+      xhr.open('POST', '/api/upload');
+      xhr.send(formData);
+
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: "Please try again",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
-    } finally {
       setUploading(false);
     }
   };
 
-  const getFileIcon = () => {
-    switch (type) {
-      case 'IMAGE': return <Image className="h-8 w-8 text-blue-500" />;
-      case 'VIDEO': return <Video className="h-8 w-8 text-purple-500" />;
-      case 'DOCUMENT': return <File className="h-8 w-8 text-orange-500" />;
-      default: return <Upload className="h-8 w-8 text-gray-500" />;
-    }
+  const removeFile = () => {
+    setSelectedFile(null);
+    setUploadProgress(0);
   };
 
   return (
     <div className="space-y-4">
       {!selectedFile ? (
-        <div className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-          <input
-            type="file"
-            accept={accept}
-            onChange={handleFileSelect}
-            className="hidden"
-            id={`file-upload-${type}`}
-          />
-          <label
-            htmlFor={`file-upload-${type}`}
-            className="cursor-pointer flex flex-col items-center gap-2"
-          >
-            {getFileIcon()}
-            <p className="text-sm text-muted-foreground">
-              Click to select {type.toLowerCase()}
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragActive
+              ? 'border-primary bg-primary/5'
+              : 'border-gray-300 hover:border-primary hover:bg-gray-50'
+          }`}
+        >
+          <input {...getInputProps()} />
+          <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <div className="space-y-2">
+            <p className="text-lg font-medium text-gray-700">
+              {isDragActive
+                ? `Drop your ${type.toLowerCase()} here`
+                : `Upload ${type.toLowerCase()}`}
             </p>
-          </label>
+            <p className="text-sm text-gray-500">
+              Drag and drop or click to browse
+            </p>
+            <p className="text-xs text-gray-400">
+              Max size: {maxSize}MB
+              {type === 'DOCUMENT' && ' • PDF, DOC, XLS, PPT, TXT'}
+              {type === 'IMAGE' && ' • JPG, PNG, GIF, WebP'}
+              {type === 'VIDEO' && ' • MP4, MOV, AVI'}
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-3 bg-accent/20 rounded-lg">
-            {getFileIcon()}
-            <div className="flex-1">
-              <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-              </p>
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              {getFileIcon(selectedFile)}
+              <div>
+                <p className="font-medium text-gray-700">{selectedFile.name}</p>
+                <p className="text-sm text-gray-500">
+                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedFile(null)}
-              disabled={uploading}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {!uploading && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={removeFile}
+                className="text-gray-500 hover:text-red-500"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-
-          {(type === 'IMAGE' || type === 'VIDEO') && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Caption (optional)</label>
-              <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Add a caption..."
-                className="w-full p-2 border border-border/50 rounded-md resize-none"
-                rows={2}
-                disabled={uploading}
-              />
-            </div>
-          )}
 
           {uploading && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Uploading...</span>
-                <span>{uploadProgress}%</span>
+                <span className="text-gray-600">Uploading...</span>
+                <span className="text-gray-600">{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} className="h-2" />
             </div>
           )}
 
-          <div className="flex gap-2">
-            <Button
-              onClick={handleUpload}
-              disabled={uploading}
-              className="flex-1"
-            >
-              {uploading ? "Uploading..." : "Upload & Send"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setSelectedFile(null)}
-              disabled={uploading}
-            >
-              Cancel
-            </Button>
-          </div>
+          {!uploading && (
+            <div className="flex space-x-2 mt-4">
+              <Button onClick={uploadFile} className="flex-1">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload & Send
+              </Button>
+              <Button variant="outline" onClick={removeFile}>
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

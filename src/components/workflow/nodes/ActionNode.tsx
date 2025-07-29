@@ -170,54 +170,44 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       {actionType === 'send_button' && data.config?.buttons?.length > 0 ? (
         <div className="relative">
           {/* Button handle container */}
-          <div className="absolute top-0 left-0 right-0 h-4" style={{ top: '-20%' }}>
+          <div className="absolute top-0 left-full ml-4" style={{ top: '0%' }}>
             {data.config.buttons.map((button: any, index: number) => {
               const buttonId = button.id || `btn_${index + 1}`;
               const totalButtons = data.config.buttons.length;
 
-              // Calculate precise positioning
-              let leftPosition;
-              if (totalButtons === 1) {
-                leftPosition = 50;
-              } else {
-                // Distribute buttons evenly across the width with some padding
-                const padding = 15; // 15% padding on each side
-                const availableWidth = 100 - (2 * padding);
-                leftPosition = padding + (index * availableWidth / (totalButtons - 1));
-              }
+              // Calculate vertical positioning (one below the other)
+              const topPosition = index * 40; // 60px spacing between buttons
 
               return (
                 <div
                   key={buttonId}
                   className="absolute"
                   style={{
-                    left: `${leftPosition}%`,
-                    transform: 'translateX(-50%)',
-                    top: '0px'
+                    left: '0px',
+                    top: `${topPosition + 10}px`
                   }}
                 >
                   {/* Visual button indicator */}
-                  <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-2">
                     {/* Handle */}
                     <Handle
                       type="source"
-                      position={Position.left}
+                      position={Position.Right}
                       id={buttonId}
                       style={{
                         position: 'relative',
-                        left: 'auto',
+                        left: '-20px',
                         top: 'auto',
                         transform: 'none',
-                        margin: '0 auto'
+                        margin: '0'
                       }}
-                      className="w-4 h-4 bg-blue-500 border-2 border-white hover:bg-blue-600 transition-colors shadow-lg relative z-10"
+                      className="w-4 h-4 bg-blue-500 border-2  border-white hover:bg-blue-600 transition-colors shadow-lg relative z-10"
                     />
 
-                    {/* Connector line */}
-                    <div className="w-0.5 h-3 bg-blue-400"></div>
+
 
                     {/* Button label */}
-                    <div className="bg-blue-100 border border-blue-300 rounded px-2 py-1 shadow-sm mt-1">
+                    <div className="bg-blue-100 border border-blue-300 -ml-[228px] mt-1 w-[200px] rounded px-2 py-1 shadow-sm">
                       <span className="text-xs text-blue-700 font-medium whitespace-nowrap">
                         {button.text || `Button ${index + 1}`}
                       </span>
@@ -228,60 +218,51 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
             })}
           </div>
 
-          {/* Spacer to account for labels below */}
-          <div className="h-12"></div>
+          {/* Spacer to account for buttons on the right */}
+          <div style={{ height: `${Math.max(data.config.buttons.length * 40 - 20, 0)}px` }}></div>
         </div>
       ) : actionType === 'send_list' && data.config?.sections?.length > 0 ? (
         <div className="relative">
           {/* List handle container */}
-          <div className="absolute top-0 left-0 right-0 h-4" style={{ top: '100%' }}>
+          <div className="absolute top-0 left-full ml-4" style={{ top: '0%' }}>
             {data.config.sections.flatMap((section: any, sectionIndex: number) =>
               section.rows?.map((row: any, rowIndex: number) => {
                 const rowId = row.id || `list_${sectionIndex}_${rowIndex}`;
                 const totalRows = data.config.sections.reduce((acc: number, s: any) => acc + (s.rows?.length || 0), 0);
                 const currentRowIndex = data.config.sections.slice(0, sectionIndex).reduce((acc: number, s: any) => acc + (s.rows?.length || 0), 0) + rowIndex;
 
-                let leftPosition;
-                if (totalRows === 1) {
-                  leftPosition = 50;
-                } else {
-                  const padding = 15; // Match button padding
-                  const availableWidth = 100 - (2 * padding);
-                  leftPosition = padding + (currentRowIndex * availableWidth / (totalRows - 1));
-                }
+                // Calculate vertical positioning (one below the other) - exactly like buttons
+                const topPosition = currentRowIndex * 40; // Same 40px spacing as buttons
 
                 return (
                   <div
                     key={rowId}
                     className="absolute"
                     style={{
-                      left: `${leftPosition}%`,
-                      transform: 'translateX(-50%)',
-                      top: '0px'
+                      left: '0px',
+                      top: `${topPosition + 10}px` // Same offset as buttons
                     }}
                   >
-                    <div className="flex flex-col items-center">
-                      {/* Handle - match button handle exactly */}
+                    {/* Visual list indicator - exactly like button */}
+                    <div className="flex items-center gap-2">
+                      {/* Handle - styled exactly like button handle */}
                       <Handle
                         type="source"
-                        position={Position.Bottom}
+                        position={Position.Right}
                         id={rowId}
                         style={{
                           position: 'relative',
-                          left: 'auto',
+                          left: '-20px', // Same positioning as button
                           top: 'auto',
                           transform: 'none',
-                          margin: '0 auto'
+                          margin: '0'
                         }}
                         className="w-4 h-4 bg-orange-500 border-2 border-white hover:bg-orange-600 transition-colors shadow-lg relative z-10"
                       />
 
-                      {/* Connector line */}
-                      <div className="w-0.5 h-3 bg-orange-400"></div>
-
-                      {/* Row label */}
-                      <div className="bg-orange-100 border border-orange-300 rounded px-2 py-1 shadow-sm mt-1">
-                        <span className="text-xs text-orange-700 font-medium whitespace-nowrap max-w-20 truncate block">
+                      {/* List label - styled exactly like button label */}
+                      <div className="bg-orange-100 border border-orange-300 -ml-[228px] mt-1 w-[200px] rounded px-2 py-1 shadow-sm">
+                        <span className="text-xs text-orange-700 font-medium whitespace-nowrap">
                           {row.title || `Row ${currentRowIndex + 1}`}
                         </span>
                       </div>
@@ -292,8 +273,13 @@ const ActionNode: React.FC<NodeProps> = ({ data, selected, id }) => {
             )}
           </div>
 
-          {/* Spacer to account for labels below */}
-          <div className="h-12"></div>
+          {/* Spacer to account for list items on the right - same calculation as buttons */}
+          <div style={{
+            height: `${Math.max(
+              data.config.sections.reduce((acc: number, s: any) => acc + (s.rows?.length || 0), 0) * 40 - 20,
+              0
+            )}px`
+          }}></div>
         </div>
       ) : (
         <Handle

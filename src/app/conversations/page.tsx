@@ -506,40 +506,37 @@ function ConversationsPageContent() {
 
   // Update the handleUploadComplete function to populate templateMediaInputs
   // Update handleUploadComplete to better handle template media
+  // Update the handleUploadComplete function
   const handleUploadComplete = (url: string, type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => {
     console.log('🎉 Upload completed:', { url, type });
-    console.log('Current selectedTemplate:', selectedTemplate?.name);
-    console.log('Current templateMediaInputs before update:', templateMediaInputs);
 
-    // Always set the uploaded URL for regular messages
-    // setUploadedImageUrl(url);
+    // If we're in template mode, set the template media input
+    if (selectedTemplate) {
+      const mediaType = type.toLowerCase();
+      const inputKey = `header_${mediaType}`;
 
-    // CRITICAL: If we're dealing with a template, set the template media input
-    const mediaType = type.toLowerCase();
-    const inputKey = `header_${mediaType}`;
+      setTemplateMediaInputs(prev => {
+        const updated = {
+          ...prev,
+          [inputKey]: url
+        };
+        console.log('🔧 Updated templateMediaInputs:', updated);
+        return updated;
+      });
 
-    setTemplateMediaInputs(prev => {
-      const updated = {
-        ...prev,
-        [inputKey]: url
-      };
-      console.log('🔧 Updated templateMediaInputs:', updated);
-      return updated;
-    });
+      toast({
+        title: "Upload successful",
+        description: `${type.toLowerCase()} uploaded and ready to use in template`
+      });
+    } else {
+      // Regular media message - send immediately
+      sendMediaMessage(url, type);
+    }
 
     // Close the upload dialog
     setShowFileUpload(false);
-
-    toast({
-      title: "Upload successful",
-      description: `${type.toLowerCase()} uploaded and ready to use`
-    });
-
-    console.log('📝 Final state after upload:');
-    console.log('- uploadedImageUrl:', url);
-    console.log('- inputKey:', inputKey);
-    console.log('- Will be available at templateMediaInputs[' + inputKey + ']');
   };
+
 
 
   const handleMediaUpload = (type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => {
@@ -1504,34 +1501,114 @@ function ConversationsPageContent() {
     }
   };
 
-useEffect(() => {
-  if (!activeConversation || messages.length === 0) return;
-  
-  const within = compute24hWindow(messages);
-  
-  // Update the conversation in the conversations list instead
-  if (activeConversation.isWithin24Hours !== within) {
-    setConversations(prevConversations =>
-      prevConversations.map(conv =>
-        conv.id === activeConversation.id
-          ? { ...conv, isWithin24Hours: within }
-          : conv
-      )
-    );
-    
-    // Update filtered conversations too
-    setFilteredConversations(prevFiltered =>
-      prevFiltered.map(conv =>
-        conv.id === activeConversation.id
-          ? { ...conv, isWithin24Hours: within }
-          : conv
-      )
-    );
-    
-    // Update active conversation without triggering the conversation change effect
-    setActiveConversation(prev => prev ? { ...prev, isWithin24Hours: within } : prev);
-  }
-}, [messages]);
+  useEffect(() => {
+    if (!activeConversation || messages.length === 0) return;
+
+    const within = compute24hWindow(messages);
+
+    // Update the conversation in the conversations list instead
+    if (activeConversation.isWithin24Hours !== within) {
+      setConversations(prevConversations =>
+        prevConversations.map(conv =>
+          conv.id === activeConversation.id
+            ? { ...conv, isWithin24Hours: within }
+            : conv
+        )
+      );
+
+      // Update filtered conversations too
+      setFilteredConversations(prevFiltered =>
+        prevFiltered.map(conv =>
+          conv.id === activeConversation.id
+            ? { ...conv, isWithin24Hours: within }
+            : conv
+        )
+      );
+
+      // Update active conversation without triggering the conversation change effect
+      setActiveConversation(prev => prev ? { ...prev, isWithin24Hours: within } : prev);
+    }
+  }, [messages]);
+
+  // Add this new function to handle sending uploaded media
+  const sendMediaMessage = async (mediaUrl: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => {
+    if (!getCurrentContact() || isSending) return;
+
+    let contactId: string;
+    let wabaId: string;
+
+    if (selectedContact) {
+      contactId = selectedContact.id;
+      wabaId = selectedContact.wabaId;
+    } else if (activeConversation?.contact?.id) {
+      contactId = activeConversation.contact.id;
+      wabaId = activeConversation.wabaId;
+    } else {
+      toast({
+        title: "Contact information missing",
+        description: "Please select a contact to send media",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId,
+          wabaId,
+          messageType: mediaType.toLowerCase(), // 'image', 'video', 'document'
+          mediaUrl,
+          mediaCaption: caption,
+          conversationId: activeConversation?.id,
+          senderName: currentUser.name
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (!activeConversation && data.conversationId) {
+          const convResponse = await fetch(`/api/conversations/${data.conversationId}`);
+          const convData = await convResponse.json();
+          if (convData.success) {
+            setActiveConversation(convData.conversation);
+            setSelectedContact(null);
+            fetchConversations();
+          }
+        } else if (activeConversation) {
+          setUserScrolledUp(false);
+          setScrollLocked(false);
+          setTimeout(() => {
+            fetchMessages(activeConversation.id, 'force-bottom');
+          }, 100);
+          fetchConversations();
+        }
+
+        toast({ title: `${mediaType.toLowerCase()} sent successfully` });
+      } else {
+        toast({
+          title: `Failed to send ${mediaType.toLowerCase()}`,
+          description: data.error || "Please try again",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Send media error:', error);
+      toast({
+        title: `Failed to send ${mediaType.toLowerCase()}`,
+        description: "Network error. Please check your connection and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+
 
   // Update your fetchConversations function
   const fetchConversations = async () => {

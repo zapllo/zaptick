@@ -173,7 +173,9 @@ export async function POST(req: NextRequest) {
       language = 'en',
       templateComponents,
       templateData,
-      variables = {} // Extract variables from request
+      variables = {},
+      mediaUrl,
+      mediaCaption
     } = requestData;
 
     console.log('🔍 Request data received:', JSON.stringify(requestData, null, 2));
@@ -194,6 +196,13 @@ export async function POST(req: NextRequest) {
     if (messageType === 'template' && !templateId) {
       return NextResponse.json({
         error: 'Missing required field: templateId for template message'
+      }, { status: 400 });
+    }
+
+    // Add validation for media messages
+    if (['image', 'video', 'document'].includes(messageType) && !mediaUrl) {
+      return NextResponse.json({
+        error: `Missing required field: mediaUrl for ${messageType} message`
       }, { status: 400 });
     }
 
@@ -222,7 +231,7 @@ export async function POST(req: NextRequest) {
       if (template.approvedAt) {
         const approvalTime = new Date(template.approvedAt).getTime();
         const currentTime = new Date().getTime();
-        const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+        const tenMinutesInMs = 10 * 60 * 1000;
         const timeSinceApproval = currentTime - approvalTime;
 
         if (timeSinceApproval < tenMinutesInMs) {
@@ -230,14 +239,12 @@ export async function POST(req: NextRequest) {
 
           return NextResponse.json({
             error: 'Template recently approved',
-            message: `This template was recently approved and needs to settle in WhatsApp's system. Please wait ${remainingMinutes} more minute(s) before sending. This helps maintain a healthy messaging ecosystem and ensures optimal delivery rates.`,
+            message: `This template was recently approved and needs to settle in WhatsApp's system. Please wait ${remainingMinutes} more minute(s) before sending.`,
             remainingMinutes,
             approvedAt: template.approvedAt
-          }, { status: 429 }); // 429 Too Many Requests status code
+          }, { status: 429 });
         }
       }
-
-      // console.log('🔍 Template found:', template.name, 'with components:', template.components.length);
     }
 
     const wabaAccounts = user.wabaAccounts || [];
@@ -252,20 +259,15 @@ export async function POST(req: NextRequest) {
     }
 
     let whatsappPayload;
-    // Render template locally so the chat can show it later
     let renderedBody = message;
     let headerMedia = {};
 
     if (messageType === 'template' && template) {
       console.log('🔧 Building template components with variables:', variables);
 
-      // Build template components automatically with variables
-      // This now properly uses mediaUrl from the template itself
       const finalComponents = templateComponents || buildTemplateComponents(template, variables);
-
       console.log('🔧 Final components built:', JSON.stringify(finalComponents, null, 2));
 
-      // Basic template structure
       whatsappPayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
@@ -279,12 +281,69 @@ export async function POST(req: NextRequest) {
         }
       };
 
-      // Add components if we have any
       if (finalComponents && finalComponents.length > 0) {
         whatsappPayload.template.components = finalComponents;
       }
 
-      console.log('🔧 Final WhatsApp payload:', JSON.stringify(whatsappPayload, null, 2));
+      renderedBody = renderTemplateBody(template, whatsappPayload.template.components, variables);
+      headerMedia = extractHeaderMedia(template, whatsappPayload.template.components);
+
+    } else if (messageType === 'image') {
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "image",
+        image: {
+          link: mediaUrl
+        }
+      };
+      
+      if (mediaCaption) {
+        whatsappPayload.image.caption = mediaCaption;
+      }
+      
+      renderedBody = mediaCaption || 'Image';
+
+    } else if (messageType === 'video') {
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "video",
+        video: {
+          link: mediaUrl
+        }
+      };
+      
+      if (mediaCaption) {
+        whatsappPayload.video.caption = mediaCaption;
+      }
+      
+      renderedBody = mediaCaption || 'Video';
+
+    } else if (messageType === 'document') {
+      // Extract filename from URL or use default
+      const urlParts = mediaUrl.split('/');
+      const filename = urlParts[urlParts.length - 1] || 'document.pdf';
+      
+      whatsappPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phoneNumber,
+        type: "document",
+        document: {
+          link: mediaUrl,
+          filename: filename
+        }
+      };
+      
+      if (mediaCaption) {
+        whatsappPayload.document.caption = mediaCaption;
+      }
+      
+      renderedBody = mediaCaption || 'Document';
+
     } else {
       // Regular text message
       whatsappPayload = {
@@ -297,12 +356,6 @@ export async function POST(req: NextRequest) {
           body: message
         }
       };
-    }
-
-    if (messageType === 'template' && template) {
-      // Pass variables to renderTemplateBody for local rendering
-      renderedBody = renderTemplateBody(template, whatsappPayload.template.components, variables);
-      headerMedia = extractHeaderMedia(template, whatsappPayload.template.components);
     }
 
     console.log('Final WhatsApp payload:', JSON.stringify(whatsappPayload, null, 2));
@@ -380,7 +433,7 @@ export async function POST(req: NextRequest) {
 
     const messageContent = messageType === 'template'
       ? renderedBody
-      : message;
+      : renderedBody; // This now handles all message types properly
 
     const newMessage = {
       id: uuidv4(),
@@ -391,7 +444,9 @@ export async function POST(req: NextRequest) {
       status: 'sent' as const,
       whatsappMessageId: interaktData.messages?.[0]?.id,
       senderName: senderName || user.name || 'Agent',
-      templateName: messageType === 'template' ? template?.name : undefined
+      templateName: messageType === 'template' ? template?.name : undefined,
+      mediaUrl: ['image', 'video', 'document'].includes(messageType) ? mediaUrl : undefined,
+      mediaCaption: ['image', 'video', 'document'].includes(messageType) ? mediaCaption : undefined
     };
 
     if (conversation) {
@@ -432,7 +487,9 @@ export async function POST(req: NextRequest) {
         status: newMessage.status,
         whatsappMessageId: newMessage.whatsappMessageId,
         senderName: newMessage.senderName,
-        templateName: newMessage.templateName
+        templateName: newMessage.templateName,
+        mediaUrl: newMessage.mediaUrl,
+        mediaCaption: newMessage.mediaCaption
       },
       conversationId: conversation._id
     });

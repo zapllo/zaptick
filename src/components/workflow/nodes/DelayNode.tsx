@@ -24,10 +24,10 @@ const DelayNode: React.FC<NodeProps> = ({ data, selected }) => {
       )}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Input Handle */}
+      {/* Input Handle - Left side like ActionNode */}
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="w-3 h-3 bg-white border-2 border-gray-400 hover:border-blue-500 transition-colors"
       />
 
@@ -88,11 +88,11 @@ const DelayNode: React.FC<NodeProps> = ({ data, selected }) => {
         </CardContent>
       </Card>
 
-      {/* Output Handle */}
+      {/* Output Handle - Right side like ActionNode */}
       <Handle
         type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-amber-500 border-2 border-white hover:bg-amber-600 transition-colors"
+        position={Position.Right}
+        className="w-3 h-3 bg-white border-2 border-gray-400 hover:border-blue-500 transition-colors"
       />
     </div>
   );
