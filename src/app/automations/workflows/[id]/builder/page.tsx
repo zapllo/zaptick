@@ -622,69 +622,68 @@ function WorkflowBuilderContent() {
     }
   }, [workflow, toast]);
 
-  // Upload media file
-  const uploadMediaFile = useCallback(async (file: File, type: string) => {
-    setIsUploadingMedia(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', type.toUpperCase()); // Convert to uppercase to match API expectations
+const uploadMediaFile = useCallback(async (file: File, type: string) => {
+  setIsUploadingMedia(true);
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type.toUpperCase());
 
-      const response = await fetch('/api/upload', { // Use your existing upload API
-        method: 'POST',
-        body: formData,
-      });
+    const response = await fetch('/api/upload-media', {
+      method: 'POST',
+      body: formData,
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (response.ok && data.url) {
-        toast({
-          title: "Media Uploaded",
-          description: `${type.charAt(0).toUpperCase() + type.slice(1)} file uploaded successfully`,
-        });
-        return data.url; // Return the direct URL
-      } else {
-        throw new Error(data.error || 'Failed to upload media');
-      }
-    } catch (error) {
-      console.error('Error uploading media:', error);
+    if (response.ok && data.success && data.url) {
       toast({
-        title: "Upload Failed",
-        description: `Failed to upload ${type} file`,
-        variant: "destructive",
+        title: "Media Uploaded",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} file uploaded successfully`,
       });
-      return null;
-    } finally {
-      setIsUploadingMedia(false);
+      return data.url;
+    } else {
+      throw new Error(data.error || 'Failed to upload media');
     }
-  }, [toast]);
+  } catch (error) {
+    console.error('Error uploading media:', error);
+    toast({
+      title: "Upload Failed",
+      description: `Failed to upload ${type} file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      variant: "destructive",
+    });
+    return null;
+  } finally {
+    setIsUploadingMedia(false);
+  }
+}, [toast]);
 
-  // Add file type validation function
-  const validateFileType = (file: File, expectedType: string): boolean => {
-    const documentTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'text/plain',
-      'text/csv',
-      'application/rtf'
-    ];
+// Add file type validation function
+const validateFileType = (file: File, expectedType: string): boolean => {
+  const documentTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'text/csv',
+    'application/rtf'
+  ];
 
-    switch (expectedType) {
-      case 'image':
-        return file.type.startsWith('image/');
-      case 'video':
-        return file.type.startsWith('video/');
-      case 'document':
-        return documentTypes.includes(file.type);
-      default:
-        return true;
-    }
-  };
+  switch (expectedType) {
+    case 'image':
+      return file.type.startsWith('image/');
+    case 'video':
+      return file.type.startsWith('video/');
+    case 'document':
+      return documentTypes.includes(file.type);
+    default:
+      return true;
+  }
+};
   const selectedNode = nodes.find(node => node.id === selectedNodeId);
 
   if (isLoading) {

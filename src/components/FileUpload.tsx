@@ -1,144 +1,73 @@
-import React, { useState, useCallback } from 'react';
+"use client";
+
+import { useState, useCallback } from "react";
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileText, Image, Video, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { toast } from '@/hooks/use-toast';
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { X, Upload, FileText, Image, Video } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface FileUploadProps {
   onFileSelect?: (file: File) => void;
   onUploadComplete: (url: string, type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => void;
   accept?: string;
+  maxSize?: number;
   type: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
-  maxSize?: number; // in MB
 }
 
-export default function FileUpload({ 
-  onFileSelect, 
-  onUploadComplete, 
-  accept, 
-  type,
-  maxSize = 10 
+export default function FileUpload({
+  onFileSelect,
+  onUploadComplete,
+  accept,
+  maxSize = 16,
+  type
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [caption, setCaption] = useState("");
+  const { toast } = useToast();
 
-  const getAcceptedFileTypes = () => {
-    if (accept) return accept;
-    
-    switch (type) {
-      case 'IMAGE':
-        return 'image/*';
-      case 'VIDEO':
-        return 'video/*';
-      case 'DOCUMENT':
-        return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt';
-      default:
-        return '*/*';
-    }
-  };
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+  if (!file) return;
 
-  const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) return <Image className="h-8 w-8 text-blue-500" />;
-    if (file.type.startsWith('video/')) return <Video className="h-8 w-8 text-purple-500" />;
-    return <FileText className="h-8 w-8 text-orange-500" />;
-  };
+    if (file.size > maxSize) {
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-
-    // Check file size
-    const fileSizeInMB = file.size / (1024 * 1024);
-    if (fileSizeInMB > maxSize) {
-      toast({
+ toast({
         title: "File too large",
-        description: `File size must be less than ${maxSize}MB`,
-        variant: "destructive"
+        description: `File size must be less than ${maxSize / (1024 * 1024)}MB`,
+
+     variant: "destructive"
       });
       return;
     }
 
     setSelectedFile(file);
-    if (onFileSelect) {
-      onFileSelect(file);
-    }
-  }, [onFileSelect, maxSize]);
+    onFileSelect(file, type);
+  };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      [getAcceptedFileTypes()]: []
-    },
-    multiple: false,
-    maxSize: maxSize * 1024 * 1024 // Convert MB to bytes
-  });
-
-  const uploadFile = async () => {
-    if (!selectedFile) return;
+ const handleUpload = async () => {
+     if (!selectedFile) return;
 
     setUploading(true);
-    setUploadProgress(0);
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('type', type.toLowerCase());
+      formData.append('type', type);
+  const response = await fetch('/api/upload-media', {
+        method: 'POST',
+        body: formData,});
 
-      const xhr = new XMLHttpRequest();
+          if (!response.ok) {
+        throw new Error('Upload failed');
+      }
 
-      // Track upload progress
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded * 100) / event.total);
-          setUploadProgress(progress);
-        }
-      });
+ 
 
-      // Handle upload completion
-      xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            if (response.success) {
-              onUploadComplete(response.url, type);
-              toast({
-                title: "Upload successful",
-                description: `${type.toLowerCase()} uploaded successfully`
-              });
-            } else {
-              throw new Error(response.error || 'Upload failed');
-            }
-          } catch (error) {
-            toast({
-              title: "Upload failed",
-              description: "Failed to parse upload response",
-              variant: "destructive"
-            });
-          }
-        } else {
-          toast({
-            title: "Upload failed",
-            description: `Server error: ${xhr.status}`,
-            variant: "destructive"
-          });
-        }
-        setUploading(false);
-      });
-
-      // Handle upload errors
-      xhr.addEventListener('error', () => {
-        toast({
-          title: "Upload failed",
-          description: "Network error occurred",
-          variant: "destructive"
-        });
-        setUploading(false);
-      });
-
-      // Start upload
-      xhr.open('POST', '/api/upload');
+      // Start upload - Use the correct endpoint
+      xhr.open('POST', '/api/upload-media');
       xhr.send(formData);
 
     } catch (error) {
@@ -157,16 +86,28 @@ export default function FileUpload({
     setUploadProgress(0);
   };
 
+  const getFileTypesText = () => {
+    switch (type) {
+      case 'DOCUMENT':
+        return 'PDF, DOC, XLS, PPT, TXT, CSV';
+      case 'IMAGE':
+        return 'JPG, PNG, GIF, WebP';
+      case 'VIDEO':
+        return 'MP4, MOV, AVI';
+      default:
+        return 'All files';
+    }
+  };
+
   return (
     <div className="space-y-4">
       {!selectedFile ? (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-            isDragActive
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive
               ? 'border-primary bg-primary/5'
               : 'border-gray-300 hover:border-primary hover:bg-gray-50'
-          }`}
+            }`}
         >
           <input {...getInputProps()} />
           <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -180,10 +121,7 @@ export default function FileUpload({
               Drag and drop or click to browse
             </p>
             <p className="text-xs text-gray-400">
-              Max size: {maxSize}MB
-              {type === 'DOCUMENT' && ' • PDF, DOC, XLS, PPT, TXT'}
-              {type === 'IMAGE' && ' • JPG, PNG, GIF, WebP'}
-              {type === 'VIDEO' && ' • MP4, MOV, AVI'}
+              Max size: {maxSize}MB • Supported: {getFileTypesText()}
             </p>
           </div>
         </div>
