@@ -275,6 +275,12 @@ const formatWhatsAppText = (text: string) => {
   return formattedText;
 };
 
+
+
+
+
+
+
 // Add these skeleton loader components after your imports
 const ConversationSkeleton = () => (
   <div className="p-4 border-b border-border/30 animate-pulse">
@@ -503,36 +509,32 @@ function ConversationsPageContent() {
   // Update the handleUploadComplete function
   const handleUploadComplete = (url: string, type: 'IMAGE' | 'VIDEO' | 'DOCUMENT') => {
     console.log('🎉 Upload completed:', { url, type });
-    console.log('Current selectedTemplate:', selectedTemplate?.name);
-    console.log('Current templateMediaInputs before update:', templateMediaInputs);
 
-    // Always set the uploaded URL for regular messages
-    // setUploadedImageUrl(url);
+    // If we're in template mode, set the template media input
+    if (selectedTemplate) {
+      const mediaType = type.toLowerCase();
+      const inputKey = `header_${mediaType}`;
 
-    // CRITICAL: If we're dealing with a template, set the template media input
-    const mediaType = type.toLowerCase();
-    const inputKey = `header_${mediaType}`;
-    setTemplateMediaInputs(prev => {
-      const updated = {
-        ...prev,
-        [inputKey]: url
-      };
-      console.log('🔧 Updated templateMediaInputs:', updated);
-      return updated;
-    });
+      setTemplateMediaInputs(prev => {
+        const updated = {
+          ...prev,
+          [inputKey]: url
+        };
+        console.log('🔧 Updated templateMediaInputs:', updated);
+        return updated;
+      });
+
+      toast({
+        title: "Upload successful",
+        description: `${type.toLowerCase()} uploaded and ready to use in template`
+      });
+    } else {
+      // Regular media message - send immediately
+      sendMediaMessage(url, type);
+    }
 
     // Close the upload dialog
     setShowFileUpload(false);
-
-    toast({
-      title: "Upload successful",
-      description: `${type.toLowerCase()} uploaded and ready to use`
-    });
-
-    console.log('📝 Final state after upload:');
-    console.log('- uploadedImageUrl:', url);
-    console.log('- inputKey:', inputKey);
-    console.log('- Will be available at templateMediaInputs[' + inputKey + ']');
   };
 
 
