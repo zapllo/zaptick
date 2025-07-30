@@ -16,6 +16,7 @@ import Workflow from '@/models/Workflow';
 import WorkflowEngine from '@/lib/workflowEngine';
 import Campaign from '@/models/Campaign';
 import Template from '@/models/Template';
+import { WebhookService } from '@/lib/webhookService';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -72,12 +73,19 @@ async function processIncomingMessages(v: any) {
   }
 }
 
-// Add this new function to process status updates
+// Update the processStatusUpdates function to include webhook calls
 async function processStatusUpdates(v: any) {
   if (!v.statuses || !v.statuses.length) return;
 
   const phoneNumberId = v.metadata?.phone_number_id;
   if (!phoneNumberId) return;
+
+  // Get user for webhook
+  const user = await User.findOne({ 'wabaAccounts.phoneNumberId': phoneNumberId });
+  if (!user) return;
+
+  const wabaAcc = user.wabaAccounts.find((a: any) => a.phoneNumberId === phoneNumberId);
+  if (!wabaAcc) return;
 
   // Process each status update
   for (const status of v.statuses) {
@@ -94,6 +102,9 @@ async function processStatusUpdates(v: any) {
       });
 
       if (conversation) {
+        // Find the contact
+        const contact = await Contact.findById(conversation.contactId);
+        
         // Find the specific message in the conversation
         const messageIndex = conversation.messages.findIndex(
           (msg: any) => msg.whatsappMessageId === whatsappMessageId
@@ -137,6 +148,22 @@ async function processStatusUpdates(v: any) {
 
           await conversation.save();
           console.log(`Updated message status to ${statusValue} for message ${whatsappMessageId}`);
+
+          // Send webhook for status update
+          if (contact) {
+            await sendWebhookForMessage(
+              {
+                whatsappMessageId,
+                timestamp,
+                errorMessage: conversation.messages[messageIndex].errorMessage,
+                errorCode: conversation.messages[messageIndex].errorCode
+              },
+              contact,
+              user,
+              wabaAcc,
+              statusValue as 'sent' | 'delivered' | 'read' | 'failed'
+            );
+          }
         } else {
           console.log(`Message not found in conversation: ${whatsappMessageId}`);
         }
@@ -153,6 +180,7 @@ async function processStatusUpdates(v: any) {
     }
   }
 }
+
 
 
 // Helper function to get user-friendly error messages from error codes
@@ -572,6 +600,27 @@ async function processMessage(
     conv.isWithin24Hours = ts.getTime() > Date.now() - 86_400_000;
 
     await conv.save();
+
+     // Send webhook for customer message
+    await WebhookService.sendCustomerMessage(
+      userId,
+      wabaAcc.wabaId,
+      {
+        id: newMsg.id,
+        whatsappMessageId: newMsg.whatsappMessageId,
+        type: newMsg.messageType,
+        content: newMsg.content,
+        timestamp: newMsg.timestamp,
+        contact: {
+          id: contact._id,
+          name: contact.name,
+          phone: contact.phone
+        },
+        conversation: {
+          id: conv._id
+        }
+      }
+    );
 
     // Process campaign responses first
     await processCampaignResponse(
@@ -1639,3 +1688,36 @@ async function handleWorkflowTrigger(
   }
 }
 
+async function sendWebhookForMessage(
+  messageData: any,
+  contact: any,
+  user: any,
+  wabaAcc: any,
+  eventType: 'sent' | 'delivered' | 'read' | 'failed'
+) {
+  try {
+    await WebhookService.sendMessageEvent(
+      user._id.toString(),
+      wabaAcc.wabaId,
+      eventType,
+      {
+        id: messageData.whatsappMessageId,
+        status: eventType,
+        contact: {
+          id: contact._id,
+          name: contact.name,
+          phone: contact.phone
+        },
+        timestamp: messageData.timestamp || new Date(),
+        ...(eventType === 'failed' && {
+          error: {
+            message: messageData.errorMessage,
+            code: messageData.errorCode
+          }
+        })
+      }
+    );
+  } catch (error) {
+    console.error('Error sending webhook for message event:', error);
+  }
+}
