@@ -769,7 +769,7 @@ export default function ChatbotsPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <p className="text-sm font-medium">${(chatbot.totalCostINR || 0).toFixed(4)}</p>
+                                  <p className="text-sm font-medium">₹{(chatbot.totalCostINR || 0).toFixed(4)}</p>
                                 </TableCell>
                                 <TableCell>
                                   <p className="text-sm text-muted-foreground">
