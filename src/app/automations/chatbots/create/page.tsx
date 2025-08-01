@@ -50,7 +50,7 @@ import {
 } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import AutomationsLayout from '@/components/automations/AutomationsLayout';
+import AutomationsLayout from '@/components/layout/automation-layout';
 
 interface ChatbotFormData {
   name: string;

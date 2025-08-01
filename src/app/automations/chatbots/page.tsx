@@ -86,8 +86,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import AutomationsLayout from '@/components/automations/AutomationsLayout';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AutomationsLayout from '@/components/layout/automation-layout';
 
 interface Chatbot {
   _id: string;
