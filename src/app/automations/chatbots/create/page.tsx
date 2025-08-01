@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -149,9 +149,53 @@ export default function CreateChatbotPage() {
   const [testMessage, setTestMessage] = useState('');
   const [testResponse, setTestResponse] = useState('');
   const [isTestLoading, setIsTestLoading] = useState(false);
+ // WABA Selection State
+  const [wabaAccounts, setWabaAccounts] = useState<any[]>([]);
+  const [selectedWabaId, setSelectedWabaId] = useState<string>('');
+  const [isLoadingWaba, setIsLoadingWaba] = useState(true);
 
-  // Get selected WABA ID
-  const selectedWabaId = typeof window !== 'undefined' ? localStorage.getItem('selectedWabaId') || '' : '';
+
+  // Load WABA accounts
+  const fetchWabaAccounts = async () => {
+    try {
+      const response = await fetch('/api/waba-accounts');
+      const data = await response.json();
+
+      if (data.success) {
+        setWabaAccounts(data.accounts);
+        
+        // Try to get saved WABA ID or use first one
+        const savedWabaId = localStorage.getItem('selectedWabaId');
+        if (savedWabaId && data.accounts.find((a: any) => a.wabaId === savedWabaId)) {
+          setSelectedWabaId(savedWabaId);
+        } else if (data.accounts.length > 0) {
+          const firstWaba = data.accounts[0];
+          setSelectedWabaId(firstWaba.wabaId);
+          localStorage.setItem('selectedWabaId', firstWaba.wabaId);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch WABA accounts",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching WABA accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch WABA accounts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingWaba(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWabaAccounts();
+  }, []);
+
 
   const updateFormData = (field: keyof ChatbotFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -488,7 +532,6 @@ export default function CreateChatbotPage() {
                           </AlertDescription>
                         </Alert>
                       </div>
-
                       {/* Advanced AI Settings */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">

@@ -18,6 +18,7 @@ import Campaign from '@/models/Campaign';
 import Template from '@/models/Template';
 import { WebhookService } from '@/lib/webhookService';
 import Chatbot from '@/models/Chatbot';
+import { generateChatbotResponse } from '@/lib/openai';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
