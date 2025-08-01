@@ -121,7 +121,7 @@ export default function ChatbotsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modelFilter, setModelFilter] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [selectedChatbot, setSelectedChatbot] = useState<Chatbot | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -396,7 +396,7 @@ export default function ChatbotsPage() {
             </div>
 
             {/* Filters and Search */}
-            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm p-0">
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                   <div className="flex flex-col sm:flex-row gap-4 flex-1">
