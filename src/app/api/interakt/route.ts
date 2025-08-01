@@ -17,6 +17,7 @@ import WorkflowEngine from '@/lib/workflowEngine';
 import Campaign from '@/models/Campaign';
 import Template from '@/models/Template';
 import { WebhookService } from '@/lib/webhookService';
+import Chatbot from '@/models/Chatbot';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -104,7 +105,7 @@ async function processStatusUpdates(v: any) {
       if (conversation) {
         // Find the contact
         const contact = await Contact.findById(conversation.contactId);
-        
+
         // Find the specific message in the conversation
         const messageIndex = conversation.messages.findIndex(
           (msg: any) => msg.whatsappMessageId === whatsappMessageId
@@ -601,7 +602,7 @@ async function processMessage(
 
     await conv.save();
 
-     // Send webhook for customer message
+    // Send webhook for customer message
     await WebhookService.sendCustomerMessage(
       userId,
       wabaAcc.wabaId,
@@ -632,7 +633,8 @@ async function processMessage(
       newMsg.interactiveData
     );
 
-    // For text messages from customers, check workflows in order of priority
+    // Add this section after the existing automation checks but before the final save
+    // For text messages from customers, check chatbots (after workflows and auto-replies)
     if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
       // 1. First check if this continues a paused workflow
       const continuedWorkflow = await checkForWorkflowContinuation(newMsg.content, contact, wabaAcc, userId);
@@ -641,11 +643,14 @@ async function processMessage(
         // 2. If no workflow was continued, check for auto replies
         await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
 
-        // 3. Then check for new workflow triggers
+        // 3. Then check for workflow triggers
         await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+
+        // 4. Finally check for chatbot responses (NEW)
+        await checkAndSendChatbotResponse(newMsg.content, contact, wabaAcc, userId);
       }
     }
-
+    
     console.log(`✅ Successfully processed message: ${newMsg.messageType} - "${newMsg.content}"`);
 
   } catch (error: any) {
@@ -763,12 +768,12 @@ async function checkAndContinueWorkflow(
     // Get all executions for debugging
     const allExecutions = workflowEngine.getAllExecutions();
     console.log(`📋 Total executions in engine: ${allExecutions.length}`);
-    
+
     // Find any execution for this contact (running or paused)
-    const contactExecutions = allExecutions.filter(exec => 
+    const contactExecutions = allExecutions.filter(exec =>
       exec.contactId === contact._id.toString()
     );
-    
+
     console.log(`👤 Executions for this contact: ${contactExecutions.length}`);
     contactExecutions.forEach((exec, index) => {
       console.log(`   Execution ${index + 1}: WorkflowID=${exec.workflowId}, Status=${exec.status}, LastActivity=${exec.lastActivity}`);
@@ -1276,8 +1281,6 @@ async function processCampaignResponse(
   }
 }
 
-// Update the handleCampaignResponse function to better handle button clicks:
-
 async function handleCampaignResponse(
   campaign: any,
   messageContent: string,
@@ -1337,8 +1340,6 @@ async function handleCampaignResponse(
     await handleWorkflowTrigger(campaign, contact, wabaAcc, userId, messageContent, interactiveData);
   }
 }
-
-// Update the handleOptOutRequest function with better logging:
 
 async function handleOptOutRequest(
   campaign: any,
@@ -1721,3 +1722,262 @@ async function sendWebhookForMessage(
     console.error('Error sending webhook for message event:', error);
   }
 }
+
+
+// Add this function after the existing helper functions
+async function checkAndSendChatbotResponse(
+  messageContent: string,
+  contact: any,
+  wabaAcc: any,
+  userId: string
+) {
+  try {
+    console.log(`🤖 Checking for chatbot responses to: "${messageContent}"`);
+
+    // Get all active chatbots for this user and WABA, sorted by priority
+    const chatbots = await Chatbot.find({
+      userId,
+      wabaId: wabaAcc.wabaId,
+      isActive: true
+    }).sort({ priority: -1, createdAt: 1 });
+
+    if (!chatbots.length) {
+      console.log('❌ No active chatbots found');
+      return false;
+    }
+
+    console.log(`📋 Found ${chatbots.length} active chatbots`);
+
+    // Check each chatbot for matches
+    for (const chatbot of chatbots) {
+      const isMatch = checkChatbotTriggerMatch(messageContent, chatbot);
+
+      if (isMatch) {
+        console.log(`🤖 Chatbot triggered: ${chatbot.name} for message: "${messageContent}"`);
+
+        try {
+          // Get conversation context if memory is enabled
+          let conversationContext = [];
+          if (chatbot.conversationMemory) {
+            const conversation = await Conversation.findOne({ contactId: contact._id });
+            if (conversation && conversation.messages.length > 0) {
+              // Get recent messages within memory duration
+              const memoryDurationMs = chatbot.memoryDuration * 60 * 1000;
+              const cutoffTime = new Date(Date.now() - memoryDurationMs);
+
+              const recentMessages = conversation.messages
+                .filter(msg => msg.timestamp > cutoffTime)
+                .slice(-chatbot.contextWindow)
+                .map(msg => ({
+                  role: msg.senderId === 'customer' ? 'user' : 'assistant',
+                  content: msg.content
+                }));
+
+              conversationContext = recentMessages;
+            }
+          }
+
+          // Prepare messages for AI
+          const messages = [
+            { role: 'system', content: chatbot.systemPrompt },
+            ...conversationContext,
+            { role: 'user', content: messageContent }
+          ];
+
+          // Generate AI response
+          const aiResponse = await generateChatbotResponse(
+            messages,
+            chatbot.aiModel,
+            chatbot.temperature,
+            chatbot.maxTokens
+          );
+
+          // Truncate response if needed
+          let responseContent = aiResponse.content;
+          if (chatbot.maxResponseLength && responseContent.length > chatbot.maxResponseLength) {
+            responseContent = responseContent.substring(0, chatbot.maxResponseLength - 3) + '...';
+          }
+
+          // Send the AI response
+          await sendChatbotMessage(contact, responseContent, wabaAcc, chatbot);
+
+          // Update chatbot statistics
+          await Chatbot.findByIdAndUpdate(chatbot._id, {
+            $inc: {
+              usageCount: 1,
+              totalTokensUsed: aiResponse.tokensUsed,
+              totalCostUSD: aiResponse.cost
+            },
+            lastTriggered: new Date()
+          });
+
+          console.log(`✅ Chatbot response sent successfully`);
+          console.log(`   Tokens used: ${aiResponse.tokensUsed}`);
+          console.log(`   Cost: $${aiResponse.cost.toFixed(6)}`);
+
+          return true; // Stop processing other chatbots
+
+        } catch (aiError) {
+          console.error(`❌ Error generating AI response for chatbot ${chatbot.name}:`, aiError);
+
+          // Send fallback message if enabled
+          if (chatbot.enableFallback && chatbot.fallbackMessage) {
+            await sendChatbotMessage(contact, chatbot.fallbackMessage, wabaAcc, chatbot);
+            console.log(`📤 Fallback message sent for chatbot: ${chatbot.name}`);
+          }
+
+          // Update failure statistics
+          await Chatbot.findByIdAndUpdate(chatbot._id, {
+            $inc: { usageCount: 1 },
+            lastTriggered: new Date()
+          });
+
+          continue; // Try next chatbot
+        }
+      }
+    }
+
+    console.log('❌ No chatbot triggers matched');
+    return false;
+
+  } catch (error) {
+    console.error('❌ Error processing chatbot responses:', error);
+    return false;
+  }
+}
+
+function checkChatbotTriggerMatch(messageContent: string, chatbot: any): boolean {
+  const content = chatbot.caseSensitive ? messageContent : messageContent.toLowerCase();
+
+  return chatbot.triggers.some((trigger: string) => {
+    const triggerText = chatbot.caseSensitive ? trigger : trigger.toLowerCase();
+
+    switch (chatbot.matchType) {
+      case 'exact':
+        return content === triggerText;
+      case 'starts_with':
+        return content.startsWith(triggerText);
+      case 'ends_with':
+        return content.endsWith(triggerText);
+      case 'contains':
+      default:
+        return content.includes(triggerText);
+    }
+  });
+}
+
+async function sendChatbotMessage(contact: any, message: string, wabaAcc: any, chatbot: any) {
+  const messageId = uuidv4();
+
+  try {
+    let phoneNumber = contact.phone;
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: phoneNumber,
+      type: "text",
+      text: {
+        preview_url: false,
+        body: message
+      }
+    };
+
+    // Pre-record the message
+    await recordChatbotMessageInConversation(
+      contact,
+      message,
+      messageId,
+      chatbot.name
+    );
+
+    console.log('🤖 Sending chatbot response:', JSON.stringify(whatsappPayload, null, 2));
+
+    const response = await fetch(
+      `https://amped-express.interakt.ai/api/v17.0/${wabaAcc.phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'x-access-token': INT_TOKEN!,
+          'x-waba-id': wabaAcc.wabaId,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(whatsappPayload)
+      }
+    );
+
+    const responseText = await response.text();
+    console.log('🤖 Chatbot response result:', responseText);
+
+    if (response.ok) {
+      const responseData = JSON.parse(responseText);
+      if (responseData.messages?.[0]?.id) {
+        await updateMessageWithWhatsAppId(
+          contact._id,
+          messageId,
+          responseData.messages[0].id
+        );
+      }
+      console.log('✅ Chatbot message sent successfully');
+    } else {
+      console.error('❌ Failed to send chatbot message:', responseText);
+      await updateMessageAsFailed(
+        contact._id,
+        messageId,
+        `Chatbot message failed: ${response.status}`,
+        response.status.toString()
+      );
+    }
+
+  } catch (error: any) {
+    console.error('❌ Error sending chatbot message:', error);
+    await updateMessageAsFailed(
+      contact._id,
+      messageId,
+      `Chatbot error: ${error.message}`,
+      'send_error'
+    );
+  }
+}
+
+async function recordChatbotMessageInConversation(
+  contact: any,
+  messageContent: string,
+  messageId: string,
+  chatbotName: string
+) {
+  try {
+    const conversation = await Conversation.findOne({ contactId: contact._id });
+    if (!conversation) return;
+
+    const chatbotMessage = {
+      id: messageId,
+      senderId: 'agent' as const,
+      content: messageContent,
+      messageType: 'text',
+      timestamp: new Date(),
+      status: 'sent' as const,
+      senderName: `AI: ${chatbotName}`,
+      whatsappMessageId: undefined,
+      errorMessage: undefined,
+      errorCode: undefined,
+      retryCount: 0
+    };
+
+    conversation.messages.push(chatbotMessage);
+    conversation.lastMessage = messageContent;
+    conversation.lastMessageType = 'text';
+    conversation.lastMessageAt = new Date();
+
+    await conversation.save();
+    console.log('🤖 Chatbot message recorded in conversation');
+
+  } catch (error) {
+    console.error('❌ Error recording chatbot message:', error);
+  }
+}
+
