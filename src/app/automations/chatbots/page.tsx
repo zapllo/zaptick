@@ -661,12 +661,7 @@ export default function ChatbotsPage() {
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => router.push(`/automations/chatbots/${chatbot._id}/edit`)}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
+                               
                                 <DropdownMenuItem onClick={() => handleToggleStatus(chatbot)}>
                                   {chatbot.isActive ? (
                                     <>
@@ -877,12 +872,7 @@ export default function ChatbotsPage() {
                                         <Eye className="h-4 w-4 mr-2" />
                                         View Details
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => router.push(`/automations/chatbots/${chatbot._id}/edit`)}
-                                      >
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Edit
-                                      </DropdownMenuItem>
+                                   
                                       <DropdownMenuItem onClick={() => handleToggleStatus(chatbot)}>
                                         {chatbot.isActive ? (
                                           <>
@@ -1131,16 +1121,7 @@ export default function ChatbotsPage() {
                             <MessageSquare className="h-4 w-4" />
                             Test Chatbot
                           </Button>
-                          <Button
-                            onClick={() => {
-                              setIsViewDialogOpen(false);
-                              router.push(`/automations/chatbots/${selectedChatbot._id}/edit`);
-                            }}
-                            className="gap-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Edit Chatbot
-                          </Button>
+                       
                         </div>
                       </div>
                     </div>
