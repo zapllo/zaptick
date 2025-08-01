@@ -484,7 +484,7 @@ export default function CreateChatbotPage() {
                         <Alert>
                           <Info className="h-4 w-4" />
                           <AlertDescription>
-                            The system prompt defines your chatbot's personality and behavior. Be specific about tone, style, and any constraints.
+                            The system prompt defines your chatbot&apos;s personality and behavior. Be specific about tone, style, and any constraints.
                           </AlertDescription>
                         </Alert>
                       </div>
