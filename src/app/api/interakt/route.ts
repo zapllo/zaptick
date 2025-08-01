@@ -1750,7 +1750,7 @@ async function checkAndSendChatbotResponse(
     const chatbots = await Chatbot.find({
       userId,
       wabaId: wabaAcc.wabaId,
-      isActive: true
+      isActive: true // Only check if chatbot is active - that's the only gate
     }).sort({ priority: -1, createdAt: 1 });
 
     if (!chatbots.length) {
@@ -1758,107 +1758,150 @@ async function checkAndSendChatbotResponse(
       return false;
     }
 
-    console.log(`📋 Found ${chatbots.length} active chatbots`);
+    console.log(`📋 Found ${chatbots.length} active chatbots - all will respond universally`);
 
-    // Check each chatbot for matches
-    for (const chatbot of chatbots) {
-      const isMatch = checkChatbotTriggerMatch(messageContent, chatbot);
+    // Use the first (highest priority) active chatbot - they're all universal now
+    const chatbot = chatbots[0]; // Take highest priority chatbot
+    
+    console.log(`🤖 Using chatbot: ${chatbot.name} (Priority: ${chatbot.priority}) for message: "${messageContent}"`);
 
-      if (isMatch) {
-        console.log(`🤖 Chatbot triggered: ${chatbot.name} for message: "${messageContent}"`);
+    try {
+      // Get conversation context if memory is enabled
+      let conversationContext: any[] = [];
+      if (chatbot.conversationMemory) {
+        const conversation = await Conversation.findOne({ contactId: contact._id });
+        if (conversation && conversation.messages.length > 0) {
+          // Get recent messages within memory duration
+          const memoryDurationMs = chatbot.memoryDuration * 60 * 1000;
+          const cutoffTime = new Date(Date.now() - memoryDurationMs);
+          
+          // Filter messages and get recent context
+          const recentMessages = conversation.messages
+            .filter(msg => new Date(msg.timestamp) > cutoffTime)
+            .slice(-chatbot.contextWindow * 2) // Get more messages to account for back-and-forth
+            .map(msg => ({
+              role: msg.senderId === 'customer' ? 'user' as const : 'assistant' as const,
+              content: msg.content
+            }));
 
+          // Only keep the last N pairs of user-assistant messages
+          conversationContext = recentMessages.slice(-chatbot.contextWindow);
+          
+          console.log(`📝 Using ${conversationContext.length} messages for context`);
+        }
+      }
+
+      // Prepare messages for AI
+      const messages = [
+        { role: 'system' as const, content: chatbot.systemPrompt },
+        ...conversationContext,
+        { role: 'user' as const, content: messageContent }
+      ];
+
+      console.log(`🤖 Sending to OpenAI (Universal chatbot):`, messages);
+
+      // Generate AI response
+      const aiResponse = await generateChatbotResponse(
+        messages,
+        chatbot.aiModel,
+        chatbot.temperature,
+        chatbot.maxTokens
+      );
+
+      // Truncate response if needed
+      let responseContent = aiResponse.content;
+      if (chatbot.maxResponseLength && responseContent.length > chatbot.maxResponseLength) {
+        responseContent = responseContent.substring(0, chatbot.maxResponseLength - 3) + '...';
+      }
+
+      // Send the AI response
+      await sendChatbotMessage(contact, responseContent, wabaAcc, chatbot);
+
+      // Update chatbot statistics
+      await Chatbot.findByIdAndUpdate(chatbot._id, {
+        $inc: { 
+          usageCount: 1,
+          totalTokensUsed: aiResponse.tokensUsed,
+          totalCostUSD: aiResponse.cost
+        },
+        lastTriggered: new Date()
+      });
+
+      console.log(`✅ Universal chatbot response sent successfully`);
+      console.log(`   Chatbot: ${chatbot.name}`);
+      console.log(`   Tokens used: ${aiResponse.tokensUsed}`);
+      console.log(`   Cost: $${aiResponse.cost.toFixed(6)}`);
+
+      return true; // Return true to indicate chatbot was triggered
+
+    } catch (aiError) {
+      console.error(`❌ Error generating AI response for chatbot ${chatbot.name}:`, aiError);
+
+      // Send fallback message if enabled
+      if (chatbot.enableFallback && chatbot.fallbackMessage) {
+        await sendChatbotMessage(contact, chatbot.fallbackMessage, wabaAcc, chatbot);
+        console.log(`📤 Fallback message sent for chatbot: ${chatbot.name}`);
+        
+        // Update statistics even for fallback
+        await Chatbot.findByIdAndUpdate(chatbot._id, {
+          $inc: { usageCount: 1 },
+          lastTriggered: new Date()
+        });
+        
+        return true; // Still count as triggered
+      }
+
+      // If fallback fails, try next chatbot
+      console.log(`⚠️ Trying next chatbot...`);
+      
+      // Try the next chatbot in priority order
+      for (let i = 1; i < chatbots.length; i++) {
+        const nextChatbot = chatbots[i];
+        console.log(`🔄 Trying next chatbot: ${nextChatbot.name}`);
+        
         try {
-          // Get conversation context if memory is enabled
-          let conversationContext: any[] = [];
-          if (chatbot.conversationMemory) {
-            const conversation = await Conversation.findOne({ contactId: contact._id });
-            if (conversation && conversation.messages.length > 0) {
-              // Get recent messages within memory duration
-              const memoryDurationMs = chatbot.memoryDuration * 60 * 1000;
-              const cutoffTime = new Date(Date.now() - memoryDurationMs);
-
-              // Filter messages and get recent context
-              const recentMessages = conversation.messages
-                .filter(msg => new Date(msg.timestamp) > cutoffTime)
-                .slice(-chatbot.contextWindow * 2) // Get more messages to account for back-and-forth
-                .map(msg => ({
-                  role: msg.senderId === 'customer' ? 'user' as const : 'assistant' as const,
-                  content: msg.content
-                }));
-
-              // Only keep the last N pairs of user-assistant messages
-              conversationContext = recentMessages.slice(-chatbot.contextWindow);
-
-              console.log(`📝 Using ${conversationContext.length} messages for context`);
-            }
-          }
-
-          // Prepare messages for AI
-          const messages = [
-            { role: 'system' as const, content: chatbot.systemPrompt },
+          // Simple retry with next chatbot
+          const retryMessages = [
+            { role: 'system' as const, content: nextChatbot.systemPrompt },
             ...conversationContext,
             { role: 'user' as const, content: messageContent }
           ];
 
-          console.log(`🤖 Sending to OpenAI:`, messages);
-
-          // Generate AI response
-          const aiResponse = await generateChatbotResponse(
-            messages,
-            chatbot.aiModel,
-            chatbot.temperature,
-            chatbot.maxTokens
+          const retryResponse = await generateChatbotResponse(
+            retryMessages,
+            nextChatbot.aiModel,
+            nextChatbot.temperature,
+            nextChatbot.maxTokens
           );
 
-          // Truncate response if needed
-          let responseContent = aiResponse.content;
-          if (chatbot.maxResponseLength && responseContent.length > chatbot.maxResponseLength) {
-            responseContent = responseContent.substring(0, chatbot.maxResponseLength - 3) + '...';
+          let retryContent = retryResponse.content;
+          if (nextChatbot.maxResponseLength && retryContent.length > nextChatbot.maxResponseLength) {
+            retryContent = retryContent.substring(0, nextChatbot.maxResponseLength - 3) + '...';
           }
 
-          // Send the AI response
-          await sendChatbotMessage(contact, responseContent, wabaAcc, chatbot);
+          await sendChatbotMessage(contact, retryContent, wabaAcc, nextChatbot);
 
-          // Update chatbot statistics
-          await Chatbot.findByIdAndUpdate(chatbot._id, {
-            $inc: {
+          await Chatbot.findByIdAndUpdate(nextChatbot._id, {
+            $inc: { 
               usageCount: 1,
-              totalTokensUsed: aiResponse.tokensUsed,
-              totalCostUSD: aiResponse.cost
+              totalTokensUsed: retryResponse.tokensUsed,
+              totalCostUSD: retryResponse.cost
             },
             lastTriggered: new Date()
           });
 
-          console.log(`✅ Chatbot response sent successfully`);
-          console.log(`   Tokens used: ${aiResponse.tokensUsed}`);
-          console.log(`   Cost: $${aiResponse.cost.toFixed(6)}`);
+          console.log(`✅ Backup chatbot "${nextChatbot.name}" responded successfully`);
+          return true;
 
-          return true; // Return true to indicate chatbot was triggered
-
-        } catch (aiError) {
-          console.error(`❌ Error generating AI response for chatbot ${chatbot.name}:`, aiError);
-
-          // Send fallback message if enabled
-          if (chatbot.enableFallback && chatbot.fallbackMessage) {
-            await sendChatbotMessage(contact, chatbot.fallbackMessage, wabaAcc, chatbot);
-            console.log(`📤 Fallback message sent for chatbot: ${chatbot.name}`);
-
-            // Update statistics even for fallback
-            await Chatbot.findByIdAndUpdate(chatbot._id, {
-              $inc: { usageCount: 1 },
-              lastTriggered: new Date()
-            });
-
-            return true; // Still count as triggered
-          }
-
-          continue; // Try next chatbot if no fallback
+        } catch (retryError) {
+          console.error(`❌ Backup chatbot "${nextChatbot.name}" also failed:`, retryError);
+          continue;
         }
       }
-    }
 
-    console.log('❌ No chatbot triggers matched');
-    return false;
+      console.log(`❌ All chatbots failed to respond`);
+      return false;
+    }
 
   } catch (error) {
     console.error('❌ Error processing chatbot responses:', error);
@@ -1868,35 +1911,9 @@ async function checkAndSendChatbotResponse(
 
 
 function checkChatbotTriggerMatch(messageContent: string, chatbot: any): boolean {
-  // Universal chatbots respond to everything
-  if (chatbot.isUniversal) {
-    return true;
-  }
-
-  const content = chatbot.caseSensitive ? messageContent : messageContent.toLowerCase();
-
-  // If no specific triggers are set, don't match
-  if (!chatbot.triggers || chatbot.triggers.length === 0) {
-    return false;
-  }
-
-  return chatbot.triggers.some((trigger: string) => {
-    if (!trigger || trigger.trim() === '') return false;
-
-    const triggerText = chatbot.caseSensitive ? trigger : trigger.toLowerCase();
-
-    switch (chatbot.matchType) {
-      case 'exact':
-        return content.trim() === triggerText.trim();
-      case 'starts_with':
-        return content.startsWith(triggerText);
-      case 'ends_with':
-        return content.endsWith(triggerText);
-      case 'contains':
-      default:
-        return content.includes(triggerText);
-    }
-  });
+  // ALL active chatbots respond to ALL messages - no trigger checking needed
+  console.log(`🌍 Chatbot "${chatbot.name}" will respond to all messages (universal by default)`);
+  return true;
 }
 
 async function sendChatbotMessage(contact: any, message: string, wabaAcc: any, chatbot: any) {
