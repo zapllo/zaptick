@@ -128,19 +128,83 @@ export default function ChatbotsPage() {
 
   // Get selected WABA ID (you'll need to implement this based on your context)
   const [selectedWabaId, setSelectedWabaId] = useState<string>('');
+    const [wabaAccounts, setWabaAccounts] = useState<any[]>([]);
+  const fetchWabaAccounts = async () => {
+ 
+    try {
+      console.log('Fetching WABA accounts...');
+      const response = await fetch('/api/waba-accounts');
+      const data = await response.json();
+
+      console.log('WABA accounts response:', data);
+
+      if (data.success) {
+        setWabaAccounts(data.accounts);
+        
+        // Try to get saved WABA ID or use first one
+        const savedWabaId = localStorage.getItem('selectedWabaId');
+        if (savedWabaId && data.accounts.find((a: any) => a.wabaId === savedWabaId)) {
+          setSelectedWabaId(savedWabaId);
+          console.log('Using saved WABA ID:', savedWabaId);
+        } else if (data.accounts.length > 0) {
+          const firstWaba = data.accounts[0];
+          setSelectedWabaId(firstWaba.wabaId);
+          localStorage.setItem('selectedWabaId', firstWaba.wabaId);
+          console.log('Using first WABA ID:', firstWaba.wabaId);
+        } else {
+          console.log('No WABA accounts found');
+        }
+      } else {
+        console.error('Failed to fetch WABA accounts:', data.error);
+        toast({
+          title: "Error",
+          description: data.error || "Failed to fetch WhatsApp accounts",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching WABA accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch WhatsApp accounts",
+        variant: "destructive",
+      });
+    } 
+  };
 
   // Load chatbots
   const fetchChatbots = async () => {
-    if (!selectedWabaId) return;
+    if (!selectedWabaId) {
+      console.log('No WABA ID selected, skipping chatbot fetch');
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/chatbots?wabaId=${selectedWabaId}`);
+      console.log('Fetching chatbots for WABA ID:', selectedWabaId);
+      
+      const response = await fetch(`/api/chatbots?wabaId=${selectedWabaId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Chatbots response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Chatbots response data:', data);
 
       if (data.success) {
-        setChatbots(data.chatbots);
+        setChatbots(data.chatbots || []);
+        console.log('Chatbots set:', data.chatbots?.length || 0);
       } else {
+        console.error('API error:', data.error);
         toast({
           title: "Error",
           description: data.error || "Failed to fetch chatbots",
@@ -149,15 +213,33 @@ export default function ChatbotsPage() {
       }
     } catch (error) {
       console.error('Error fetching chatbots:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch chatbots';
       toast({
         title: "Error",
-        description: "Failed to fetch chatbots",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Initial load - fetch WABA accounts first
+  useEffect(() => {
+    fetchWabaAccounts();
+  }, []);
+
+  // When WABA ID changes, fetch chatbots
+  useEffect(() => {
+    console.log('Selected WABA ID changed:', selectedWabaId);
+    if (selectedWabaId ) {
+      fetchChatbots();
+    } else if (!selectedWabaId) {
+      setIsLoading(false);
+    }
+  }, [selectedWabaId]);
+
+
 
   useEffect(() => {
     // Get WABA ID from your context or local storage
