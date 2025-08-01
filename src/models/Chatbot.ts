@@ -32,7 +32,7 @@ export interface IChatbot extends Document {
   // Usage Statistics
   usageCount: number;
   totalTokensUsed: number;
-  totalCostUSD: number;
+  totalCostINR: number; // Changed from totalCostUSD to totalCostINR
   lastTriggered?: Date;
   
   // Advanced Settings
@@ -92,7 +92,6 @@ const ChatbotSchema = new Schema({
   // Trigger Configuration
   triggers: [{
     type: String,
-    required: true,
     trim: true
   }],
   matchType: {
@@ -146,6 +145,11 @@ const ChatbotSchema = new Schema({
     type: Number,
     default: 0
   },
+  totalCostINR: { // Changed from totalCostUSD
+    type: Number,
+    default: 0
+  },
+  // Keep the old field for backward compatibility but mark as deprecated
   totalCostUSD: {
     type: Number,
     default: 0

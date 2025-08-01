@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Bot,
+  Sparkles,
   Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,9 +29,15 @@ const navigationItems = [
     icon: Workflow,
     description: "Multi-step automation sequences",
     badge: "New",
+  },
+  {
+    title: "AI Chatbots",
+    href: "/automations/chatbots",
+    icon: Sparkles,
+    description: "Intelligent AI-powered conversations",
+    badge: "AI",
   }
 ];
-
 export default function AutomationsLayout({ children }: AutomationsLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();

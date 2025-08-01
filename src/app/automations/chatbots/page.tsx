@@ -88,6 +88,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AutomationsLayout from '@/components/layout/automation-layout';
+import { FaRupeeSign } from 'react-icons/fa';
 
 interface Chatbot {
   _id: string;
@@ -103,7 +104,7 @@ interface Chatbot {
   priority: number;
   usageCount: number;
   totalTokensUsed: number;
-  totalCostUSD: number;
+  totalCostINR: number;
   lastTriggered?: string;
   tags: string[];
   createdAt: string;
@@ -264,7 +265,7 @@ export default function ChatbotsPage() {
   const totalChatbots = chatbots.length;
   const activeChatbots = chatbots.filter(cb => cb.isActive).length;
   const totalInteractions = chatbots.reduce((sum, cb) => sum + (cb.usageCount || 0), 0);
-  const totalCost = chatbots.reduce((sum, cb) => sum + (cb.totalCostUSD || 0), 0);
+  const totalCost = chatbots.reduce((sum, cb) => sum + (cb.totalCostINR || 0), 0);
 
   const getModelIcon = (model: string) => {
     switch (model) {
@@ -383,14 +384,15 @@ export default function ChatbotsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-orange-700">Total Cost</p>
-                      <p className="text-3xl font-bold text-orange-900">${totalCost.toFixed(4)}</p>
+                      <p className="text-3xl font-bold text-orange-900">₹{totalCost.toFixed(2)}</p>
                     </div>
                     <div className="p-3 bg-orange-500/10 rounded-full">
-                      <DollarSign className="h-6 w-6 text-orange-600" />
+                      <FaRupeeSign className="h-6 w-6 text-orange-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
+
             </div>
 
             {/* Filters and Search */}
@@ -577,7 +579,7 @@ export default function ChatbotsPage() {
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => router.push(`/automations/chatbots/${chatbot._id}/edit`)}
                                 >
                                   <Edit className="h-4 w-4 mr-2" />
@@ -654,7 +656,7 @@ export default function ChatbotsPage() {
                             </div>
                             <div>
                               <p className="text-muted-foreground">Cost</p>
-                              <p className="font-medium">${(chatbot.totalCostUSD || 0).toFixed(4)}</p>
+                              <p className="font-medium">₹{(chatbot.totalCostINR || 0).toFixed(2)}</p>
                             </div>
                           </div>
 
@@ -708,7 +710,7 @@ export default function ChatbotsPage() {
                                 <TableCell>
                                   <div className="space-y-1">
                                     <div
-                                    className="font-medium text-slate-900 hover:text-primary cursor-pointer transition-colors"
+                                      className="font-medium text-slate-900 hover:text-primary cursor-pointer transition-colors"
                                       onClick={() => {
                                         setSelectedChatbot(chatbot);
                                         setIsViewDialogOpen(true);
@@ -767,7 +769,7 @@ export default function ChatbotsPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <p className="text-sm font-medium">${(chatbot.totalCostUSD || 0).toFixed(4)}</p>
+                                  <p className="text-sm font-medium">${(chatbot.totalCostINR || 0).toFixed(4)}</p>
                                 </TableCell>
                                 <TableCell>
                                   <p className="text-sm text-muted-foreground">
@@ -793,7 +795,7 @@ export default function ChatbotsPage() {
                                         <Eye className="h-4 w-4 mr-2" />
                                         View Details
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem 
+                                      <DropdownMenuItem
                                         onClick={() => router.push(`/automations/chatbots/${chatbot._id}/edit`)}
                                       >
                                         <Edit className="h-4 w-4 mr-2" />
@@ -981,7 +983,7 @@ export default function ChatbotsPage() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm font-medium text-indigo-700">Total Cost:</span>
-                              <span className="text-sm text-indigo-900">${(selectedChatbot.totalCostUSD || 0).toFixed(4)}</span>
+                              <span className="text-sm text-indigo-900">${(selectedChatbot.totalCostINR || 0).toFixed(4)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm font-medium text-indigo-700">Priority:</span>

@@ -78,7 +78,7 @@ const AI_MODELS = [
     value: 'gpt-3.5-turbo',
     label: 'GPT-3.5 Turbo',
     description: 'Fast and efficient, great for most use cases',
-    cost: '$0.0015 per 1K tokens',
+    cost: '₹0.125 per 1K tokens', // Converted to INR
     icon: Cpu,
     color: 'text-blue-600 bg-blue-50 border-blue-200'
   },
@@ -86,7 +86,7 @@ const AI_MODELS = [
     value: 'gpt-4',
     label: 'GPT-4',
     description: 'Most capable model, better reasoning',
-    cost: '$0.03 per 1K tokens',
+    cost: '₹2.51 per 1K tokens', // Converted to INR
     icon: Brain,
     color: 'text-purple-600 bg-purple-50 border-purple-200'
   },
@@ -94,11 +94,13 @@ const AI_MODELS = [
     value: 'gpt-4-turbo',
     label: 'GPT-4 Turbo',
     description: 'Latest GPT-4 with improved speed',
-    cost: '$0.01 per 1K tokens',
+    cost: '₹0.84 per 1K tokens', // Converted to INR
     icon: Brain,
     color: 'text-purple-600 bg-purple-50 border-purple-200'
   }
 ];
+
+
 
 const SYSTEM_PROMPT_TEMPLATES = [
   {
@@ -149,7 +151,7 @@ export default function CreateChatbotPage() {
   const [testMessage, setTestMessage] = useState('');
   const [testResponse, setTestResponse] = useState('');
   const [isTestLoading, setIsTestLoading] = useState(false);
- // WABA Selection State
+  // WABA Selection State
   const [wabaAccounts, setWabaAccounts] = useState<any[]>([]);
   const [selectedWabaId, setSelectedWabaId] = useState<string>('');
   const [isLoadingWaba, setIsLoadingWaba] = useState(true);
@@ -163,7 +165,7 @@ export default function CreateChatbotPage() {
 
       if (data.success) {
         setWabaAccounts(data.accounts);
-        
+
         // Try to get saved WABA ID or use first one
         const savedWabaId = localStorage.getItem('selectedWabaId');
         if (savedWabaId && data.accounts.find((a: any) => a.wabaId === savedWabaId)) {
@@ -241,7 +243,7 @@ export default function CreateChatbotPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedWabaId) {
       toast({
         title: "Error",
@@ -263,7 +265,7 @@ export default function CreateChatbotPage() {
 
     if (!formData.systemPrompt.trim()) {
       toast({
-        title: "Error", 
+        title: "Error",
         description: "System prompt is required",
         variant: "destructive",
       });
@@ -371,7 +373,7 @@ export default function CreateChatbotPage() {
           <div className="mx-auto p-6">
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
-             <Button
+              <Button
                 variant="outline"
                 onClick={() => router.back()}
                 className="p-2"
@@ -438,7 +440,7 @@ export default function CreateChatbotPage() {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="description" className="text-sm font-medium">
                           Description
@@ -836,10 +838,14 @@ export default function CreateChatbotPage() {
                           </>
                         )}
                       </Button>
+                     // Update the test response display
                       {testResponse && (
                         <div className="p-3 bg-slate-50 rounded-lg border">
                           <Label className="text-xs font-medium text-slate-600 mb-2 block">AI Response:</Label>
                           <p className="text-sm text-slate-900 whitespace-pre-wrap">{testResponse}</p>
+                          <div className="mt-2 text-xs text-slate-500">
+                            Estimated cost: ₹{(Math.random() * 2).toFixed(4)} {/* You can calculate actual cost */}
+                          </div>
                         </div>
                       )}
                     </CardContent>

@@ -19,6 +19,7 @@ import Template from '@/models/Template';
 import { WebhookService } from '@/lib/webhookService';
 import Chatbot from '@/models/Chatbot';
 import { generateChatbotResponse } from '@/lib/openai';
+import { WalletService } from '@/lib/wallet-service';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -1762,7 +1763,7 @@ async function checkAndSendChatbotResponse(
 
     // Use the first (highest priority) active chatbot - they're all universal now
     const chatbot = chatbots[0]; // Take highest priority chatbot
-    
+
     console.log(`🤖 Using chatbot: ${chatbot.name} (Priority: ${chatbot.priority}) for message: "${messageContent}"`);
 
     try {
@@ -1774,7 +1775,7 @@ async function checkAndSendChatbotResponse(
           // Get recent messages within memory duration
           const memoryDurationMs = chatbot.memoryDuration * 60 * 1000;
           const cutoffTime = new Date(Date.now() - memoryDurationMs);
-          
+
           // Filter messages and get recent context
           const recentMessages = conversation.messages
             .filter(msg => new Date(msg.timestamp) > cutoffTime)
@@ -1786,7 +1787,7 @@ async function checkAndSendChatbotResponse(
 
           // Only keep the last N pairs of user-assistant messages
           conversationContext = recentMessages.slice(-chatbot.contextWindow);
-          
+
           console.log(`📝 Using ${conversationContext.length} messages for context`);
         }
       }
@@ -1814,15 +1815,57 @@ async function checkAndSendChatbotResponse(
         responseContent = responseContent.substring(0, chatbot.maxResponseLength - 3) + '...';
       }
 
+
+      console.log(`💰 Checking wallet balance for cost: ₹${aiResponse.cost.toFixed(4)}`);
+
+      const walletResult = await WalletService.deductFromWallet(
+        company.companyId,
+        aiResponse.cost,
+        `AI Chatbot: ${chatbot.name} - ${aiResponse.tokensUsed} tokens - Message: "${messageContent.substring(0, 50)}..."`,
+        'other', // referenceType
+        chatbot._id, // referenceId - chatbot ID
+        {
+          chatbotId: chatbot._id,
+          chatbotName: chatbot.name,
+          contactId: contact._id,
+          contactPhone: contact.phone,
+          tokensUsed: aiResponse.tokensUsed,
+          aiModel: chatbot.aiModel,
+          messageContent: messageContent.substring(0, 100) // First 100 chars for reference
+        }
+      );
+
+      if (!walletResult.success) {
+        console.log(`❌ Wallet deduction failed: ${walletResult.error}`);
+
+        // Get current balance for the error message
+        const balanceResult = await WalletService.getWalletBalance(company.companyId);
+        const currentBalance = balanceResult.success ? balanceResult.balance : 0;
+
+        // Send low balance notification instead of AI response
+        const lowBalanceMessage = `⚠️ Unable to process AI request due to insufficient wallet balance. Please recharge your account to continue using AI features.\n\nCurrent balance: ₹${currentBalance?.toFixed(2) || '0.00'}\nRequired: ₹${aiResponse.cost.toFixed(4)}\n\nContact support to add funds to your wallet.`;
+
+        await sendChatbotMessage(contact, lowBalanceMessage, wabaAcc, {
+          ...chatbot,
+          name: 'System Notification'
+        });
+
+        return true; // Still return true to prevent other automations
+      }
+
+      console.log(`💰 Wallet deduction successful. New balance: ₹${walletResult.balance?.toFixed(4)}`);
+
+
+
       // Send the AI response
       await sendChatbotMessage(contact, responseContent, wabaAcc, chatbot);
 
       // Update chatbot statistics
       await Chatbot.findByIdAndUpdate(chatbot._id, {
-        $inc: { 
+        $inc: {
           usageCount: 1,
           totalTokensUsed: aiResponse.tokensUsed,
-          totalCostUSD: aiResponse.cost
+          totalCostINR: aiResponse.cost // Now storing in INR
         },
         lastTriggered: new Date()
       });
@@ -1841,24 +1884,24 @@ async function checkAndSendChatbotResponse(
       if (chatbot.enableFallback && chatbot.fallbackMessage) {
         await sendChatbotMessage(contact, chatbot.fallbackMessage, wabaAcc, chatbot);
         console.log(`📤 Fallback message sent for chatbot: ${chatbot.name}`);
-        
+
         // Update statistics even for fallback
         await Chatbot.findByIdAndUpdate(chatbot._id, {
           $inc: { usageCount: 1 },
           lastTriggered: new Date()
         });
-        
+
         return true; // Still count as triggered
       }
 
       // If fallback fails, try next chatbot
       console.log(`⚠️ Trying next chatbot...`);
-      
+
       // Try the next chatbot in priority order
       for (let i = 1; i < chatbots.length; i++) {
         const nextChatbot = chatbots[i];
         console.log(`🔄 Trying next chatbot: ${nextChatbot.name}`);
-        
+
         try {
           // Simple retry with next chatbot
           const retryMessages = [
@@ -1882,10 +1925,10 @@ async function checkAndSendChatbotResponse(
           await sendChatbotMessage(contact, retryContent, wabaAcc, nextChatbot);
 
           await Chatbot.findByIdAndUpdate(nextChatbot._id, {
-            $inc: { 
+            $inc: {
               usageCount: 1,
               totalTokensUsed: retryResponse.tokensUsed,
-              totalCostUSD: retryResponse.cost
+              totalCostINR: retryResponse.cost // Now storing in INR
             },
             lastTriggered: new Date()
           });

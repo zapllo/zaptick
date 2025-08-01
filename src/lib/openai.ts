@@ -12,12 +12,12 @@ export interface ChatMessage {
 export interface OpenAIResponse {
   content: string;
   tokensUsed: number;
-  cost: number;
+  cost: number; // This will now be in INR
   model: string;
 }
 
-// Token pricing per 1K tokens (as of 2024)
-const TOKEN_PRICING = {
+// Token pricing per 1K tokens in USD (as of 2024)
+const TOKEN_PRICING_USD = {
   'gpt-3.5-turbo': {
     input: 0.0015,
     output: 0.002
@@ -32,11 +32,15 @@ const TOKEN_PRICING = {
   }
 };
 
+// Current USD to INR exchange rate (you can make this dynamic if needed)
+const USD_TO_INR_RATE = 87.5; // Update this periodically or fetch from an API
+
 export async function generateChatbotResponse(
   messages: ChatMessage[],
   model: 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo' = 'gpt-3.5-turbo',
   temperature: number = 0.7,
-  maxTokens: number = 500
+  maxTokens: number = 500,
+  userId?: string
 ): Promise<OpenAIResponse> {
   try {
     const completion = await openai.chat.completions.create({
@@ -52,14 +56,17 @@ export async function generateChatbotResponse(
     const inputTokens = completion.usage?.prompt_tokens || 0;
     const outputTokens = completion.usage?.completion_tokens || 0;
 
-    // Calculate cost
-    const pricing = TOKEN_PRICING[model];
-    const cost = (inputTokens / 1000 * pricing.input) + (outputTokens / 1000 * pricing.output);
+    // Calculate cost in USD first
+    const pricing = TOKEN_PRICING_USD[model];
+    const costUSD = (inputTokens / 1000 * pricing.input) + (outputTokens / 1000 * pricing.output);
+    
+    // Convert to INR
+    const costINR = costUSD * USD_TO_INR_RATE;
 
     return {
       content: response,
       tokensUsed,
-      cost,
+      cost: costINR, // Now in INR
       model
     };
   } catch (error) {
@@ -85,7 +92,7 @@ export function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-// Function to calculate estimated cost
+// Function to calculate estimated cost in INR
 export function estimateCost(
   inputText: string,
   outputText: string,
@@ -93,7 +100,18 @@ export function estimateCost(
 ): number {
   const inputTokens = estimateTokenCount(inputText);
   const outputTokens = estimateTokenCount(outputText);
-  const pricing = TOKEN_PRICING[model];
+  const pricing = TOKEN_PRICING_USD[model];
   
-  return (inputTokens / 1000 * pricing.input) + (outputTokens / 1000 * pricing.output);
+  const costUSD = (inputTokens / 1000 * pricing.input) + (outputTokens / 1000 * pricing.output);
+  return costUSD * USD_TO_INR_RATE; // Return in INR
+}
+
+// Helper function to get current exchange rate (you can make this dynamic)
+export function getUSDToINRRate(): number {
+  return USD_TO_INR_RATE;
+}
+
+// Helper function to convert USD to INR
+export function convertUSDToINR(usdAmount: number): number {
+  return usdAmount * USD_TO_INR_RATE;
 }
