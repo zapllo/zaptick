@@ -141,7 +141,7 @@ export default function CreateChatbotPage() {
     memoryDuration: 30,
     contextWindow: 5,
     tags: [],
-    isActive: true
+    isActive: true,
   });
 
   const [currentTag, setCurrentTag] = useState('');

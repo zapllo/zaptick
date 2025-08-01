@@ -634,24 +634,35 @@ async function processMessage(
       newMsg.interactiveData
     );
 
-    // Add this section after the existing automation checks but before the final save
-    // For text messages from customers, check chatbots (after workflows and auto-replies)
+    // UPDATED: Process automations for text messages only (not interactive)
     if (newMsg.messageType === 'text' && newMsg.senderId === 'customer') {
+      console.log(`🤖 Processing text message: "${newMsg.content}"`);
+
       // 1. First check if this continues a paused workflow
       const continuedWorkflow = await checkForWorkflowContinuation(newMsg.content, contact, wabaAcc, userId);
 
       if (!continuedWorkflow) {
-        // 2. If no workflow was continued, check for auto replies
-        await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
+        console.log('🤖 No workflow continuation, checking other automations...');
 
-        // 3. Then check for workflow triggers
-        await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+        // 2. Check for chatbot responses FIRST (highest priority for AI responses)
+        const chatbotTriggered = await checkAndSendChatbotResponse(newMsg.content, contact, wabaAcc, userId);
 
-        // 4. Finally check for chatbot responses (NEW)
-        await checkAndSendChatbotResponse(newMsg.content, contact, wabaAcc, userId);
+        if (!chatbotTriggered) {
+          console.log('🤖 No chatbot triggered, checking auto replies...');
+
+          // 3. If no chatbot was triggered, check for auto replies
+          await checkAndSendAutoReply(newMsg.content, contact, wabaAcc, userId);
+
+          // 4. Then check for new workflow triggers
+          await checkAndTriggerWorkflows(newMsg.content, contact, wabaAcc, userId);
+        } else {
+          console.log('✅ Chatbot response sent, skipping other automations');
+        }
+      } else {
+        console.log('✅ Workflow continued, skipping other automations');
       }
     }
-    
+
     console.log(`✅ Successfully processed message: ${newMsg.messageType} - "${newMsg.content}"`);
 
   } catch (error: any) {
@@ -1731,7 +1742,7 @@ async function checkAndSendChatbotResponse(
   contact: any,
   wabaAcc: any,
   userId: string
-) {
+): Promise<boolean> {
   try {
     console.log(`🤖 Checking for chatbot responses to: "${messageContent}"`);
 
@@ -1758,7 +1769,7 @@ async function checkAndSendChatbotResponse(
 
         try {
           // Get conversation context if memory is enabled
-          let conversationContext = [];
+          let conversationContext: any[] = [];
           if (chatbot.conversationMemory) {
             const conversation = await Conversation.findOne({ contactId: contact._id });
             if (conversation && conversation.messages.length > 0) {
@@ -1766,24 +1777,30 @@ async function checkAndSendChatbotResponse(
               const memoryDurationMs = chatbot.memoryDuration * 60 * 1000;
               const cutoffTime = new Date(Date.now() - memoryDurationMs);
 
+              // Filter messages and get recent context
               const recentMessages = conversation.messages
-                .filter(msg => msg.timestamp > cutoffTime)
-                .slice(-chatbot.contextWindow)
+                .filter(msg => new Date(msg.timestamp) > cutoffTime)
+                .slice(-chatbot.contextWindow * 2) // Get more messages to account for back-and-forth
                 .map(msg => ({
-                  role: msg.senderId === 'customer' ? 'user' : 'assistant',
+                  role: msg.senderId === 'customer' ? 'user' as const : 'assistant' as const,
                   content: msg.content
                 }));
 
-              conversationContext = recentMessages;
+              // Only keep the last N pairs of user-assistant messages
+              conversationContext = recentMessages.slice(-chatbot.contextWindow);
+
+              console.log(`📝 Using ${conversationContext.length} messages for context`);
             }
           }
 
           // Prepare messages for AI
           const messages = [
-            { role: 'system', content: chatbot.systemPrompt },
+            { role: 'system' as const, content: chatbot.systemPrompt },
             ...conversationContext,
-            { role: 'user', content: messageContent }
+            { role: 'user' as const, content: messageContent }
           ];
+
+          console.log(`🤖 Sending to OpenAI:`, messages);
 
           // Generate AI response
           const aiResponse = await generateChatbotResponse(
@@ -1816,7 +1833,7 @@ async function checkAndSendChatbotResponse(
           console.log(`   Tokens used: ${aiResponse.tokensUsed}`);
           console.log(`   Cost: $${aiResponse.cost.toFixed(6)}`);
 
-          return true; // Stop processing other chatbots
+          return true; // Return true to indicate chatbot was triggered
 
         } catch (aiError) {
           console.error(`❌ Error generating AI response for chatbot ${chatbot.name}:`, aiError);
@@ -1825,15 +1842,17 @@ async function checkAndSendChatbotResponse(
           if (chatbot.enableFallback && chatbot.fallbackMessage) {
             await sendChatbotMessage(contact, chatbot.fallbackMessage, wabaAcc, chatbot);
             console.log(`📤 Fallback message sent for chatbot: ${chatbot.name}`);
+
+            // Update statistics even for fallback
+            await Chatbot.findByIdAndUpdate(chatbot._id, {
+              $inc: { usageCount: 1 },
+              lastTriggered: new Date()
+            });
+
+            return true; // Still count as triggered
           }
 
-          // Update failure statistics
-          await Chatbot.findByIdAndUpdate(chatbot._id, {
-            $inc: { usageCount: 1 },
-            lastTriggered: new Date()
-          });
-
-          continue; // Try next chatbot
+          continue; // Try next chatbot if no fallback
         }
       }
     }
@@ -1847,15 +1866,28 @@ async function checkAndSendChatbotResponse(
   }
 }
 
+
 function checkChatbotTriggerMatch(messageContent: string, chatbot: any): boolean {
+  // Universal chatbots respond to everything
+  if (chatbot.isUniversal) {
+    return true;
+  }
+
   const content = chatbot.caseSensitive ? messageContent : messageContent.toLowerCase();
 
+  // If no specific triggers are set, don't match
+  if (!chatbot.triggers || chatbot.triggers.length === 0) {
+    return false;
+  }
+
   return chatbot.triggers.some((trigger: string) => {
+    if (!trigger || trigger.trim() === '') return false;
+
     const triggerText = chatbot.caseSensitive ? trigger : trigger.toLowerCase();
 
     switch (chatbot.matchType) {
       case 'exact':
-        return content === triggerText;
+        return content.trim() === triggerText.trim();
       case 'starts_with':
         return content.startsWith(triggerText);
       case 'ends_with':
