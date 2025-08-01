@@ -838,7 +838,7 @@ export default function CreateChatbotPage() {
                           </>
                         )}
                       </Button>
-                     // Update the test response display
+
                       {testResponse && (
                         <div className="p-3 bg-slate-50 rounded-lg border">
                           <Label className="text-xs font-medium text-slate-600 mb-2 block">AI Response:</Label>
