@@ -6,13 +6,13 @@ export interface IChatbot extends Document {
   name: string;
   description?: string;
   isActive: boolean;
-  
+
   // AI Configuration
   aiModel: 'gpt-3.5-turbo' | 'gpt-4' | 'gpt-4-turbo';
   systemPrompt: string;
   temperature: number;
   maxTokens: number;
-  
+
   // NEW: Knowledge Base Configuration
   knowledgeBase: {
     enabled: boolean;
@@ -44,29 +44,29 @@ export interface IChatbot extends Document {
       namespace?: string;
     };
   };
-  
+
   // Trigger Configuration
   triggers: string[];
   matchType: 'exact' | 'contains' | 'starts_with' | 'ends_with';
   caseSensitive: boolean;
   priority: number;
-  
+
   // Response Configuration
   fallbackMessage: string;
   enableFallback: boolean;
   maxResponseLength: number;
-  
+
   // Conversation Settings
   conversationMemory: boolean;
   memoryDuration: number; // in minutes
   contextWindow: number; // number of previous messages to include
-  
+
   // Usage Statistics
   usageCount: number;
   totalTokensUsed: number;
   totalCostINR: number;
   lastTriggered?: Date;
-  
+
   // Advanced Settings
   tags: string[];
   createdAt: Date;
@@ -96,7 +96,7 @@ const ChatbotSchema = new Schema({
     type: Boolean,
     default: true
   },
-  
+
   // AI Configuration
   aiModel: {
     type: String,
@@ -120,7 +120,7 @@ const ChatbotSchema = new Schema({
     max: 4096,
     default: 500
   },
-  
+
   // NEW: Knowledge Base Configuration
   knowledgeBase: {
     enabled: {
@@ -160,7 +160,17 @@ const ChatbotSchema = new Schema({
       },
       errorMessage: String,
       chunks: Number,
-      s3Url: String
+      s3Url: String,
+      processedChunks: {
+        type: [String], // Array of strings (the actual text chunks)
+        default: []
+      },
+      textPreview: String,
+      processingStats: {
+        originalLength: Number,
+        chunksCount: Number,
+        averageChunkSize: Number
+      }
     }],
     settings: {
       maxDocuments: {
@@ -203,7 +213,7 @@ const ChatbotSchema = new Schema({
       namespace: String
     }
   },
-  
+
   // Trigger Configuration
   triggers: [{
     type: String,
@@ -222,7 +232,7 @@ const ChatbotSchema = new Schema({
     type: Number,
     default: 0
   },
-  
+
   // Response Configuration
   fallbackMessage: {
     type: String,
@@ -236,7 +246,7 @@ const ChatbotSchema = new Schema({
     type: Number,
     default: 1000
   },
-  
+
   // Conversation Settings
   conversationMemory: {
     type: Boolean,
@@ -250,7 +260,7 @@ const ChatbotSchema = new Schema({
     type: Number,
     default: 5 // last 5 messages
   },
-  
+
   // Usage Statistics
   usageCount: {
     type: Number,
@@ -269,7 +279,7 @@ const ChatbotSchema = new Schema({
     default: 0
   },
   lastTriggered: Date,
-  
+
   // Advanced Settings
   tags: [String]
 }, {
