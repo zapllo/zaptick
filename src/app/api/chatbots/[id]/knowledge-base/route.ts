@@ -48,7 +48,7 @@ export async function GET(
   }
 }
 
-export async function POST(
+export async function POST( 
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {

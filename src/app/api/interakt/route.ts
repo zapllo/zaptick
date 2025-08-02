@@ -1737,7 +1737,7 @@ async function sendWebhookForMessage(
   }
 }
 
-// Add this function after the existing helper functions
+// Update the checkAndSendChatbotResponse function to handle initial trigger + continuous mode
 async function checkAndSendChatbotResponse(
   messageContent: string,
   contact: any,
@@ -1757,42 +1757,120 @@ async function checkAndSendChatbotResponse(
       return false;
     }
 
-    // Find matching chatbot
+    // 🔥 NEW LOGIC: Check if chatbot is already in continuous mode for this contact
     let matchedChatbot = null;
+    let isContinuousMode = false;
+
+    // First, check if any chatbot is already in continuous conversation with this contact
     for (const chatbot of chatbots) {
-      const isTriggered = chatbot.triggers.some(trigger => {
-        if (!trigger.trim()) return false;
-
-        const messageToCheck = chatbot.caseSensitive ? messageContent : messageContent.toLowerCase();
-        const triggerToCheck = chatbot.caseSensitive ? trigger : trigger.toLowerCase();
-
-        switch (chatbot.matchType) {
-          case 'exact':
-            return messageToCheck === triggerToCheck;
-          case 'starts_with':
-            return messageToCheck.startsWith(triggerToCheck);
-          case 'ends_with':
-            return messageToCheck.endsWith(triggerToCheck);
-          case 'contains':
-          default:
-            return messageToCheck.includes(triggerToCheck);
-        }
-      });
-
-      if (isTriggered) {
+      const isAlreadyActive = await isChatbotActiveForContact(chatbot._id, contact._id);
+      if (isAlreadyActive) {
         matchedChatbot = chatbot;
+        isContinuousMode = true;
+        console.log(`🔄 Chatbot "${chatbot.name}" is in CONTINUOUS mode for contact ${contact.phone}`);
         break;
       }
     }
 
+    // If no chatbot is in continuous mode, check for trigger matches
     if (!matchedChatbot) {
-      console.log('❌ No chatbot triggers matched');
+      for (const chatbot of chatbots) {
+        const isTriggered = checkChatbotTriggerMatch(messageContent, chatbot);
+        if (isTriggered) {
+          matchedChatbot = chatbot;
+          isContinuousMode = false; // This is the initial trigger
+          console.log(`🚀 Chatbot "${chatbot.name}" TRIGGERED by: "${messageContent}"`);
+          
+          // Mark this chatbot as active for this contact
+          await setChatbotActiveForContact(chatbot._id, contact._id);
+          break;
+        }
+      }
+    }
+
+    if (!matchedChatbot) {
+      console.log('❌ No chatbot triggers matched and none in continuous mode');
       return false;
     }
 
-    console.log(`🤖 Using chatbot: ${matchedChatbot.name} for message: "${messageContent}"`);
+    // Check for pause keywords
+    if (matchedChatbot.pauseKeywords && matchedChatbot.pauseKeywords.length > 0) {
+      const isPauseKeyword = matchedChatbot.pauseKeywords.some(keyword => 
+        messageContent.toLowerCase().includes(keyword.toLowerCase())
+      );
+
+      if (isPauseKeyword) {
+        console.log(`🛑 Chatbot paused by keyword: "${messageContent}"`);
+        
+        // Remove continuous mode for this contact
+        await removeChatbotActiveForContact(matchedChatbot._id, contact._id);
+        
+        await sendChatbotMessage(
+          contact, 
+          "I'll pause our conversation now. Send a trigger word again to restart our chat!", 
+          wabaAcc, 
+          matchedChatbot
+        );
+        
+        return true;
+      }
+    }
+
+    console.log(`🤖 Using chatbot: ${matchedChatbot.name} (${isContinuousMode ? 'CONTINUOUS' : 'INITIAL TRIGGER'} mode)`);
 
     try {
+      // Get user with populated companyId
+      const user = await User.findById(userId).populate('companyId');
+      if (!user) {
+        console.error('❌ User not found:', userId);
+        return false;
+      }
+
+      // Extract company ID
+      let companyId = null;
+      if (user.companyId) {
+        companyId = typeof user.companyId === 'object' ? user.companyId._id.toString() : user.companyId.toString();
+      }
+
+      if (!companyId) {
+        console.error('❌ No company ID found for user:', userId);
+        return false;
+      }
+
+      console.log(`🏢 Using company ID: ${companyId}`);
+
+      // Check wallet balance
+      const balanceResult = await WalletService.getWalletBalance(companyId);
+      if (!balanceResult.success) {
+        console.error('❌ Failed to get wallet balance:', balanceResult.error);
+        return false;
+      }
+
+      const currentBalance = balanceResult.balance || 0;
+      console.log(`💰 Current wallet balance: ₹${currentBalance.toFixed(4)}`);
+
+      // Estimate cost
+      const estimatedTokens = Math.min(matchedChatbot.maxTokens || 150, messageContent.length * 2 + 100);
+      const estimatedCost = WalletService.calculateCost(estimatedTokens, matchedChatbot.aiModel || 'gpt-3.5-turbo');
+      
+      console.log(`📊 Estimated cost: ₹${estimatedCost.toFixed(6)} for ~${estimatedTokens} tokens`);
+
+      if (currentBalance < estimatedCost) {
+        console.log(`❌ Insufficient balance: ₹${currentBalance.toFixed(4)} < ₹${estimatedCost.toFixed(6)}`);
+
+        // Remove continuous mode due to insufficient balance
+        await removeChatbotActiveForContact(matchedChatbot._id, contact._id);
+
+        const lowBalanceMessage = `⚠️ Unable to process AI request due to insufficient wallet balance. Please recharge your account to continue using AI features.\n\nCurrent balance: ₹${currentBalance.toFixed(2)}\nRequired: ₹${estimatedCost.toFixed(4)}`;
+
+        await sendChatbotMessage(contact, lowBalanceMessage, wabaAcc, {
+          ...matchedChatbot,
+          name: 'System Notification'
+        });
+
+        return true;
+      }
+
       // Get conversation context if memory is enabled
       let conversationContext: any[] = [];
       if (matchedChatbot.conversationMemory) {
@@ -1802,11 +1880,20 @@ async function checkAndSendChatbotResponse(
           const cutoffTime = new Date(Date.now() - memoryDurationMs);
 
           const recentMessages = conversation.messages
-            .filter(msg => new Date(msg.timestamp) > cutoffTime)
+            .filter(msg => 
+              new Date(msg.timestamp) > cutoffTime && 
+              msg.senderId !== 'system' && 
+              msg.messageType !== 'system' &&
+              msg.content && 
+              msg.content.trim().length > 0 &&
+              !msg.content.startsWith('⚠️') &&
+              !msg.content.startsWith('❌') &&
+              !msg.senderName?.includes('System')
+            )
             .slice(-matchedChatbot.contextWindow * 2)
             .map(msg => ({
               role: msg.senderId === 'customer' ? 'user' as const : 'assistant' as const,
-              content: msg.content
+              content: msg.content.substring(0, 500)
             }));
 
           conversationContext = recentMessages.slice(-matchedChatbot.contextWindow);
@@ -1814,18 +1901,14 @@ async function checkAndSendChatbotResponse(
         }
       }
 
-      // 🧠 ENHANCED: Search knowledge base if enabled
+      // Search knowledge base if enabled
       let enhancedSystemPrompt = matchedChatbot.systemPrompt;
       if (matchedChatbot.knowledgeBase?.enabled && matchedChatbot.knowledgeBase.documents?.length > 0) {
         console.log(`🔍 Searching knowledge base for: "${messageContent}"`);
-        console.log(`📚 Knowledge base has ${matchedChatbot.knowledgeBase.documents.length} documents`);
-
-        // Filter only processed documents
+        
         const processedDocs = matchedChatbot.knowledgeBase.documents.filter(
-          (doc: any) => doc.status === 'processed' && doc.processedChunks && doc.processedChunks.length > 0
+          (doc: any) => doc.status === 'processed' && doc.chunks && doc.chunks > 0
         );
-
-        console.log(`📋 ${processedDocs.length} documents are processed and ready for search`);
 
         if (processedDocs.length > 0) {
           try {
@@ -1841,31 +1924,41 @@ async function checkAndSendChatbotResponse(
                 matchedChatbot.systemPrompt,
                 relevantContent
               );
-
-              // Log the enhanced prompt length for debugging
-              console.log(`🧠 Enhanced system prompt: ${enhancedSystemPrompt.length} characters`);
-            } else {
-              console.log(`📚 No relevant knowledge base content found for query: "${messageContent}"`);
             }
           } catch (kbError) {
             console.error('❌ Error searching knowledge base:', kbError);
-            // Continue with original prompt if knowledge base search fails
           }
-        } else {
-          console.log(`⚠️ No processed documents available in knowledge base`);
         }
-      } else {
-        console.log(`📚 Knowledge base not enabled or no documents available`);
       }
 
-      // Prepare messages for AI with enhanced system prompt
+      // Create context-aware system prompt
+      const contextPrompt = isContinuousMode 
+        ? `${enhancedSystemPrompt}
+
+CONTINUOUS CONVERSATION MODE:
+- You are currently in an ongoing conversation with this customer
+- Continue the conversation naturally based on the context
+- Be helpful, engaging, and professional
+- Ask follow-up questions when appropriate
+- Keep responses under ${matchedChatbot.maxResponseLength || 1000} characters
+- Remember previous context and build upon it`
+        : `${enhancedSystemPrompt}
+
+INITIAL CONVERSATION:
+- This customer has just triggered our chatbot with their message
+- Start a helpful conversation based on their query
+- Be welcoming, professional, and informative
+- Ask relevant questions to better assist them
+- Keep responses under ${matchedChatbot.maxResponseLength || 1000} characters`;
+
+      // Prepare messages for AI
       const messages = [
-        { role: 'system' as const, content: enhancedSystemPrompt },
+        { role: 'system' as const, content: contextPrompt },
         ...conversationContext,
         { role: 'user' as const, content: messageContent }
       ];
 
-      console.log(`🤖 Sending to OpenAI with ${enhancedSystemPrompt !== matchedChatbot.systemPrompt ? 'enhanced' : 'standard'} system prompt`);
+      console.log(`🤖 Generating AI response (${isContinuousMode ? 'continuous' : 'initial'}) with ${messages.length} context messages`);
 
       // Generate AI response
       const aiResponse = await generateChatbotResponse(
@@ -1875,25 +1968,33 @@ async function checkAndSendChatbotResponse(
         matchedChatbot.maxTokens
       );
 
-      // Truncate response if needed
-      let responseContent = aiResponse.content;
-      if (matchedChatbot.maxResponseLength && responseContent.length > matchedChatbot.maxResponseLength) {
-        responseContent = responseContent.substring(0, matchedChatbot.maxResponseLength - 3) + '...';
+      console.log(`🤖 AI Response generated - Tokens: ${aiResponse.tokensUsed}, Cost: ₹${aiResponse.cost.toFixed(6)}`);
+
+      // Final balance check
+      const latestBalanceResult = await WalletService.getWalletBalance(companyId);
+      const latestBalance = latestBalanceResult.success ? latestBalanceResult.balance : 0;
+
+      if (latestBalance < aiResponse.cost) {
+        console.log(`❌ Insufficient balance at deduction: ₹${latestBalance.toFixed(4)} < ₹${aiResponse.cost.toFixed(6)}`);
+        
+        // Remove continuous mode due to insufficient balance
+        await removeChatbotActiveForContact(matchedChatbot._id, contact._id);
+        
+        const lowBalanceMessage = `⚠️ Unable to complete AI request due to insufficient wallet balance.\n\nCurrent balance: ₹${latestBalance.toFixed(2)}\nRequired: ₹${aiResponse.cost.toFixed(4)}`;
+
+        await sendChatbotMessage(contact, lowBalanceMessage, wabaAcc, {
+          ...matchedChatbot,
+          name: 'System Notification'
+        });
+
+        return true;
       }
 
-      // Get user's company for wallet operations
-      const user = await User.findById(userId).populate('companyId');
-      if (!user || !user.companyId) {
-        console.error('❌ User or company not found for wallet operations');
-        return false;
-      }
-
-      console.log(`💰 Checking wallet balance for cost: ₹${aiResponse.cost.toFixed(4)}`);
-
+      // Deduct from wallet
       const walletResult = await WalletService.deductFromWallet(
-        user.companyId,
+        companyId,
         aiResponse.cost,
-        `AI Chatbot: ${matchedChatbot.name} - ${aiResponse.tokensUsed} tokens - Message: "${messageContent.substring(0, 50)}..."`,
+        `AI Chatbot: ${matchedChatbot.name} - ${aiResponse.tokensUsed} tokens - "${messageContent.substring(0, 50)}..."`,
         'other',
         matchedChatbot._id,
         {
@@ -1904,27 +2005,25 @@ async function checkAndSendChatbotResponse(
           tokensUsed: aiResponse.tokensUsed,
           aiModel: matchedChatbot.aiModel,
           messageContent: messageContent.substring(0, 100),
-          knowledgeBaseUsed: enhancedSystemPrompt !== matchedChatbot.systemPrompt // Track if KB was used
+          knowledgeBaseUsed: enhancedSystemPrompt !== matchedChatbot.systemPrompt,
+          conversationMode: isContinuousMode ? 'continuous' : 'initial'
         }
       );
 
       if (!walletResult.success) {
-        console.log(`❌ Wallet deduction failed: ${walletResult.error}`);
-
-        const balanceResult = await WalletService.getWalletBalance(user.companyId);
-        const currentBalance = balanceResult.success ? balanceResult.balance : 0;
-
-        const lowBalanceMessage = `⚠️ Unable to process AI request due to insufficient wallet balance. Please recharge your account to continue using AI features.\n\nCurrent balance: ₹${currentBalance?.toFixed(2) || '0.00'}\nRequired: ₹${aiResponse.cost.toFixed(4)}\n\nContact support to add funds to your wallet.`;
-
-        await sendChatbotMessage(contact, lowBalanceMessage, wabaAcc, {
-          ...matchedChatbot,
-          name: 'System Notification'
-        });
-
-        return true;
+        console.error(`❌ Wallet deduction failed: ${walletResult.error}`);
+        // Remove continuous mode on wallet failure
+        await removeChatbotActiveForContact(matchedChatbot._id, contact._id);
+        return false;
       }
 
       console.log(`💰 Wallet deduction successful. New balance: ₹${walletResult.balance?.toFixed(4)}`);
+
+      // Truncate response if needed
+      let responseContent = aiResponse.content;
+      if (matchedChatbot.maxResponseLength && responseContent.length > matchedChatbot.maxResponseLength) {
+        responseContent = responseContent.substring(0, matchedChatbot.maxResponseLength - 3) + '...';
+      }
 
       // Send the AI response
       await sendChatbotMessage(contact, responseContent, wabaAcc, matchedChatbot);
@@ -1939,22 +2038,20 @@ async function checkAndSendChatbotResponse(
         lastTriggered: new Date()
       });
 
-      console.log(`✅ Knowledge-enhanced chatbot response sent successfully`);
+      console.log(`✅ Chatbot response sent successfully!`);
+      console.log(`   Mode: ${isContinuousMode ? 'CONTINUOUS' : 'INITIAL TRIGGER'}`);
       console.log(`   Chatbot: ${matchedChatbot.name}`);
-      console.log(`   Tokens used: ${aiResponse.tokensUsed}`);
-      console.log(`   Cost: ₹${aiResponse.cost.toFixed(6)}`);
-      console.log(`   Knowledge base used: ${enhancedSystemPrompt !== matchedChatbot.systemPrompt ? 'Yes' : 'No'}`);
+      console.log(`   Response: "${responseContent.substring(0, 100)}..."`);
 
       return true;
 
     } catch (aiError) {
-      console.error(`❌ Error generating AI response for chatbot ${matchedChatbot.name}:`, aiError);
+      console.error(`❌ Error generating AI response:`, aiError);
 
       // Send fallback message if enabled
       if (matchedChatbot.enableFallback && matchedChatbot.fallbackMessage) {
         await sendChatbotMessage(contact, matchedChatbot.fallbackMessage, wabaAcc, matchedChatbot);
-        console.log(`📤 Fallback message sent for chatbot: ${matchedChatbot.name}`);
-
+        
         await Chatbot.findByIdAndUpdate(matchedChatbot._id, {
           $inc: { usageCount: 1 },
           lastTriggered: new Date()
@@ -1967,15 +2064,93 @@ async function checkAndSendChatbotResponse(
     }
 
   } catch (error) {
-    console.error('❌ Error processing chatbot responses:', error);
+    console.error('❌ Error in checkAndSendChatbotResponse:', error);
     return false;
   }
 }
 
+// Keep the existing checkChatbotTriggerMatch function
 function checkChatbotTriggerMatch(messageContent: string, chatbot: any): boolean {
-  // ALL active chatbots respond to ALL messages - no trigger checking needed
-  console.log(`🌍 Chatbot "${chatbot.name}" will respond to all messages (universal by default)`);
-  return true;
+  if (!chatbot.triggers || chatbot.triggers.length === 0) {
+    return false;
+  }
+
+  const content = chatbot.caseSensitive ? messageContent : messageContent.toLowerCase();
+
+  return chatbot.triggers.some((trigger: string) => {
+    if (!trigger.trim()) return false;
+    
+    const triggerText = chatbot.caseSensitive ? trigger : trigger.toLowerCase();
+
+    switch (chatbot.matchType) {
+      case 'exact':
+        return content === triggerText;
+      case 'starts_with':
+        return content.startsWith(triggerText);
+      case 'ends_with':
+        return content.endsWith(triggerText);
+      case 'contains':
+      default:
+        return content.includes(triggerText);
+    }
+  });
+}
+
+// NEW: Helper functions to manage continuous conversation state
+async function isChatbotActiveForContact(chatbotId: string, contactId: string): Promise<boolean> {
+  try {
+    // Check if there's an active conversation session in the last 30 minutes
+    const conversation = await Conversation.findOne({ contactId });
+    if (!conversation) return false;
+
+    // Look for recent chatbot messages (within last 30 minutes)
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    
+    const recentChatbotMessage = conversation.messages.find(msg => 
+      msg.senderName?.startsWith('AI:') &&
+      new Date(msg.timestamp) > thirtyMinutesAgo
+    );
+
+    const hasRecentActivity = !!recentChatbotMessage;
+    
+    console.log(`🔍 Checking continuous mode for contact ${contactId}: ${hasRecentActivity ? 'ACTIVE' : 'INACTIVE'}`);
+    
+    return hasRecentActivity;
+  } catch (error) {
+    console.error('Error checking chatbot active status:', error);
+    return false;
+  }
+}
+
+async function setChatbotActiveForContact(chatbotId: string, contactId: string): Promise<void> {  
+  // This is automatically handled when we send a chatbot message
+  // The presence of recent AI messages indicates active conversation
+  console.log(`🔄 Chatbot ${chatbotId} is now active for contact ${contactId}`);
+}
+
+async function removeChatbotActiveForContact(chatbotId: string, contactId: string): Promise<void> {
+  try {
+    // Add a system message to indicate conversation end
+    const conversation = await Conversation.findOne({ contactId });
+    if (conversation) {
+      const endMessage = {
+        id: uuidv4(),
+        senderId: 'system' as const,
+        content: `🛑 Chatbot conversation ended`,
+        messageType: 'system' as const,
+        timestamp: new Date(),
+        status: 'sent' as const,
+        senderName: 'System'
+      };
+
+      conversation.messages.push(endMessage);
+      await conversation.save();
+    }
+    
+    console.log(`🛑 Chatbot ${chatbotId} is no longer active for contact ${contactId}`);
+  } catch (error) {
+    console.error('Error removing chatbot active status:', error);
+  }
 }
 
 async function sendChatbotMessage(contact: any, message: string, wabaAcc: any, chatbot: any) {
