@@ -577,7 +577,7 @@ export default function KnowledgeBaseManager({
               <div>
                 <h3 className="text-lg font-semibold">Knowledge Base Disabled</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Enable knowledge base to upload documents and enhance your chatbot's responses with specific company information
+                  Enable knowledge base to upload documents and enhance your chatbot&apos;s responses with specific company information
                 </p>
               </div>
               <Button
