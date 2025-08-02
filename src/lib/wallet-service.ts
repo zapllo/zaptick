@@ -12,17 +12,23 @@ export class WalletService {
     metadata?: any
   ): Promise<{ success: boolean; balance?: number; error?: string }> {
     try {
-      const company = await Company.findOne({ companyId });
+      // Fix: Use _id instead of companyId field
+      const company = await Company.findById(companyId);
       
       if (!company) {
+        console.error(`❌ Company not found with _id: ${companyId}`);
         return { success: false, error: 'Company not found' };
       }
+
+      console.log(`🏢 Found company: ${company.name} (ID: ${company._id})`);
 
       // Get current wallet balance
       const currentBalance = await this.getWalletBalance(companyId);
       if (!currentBalance.success) {
         return { success: false, error: currentBalance.error };
       }
+
+      console.log(`💰 Current balance: ₹${currentBalance.balance?.toFixed(4)}, Deducting: ₹${amount.toFixed(4)}`);
 
       // Check if company has sufficient balance
       if (currentBalance.balance! < amount) {
@@ -51,7 +57,7 @@ export class WalletService {
 
       const newBalance = currentBalance.balance! - amount;
 
-      console.log(`💰 Wallet deduction successful: ₹${amount.toFixed(4)} from ${companyId}`);
+      console.log(`💰 Wallet deduction successful: ₹${amount.toFixed(4)} from ${company.name}`);
       console.log(`💰 New balance: ₹${newBalance.toFixed(4)}`);
 
       return { success: true, balance: newBalance };
@@ -71,7 +77,8 @@ export class WalletService {
     metadata?: any
   ): Promise<{ success: boolean; balance?: number; error?: string }> {
     try {
-      const company = await Company.findOne({ companyId });
+      // Fix: Use _id instead of companyId field
+      const company = await Company.findById(companyId);
       
       if (!company) {
         return { success: false, error: 'Company not found' };
@@ -102,7 +109,7 @@ export class WalletService {
 
       const newBalance = currentBalance.balance! + amount;
 
-      console.log(`💰 Wallet credit successful: ₹${amount.toFixed(4)} to ${companyId}`);
+      console.log(`💰 Wallet credit successful: ₹${amount.toFixed(4)} to ${company.name}`);
       console.log(`💰 New balance: ₹${newBalance.toFixed(4)}`);
 
       return { success: true, balance: newBalance };
@@ -115,13 +122,25 @@ export class WalletService {
 
   static async getWalletBalance(companyId: string): Promise<{ success: boolean; balance?: number; error?: string }> {
     try {
-      const company = await Company.findOne({ companyId });
+      // Fix: Use _id instead of companyId field
+      const company = await Company.findById(companyId);
       
       if (!company) {
+        console.error(`❌ Company not found with _id: ${companyId}`);
         return { success: false, error: 'Company not found' };
       }
 
-      // Calculate balance from all transactions
+      console.log(`🏢 Getting balance for company: ${company.name} (ID: ${company._id})`);
+      console.log(`💰 Company.walletBalance field: ₹${company.walletBalance || 0}`);
+
+      // First, try to use the walletBalance field from the company document
+      if (company.walletBalance !== undefined && company.walletBalance !== null) {
+        console.log(`💰 Using company.walletBalance: ₹${company.walletBalance}`);
+        return { success: true, balance: Math.max(0, company.walletBalance) };
+      }
+
+      // Fallback: Calculate balance from all transactions
+      console.log(`🔄 Calculating balance from transactions...`);
       const transactions = await WalletTransaction.aggregate([
         { $match: { companyId: company._id, status: 'completed' } },
         {
@@ -145,6 +164,8 @@ export class WalletService {
         ? transactions[0].totalCredits - transactions[0].totalDebits 
         : 0;
 
+      console.log(`💰 Calculated balance from transactions: ₹${balance}`);
+
       return { success: true, balance: Math.max(0, balance) }; // Ensure balance never goes negative
 
     } catch (error) {
@@ -155,7 +176,8 @@ export class WalletService {
 
   static async getTotalSpent(companyId: string): Promise<{ success: boolean; totalSpent?: number; error?: string }> {
     try {
-      const company = await Company.findOne({ companyId });
+      // Fix: Use _id instead of companyId field
+      const company = await Company.findById(companyId);
       
       if (!company) {
         return { success: false, error: 'Company not found' };
@@ -194,7 +216,8 @@ export class WalletService {
     type?: 'credit' | 'debit' | 'refund'
   ): Promise<{ success: boolean; transactions?: any[]; total?: number; error?: string }> {
     try {
-      const company = await Company.findOne({ companyId });
+      // Fix: Use _id instead of companyId field
+      const company = await Company.findById(companyId);
       
       if (!company) {
         return { success: false, error: 'Company not found' };
@@ -227,7 +250,8 @@ export class WalletService {
     days: number = 30
   ): Promise<{ success: boolean; spending?: number; transactions?: number; error?: string }> {
     try {
-      const company = await Company.findOne({ companyId });
+      // Fix: Use _id instead of companyId field
+      const company = await Company.findById(companyId);
       
       if (!company) {
         return { success: false, error: 'Company not found' };
@@ -265,5 +289,21 @@ export class WalletService {
       console.error('❌ Error getting chatbot spending:', error);
       return { success: false, error: 'Failed to get chatbot spending' };
     }
+  }
+
+  // Add the calculateCost method
+  static calculateCost(tokens: number, model: string = 'gpt-3.5-turbo'): number {
+    // Cost per token in USD (approximate)
+    const costPerTokenUSD = {
+      'gpt-3.5-turbo': 0.000002,
+      'gpt-4': 0.00003,
+      'gpt-4-turbo': 0.00001,
+      'gpt-4o': 0.000005,
+      'gpt-4o-mini': 0.000001
+    };
+
+    const baseCostUSD = costPerTokenUSD[model] || costPerTokenUSD['gpt-3.5-turbo'];
+    const usdToInr = 83; // Approximate conversion rate
+    return tokens * baseCostUSD * usdToInr;
   }
 }
