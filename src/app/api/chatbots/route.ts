@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       memoryDuration,
       contextWindow,
       tags,
+      knowledgeBase,
       isActive
     } = await req.json();
 
@@ -157,7 +158,15 @@ export async function POST(req: NextRequest) {
       tags: tags || [],
       isActive: isActive !== false
     });
-
+// Handle knowledge base if provided
+if (knowledgeBase && knowledgeBase.enabled) {
+  await Chatbot.findByIdAndUpdate(chatbot._id, {
+    $set: {
+      'knowledgeBase.enabled': true,
+      'knowledgeBase.settings': knowledgeBase.settings
+    }
+  });
+}
     return NextResponse.json({
       success: true,
       chatbot,

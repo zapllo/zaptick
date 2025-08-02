@@ -13,6 +13,38 @@ export interface IChatbot extends Document {
   temperature: number;
   maxTokens: number;
   
+  // NEW: Knowledge Base Configuration
+  knowledgeBase: {
+    enabled: boolean;
+    documents: Array<{
+      id: string;
+      filename: string;
+      originalName: string;
+      fileType: string;
+      fileSize: number;
+      uploadedAt: Date;
+      processedAt?: Date;
+      status: 'uploading' | 'processing' | 'processed' | 'failed';
+      errorMessage?: string;
+      chunks?: number; // Number of text chunks created
+      s3Url?: string;
+    }>;
+    settings: {
+      maxDocuments: number;
+      maxFileSize: number; // in MB
+      allowedFileTypes: string[];
+      chunkSize: number;
+      chunkOverlap: number;
+      searchMode: 'semantic' | 'keyword' | 'hybrid';
+      maxRelevantChunks: number;
+    };
+    vectorStore?: {
+      provider: 'pinecone' | 'weaviate' | 'local';
+      indexName?: string;
+      namespace?: string;
+    };
+  };
+  
   // Trigger Configuration
   triggers: string[];
   matchType: 'exact' | 'contains' | 'starts_with' | 'ends_with';
@@ -32,7 +64,7 @@ export interface IChatbot extends Document {
   // Usage Statistics
   usageCount: number;
   totalTokensUsed: number;
-  totalCostINR: number; // Changed from totalCostUSD to totalCostINR
+  totalCostINR: number;
   lastTriggered?: Date;
   
   // Advanced Settings
@@ -87,6 +119,89 @@ const ChatbotSchema = new Schema({
     min: 1,
     max: 4096,
     default: 500
+  },
+  
+  // NEW: Knowledge Base Configuration
+  knowledgeBase: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    documents: [{
+      id: {
+        type: String,
+        required: true
+      },
+      filename: {
+        type: String,
+        required: true
+      },
+      originalName: {
+        type: String,
+        required: true
+      },
+      fileType: {
+        type: String,
+        required: true
+      },
+      fileSize: {
+        type: Number,
+        required: true
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      },
+      processedAt: Date,
+      status: {
+        type: String,
+        enum: ['uploading', 'processing', 'processed', 'failed'],
+        default: 'uploading'
+      },
+      errorMessage: String,
+      chunks: Number,
+      s3Url: String
+    }],
+    settings: {
+      maxDocuments: {
+        type: Number,
+        default: 10
+      },
+      maxFileSize: {
+        type: Number,
+        default: 10 // 10MB
+      },
+      allowedFileTypes: {
+        type: [String],
+        default: ['pdf', 'txt', 'doc', 'docx', 'csv']
+      },
+      chunkSize: {
+        type: Number,
+        default: 1000
+      },
+      chunkOverlap: {
+        type: Number,
+        default: 200
+      },
+      searchMode: {
+        type: String,
+        enum: ['semantic', 'keyword', 'hybrid'],
+        default: 'semantic'
+      },
+      maxRelevantChunks: {
+        type: Number,
+        default: 3
+      }
+    },
+    vectorStore: {
+      provider: {
+        type: String,
+        enum: ['pinecone', 'weaviate', 'local'],
+        default: 'local'
+      },
+      indexName: String,
+      namespace: String
+    }
   },
   
   // Trigger Configuration
@@ -145,11 +260,10 @@ const ChatbotSchema = new Schema({
     type: Number,
     default: 0
   },
-  totalCostINR: { // Changed from totalCostUSD
+  totalCostINR: {
     type: Number,
     default: 0
   },
-  // Keep the old field for backward compatibility but mark as deprecated
   totalCostUSD: {
     type: Number,
     default: 0

@@ -89,6 +89,8 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AutomationsLayout from '@/components/layout/automation-layout';
 import { FaRupeeSign } from 'react-icons/fa';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import KnowledgeBaseManager from '@/components/chatbots/KnowledgeBaseManager';
 
 interface Chatbot {
   _id: string;
@@ -109,13 +111,25 @@ interface Chatbot {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  // Add this
+  knowledgeBase?: {
+    enabled: boolean;
+    documents: any[];
+    settings: {
+      maxDocuments: number;
+      maxFileSize: number;
+      allowedFileTypes: string[];
+      chunkSize: number;
+      chunkOverlap: number;
+      searchMode: 'semantic' | 'keyword' | 'hybrid';
+      maxRelevantChunks: number;
+    };
+  };
 }
 
 export default function ChatbotsPage() {
   const router = useRouter();
-  const { toast } = useToast();
-
-  // State
+  const { toast } = useToast();  // State
   const [chatbots, setChatbots] = useState<Chatbot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -128,9 +142,9 @@ export default function ChatbotsPage() {
 
   // Get selected WABA ID (you'll need to implement this based on your context)
   const [selectedWabaId, setSelectedWabaId] = useState<string>('');
-    const [wabaAccounts, setWabaAccounts] = useState<any[]>([]);
+  const [wabaAccounts, setWabaAccounts] = useState<any[]>([]);
   const fetchWabaAccounts = async () => {
- 
+
     try {
       console.log('Fetching WABA accounts...');
       const response = await fetch('/api/waba-accounts');
@@ -140,7 +154,7 @@ export default function ChatbotsPage() {
 
       if (data.success) {
         setWabaAccounts(data.accounts);
-        
+
         // Try to get saved WABA ID or use first one
         const savedWabaId = localStorage.getItem('selectedWabaId');
         if (savedWabaId && data.accounts.find((a: any) => a.wabaId === savedWabaId)) {
@@ -169,7 +183,7 @@ export default function ChatbotsPage() {
         description: "Failed to fetch WhatsApp accounts",
         variant: "destructive",
       });
-    } 
+    }
   };
 
   // Load chatbots
@@ -183,16 +197,16 @@ export default function ChatbotsPage() {
     setIsLoading(true);
     try {
       console.log('Fetching chatbots for WABA ID:', selectedWabaId);
-      
+
       const response = await fetch(`/api/chatbots?wabaId=${selectedWabaId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      
+
       console.log('Chatbots response status:', response.status);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -232,7 +246,7 @@ export default function ChatbotsPage() {
   // When WABA ID changes, fetch chatbots
   useEffect(() => {
     console.log('Selected WABA ID changed:', selectedWabaId);
-    if (selectedWabaId ) {
+    if (selectedWabaId) {
       fetchChatbots();
     } else if (!selectedWabaId) {
       setIsLoading(false);
@@ -661,7 +675,7 @@ export default function ChatbotsPage() {
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                               
+
                                 <DropdownMenuItem onClick={() => handleToggleStatus(chatbot)}>
                                   {chatbot.isActive ? (
                                     <>
@@ -872,7 +886,7 @@ export default function ChatbotsPage() {
                                         <Eye className="h-4 w-4 mr-2" />
                                         View Details
                                       </DropdownMenuItem>
-                                   
+
                                       <DropdownMenuItem onClick={() => handleToggleStatus(chatbot)}>
                                         {chatbot.isActive ? (
                                           <>
@@ -937,7 +951,6 @@ export default function ChatbotsPage() {
                 </CardContent>
               </Card>
             )}
-
             {/* View Chatbot Dialog */}
             <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
               <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col p-0">
@@ -972,136 +985,277 @@ export default function ChatbotsPage() {
                       </div>
                     </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-                      {/* Description */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                          Description
-                        </h4>
-                        <p className="text-slate-700 bg-slate-50 p-3 rounded-lg">
-                          {selectedChatbot.description || "No description provided"}
-                        </p>
-                      </div>
+                    {/* Add Tabs here */}
+                    <Tabs defaultValue="overview" className="flex-1 flex flex-col">
+                      <TabsList className="grid w-full grid-cols-4 mx-6 mt-4">
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                        <TabsTrigger value="knowledge-base">Knowledge Base</TabsTrigger>
+                        <TabsTrigger value="settings">Settings</TabsTrigger>
+                      </TabsList>
 
-                      {/* System Prompt */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-                          System Prompt
-                        </h4>
-                        <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-lg border border-purple-200">
-                          <p className="text-sm text-purple-900 whitespace-pre-wrap">
-                            {selectedChatbot.systemPrompt}
-                          </p>
-                        </div>
-                      </div>
+                      <div className="flex-1 overflow-y-auto px-6 py-6">
+                        {/* Overview Tab */}
+                        <TabsContent value="overview" className="space-y-6 mt-0">
+                          {/* Description */}
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                              Description
+                            </h4>
+                            <p className="text-slate-700 bg-slate-50 p-3 rounded-lg">
+                              {selectedChatbot.description || "No description provided"}
+                            </p>
+                          </div>
 
-                      {/* Triggers */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                          Trigger Keywords
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedChatbot.triggers.map((trigger, index) => (
-                            <Badge
-                              key={index}
-                              variant="secondary"
-                              className="bg-green-100 text-green-700 border-green-200"
-                            >
-                              {trigger}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Configuration */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                            AI Configuration
-                          </h4>
-                          <div className="space-y-3 bg-orange-50/50 p-4 rounded-lg border border-orange-200">
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium text-orange-700">Temperature:</span>
-                              <span className="text-sm text-orange-900">{selectedChatbot.temperature}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium text-orange-700">Max Tokens:</span>
-                              <span className="text-sm text-orange-900">{selectedChatbot.maxTokens}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium text-orange-700">Match Type:</span>
-                              <span className="text-sm text-orange-900 capitalize">{selectedChatbot.matchType.replace('_', ' ')}</span>
+                          {/* System Prompt */}
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                              System Prompt
+                            </h4>
+                            <div className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 rounded-lg border border-purple-200">
+                              <p className="text-sm text-purple-900 whitespace-pre-wrap">
+                                {selectedChatbot.systemPrompt}
+                              </p>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="space-y-4">
-                          <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                            Usage Statistics
-                          </h4>
-                          <div className="space-y-3 bg-indigo-50/50 p-4 rounded-lg border border-indigo-200">
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium text-indigo-700">Total Interactions:</span>
-                              <span className="text-sm text-indigo-900">{selectedChatbot.usageCount || 0}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium text-indigo-700">Tokens Used:</span>
-                              <span className="text-sm text-indigo-900">{(selectedChatbot.totalTokensUsed || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium text-indigo-700">Total Cost:</span>
-                              <span className="text-sm text-indigo-900">${(selectedChatbot.totalCostINR || 0).toFixed(4)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm font-medium text-indigo-700">Priority:</span>
-                              <span className="text-sm text-indigo-900">{selectedChatbot.priority}</span>
+                          {/* Triggers */}
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                              Trigger Keywords
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedChatbot.triggers.map((trigger, index) => (
+                                <Badge
+                                  key={index}
+                                  variant="secondary"
+                                  className="bg-green-100 text-green-700 border-green-200"
+                                >
+                                  {trigger}
+                                </Badge>
+                              ))}
                             </div>
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Tags */}
-                      {selectedChatbot.tags && selectedChatbot.tags.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-pink-500" />
-                            Tags
-                          </h4>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedChatbot.tags.map((tag, index) => (
-                              <Badge
-                                key={index}
-                                variant="outline"
-                                className="bg-pink-50 text-pink-700 border-pink-200"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
+                          {/* Knowledge Base Section */}
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                              Knowledge Base
+                            </h4>
+                            {selectedChatbot.knowledgeBase?.enabled ? (
+                              <div className="bg-indigo-50/50 p-4 rounded-lg border border-indigo-200">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <p className="text-indigo-700 font-medium">Documents</p>
+                                    <p className="text-indigo-900">
+                                      {selectedChatbot.knowledgeBase.documents?.length || 0}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-indigo-700 font-medium">Total Chunks</p>
+                                    <p className="text-indigo-900">
+                                      {selectedChatbot.knowledgeBase.documents?.reduce((sum: number, doc: any) => sum + (doc.chunks || 0), 0) || 0}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-indigo-700 font-medium">Search Mode</p>
+                                    <p className="text-indigo-900 capitalize">
+                                      {selectedChatbot.knowledgeBase.settings?.searchMode?.replace('_', ' ') || 'Semantic'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-indigo-700 font-medium">Max Results</p>
+                                    <p className="text-indigo-900">
+                                      {selectedChatbot.knowledgeBase.settings?.maxRelevantChunks || 3}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {selectedChatbot.knowledgeBase.documents && selectedChatbot.knowledgeBase.documents.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t border-indigo-200">
+                                    <p className="text-xs text-indigo-600 font-medium mb-2">Recent Documents:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {selectedChatbot.knowledgeBase.documents.slice(0, 3).map((doc: any, index: number) => (
+                                        <Badge key={index} variant="outline" className="text-xs bg-indigo-100 text-indigo-700 border-indigo-300">
+                                          {doc.originalName}
+                                        </Badge>
+                                      ))}
+                                      {selectedChatbot.knowledgeBase.documents.length > 3 && (
+                                        <Badge variant="outline" className="text-xs bg-indigo-100 text-indigo-700 border-indigo-300">
+                                          +{selectedChatbot.knowledgeBase.documents.length - 3} more
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full bg-slate-400" />
+                                  <p className="text-slate-600 text-sm">Knowledge base is disabled</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
 
-                      {/* Timestamps */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-200">
-                        <div>
-                          <p className="text-sm font-medium text-slate-700">Created</p>
-                          <p className="text-sm text-slate-600">
-                            {format(new Date(selectedChatbot.createdAt), "MMM dd, yyyy 'at' HH:mm")}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-700">Last Updated</p>
-                          <p className="text-sm text-slate-600">
-                            {format(new Date(selectedChatbot.updatedAt), "MMM dd, yyyy 'at' HH:mm")}
-                          </p>
-                        </div>
+                          {/* Configuration */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                                AI Configuration
+                              </h4>
+                              <div className="space-y-3 bg-orange-50/50 p-4 rounded-lg border border-orange-200">
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-orange-700">Temperature:</span>
+                                  <span className="text-sm text-orange-900">{selectedChatbot.temperature}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-orange-700">Max Tokens:</span>
+                                  <span className="text-sm text-orange-900">{selectedChatbot.maxTokens}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-orange-700">Match Type:</span>
+                                  <span className="text-sm text-orange-900 capitalize">{selectedChatbot.matchType.replace('_', ' ')}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                                Usage Statistics
+                              </h4>
+                              <div className="space-y-3 bg-indigo-50/50 p-4 rounded-lg border border-indigo-200">
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-indigo-700">Total Interactions:</span>
+                                  <span className="text-sm text-indigo-900">{selectedChatbot.usageCount || 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-indigo-700">Tokens Used:</span>
+                                  <span className="text-sm text-indigo-900">{(selectedChatbot.totalTokensUsed || 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-indigo-700">Total Cost:</span>
+                                  <span className="text-sm text-indigo-900">₹{(selectedChatbot.totalCostINR || 0).toFixed(4)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-indigo-700">Priority:</span>
+                                  <span className="text-sm text-indigo-900">{selectedChatbot.priority}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Tags */}
+                          {selectedChatbot.tags && selectedChatbot.tags.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-pink-500" />
+                                Tags
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {selectedChatbot.tags.map((tag, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="outline"
+                                    className="bg-pink-50 text-pink-700 border-pink-200"
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Timestamps */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">Created</p>
+                              <p className="text-sm text-slate-600">
+                                {format(new Date(selectedChatbot.createdAt), "MMM dd, yyyy 'at' HH:mm")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">Last Updated</p>
+                              <p className="text-sm text-slate-600">
+                                {format(new Date(selectedChatbot.updatedAt), "MMM dd, yyyy 'at' HH:mm")}
+                              </p>
+                            </div>
+                          </div>
+                        </TabsContent>
+
+                        {/* Analytics Tab */}
+                        <TabsContent value="analytics" className="space-y-6 mt-0">
+                          <div className="text-center py-12">
+                            <div className="space-y-4">
+                              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                                <BarChart3 className="h-8 w-8 text-slate-400" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-slate-900">Analytics Coming Soon</h3>
+                                <p className="text-slate-600">
+                                  Detailed analytics and performance metrics will be available here
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
+
+                        {/* Knowledge Base Tab */}
+                        <TabsContent value="knowledge-base" className="space-y-6 mt-0">
+                          <KnowledgeBaseManager
+                            chatbotId={selectedChatbot._id}
+                            knowledgeBase={selectedChatbot.knowledgeBase || {
+                              enabled: false,
+                              documents: [],
+                              settings: {
+                                maxDocuments: 10,
+                                maxFileSize: 10,
+                                allowedFileTypes: ['pdf', 'txt', 'doc', 'docx', 'csv', 'json', 'md'],
+                                chunkSize: 1000,
+                                chunkOverlap: 200,
+                                searchMode: 'semantic',
+                                maxRelevantChunks: 3
+                              }
+                            }}
+                            onUpdate={(updatedKnowledgeBase) => {
+                              // Update the local chatbots state
+                              setChatbots(prev => prev.map(bot =>
+                                bot._id === selectedChatbot._id
+                                  ? { ...bot, knowledgeBase: updatedKnowledgeBase }
+                                  : bot
+                              ));
+
+                              // Update selected chatbot state
+                              setSelectedChatbot(prev => prev ? { ...prev, knowledgeBase: updatedKnowledgeBase } : null);
+                            }}
+                          />
+                        </TabsContent>
+
+                        {/* Settings Tab */}
+                        <TabsContent value="settings" className="space-y-6 mt-0">
+                          <div className="text-center py-12">
+                            <div className="space-y-4">
+                              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                                <Settings className="h-8 w-8 text-slate-400" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-slate-900">Settings</h3>
+                                <p className="text-slate-600">
+                                  Chatbot configuration settings will be available here
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </TabsContent>
                       </div>
-                    </div>
+                    </Tabs>
 
                     <div className="px-6 py-4 border-t border-slate-200 flex-shrink-0 bg-slate-50/50">
                       <div className="flex items-center justify-between">
@@ -1121,7 +1275,6 @@ export default function ChatbotsPage() {
                             <MessageSquare className="h-4 w-4" />
                             Test Chatbot
                           </Button>
-                       
                         </div>
                       </div>
                     </div>

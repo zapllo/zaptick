@@ -18,7 +18,8 @@ import {
   Info,
   HelpCircle,
   Plus,
-  X
+  X,
+  FileText
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -145,6 +146,20 @@ export default function CreateChatbotPage() {
     tags: [],
     isActive: true,
   });
+  // Add knowledge base state after the existing state declarations
+  const [knowledgeBase, setKnowledgeBase] = useState({
+    enabled: false,
+    documents: [],
+    settings: {
+      maxDocuments: 10,
+      maxFileSize: 10,
+      allowedFileTypes: ['pdf', 'txt', 'doc', 'docx', 'csv', 'json', 'md'],
+      chunkSize: 1000,
+      chunkOverlap: 200,
+      searchMode: 'semantic' as const,
+      maxRelevantChunks: 3
+    }
+  });
 
   const [currentTag, setCurrentTag] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -241,6 +256,7 @@ export default function CreateChatbotPage() {
     }));
   };
 
+  // Update the handleSubmit function to include knowledge base data:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -293,7 +309,9 @@ export default function CreateChatbotPage() {
         body: JSON.stringify({
           ...formData,
           wabaId: selectedWabaId,
-          triggers: validTriggers
+          triggers: validTriggers,
+          // Add knowledge base data
+          knowledgeBase: knowledgeBase.enabled ? knowledgeBase : undefined
         }),
       });
 
@@ -590,9 +608,68 @@ export default function CreateChatbotPage() {
                           </div>
                         </div>
                       </div>
+
                     </CardContent>
                   </Card>
+                  {/* Knowledge Base Configuration */}
+                  <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                        Knowledge Base
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="text-sm font-medium">Enable Knowledge Base</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Upload documents to enhance your chatbot with specific knowledge
+                            </p>
+                          </div>
+                          <Switch
+                            checked={knowledgeBase.enabled}
+                            onCheckedChange={(checked) => setKnowledgeBase(prev => ({ ...prev, enabled: checked }))}
+                          />
+                        </div>
 
+                        {knowledgeBase.enabled && (
+                          <div className="mt-6">
+                            {/* Note: For creation, we'll show a simplified version */}
+                            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
+                              <div className="space-y-3">
+                                <div className="mx-auto w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                                  <FileText className="h-6 w-6 text-indigo-600" />
+                                </div>
+                                <div>
+                                  <h3 className="font-medium text-slate-900">Knowledge Base Ready</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    Documents can be uploaded after creating the chatbot
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                              <div className="flex items-start gap-2">
+                                <Info className="h-4 w-4 text-indigo-600 mt-0.5" />
+                                <div className="text-sm text-indigo-700">
+                                  <p className="font-medium">Knowledge Base Features</p>
+                                  <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
+                                    <li>Upload PDF, Word, TXT, CSV, JSON, and Markdown files</li>
+                                    <li>Automatic text extraction and intelligent chunking</li>
+                                    <li>Semantic search integration with AI responses</li>
+                                    <li>Up to {knowledgeBase.settings.maxDocuments} documents, {knowledgeBase.settings.maxFileSize}MB each</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                   {/* Trigger Configuration */}
                   <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                     <CardHeader>
@@ -890,6 +967,12 @@ export default function CreateChatbotPage() {
                           checked={formData.isActive}
                           onCheckedChange={(checked) => updateFormData('isActive', checked)}
                         />
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Knowledge Base</span>
+                        <Badge variant={knowledgeBase.enabled ? "default" : "secondary"}>
+                          {knowledgeBase.enabled ? 'Enabled' : 'Disabled'}
+                        </Badge>
                       </div>
                     </CardContent>
                   </Card>

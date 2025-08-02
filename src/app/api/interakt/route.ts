@@ -20,6 +20,7 @@ import { WebhookService } from '@/lib/webhookService';
 import Chatbot from '@/models/Chatbot';
 import { generateChatbotResponse } from '@/lib/openai';
 import { WalletService } from '@/lib/wallet-service';
+import { KnowledgeBaseService } from '@/lib/knowledge-base';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -1736,7 +1737,6 @@ async function sendWebhookForMessage(
   }
 }
 
-
 // Add this function after the existing helper functions
 async function checkAndSendChatbotResponse(
   messageContent: string,
@@ -1746,12 +1746,10 @@ async function checkAndSendChatbotResponse(
 ): Promise<boolean> {
   try {
     console.log(`🤖 Checking for chatbot responses to: "${messageContent}"`);
-
-    // Get all active chatbots for this user and WABA, sorted by priority
     const chatbots = await Chatbot.find({
       userId,
       wabaId: wabaAcc.wabaId,
-      isActive: true // Only check if chatbot is active - that's the only gate
+      isActive: true
     }).sort({ priority: -1, createdAt: 1 });
 
     if (!chatbots.length) {
@@ -1759,190 +1757,212 @@ async function checkAndSendChatbotResponse(
       return false;
     }
 
-    console.log(`📋 Found ${chatbots.length} active chatbots - all will respond universally`);
+    // Find matching chatbot
+    let matchedChatbot = null;
+    for (const chatbot of chatbots) {
+      const isTriggered = chatbot.triggers.some(trigger => {
+        if (!trigger.trim()) return false;
 
-    // Use the first (highest priority) active chatbot - they're all universal now
-    const chatbot = chatbots[0]; // Take highest priority chatbot
+        const messageToCheck = chatbot.caseSensitive ? messageContent : messageContent.toLowerCase();
+        const triggerToCheck = chatbot.caseSensitive ? trigger : trigger.toLowerCase();
 
-    console.log(`🤖 Using chatbot: ${chatbot.name} (Priority: ${chatbot.priority}) for message: "${messageContent}"`);
+        switch (chatbot.matchType) {
+          case 'exact':
+            return messageToCheck === triggerToCheck;
+          case 'starts_with':
+            return messageToCheck.startsWith(triggerToCheck);
+          case 'ends_with':
+            return messageToCheck.endsWith(triggerToCheck);
+          case 'contains':
+          default:
+            return messageToCheck.includes(triggerToCheck);
+        }
+      });
+
+      if (isTriggered) {
+        matchedChatbot = chatbot;
+        break;
+      }
+    }
+
+    if (!matchedChatbot) {
+      console.log('❌ No chatbot triggers matched');
+      return false;
+    }
+
+    console.log(`🤖 Using chatbot: ${matchedChatbot.name} for message: "${messageContent}"`);
 
     try {
       // Get conversation context if memory is enabled
       let conversationContext: any[] = [];
-      if (chatbot.conversationMemory) {
+      if (matchedChatbot.conversationMemory) {
         const conversation = await Conversation.findOne({ contactId: contact._id });
         if (conversation && conversation.messages.length > 0) {
-          // Get recent messages within memory duration
-          const memoryDurationMs = chatbot.memoryDuration * 60 * 1000;
+          const memoryDurationMs = matchedChatbot.memoryDuration * 60 * 1000;
           const cutoffTime = new Date(Date.now() - memoryDurationMs);
 
-          // Filter messages and get recent context
           const recentMessages = conversation.messages
             .filter(msg => new Date(msg.timestamp) > cutoffTime)
-            .slice(-chatbot.contextWindow * 2) // Get more messages to account for back-and-forth
+            .slice(-matchedChatbot.contextWindow * 2)
             .map(msg => ({
               role: msg.senderId === 'customer' ? 'user' as const : 'assistant' as const,
               content: msg.content
             }));
 
-          // Only keep the last N pairs of user-assistant messages
-          conversationContext = recentMessages.slice(-chatbot.contextWindow);
-
+          conversationContext = recentMessages.slice(-matchedChatbot.contextWindow);
           console.log(`📝 Using ${conversationContext.length} messages for context`);
         }
       }
 
-      // Prepare messages for AI
+      // 🧠 ENHANCED: Search knowledge base if enabled
+      let enhancedSystemPrompt = matchedChatbot.systemPrompt;
+      if (matchedChatbot.knowledgeBase?.enabled && matchedChatbot.knowledgeBase.documents?.length > 0) {
+        console.log(`🔍 Searching knowledge base for: "${messageContent}"`);
+        console.log(`📚 Knowledge base has ${matchedChatbot.knowledgeBase.documents.length} documents`);
+
+        // Filter only processed documents
+        const processedDocs = matchedChatbot.knowledgeBase.documents.filter(
+          (doc: any) => doc.status === 'processed' && doc.processedChunks && doc.processedChunks.length > 0
+        );
+
+        console.log(`📋 ${processedDocs.length} documents are processed and ready for search`);
+
+        if (processedDocs.length > 0) {
+          try {
+            const relevantContent = await KnowledgeBaseService.searchKnowledgeBase(
+              messageContent,
+              processedDocs,
+              matchedChatbot.knowledgeBase.settings?.maxRelevantChunks || 3
+            );
+
+            if (relevantContent.length > 0) {
+              console.log(`📚 Found ${relevantContent.length} relevant knowledge base entries`);
+              enhancedSystemPrompt = KnowledgeBaseService.generateEnhancedSystemPrompt(
+                matchedChatbot.systemPrompt,
+                relevantContent
+              );
+
+              // Log the enhanced prompt length for debugging
+              console.log(`🧠 Enhanced system prompt: ${enhancedSystemPrompt.length} characters`);
+            } else {
+              console.log(`📚 No relevant knowledge base content found for query: "${messageContent}"`);
+            }
+          } catch (kbError) {
+            console.error('❌ Error searching knowledge base:', kbError);
+            // Continue with original prompt if knowledge base search fails
+          }
+        } else {
+          console.log(`⚠️ No processed documents available in knowledge base`);
+        }
+      } else {
+        console.log(`📚 Knowledge base not enabled or no documents available`);
+      }
+
+      // Prepare messages for AI with enhanced system prompt
       const messages = [
-        { role: 'system' as const, content: chatbot.systemPrompt },
+        { role: 'system' as const, content: enhancedSystemPrompt },
         ...conversationContext,
         { role: 'user' as const, content: messageContent }
       ];
 
-      console.log(`🤖 Sending to OpenAI (Universal chatbot):`, messages);
+      console.log(`🤖 Sending to OpenAI with ${enhancedSystemPrompt !== matchedChatbot.systemPrompt ? 'enhanced' : 'standard'} system prompt`);
 
       // Generate AI response
       const aiResponse = await generateChatbotResponse(
         messages,
-        chatbot.aiModel,
-        chatbot.temperature,
-        chatbot.maxTokens
+        matchedChatbot.aiModel,
+        matchedChatbot.temperature,
+        matchedChatbot.maxTokens
       );
 
       // Truncate response if needed
       let responseContent = aiResponse.content;
-      if (chatbot.maxResponseLength && responseContent.length > chatbot.maxResponseLength) {
-        responseContent = responseContent.substring(0, chatbot.maxResponseLength - 3) + '...';
+      if (matchedChatbot.maxResponseLength && responseContent.length > matchedChatbot.maxResponseLength) {
+        responseContent = responseContent.substring(0, matchedChatbot.maxResponseLength - 3) + '...';
       }
 
+      // Get user's company for wallet operations
+      const user = await User.findById(userId).populate('companyId');
+      if (!user || !user.companyId) {
+        console.error('❌ User or company not found for wallet operations');
+        return false;
+      }
 
       console.log(`💰 Checking wallet balance for cost: ₹${aiResponse.cost.toFixed(4)}`);
 
       const walletResult = await WalletService.deductFromWallet(
-        company.companyId,
+        user.companyId,
         aiResponse.cost,
-        `AI Chatbot: ${chatbot.name} - ${aiResponse.tokensUsed} tokens - Message: "${messageContent.substring(0, 50)}..."`,
-        'other', // referenceType
-        chatbot._id, // referenceId - chatbot ID
+        `AI Chatbot: ${matchedChatbot.name} - ${aiResponse.tokensUsed} tokens - Message: "${messageContent.substring(0, 50)}..."`,
+        'other',
+        matchedChatbot._id,
         {
-          chatbotId: chatbot._id,
-          chatbotName: chatbot.name,
+          chatbotId: matchedChatbot._id,
+          chatbotName: matchedChatbot.name,
           contactId: contact._id,
           contactPhone: contact.phone,
           tokensUsed: aiResponse.tokensUsed,
-          aiModel: chatbot.aiModel,
-          messageContent: messageContent.substring(0, 100) // First 100 chars for reference
+          aiModel: matchedChatbot.aiModel,
+          messageContent: messageContent.substring(0, 100),
+          knowledgeBaseUsed: enhancedSystemPrompt !== matchedChatbot.systemPrompt // Track if KB was used
         }
       );
 
       if (!walletResult.success) {
         console.log(`❌ Wallet deduction failed: ${walletResult.error}`);
 
-        // Get current balance for the error message
-        const balanceResult = await WalletService.getWalletBalance(company.companyId);
+        const balanceResult = await WalletService.getWalletBalance(user.companyId);
         const currentBalance = balanceResult.success ? balanceResult.balance : 0;
 
-        // Send low balance notification instead of AI response
         const lowBalanceMessage = `⚠️ Unable to process AI request due to insufficient wallet balance. Please recharge your account to continue using AI features.\n\nCurrent balance: ₹${currentBalance?.toFixed(2) || '0.00'}\nRequired: ₹${aiResponse.cost.toFixed(4)}\n\nContact support to add funds to your wallet.`;
 
         await sendChatbotMessage(contact, lowBalanceMessage, wabaAcc, {
-          ...chatbot,
+          ...matchedChatbot,
           name: 'System Notification'
         });
 
-        return true; // Still return true to prevent other automations
+        return true;
       }
 
       console.log(`💰 Wallet deduction successful. New balance: ₹${walletResult.balance?.toFixed(4)}`);
 
-
-
       // Send the AI response
-      await sendChatbotMessage(contact, responseContent, wabaAcc, chatbot);
+      await sendChatbotMessage(contact, responseContent, wabaAcc, matchedChatbot);
 
       // Update chatbot statistics
-      await Chatbot.findByIdAndUpdate(chatbot._id, {
+      await Chatbot.findByIdAndUpdate(matchedChatbot._id, {
         $inc: {
           usageCount: 1,
           totalTokensUsed: aiResponse.tokensUsed,
-          totalCostINR: aiResponse.cost // Now storing in INR
+          totalCostINR: aiResponse.cost
         },
         lastTriggered: new Date()
       });
 
-      console.log(`✅ Universal chatbot response sent successfully`);
-      console.log(`   Chatbot: ${chatbot.name}`);
+      console.log(`✅ Knowledge-enhanced chatbot response sent successfully`);
+      console.log(`   Chatbot: ${matchedChatbot.name}`);
       console.log(`   Tokens used: ${aiResponse.tokensUsed}`);
-      console.log(`   Cost: $${aiResponse.cost.toFixed(6)}`);
+      console.log(`   Cost: ₹${aiResponse.cost.toFixed(6)}`);
+      console.log(`   Knowledge base used: ${enhancedSystemPrompt !== matchedChatbot.systemPrompt ? 'Yes' : 'No'}`);
 
-      return true; // Return true to indicate chatbot was triggered
+      return true;
 
     } catch (aiError) {
-      console.error(`❌ Error generating AI response for chatbot ${chatbot.name}:`, aiError);
+      console.error(`❌ Error generating AI response for chatbot ${matchedChatbot.name}:`, aiError);
 
       // Send fallback message if enabled
-      if (chatbot.enableFallback && chatbot.fallbackMessage) {
-        await sendChatbotMessage(contact, chatbot.fallbackMessage, wabaAcc, chatbot);
-        console.log(`📤 Fallback message sent for chatbot: ${chatbot.name}`);
+      if (matchedChatbot.enableFallback && matchedChatbot.fallbackMessage) {
+        await sendChatbotMessage(contact, matchedChatbot.fallbackMessage, wabaAcc, matchedChatbot);
+        console.log(`📤 Fallback message sent for chatbot: ${matchedChatbot.name}`);
 
-        // Update statistics even for fallback
-        await Chatbot.findByIdAndUpdate(chatbot._id, {
+        await Chatbot.findByIdAndUpdate(matchedChatbot._id, {
           $inc: { usageCount: 1 },
           lastTriggered: new Date()
         });
 
-        return true; // Still count as triggered
+        return true;
       }
 
-      // If fallback fails, try next chatbot
-      console.log(`⚠️ Trying next chatbot...`);
-
-      // Try the next chatbot in priority order
-      for (let i = 1; i < chatbots.length; i++) {
-        const nextChatbot = chatbots[i];
-        console.log(`🔄 Trying next chatbot: ${nextChatbot.name}`);
-
-        try {
-          // Simple retry with next chatbot
-          const retryMessages = [
-            { role: 'system' as const, content: nextChatbot.systemPrompt },
-            ...conversationContext,
-            { role: 'user' as const, content: messageContent }
-          ];
-
-          const retryResponse = await generateChatbotResponse(
-            retryMessages,
-            nextChatbot.aiModel,
-            nextChatbot.temperature,
-            nextChatbot.maxTokens
-          );
-
-          let retryContent = retryResponse.content;
-          if (nextChatbot.maxResponseLength && retryContent.length > nextChatbot.maxResponseLength) {
-            retryContent = retryContent.substring(0, nextChatbot.maxResponseLength - 3) + '...';
-          }
-
-          await sendChatbotMessage(contact, retryContent, wabaAcc, nextChatbot);
-
-          await Chatbot.findByIdAndUpdate(nextChatbot._id, {
-            $inc: {
-              usageCount: 1,
-              totalTokensUsed: retryResponse.tokensUsed,
-              totalCostINR: retryResponse.cost // Now storing in INR
-            },
-            lastTriggered: new Date()
-          });
-
-          console.log(`✅ Backup chatbot "${nextChatbot.name}" responded successfully`);
-          return true;
-
-        } catch (retryError) {
-          console.error(`❌ Backup chatbot "${nextChatbot.name}" also failed:`, retryError);
-          continue;
-        }
-      }
-
-      console.log(`❌ All chatbots failed to respond`);
       return false;
     }
 
@@ -1951,7 +1971,6 @@ async function checkAndSendChatbotResponse(
     return false;
   }
 }
-
 
 function checkChatbotTriggerMatch(messageContent: string, chatbot: any): boolean {
   // ALL active chatbots respond to ALL messages - no trigger checking needed
