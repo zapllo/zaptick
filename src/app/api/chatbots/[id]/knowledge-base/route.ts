@@ -48,7 +48,7 @@ export async function GET(
   }
 }
 
-export async function POST( 
+export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -91,7 +91,7 @@ export async function POST(
     // Parse form data
     const formData = await req.formData();
     const files = formData.getAll('files') as File[];
-    
+
     if (!files || files.length === 0) {
       return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
@@ -175,10 +175,15 @@ export async function POST(
           continue;
         }
 
+        // In the POST method, update the results.push section:
         results.push({
           ...processedDoc,
           status: 'processed',
-          processedAt: new Date()
+          processedAt: new Date(),
+          // 🔥 ENSURE processedChunks are saved to database
+          processedChunks: processedDoc.processedChunks || [], // Save the actual chunks
+          textPreview: processedDoc.textPreview,
+          processingStats: processedDoc.processingStats
         });
 
         console.log(`✅ Successfully processed: ${file.name}`);

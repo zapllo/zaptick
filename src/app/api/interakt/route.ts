@@ -1780,7 +1780,7 @@ async function checkAndSendChatbotResponse(
           matchedChatbot = chatbot;
           isContinuousMode = false; // This is the initial trigger
           console.log(`🚀 Chatbot "${chatbot.name}" TRIGGERED by: "${messageContent}"`);
-          
+
           // Mark this chatbot as active for this contact
           await setChatbotActiveForContact(chatbot._id, contact._id);
           break;
@@ -1795,23 +1795,23 @@ async function checkAndSendChatbotResponse(
 
     // Check for pause keywords
     if (matchedChatbot.pauseKeywords && matchedChatbot.pauseKeywords.length > 0) {
-      const isPauseKeyword = matchedChatbot.pauseKeywords.some(keyword => 
+      const isPauseKeyword = matchedChatbot.pauseKeywords.some(keyword =>
         messageContent.toLowerCase().includes(keyword.toLowerCase())
       );
 
       if (isPauseKeyword) {
         console.log(`🛑 Chatbot paused by keyword: "${messageContent}"`);
-        
+
         // Remove continuous mode for this contact
         await removeChatbotActiveForContact(matchedChatbot._id, contact._id);
-        
+
         await sendChatbotMessage(
-          contact, 
-          "I'll pause our conversation now. Send a trigger word again to restart our chat!", 
-          wabaAcc, 
+          contact,
+          "I'll pause our conversation now. Send a trigger word again to restart our chat!",
+          wabaAcc,
           matchedChatbot
         );
-        
+
         return true;
       }
     }
@@ -1852,7 +1852,7 @@ async function checkAndSendChatbotResponse(
       // Estimate cost
       const estimatedTokens = Math.min(matchedChatbot.maxTokens || 150, messageContent.length * 2 + 100);
       const estimatedCost = WalletService.calculateCost(estimatedTokens, matchedChatbot.aiModel || 'gpt-3.5-turbo');
-      
+
       console.log(`📊 Estimated cost: ₹${estimatedCost.toFixed(6)} for ~${estimatedTokens} tokens`);
 
       if (currentBalance < estimatedCost) {
@@ -1880,11 +1880,11 @@ async function checkAndSendChatbotResponse(
           const cutoffTime = new Date(Date.now() - memoryDurationMs);
 
           const recentMessages = conversation.messages
-            .filter(msg => 
-              new Date(msg.timestamp) > cutoffTime && 
-              msg.senderId !== 'system' && 
+            .filter(msg =>
+              new Date(msg.timestamp) > cutoffTime &&
+              msg.senderId !== 'system' &&
               msg.messageType !== 'system' &&
-              msg.content && 
+              msg.content &&
               msg.content.trim().length > 0 &&
               !msg.content.startsWith('⚠️') &&
               !msg.content.startsWith('❌') &&
@@ -1901,38 +1901,145 @@ async function checkAndSendChatbotResponse(
         }
       }
 
-      // Search knowledge base if enabled
       let enhancedSystemPrompt = matchedChatbot.systemPrompt;
       if (matchedChatbot.knowledgeBase?.enabled && matchedChatbot.knowledgeBase.documents?.length > 0) {
         console.log(`🔍 Searching knowledge base for: "${messageContent}"`);
-        
-        const processedDocs = matchedChatbot.knowledgeBase.documents.filter(
-          (doc: any) => doc.status === 'processed' && doc.chunks && doc.chunks > 0
-        );
+        console.log(`📚 Knowledge base has ${matchedChatbot.knowledgeBase.documents.length} documents`);
+
+        // 🔥 DEBUG: Log all documents and their status
+        matchedChatbot.knowledgeBase.documents.forEach((doc: any, index: number) => {
+          console.log(`📄 Document ${index + 1}:`);
+          console.log(`   Name: ${doc.originalName || doc.filename}`);
+          console.log(`   Status: ${doc.status}`);
+          console.log(`   Chunks (count): ${doc.chunks || 'undefined'}`);
+          console.log(`   ProcessedChunks (array): ${doc.processedChunks ? doc.processedChunks.length : 'undefined'}`);
+          console.log(`   ProcessedAt: ${doc.processedAt || 'not processed'}`);
+        });
+
+        // 🔥 FIXED: Check for processed status and either processedChunks OR chunks count
+        const processedDocs = matchedChatbot.knowledgeBase.documents.filter((doc: any) => {
+          const isProcessed = doc.status === 'processed';
+          const hasChunks = (doc.processedChunks && doc.processedChunks.length > 0) || (doc.chunks && doc.chunks > 0);
+
+          console.log(`📋 Document "${doc.originalName}": processed=${isProcessed}, hasChunks=${hasChunks}`);
+
+          return isProcessed && hasChunks;
+        });
+
+        console.log(`📋 ${processedDocs.length} documents are processed and ready for search`);
 
         if (processedDocs.length > 0) {
           try {
-            const relevantContent = await KnowledgeBaseService.searchKnowledgeBase(
-              messageContent,
-              processedDocs,
-              matchedChatbot.knowledgeBase.settings?.maxRelevantChunks || 3
+            console.log(`🔍 Calling KnowledgeBaseService.searchKnowledgeBase with ${processedDocs.length} documents`);
+
+            // 🔥 CRITICAL FIX: If processedChunks don't exist, we need to re-process or use fallback
+            const documentsWithChunks = await Promise.all(
+              processedDocs.map(async (doc: any) => {
+                if (doc.processedChunks && doc.processedChunks.length > 0) {
+                  console.log(`✅ Document ${doc.originalName} has processedChunks: ${doc.processedChunks.length}`);
+                  return doc;
+                } else if (doc.chunks > 0 && doc.s3Url) {
+                  console.log(`⚠️ Document ${doc.originalName} missing processedChunks, attempting to re-process...`);
+                  // Try to re-download and re-process the document
+                  try {
+                    const reprocessedDoc = await reprocessDocumentFromS3(doc);
+                    if (reprocessedDoc && reprocessedDoc.processedChunks) {
+                      console.log(`✅ Re-processed ${doc.originalName}: ${reprocessedDoc.processedChunks.length} chunks`);
+
+                      // Update the database with the re-processed chunks
+                      await Chatbot.findOneAndUpdate(
+                        { _id: chatbotId, 'knowledgeBase.documents.id': doc.id },
+                        {
+                          $set: {
+                            'knowledgeBase.documents.$.processedChunks': reprocessedDoc.processedChunks,
+                            'knowledgeBase.documents.$.textPreview': reprocessedDoc.textPreview
+                          }
+                        }
+                      );
+
+                      return { ...doc, processedChunks: reprocessedDoc.processedChunks };
+                    }
+                  } catch (reprocessError) {
+                    console.error(`❌ Failed to re-process ${doc.originalName}:`, reprocessError);
+                  }
+                }
+
+                console.log(`❌ Document ${doc.originalName} has no usable chunks`);
+                return null;
+              })
             );
 
-            if (relevantContent.length > 0) {
-              console.log(`📚 Found ${relevantContent.length} relevant knowledge base entries`);
-              enhancedSystemPrompt = KnowledgeBaseService.generateEnhancedSystemPrompt(
-                matchedChatbot.systemPrompt,
-                relevantContent
+            const validDocs = documentsWithChunks.filter(doc => doc !== null);
+
+            if (validDocs.length === 0) {
+              console.log(`❌ No documents with valid chunks available for search`);
+            } else {
+              const relevantContent = await KnowledgeBaseService.searchKnowledgeBase(
+                messageContent,
+                validDocs,
+                matchedChatbot.knowledgeBase.settings?.maxRelevantChunks || 3
               );
+
+              if (relevantContent.length > 0) {
+                console.log(`📚 Found ${relevantContent.length} relevant knowledge base entries`);
+                enhancedSystemPrompt = KnowledgeBaseService.generateEnhancedSystemPrompt(
+                  matchedChatbot.systemPrompt,
+                  relevantContent
+                );
+                console.log(`🧠 Enhanced system prompt length: ${enhancedSystemPrompt.length} characters`);
+              } else {
+                console.log(`📚 No relevant knowledge base content found for query: "${messageContent}"`);
+              }
             }
           } catch (kbError) {
             console.error('❌ Error searching knowledge base:', kbError);
+            console.error('❌ KB Error stack:', kbError.stack);
           }
+        } else {
+          console.log(`⚠️ No processed documents available in knowledge base`);
+        }
+      } else {
+        console.log(`📚 Knowledge base not enabled or no documents available`);
+      }
+
+      // Add this helper function at the top of the file
+      async function reprocessDocumentFromS3(doc: any) {
+        try {
+          if (!doc.s3Url) {
+            throw new Error('No S3 URL available');
+          }
+
+          console.log(`📥 Re-downloading document from S3: ${doc.s3Url}`);
+
+          // Download file from S3
+          const response = await fetch(doc.s3Url);
+          if (!response.ok) {
+            throw new Error(`Failed to download from S3: ${response.status}`);
+          }
+
+          const fileBuffer = Buffer.from(await response.arrayBuffer());
+
+          // Re-process the document
+          const reprocessed = await KnowledgeBaseService.processDocument(
+            fileBuffer,
+            doc.originalName,
+            doc.fileType,
+            doc.fileSize,
+            {
+              chunkSize: 1000,
+              chunkOverlap: 200
+            }
+          );
+
+          return reprocessed;
+        } catch (error) {
+          console.error('Error re-processing document from S3:', error);
+          return null;
         }
       }
 
       // Create context-aware system prompt
-      const contextPrompt = isContinuousMode 
+      const contextPrompt = isContinuousMode
         ? `${enhancedSystemPrompt}
 
 CONTINUOUS CONVERSATION MODE:
@@ -1976,10 +2083,10 @@ INITIAL CONVERSATION:
 
       if (latestBalance < aiResponse.cost) {
         console.log(`❌ Insufficient balance at deduction: ₹${latestBalance.toFixed(4)} < ₹${aiResponse.cost.toFixed(6)}`);
-        
+
         // Remove continuous mode due to insufficient balance
         await removeChatbotActiveForContact(matchedChatbot._id, contact._id);
-        
+
         const lowBalanceMessage = `⚠️ Unable to complete AI request due to insufficient wallet balance.\n\nCurrent balance: ₹${latestBalance.toFixed(2)}\nRequired: ₹${aiResponse.cost.toFixed(4)}`;
 
         await sendChatbotMessage(contact, lowBalanceMessage, wabaAcc, {
@@ -2051,7 +2158,7 @@ INITIAL CONVERSATION:
       // Send fallback message if enabled
       if (matchedChatbot.enableFallback && matchedChatbot.fallbackMessage) {
         await sendChatbotMessage(contact, matchedChatbot.fallbackMessage, wabaAcc, matchedChatbot);
-        
+
         await Chatbot.findByIdAndUpdate(matchedChatbot._id, {
           $inc: { usageCount: 1 },
           lastTriggered: new Date()
@@ -2079,7 +2186,7 @@ function checkChatbotTriggerMatch(messageContent: string, chatbot: any): boolean
 
   return chatbot.triggers.some((trigger: string) => {
     if (!trigger.trim()) return false;
-    
+
     const triggerText = chatbot.caseSensitive ? trigger : trigger.toLowerCase();
 
     switch (chatbot.matchType) {
@@ -2105,16 +2212,16 @@ async function isChatbotActiveForContact(chatbotId: string, contactId: string): 
 
     // Look for recent chatbot messages (within last 30 minutes)
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    
-    const recentChatbotMessage = conversation.messages.find(msg => 
+
+    const recentChatbotMessage = conversation.messages.find(msg =>
       msg.senderName?.startsWith('AI:') &&
       new Date(msg.timestamp) > thirtyMinutesAgo
     );
 
     const hasRecentActivity = !!recentChatbotMessage;
-    
+
     console.log(`🔍 Checking continuous mode for contact ${contactId}: ${hasRecentActivity ? 'ACTIVE' : 'INACTIVE'}`);
-    
+
     return hasRecentActivity;
   } catch (error) {
     console.error('Error checking chatbot active status:', error);
@@ -2122,7 +2229,7 @@ async function isChatbotActiveForContact(chatbotId: string, contactId: string): 
   }
 }
 
-async function setChatbotActiveForContact(chatbotId: string, contactId: string): Promise<void> {  
+async function setChatbotActiveForContact(chatbotId: string, contactId: string): Promise<void> {
   // This is automatically handled when we send a chatbot message
   // The presence of recent AI messages indicates active conversation
   console.log(`🔄 Chatbot ${chatbotId} is now active for contact ${contactId}`);
@@ -2146,7 +2253,7 @@ async function removeChatbotActiveForContact(chatbotId: string, contactId: strin
       conversation.messages.push(endMessage);
       await conversation.save();
     }
-    
+
     console.log(`🛑 Chatbot ${chatbotId} is no longer active for contact ${contactId}`);
   } catch (error) {
     console.error('Error removing chatbot active status:', error);
