@@ -17,9 +17,10 @@ export interface IUser extends Document {
     isvNameToken: string;
     templateCount?: number;
   }[];
-  role: 'owner' | 'admin' | 'agent'; // Add 'owner' role
+  role: 'owner' | 'admin' | 'agent' | 'superadmin'; // Add 'owner' role
   isActive: boolean;
   isOwner: boolean; // Add owner flag
+  isSuperAdmin: boolean; // Add super admin flag
   lastLoginAt?: Date;
   invitedBy?: mongoose.Types.ObjectId;
   invitedAt?: Date;
@@ -60,10 +61,14 @@ const UserSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['owner', 'admin', 'agent'],
+      enum: ['owner', 'admin', 'agent', 'superadmin'],
       default: 'agent'
     },
     isOwner: {
+      type: Boolean,
+      default: false
+    },
+    isSuperAdmin: {
       type: Boolean,
       default: false
     },

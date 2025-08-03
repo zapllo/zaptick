@@ -39,9 +39,14 @@ export async function POST(req: NextRequest) {
         id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
+        isSuperAdmin: user.isSuperAdmin || user.role === 'superadmin',
+        isOwner: user.isOwner,
+        companyId: user.companyId,
       },
     });
 
+    console.log(response, 'response')
     // Set HTTP-only cookie with the token
     response.cookies.set({
       name: 'token',

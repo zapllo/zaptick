@@ -7,12 +7,16 @@ type User = {
   id: string;
   name: string;
   email: string;
+  role: string;
+  isSuperAdmin: boolean;
+  isOwner: boolean;
+  companyId: string;
 };
 
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   signup: (
     name: string, 
     email: string, 
@@ -54,9 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkUserLoggedIn();
   }, []);
 
-  // Inside the login function:
-  const login = async (email: string, password: string) => {
-    setLoading(true);
+  // Updated login function to return user data for role-based redirection
+  const login = async (email: string, password: string): Promise<User> => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -72,16 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Login failed');
       }
 
-      setUser(data.user);
-      // Use a timeout to let the cookie get set before redirecting
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 100);
+      const userData = data.user;
+      setUser(userData);
+      
+      // Return user data so calling component can handle redirection
+      return userData;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -124,7 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'Signup failed');
       }
 
-      localStorage.setItem('token', data.token);
       setUser(data.user);
       router.push('/signup/whatsapp');
     } catch (error) {
@@ -135,8 +135,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    try {
+      // Call logout API to clear server-side cookie
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
     setUser(null);
     router.push('/login');
   };

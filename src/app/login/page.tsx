@@ -63,10 +63,33 @@ export default function LoginPage() {
 
     try {
       console.log('Attempting login...');
-      await login(email, password);
-      console.log('Login successful, should redirect to dashboard...');
-      // Add explicit redirect here as a backup
-      window.location.href = '/home';
+
+      // Simple login request
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      console.log('Login successful, user data:', data.user);
+
+      // Simple role-based redirect
+      if (data.user.role === 'superadmin') {
+        console.log('Redirecting super admin to admin panel');
+        window.location.href = '/admin/template-rates';
+      } else {
+        console.log('Redirecting regular user to dashboard');
+        window.location.href = '/dashboard';
+      }
+
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || "Failed to login. Please check your credentials.");
@@ -74,6 +97,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-br from-background via-background/95 to-green-50/20 overflow-hidden">
@@ -109,7 +133,7 @@ export default function LoginPage() {
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
           <Link href="/">
             <div className="flex items-center gap-2">
-             <img src='/zapzap.png' className="h-12"/>
+              <img src='/zapzap.png' className="h-12" />
             </div>
           </Link>
         </motion.div>

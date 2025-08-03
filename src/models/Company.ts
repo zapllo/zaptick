@@ -46,6 +46,31 @@ export interface ICompany extends Document {
     profilePictureHandle?: string;
     lastSyncAt?: Date;
   }>;
+ // Template message rates by country and type
+  templateRates: Array<{
+    countryCode: string; // ISO country code (e.g., 'IN', 'US', 'GB')
+    countryName: string; // Human readable country name
+    currency: string; // Currency code (e.g., 'INR', 'USD', 'GBP')
+    rates: {
+      marketing: {
+        interaktPrice: number; // Base price from Interakt
+        marginPercentage: number; // Margin percentage for platform
+        platformPrice: number; // Final price charged to customer
+      };
+      authentication: {
+        interaktPrice: number;
+        marginPercentage: number;
+        platformPrice: number;
+      };
+      utility: {
+        interaktPrice: number;
+        marginPercentage: number;
+        platformPrice: number;
+      };
+    };
+    isActive: boolean; // Whether this country pricing is active
+    lastUpdated: Date;
+  }>;
 }
 
 const CompanySchema = new Schema<ICompany>(
@@ -156,6 +181,89 @@ const CompanySchema = new Schema<ICompany>(
       profilePictureUrl: String,
       profilePictureHandle: String,
       lastSyncAt: Date
+    }],
+     templateRates: [{
+      countryCode: {
+        type: String,
+        required: true,
+        uppercase: true,
+        trim: true
+      },
+      countryName: {
+        type: String,
+        required: true,
+        trim: true
+      },
+      currency: {
+        type: String,
+        required: true,
+        uppercase: true,
+        trim: true
+      },
+      rates: {
+        marketing: {
+          interaktPrice: {
+            type: Number,
+            required: true,
+            min: 0
+          },
+          marginPercentage: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 100
+          },
+          platformPrice: {
+            type: Number,
+            required: true,
+            min: 0
+          }
+        },
+        authentication: {
+          interaktPrice: {
+            type: Number,
+            required: true,
+            min: 0
+          },
+          marginPercentage: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 100
+          },
+          platformPrice: {
+            type: Number,
+            required: true,
+            min: 0
+          }
+        },
+        utility: {
+          interaktPrice: {
+            type: Number,
+            required: true,
+            min: 0
+          },
+          marginPercentage: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 100
+          },
+          platformPrice: {
+            type: Number,
+            required: true,
+            min: 0
+          }
+        }
+      },
+      isActive: {
+        type: Boolean,
+        default: true
+      },
+      lastUpdated: {
+        type: Date,
+        default: Date.now
+      }
     }]
   },
   { timestamps: true }

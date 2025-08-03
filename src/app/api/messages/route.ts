@@ -7,6 +7,7 @@ import Conversation from '@/models/Conversation';
 import { v4 as uuidv4 } from 'uuid';
 import { renderTemplateBody, extractHeaderMedia } from '@/lib/renderTemplate'
 import Template from '@/models/Template';
+import { WalletService } from '@/lib/wallet-service';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -238,12 +239,44 @@ export async function POST(req: NextRequest) {
           const remainingMinutes = Math.ceil((tenMinutesInMs - timeSinceApproval) / (60 * 1000));
 
           return NextResponse.json({
-            error: 'Template recently approved',
+            error: 'Template recently approved, ',
             message: `This template was recently approved and needs to settle in WhatsApp's system. Please wait ${remainingMinutes} more minute(s) before sending.`,
             remainingMinutes,
             approvedAt: template.approvedAt
           }, { status: 429 });
         }
+      }
+
+      // ** NEW: Deduct template cost before sending **
+      if (user.companyId) {
+        const companyId = typeof user.companyId === 'object' ? user.companyId._id.toString() : user.companyId.toString();
+        
+        // Determine template type from template category
+        const templateType = (template.category?.toLowerCase() || 'utility') as 'marketing' | 'authentication' | 'utility';
+        
+        console.log(`💰 Deducting template cost for: ${template.name} (${templateType}) to ${contact.phone}`);
+
+        const costResult = await WalletService.deductForTemplateMessage(
+          companyId,
+          templateType,
+          contact.phone,
+          template.name,
+          undefined, // No campaign ID for individual messages
+          uuidv4()   // Generate message ID for tracking
+        );
+
+        if (!costResult.success) {
+          console.error(`❌ Template cost deduction failed: ${costResult.error}`);
+          return NextResponse.json({
+            error: 'Insufficient wallet balance',
+            message: costResult.error,
+            cost: costResult.cost,
+            countryCode: costResult.countryCode
+          }, { status: 400 });
+        }
+
+        console.log(`✅ Template cost deducted: ₹${costResult.cost} for ${costResult.countryCode}`);
+        console.log(`💰 Remaining balance: ₹${costResult.balance?.toFixed(4)}`);
       }
     }
 
@@ -390,6 +423,17 @@ export async function POST(req: NextRequest) {
 
     if (!responseText || responseText === 'Invalid request' || responseText.startsWith('<!DOCTYPE')) {
       console.error('Invalid response from WhatsApp API:', responseText);
+      
+      // ** NEW: Refund template cost if sending failed **
+      if (messageType === 'template' && user.companyId && template) {
+        await refundTemplateMessageCost(
+          user.companyId,
+          template.name,
+          contact.phone,
+          `Invalid WhatsApp API response: ${responseText}`
+        );
+      }
+      
       return NextResponse.json({
         error: 'Invalid response from WhatsApp API',
         details: `Status: ${interaktResponse.status}, Response: ${responseText}`,
@@ -402,6 +446,17 @@ export async function POST(req: NextRequest) {
       interaktData = JSON.parse(responseText);
     } catch (parseError) {
       console.error('Failed to parse WhatsApp response:', parseError);
+      
+      // ** NEW: Refund template cost if parsing failed **
+      if (messageType === 'template' && user.companyId && template) {
+        await refundTemplateMessageCost(
+          user.companyId,
+          template.name,
+          contact.phone,
+          `JSON parse error: ${parseError}`
+        );
+      }
+      
       return NextResponse.json({
         error: 'Invalid JSON response from WhatsApp API',
         details: responseText,
@@ -411,6 +466,16 @@ export async function POST(req: NextRequest) {
 
     if (!interaktResponse.ok) {
       console.error('WhatsApp API error:', interaktData);
+
+      // ** NEW: Refund template cost if API returned error **
+      if (messageType === 'template' && user.companyId && template) {
+        await refundTemplateMessageCost(
+          user.companyId,
+          template.name,
+          contact.phone,
+          `WhatsApp API error: ${JSON.stringify(interaktData)}`
+        );
+      }
 
       let errorMessage = 'Failed to send message';
       if (interaktData.error?.message) {
@@ -500,5 +565,48 @@ export async function POST(req: NextRequest) {
       error: 'Failed to send message',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  }
+}
+
+// ** NEW: Helper function to refund template cost when sending fails **
+async function refundTemplateMessageCost(
+  companyId: string | any,
+  templateName: string,
+  recipientPhone: string,
+  errorDetails: string
+) {
+  try {
+    const companyIdStr = typeof companyId === 'object' ? companyId._id.toString() : companyId.toString();
+    
+    // Calculate what the cost would have been
+    const templateType = 'utility'; // Default fallback
+    const costResult = await WalletService.calculateTemplateMessageCost(
+      companyIdStr,
+      templateType,
+      recipientPhone
+    );
+
+    if (costResult.success && costResult.cost > 0) {
+      console.log(`🔄 Refunding template cost: ₹${costResult.cost}`);
+
+      await WalletService.addToWallet(
+        companyIdStr,
+        costResult.cost,
+        `Refund: Template send failed - ${templateName} to ${recipientPhone}`,
+        'refund',
+        undefined,
+        {
+          templateName,
+          recipientPhone,
+          errorDetails: errorDetails.substring(0, 500),
+          refundReason: 'template_send_failed'
+        }
+      );
+
+      console.log(`✅ Template cost refunded: ₹${costResult.cost}`);
+    }
+
+  } catch (refundError) {
+    console.error('❌ Error refunding template cost:', refundError);
   }
 }
