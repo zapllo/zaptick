@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
     // Define chatbot limits based on subscription plan
     const planLimits = {
       free: 1,
-      starter: 3,
-      growth: 10,
+      starter: 1,
+      growth: 5,
       advanced: 25,
       enterprise: Infinity
     };

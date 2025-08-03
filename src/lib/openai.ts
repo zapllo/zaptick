@@ -33,7 +33,7 @@ const TOKEN_PRICING_USD = {
 };
 
 // Current USD to INR exchange rate (you can make this dynamic if needed)
-const USD_TO_INR_RATE = 87.5; // Update this periodically or fetch from an API
+const USD_TO_INR_RATE = 160; // Update this periodically or fetch from an API
 
 export async function generateChatbotResponse(
   messages: ChatMessage[],

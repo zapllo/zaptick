@@ -382,6 +382,15 @@ export default function ChatbotsPage() {
         return 'text-blue-600 bg-blue-50 border-blue-200';
     }
   };
+// Add helper function to get model display names
+const getModelDisplayName = (modelValue: string) => {
+  const modelMap: { [key: string]: string } = {
+    'gpt-3.5-turbo': 'Zaptick Smart',
+    'gpt-4': 'Zaptick Pro',
+    'gpt-4-turbo': 'Zaptick Ultra'
+  };
+  return modelMap[modelValue] || modelValue;
+};
 
   return (
     <AutomationsLayout>
@@ -711,9 +720,9 @@ export default function ChatbotsPage() {
                         <CardContent className="space-y-4">
                           <div>
                             <p className="text-sm font-medium text-slate-700 mb-2">AI Model</p>
-                            <Badge variant="outline" className={cn("text-xs", getModelColor(chatbot.aiModel))}>
+                           <Badge variant="outline" className={cn("text-xs", getModelColor(chatbot.aiModel))}>
                               {getModelIcon(chatbot.aiModel)}
-                              <span className="ml-1">{chatbot.aiModel}</span>
+                              <span className="ml-1">{getModelDisplayName(chatbot.aiModel)}</span>
                             </Badge>
                           </div>
 
@@ -817,7 +826,7 @@ export default function ChatbotsPage() {
                                 <TableCell>
                                   <Badge variant="outline" className={cn("text-xs", getModelColor(chatbot.aiModel))}>
                                     {getModelIcon(chatbot.aiModel)}
-                                    <span className="ml-1">{chatbot.aiModel}</span>
+                                    <span className="ml-1">{getModelDisplayName(chatbot.aiModel)}</span>
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
@@ -953,7 +962,7 @@ export default function ChatbotsPage() {
             )}
             {/* View Chatbot Dialog */}
             <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-              <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col p-0">
+              <DialogContent className="h-fit w-full max-w-4xl max-h-screen overflow-y-scroll flex flex-col p-0">
                 {selectedChatbot && (
                   <>
                     <DialogHeader className="px-6 py-4 border-b border-slate-200 flex-shrink-0">
