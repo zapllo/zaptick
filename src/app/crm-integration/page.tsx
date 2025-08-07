@@ -35,18 +35,33 @@ export default function CrmIntegrationSetup() {
 
   const fetchWabaAccounts = async () => {
     try {
-      // Replace with your actual API to get user's WABA accounts
-      const response = await fetch('/api/user/waba-accounts');
+      const response = await fetch('/api/waba-accounts');
       const data = await response.json();
       
-      if (data.success) {
-        setWabaAccounts(data.wabaAccounts || []);
-        if (data.wabaAccounts?.length === 1) {
-          setSelectedWabaId(data.wabaAccounts[0].wabaId);
+      console.log('WABA accounts response:', data); // Debug log
+      
+      if (data.success && data.accounts && data.accounts.length > 0) {
+        setWabaAccounts(data.accounts);
+        // Auto-select the first account
+        if (data.accounts.length > 0) {
+          console.log('Auto-selecting WABA:', data.accounts[0].wabaId); // Debug log
+          setSelectedWabaId(data.accounts[0].wabaId);
         }
+      } else {
+        console.log('No WABA accounts found'); // Debug log
+        toast({
+          title: "No WhatsApp Accounts",
+          description: "Please set up your WhatsApp Business Account first",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error fetching WABA accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch WhatsApp accounts",
+        variant: "destructive",
+      });
     } finally {
       setIsLoadingWabas(false);
     }
@@ -59,6 +74,8 @@ export default function CrmIntegrationSetup() {
       const response = await fetch(`/api/crm-integration?wabaId=${selectedWabaId}`);
       const data = await response.json();
       
+      console.log('Integration status response:', data); // Debug log
+      
       if (data.success && data.integration) {
         setIntegration(data.integration);
         setIsConnected(data.integration.isActive);
@@ -68,6 +85,9 @@ export default function CrmIntegrationSetup() {
       }
     } catch (error) {
       console.error('Error checking integration status:', error);
+      // Don't show error toast, just continue with setup
+      setIntegration(null);
+      setIsConnected(false);
     }
   };
 
@@ -92,6 +112,11 @@ export default function CrmIntegrationSetup() {
 
     setIsLoading(true);
     try {
+      console.log('Attempting to connect with:', { 
+        apiKey: apiKey.substring(0, 10) + '...', 
+        selectedWabaId 
+      }); // Debug log
+      
       const response = await fetch('/api/crm-integration', {
         method: 'POST',
         headers: {
@@ -104,6 +129,7 @@ export default function CrmIntegrationSetup() {
       });
 
       const data = await response.json();
+      console.log('Connection response:', data); // Debug log
 
       if (data.success) {
         setIsConnected(true);
@@ -120,6 +146,7 @@ export default function CrmIntegrationSetup() {
         });
       }
     } catch (error) {
+      console.error('Connection error:', error);
       toast({
         title: "Connection Error",
         description: "Failed to connect to CRM. Please try again.",
@@ -130,143 +157,216 @@ export default function CrmIntegrationSetup() {
     }
   };
 
+  // Debug: Log current state
+  console.log('Current state:', {
+    apiKey: apiKey ? `SET (${apiKey.length} chars)` : 'EMPTY',
+    selectedWabaId,
+    wabaAccountsLength: wabaAccounts.length,
+    isLoadingWabas,
+    isConnected
+  });
+
+  // Calculate if button should be disabled
+  const isButtonDisabled = isLoading || !apiKey.trim() || !selectedWabaId || wabaAccounts.length === 0;
+
   if (isLoadingWabas) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading your WhatsApp accounts...</span>
+      <Layout>
+        <div className="max-w-2xl mx-auto p-6">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading your WhatsApp accounts...</span>
+          </div>
         </div>
-      </div>
+      </Layout>
+    );
+  }
+
+  // If no WABA accounts, show setup message
+  if (wabaAccounts.length === 0) {
+    return (
+      <Layout>
+        <div className="max-w-2xl mx-auto p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>WhatsApp Business Account Required</CardTitle>
+              <CardDescription>
+                You need to set up a WhatsApp Business Account before connecting to CRM
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No WhatsApp Accounts Found</h3>
+                <p className="text-muted-foreground mb-6">
+                  Please set up your WhatsApp Business Account integration first.
+                </p>
+                <Button onClick={() => router.push('/waba-setup')}>
+                  Set Up WhatsApp Account
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
     );
   }
 
   if (isConnected) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
-        <Card>
-       <CardHeader>
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-              <CardTitle>CRM Integration Active</CardTitle>
-            </div>
-            <CardDescription>
-              Your Zaptick account is successfully connected to Zapllo CRM
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span>Status</span>
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                Connected
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>WhatsApp Account</span>
-              <span className="text-sm text-muted-foreground">
-                {wabaAccounts.find(w => w.wabaId === selectedWabaId)?.businessName || selectedWabaId}
-              </span>
-            </div>
-            {integration?.lastSyncAt && (
+      <Layout>
+        <div className="max-w-2xl mx-auto p-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                <CardTitle>CRM Integration Active</CardTitle>
+              </div>
+              <CardDescription>
+                Your Zaptick account is successfully connected to Zapllo CRM
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span>Last Sync</span>
+                <span>Status</span>
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  Connected
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>WhatsApp Account</span>
                 <span className="text-sm text-muted-foreground">
-                  {new Date(integration.lastSyncAt).toLocaleString()}
+                  {wabaAccounts.find(w => w.wabaId === selectedWabaId)?.businessName || 
+                   wabaAccounts.find(w => w.wabaId === selectedWabaId)?.name || 
+                   selectedWabaId}
                 </span>
               </div>
-            )}
-            <div className="pt-4">
-              <Button onClick={() => router.push('/crm-integration/dashboard')} className="w-full">
-                Go to Lead Management
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              {integration?.lastSyncAt && (
+                <div className="flex items-center justify-between">
+                  <span>Last Sync</span>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(integration.lastSyncAt).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              <div className="pt-4">
+                <Button onClick={() => router.push('/crm-integration/dashboard')} className="w-full">
+                  Go to Lead Management
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
     );
   }
 
   return (
     <Layout>
-    <div className="max-w-2xl mx-auto p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Connect to Zapllo CRM</CardTitle>
-          <CardDescription>
-            Integrate your Zaptick WhatsApp contacts with Zapllo CRM to convert conversations into leads
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-blue-900">How to get your CRM API Key</h3>
-                <ol className="mt-2 text-sm text-blue-800 space-y-1">
-                  <li>1. Log in to your Zapllo CRM account</li>
-                  <li>2. Go to Settings → API & Integrations</li>
-                  <li>3. Generate a new API Key with &quot;Read&quot; and &quot;Write&quot; permissions</li>
-                  <li>4. Copy the API key and paste it below</li>
-                </ol>
-                <Button 
-                  variant="link" 
-                  className="h-auto p-0 mt-2 text-blue-700"
-                  onClick={() => window.open('https://crm.zapllo.com/settings/api', '_blank')}
-                >
-                  Open CRM API Settings
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </Button>
+      <div className="max-w-2xl mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Connect to Zapllo CRM</CardTitle>
+            <CardDescription>
+              Integrate your Zaptick WhatsApp contacts with Zapllo CRM to convert conversations into leads
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-900">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-blue-900 dark:text-blue-300">How to get your CRM API Key</h3>
+                  <ol className="mt-2 text-sm text-blue-800 dark:text-blue-400 space-y-1">
+                    <li>1. Log in to your Zapllo CRM account</li>
+                    <li>2. Go to Settings → API & Integrations</li>
+                    <li>3. Generate a new API Key with &quot;Read&quot; and &quot;Write&quot; permissions</li>
+                    <li>4. Copy the API key and paste it below</li>
+                  </ol>
+                  <Button 
+                    variant="link" 
+                    className="h-auto p-0 mt-2 text-blue-700 dark:text-blue-400"
+                    onClick={() => window.open('https://crm.zapllo.com/settings/api', '_blank')}
+                  >
+                    Open CRM API Settings
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* WABA Selection */}
-          {wabaAccounts.length > 1 && (
-            <div className="space-y-2">
-              <Label htmlFor="waba-select">WhatsApp Business Account</Label>
-              <Select value={selectedWabaId} onValueChange={setSelectedWabaId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select WhatsApp account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {wabaAccounts.map((waba) => (
-                    <SelectItem key={waba.wabaId} value={waba.wabaId}>
-                      {waba.businessName || waba.wabaId}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="api-key">CRM API Key</Label>
-            <Input
-              id="api-key"
-              type="password"
-              placeholder="Enter your Zapllo CRM API key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          </div>
-
-          <Button 
-            onClick={handleConnect} 
-            disabled={isLoading || !apiKey.trim() || !selectedWabaId}
-            className="w-full"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              'Connect to CRM'
+            {/* Always show WABA Selection when multiple accounts */}
+            {wabaAccounts.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="waba-select">WhatsApp Business Account</Label>
+                <Select value={selectedWabaId} onValueChange={setSelectedWabaId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select WhatsApp account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wabaAccounts.map((waba) => (
+                      <SelectItem key={waba.wabaId} value={waba.wabaId}>
+                        {waba.businessName || waba.name || waba.wabaId}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+
+            {/* Show selected WABA for single account */}
+            {wabaAccounts.length === 1 && (
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">WhatsApp Account:</span>
+                  <span className="text-sm">
+                    {wabaAccounts[0].businessName || wabaAccounts[0].name || wabaAccounts[0].wabaId}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="api-key">CRM API Key</Label>
+              <Input
+                id="api-key"
+                type="password"
+                placeholder="Enter your Zapllo CRM API key"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+            </div>
+
+            {/* Debug section - remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded text-xs space-y-1 border">
+                <div><strong>Debug Info:</strong></div>
+                <div>Button Disabled: {isButtonDisabled.toString()}</div>
+                <div>Is Loading: {isLoading.toString()}</div>
+                <div>API Key: {apiKey ? `Entered (${apiKey.length} chars)` : 'Empty'}</div>
+                <div>WABA Selected: {selectedWabaId || 'None'}</div>
+                <div>WABA Count: {wabaAccounts.length}</div>
+                <div>WABA IDs: {wabaAccounts.map(w => w.wabaId).join(', ')}</div>
+              </div>
+            )}
+
+            <Button 
+              onClick={handleConnect} 
+              disabled={isButtonDisabled}
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Connect to CRM'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </Layout>
   );
 }
