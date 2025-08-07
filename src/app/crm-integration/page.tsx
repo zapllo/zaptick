@@ -205,7 +205,7 @@ export default function CrmIntegrationSetup() {
                 <ol className="mt-2 text-sm text-blue-800 space-y-1">
                   <li>1. Log in to your Zapllo CRM account</li>
                   <li>2. Go to Settings → API & Integrations</li>
-                  <li>3. Generate a new API Key with "Read" and "Write" permissions</li>
+                  <li>3. Generate a new API Key with &quot;Read&quot; and &quot;Write&quot; permissions</li>
                   <li>4. Copy the API key and paste it below</li>
                 </ol>
                 <Button 
