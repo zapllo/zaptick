@@ -19,54 +19,56 @@ export async function POST(req: NextRequest) {
 
     await dbConnect();
 
-    const { contactId, leadData, pipelineData, wabaId } = await req.json();
+    const body = await req.json();
+    console.log('=== ZAPTICK CREATE LEAD REQUEST ===');
+    console.log('Full request body:', JSON.stringify(body, null, 2));
 
-    // Debug: Log the received data
-    console.log('Received data:', {
-      contactId: contactId ? 'present' : 'missing',
-      leadData: leadData ? Object.keys(leadData) : 'missing',
-      pipelineData: pipelineData ? Object.keys(pipelineData) : 'missing',
-      wabaId: wabaId ? 'present' : 'missing'
-    });
+    const { contactId, leadData, pipelineData, wabaId } = body;
+
+    // Detailed validation with logging
+    console.log('Field validation:');
+    console.log('- contactId:', contactId ? `present (${contactId})` : 'MISSING');
+    console.log('- leadData:', leadData ? `present (${JSON.stringify(leadData)})` : 'MISSING');
+    console.log('- pipelineData:', pipelineData ? `present (${JSON.stringify(pipelineData)})` : 'MISSING');
+    console.log('- wabaId:', wabaId ? `present (${wabaId})` : 'MISSING');
 
     if (!contactId || !leadData || !pipelineData || !wabaId) {
-      return NextResponse.json(
-        { 
-          error: "Missing required fields",
-          details: {
-            contactId: !contactId ? 'missing' : 'present',
-            leadData: !leadData ? 'missing' : 'present',
-            pipelineData: !pipelineData ? 'missing' : 'present',
-            wabaId: !wabaId ? 'missing' : 'present'
-          }
+      const error = {
+        error: "Missing required fields in Zaptick",
+        details: {
+          contactId: !contactId ? 'missing' : 'present',
+          leadData: !leadData ? 'missing' : 'present',
+          pipelineData: !pipelineData ? 'missing' : 'present',
+          wabaId: !wabaId ? 'missing' : 'present'
         },
-        { status: 400 }
-      );
+        receivedBody: body
+      };
+      console.log('VALIDATION FAILED:', error);
+      return NextResponse.json(error, { status: 400 });
     }
 
     // Validate leadData required fields
     if (!leadData.title || !leadData.stage) {
-      return NextResponse.json(
-        { 
-          error: "Missing required lead fields",
-          details: {
-            title: !leadData.title ? 'missing' : 'present',
-            stage: !leadData.stage ? 'missing' : 'present'
-          }
+      const error = {
+        error: "Missing required lead fields in Zaptick",
+        details: {
+          title: !leadData.title ? 'missing' : `present (${leadData.title})`,
+          stage: !leadData.stage ? 'missing' : `present (${leadData.stage})`
         },
-        { status: 400 }
-      );
+        receivedLeadData: leadData
+      };
+      console.log('LEAD DATA VALIDATION FAILED:', error);
+      return NextResponse.json(error, { status: 400 });
     }
 
     // Validate pipelineData required fields
     if (!pipelineData.name) {
-      return NextResponse.json(
-        { 
-          error: "Missing pipeline name",
-          received: pipelineData
-        },
-        { status: 400 }
-      );
+      const error = {
+        error: "Missing pipeline name in Zaptick",
+        receivedPipelineData: pipelineData
+      };
+      console.log('PIPELINE DATA VALIDATION FAILED:', error);
+      return NextResponse.json(error, { status: 400 });
     }
 
     // Verify user has access to this WABA
@@ -94,6 +96,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    console.log('Integration found:', {
+      id: integration._id,
+      crmBaseUrl: integration.crmBaseUrl,
+      hasApiKey: !!integration.crmApiKey
+    });
+
     // Get contact details
     const contact = await Contact.findOne({ 
       _id: contactId, 
@@ -108,13 +116,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    console.log('Contact found:', {
+      id: contact._id,
+      name: contact.name,
+      phone: contact.phone,
+      email: contact.email
+    });
+
     // Ensure we have a valid closeDate
     let closeDate = leadData.closeDate;
     if (!closeDate) {
-      // Default to 30 days from now
       closeDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     } else if (typeof closeDate === 'string' && !closeDate.includes('T')) {
-      // If it's just a date string, convert to full ISO string
       closeDate = new Date(closeDate + 'T12:00:00.000Z').toISOString();
     }
 
@@ -128,8 +141,7 @@ export async function POST(req: NextRequest) {
         closeDate: closeDate,
         remarks: leadData.remarks || `Lead created from Zaptick WhatsApp conversation with ${contact.name}. Original contact phone: ${contact.phone}`,
         source: leadData.source || 'WhatsApp - Zaptick',
-        // Add any other fields that might be required by the CRM
-        assignedTo: null, // Will be handled by CRM to assign to admin user
+        assignedTo: null,
         customFieldValues: {}
       },
       contactData: {
@@ -145,7 +157,6 @@ export async function POST(req: NextRequest) {
         openStages: pipelineData.openStages || [],
         closeStages: pipelineData.closeStages || []
       },
-      // Add metadata about the source
       sourceMetadata: {
         platform: 'Zaptick',
         wabaId: wabaId,
@@ -154,13 +165,9 @@ export async function POST(req: NextRequest) {
       }
     };
 
-    console.log('Sending to CRM:', {
-      url: `${integration.crmBaseUrl}/api/webhooks/zaptick-leads`,
-      hasApiKey: !!integration.crmApiKey,
-      leadTitle: crmData.leadData.title,
-      contactName: crmData.contactData.name,
-      pipelineName: crmData.pipelineData.name
-    });
+    console.log('=== SENDING TO CRM ===');
+    console.log('URL:', `${integration.crmBaseUrl}/api/webhooks/zaptick-leads`);
+    console.log('Data being sent:', JSON.stringify(crmData, null, 2));
 
     // Send to CRM
     const response = await fetch(`${integration.crmBaseUrl}/api/webhooks/zaptick-leads`, {
@@ -173,7 +180,9 @@ export async function POST(req: NextRequest) {
     });
 
     const responseText = await response.text();
-    console.log('CRM Response:', response.status, responseText);
+    console.log('=== CRM RESPONSE ===');
+    console.log('Status:', response.status);
+    console.log('Response text:', responseText);
 
     if (!response.ok) {
       let errorData;
@@ -183,11 +192,12 @@ export async function POST(req: NextRequest) {
         errorData = { error: responseText };
       }
       
-      console.error('CRM Error:', errorData);
+      console.error('CRM Error Response:', errorData);
       return NextResponse.json(
         { 
           error: errorData.error || "Failed to create lead in CRM",
-          details: errorData.details || responseText,
+          details: errorData.details || errorData,
+          crmResponse: responseText,
           status: response.status
         },
         { status: response.status }
@@ -198,13 +208,16 @@ export async function POST(req: NextRequest) {
     try {
       result = JSON.parse(responseText);
     } catch (e) {
-      result = { message: 'Lead created but response parsing failed' };
+      result = { message: 'Lead created but response parsing failed', rawResponse: responseText };
     }
 
     // Update integration last sync time
     await CrmIntegration.findByIdAndUpdate(integration._id, {
       lastSyncAt: new Date()
     });
+
+    console.log('=== SUCCESS ===');
+    console.log('Lead created successfully');
 
     return NextResponse.json({
       success: true,
@@ -214,7 +227,10 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error creating lead in CRM:', error);
+    console.error('=== ERROR IN ZAPTICK CREATE LEAD ===');
+    console.error('Error:', error);
+    console.error('Stack:', error.stack);
+    
     return NextResponse.json(
       { 
         error: "Failed to create lead in CRM",

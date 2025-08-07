@@ -15,9 +15,16 @@ interface CreateLeadModalProps {
   onOpenChange: (open: boolean) => void;
   contact: any;
   wabaId: string;
+  onLeadCreated?: () => void;
 }
 
-export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }: CreateLeadModalProps) {
+export default function CreateLeadModal({ 
+  open, 
+  onOpenChange, 
+  contact, 
+  wabaId, 
+  onLeadCreated 
+}: CreateLeadModalProps) {
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [selectedPipeline, setSelectedPipeline] = useState<any>(null);
   const [leadData, setLeadData] = useState({
@@ -34,13 +41,17 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) {
+    if (open && contact) {
+      console.log('Modal opened with contact:', contact);
+      console.log('WABA ID:', wabaId);
+      
       fetchPipelines();
+      
       // Set default title and description
       setLeadData(prev => ({
         ...prev,
         title: `Lead for ${contact?.name || 'Contact'}`,
-        description: `Potential lead from WhatsApp conversation with ${contact?.name || 'contact'}`
+        description: `Potential lead from WhatsApp conversation with ${contact?.name || 'contact'}.`
       }));
     }
   }, [open, contact]);
@@ -48,16 +59,24 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
   const fetchPipelines = async () => {
     setIsLoadingPipelines(true);
     try {
+      console.log('Fetching pipelines for WABA:', wabaId);
       const response = await fetch(`/api/crm-integration/pipelines?wabaId=${wabaId}`);
       const data = await response.json();
       
-      if (data.success) {
+      console.log('Pipelines response:', data);
+      
+      if (data.success && data.pipelines) {
         setPipelines(data.pipelines);
         if (data.pipelines.length > 0) {
-          setSelectedPipeline(data.pipelines[0]);
+          const defaultPipeline = data.pipelines[0];
+          console.log('Setting default pipeline:', defaultPipeline);
+          setSelectedPipeline(defaultPipeline);
+          
+          const defaultStage = defaultPipeline.openStages?.[0]?.name || '';
+          console.log('Setting default stage:', defaultStage);
           setLeadData(prev => ({
             ...prev,
-            stage: data.pipelines[0].openStages?.[0]?.name || ''
+            stage: defaultStage
           }));
         }
       } else {
@@ -68,6 +87,7 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
         });
       }
     } catch (error) {
+      console.error('Error fetching pipelines:', error);
       toast({
         title: "Error",
         description: "Failed to fetch pipelines",
@@ -79,15 +99,29 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
   };
 
   const handlePipelineChange = (pipelineId: string) => {
+    console.log('Pipeline changed to ID:', pipelineId);
     const pipeline = pipelines.find(p => p.id === pipelineId);
+    console.log('Found pipeline:', pipeline);
+    
     setSelectedPipeline(pipeline);
+    
+    const defaultStage = pipeline?.openStages?.[0]?.name || '';
+    console.log('Setting new default stage:', defaultStage);
+    
     setLeadData(prev => ({
       ...prev,
-      stage: pipeline?.openStages?.[0]?.name || ''
+      stage: defaultStage
     }));
   };
 
   const handleCreateLead = async () => {
+    console.log('=== CREATE LEAD CLICKED ===');
+    console.log('Current form data:', leadData);
+    console.log('Selected pipeline:', selectedPipeline);
+    console.log('Contact:', contact);
+    console.log('WABA ID:', wabaId);
+
+    // Validation
     if (!leadData.title.trim()) {
       toast({
         title: "Title Required",
@@ -106,37 +140,87 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
       return;
     }
 
+    if (!leadData.stage) {
+      toast({
+        title: "Stage Required",
+        description: "Please select a stage",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!contact?._id) {
+      toast({
+        title: "Contact Error",
+        description: "Contact information is missing",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!wabaId) {
+      toast({
+        title: "WABA Error",
+        description: "WhatsApp Business Account ID is missing",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
+    
     try {
+      // Prepare the request payload
+      const payload = {
+        contactId: contact._id,
+        leadData: {
+          title: leadData.title,
+          description: leadData.description || `Lead for ${contact.name} from WhatsApp conversation`,
+          amount: parseFloat(leadData.amount) || 0,
+          stage: leadData.stage,
+          closeDate: leadData.closeDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          remarks: leadData.remarks || `Lead created from Zaptick WhatsApp conversation with ${contact.name}`,
+          source: leadData.source || 'WhatsApp - Zaptick'
+        },
+        pipelineData: {
+          name: selectedPipeline.name,
+          openStages: selectedPipeline.openStages || [],
+          closeStages: selectedPipeline.closeStages || []
+        },
+        wabaId: wabaId
+      };
+
+      console.log('=== SENDING PAYLOAD ===');
+      console.log('Payload:', JSON.stringify(payload, null, 2));
+
       const response = await fetch('/api/crm-integration/create-lead', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contactId: contact._id,
-          leadData: {
-            ...leadData,
-            amount: parseFloat(leadData.amount) || 0,
-            closeDate: leadData.closeDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          pipelineData: {
-            name: selectedPipeline.name,
-            openStages: selectedPipeline.openStages,
-            closeStages: selectedPipeline.closeStages
-          },
-          wabaId
-        })
+        body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log('=== RESPONSE RECEIVED ===');
+      console.log('Status:', response.status);
+      console.log('Response text:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse response:', e);
+        throw new Error(`Invalid JSON response: ${responseText}`);
+      }
 
       if (data.success) {
         toast({
-          title: "Lead Created",
-          description: `Lead "${leadData.title}" has been created in your CRM`
+          title: "Success!",
+          description: `Lead "${leadData.title}" has been created in your CRM`,
         });
         onOpenChange(false);
+        
         // Reset form
         setLeadData({
           title: '',
@@ -147,17 +231,25 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
           remarks: '',
           source: 'WhatsApp - Zaptick'
         });
+        setSelectedPipeline(null);
+        
+        // Call callback if provided
+        if (onLeadCreated) {
+          onLeadCreated();
+        }
       } else {
+        console.error('Lead creation failed:', data);
         toast({
           title: "Failed to Create Lead",
           description: data.error || "An error occurred while creating the lead",
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error in handleCreateLead:', error);
       toast({
         title: "Error",
-        description: "Failed to create lead in CRM",
+        description: error.message || "Failed to create lead in CRM",
         variant: "destructive"
       });
     } finally {
@@ -178,6 +270,31 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
     );
   }
 
+  if (pipelines.length === 0) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>No Pipelines Available</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">
+              You need to create at least one pipeline in your CRM before creating leads.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => window.open('https://crm.zapllo.com/pipelines', '_blank')}>
+                Create Pipeline in CRM
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -189,10 +306,25 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Contact Info Display */}
+          <div className="bg-muted/50 p-3 rounded-md">
+            <h4 className="font-medium text-sm mb-2">Contact Information</h4>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p><strong>Name:</strong> {contact?.name}</p>
+              <p><strong>Phone:</strong> {contact?.phone}</p>
+              {contact?.email && <p><strong>Email:</strong> {contact.email}</p>}
+              <p className="text-xs"><strong>Contact ID:</strong> {contact?._id}</p>
+              <p className="text-xs"><strong>WABA ID:</strong> {wabaId}</p>
+            </div>
+          </div>
+
           {/* Pipeline Selection */}
           <div className="space-y-2">
-            <Label htmlFor="pipeline">Pipeline</Label>
-            <Select value={selectedPipeline?.id || ''} onValueChange={handlePipelineChange}>
+            <Label htmlFor="pipeline">Pipeline *</Label>
+            <Select 
+              value={selectedPipeline?.id || ''} 
+              onValueChange={handlePipelineChange}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select a pipeline" />
               </SelectTrigger>
@@ -209,8 +341,14 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
           {/* Stage Selection */}
           {selectedPipeline && (
             <div className="space-y-2">
-              <Label htmlFor="stage">Stage</Label>
-              <Select value={leadData.stage} onValueChange={(value) => setLeadData(prev => ({ ...prev, stage: value }))}>
+              <Label htmlFor="stage">Stage *</Label>
+              <Select 
+                value={leadData.stage} 
+                onValueChange={(value) => {
+                  console.log('Stage changed to:', value);
+                  setLeadData(prev => ({ ...prev, stage: value }));
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a stage" />
                 </SelectTrigger>
@@ -297,15 +435,15 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
             />
           </div>
 
-          {/* Contact Info Display */}
-          <div className="bg-muted/50 p-3 rounded-md">
-            <h4 className="font-medium text-sm mb-2">Contact Information</h4>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p><strong>Name:</strong> {contact?.name}</p>
-              <p><strong>Phone:</strong> {contact?.phone}</p>
-              {contact?.email && <p><strong>Email:</strong> {contact.email}</p>}
+          {/* Debug Info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-gray-100 p-2 rounded text-xs">
+              <strong>Debug:</strong>
+              <div>Pipeline: {selectedPipeline?.name || 'None'}</div>
+              <div>Stage: {leadData.stage || 'None'}</div>
+              <div>Title: {leadData.title || 'Empty'}</div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -318,7 +456,7 @@ export default function CreateLeadModal({ open, onOpenChange, contact, wabaId }:
           </Button>
           <Button
             onClick={handleCreateLead}
-            disabled={isLoading || !leadData.title.trim() || !selectedPipeline}
+            disabled={isLoading || !leadData.title.trim() || !selectedPipeline || !leadData.stage}
             className="flex-1"
           >
             {isLoading ? (
