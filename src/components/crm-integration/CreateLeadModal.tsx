@@ -184,7 +184,7 @@ export default function CreateLeadModal({
           stage: leadData.stage,
           closeDate: leadData.closeDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           remarks: leadData.remarks || `Lead created from Zaptick WhatsApp conversation with ${contact.name}`,
-          source: leadData.source || 'WhatsApp - Zaptick'
+          source: leadData.source || 'Zaptick'
         },
         pipelineData: {
           name: selectedPipeline.name,
