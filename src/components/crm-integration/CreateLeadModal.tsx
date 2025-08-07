@@ -18,12 +18,12 @@ interface CreateLeadModalProps {
   onLeadCreated?: () => void;
 }
 
-export default function CreateLeadModal({ 
-  open, 
-  onOpenChange, 
-  contact, 
-  wabaId, 
-  onLeadCreated 
+export default function CreateLeadModal({
+  open,
+  onOpenChange,
+  contact,
+  wabaId,
+  onLeadCreated
 }: CreateLeadModalProps) {
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [selectedPipeline, setSelectedPipeline] = useState<any>(null);
@@ -44,9 +44,9 @@ export default function CreateLeadModal({
     if (open && contact) {
       console.log('Modal opened with contact:', contact);
       console.log('WABA ID:', wabaId);
-      
+
       fetchPipelines();
-      
+
       // Set default title and description
       setLeadData(prev => ({
         ...prev,
@@ -62,16 +62,16 @@ export default function CreateLeadModal({
       console.log('Fetching pipelines for WABA:', wabaId);
       const response = await fetch(`/api/crm-integration/pipelines?wabaId=${wabaId}`);
       const data = await response.json();
-      
+
       console.log('Pipelines response:', data);
-      
+
       if (data.success && data.pipelines) {
         setPipelines(data.pipelines);
         if (data.pipelines.length > 0) {
           const defaultPipeline = data.pipelines[0];
           console.log('Setting default pipeline:', defaultPipeline);
           setSelectedPipeline(defaultPipeline);
-          
+
           const defaultStage = defaultPipeline.openStages?.[0]?.name || '';
           console.log('Setting default stage:', defaultStage);
           setLeadData(prev => ({
@@ -102,12 +102,12 @@ export default function CreateLeadModal({
     console.log('Pipeline changed to ID:', pipelineId);
     const pipeline = pipelines.find(p => p.id === pipelineId);
     console.log('Found pipeline:', pipeline);
-    
+
     setSelectedPipeline(pipeline);
-    
+
     const defaultStage = pipeline?.openStages?.[0]?.name || '';
     console.log('Setting new default stage:', defaultStage);
-    
+
     setLeadData(prev => ({
       ...prev,
       stage: defaultStage
@@ -120,6 +120,10 @@ export default function CreateLeadModal({
     console.log('Selected pipeline:', selectedPipeline);
     console.log('Contact:', contact);
     console.log('WABA ID:', wabaId);
+
+    // Get the contact ID - handle both _id and id formats
+    const contactId = contact?._id || contact?.id;
+    console.log('Contact ID to use:', contactId);
 
     // Validation
     if (!leadData.title.trim()) {
@@ -149,10 +153,10 @@ export default function CreateLeadModal({
       return;
     }
 
-    if (!contact?._id) {
+    if (!contactId) {
       toast({
         title: "Contact Error",
-        description: "Contact information is missing",
+        description: "Contact ID is missing",
         variant: "destructive"
       });
       return;
@@ -168,11 +172,11 @@ export default function CreateLeadModal({
     }
 
     setIsLoading(true);
-    
+
     try {
       // Prepare the request payload
       const payload = {
-        contactId: contact._id,
+        contactId: contactId, // Use the resolved contact ID
         leadData: {
           title: leadData.title,
           description: leadData.description || `Lead for ${contact.name} from WhatsApp conversation`,
@@ -220,7 +224,7 @@ export default function CreateLeadModal({
           description: `Lead "${leadData.title}" has been created in your CRM`,
         });
         onOpenChange(false);
-        
+
         // Reset form
         setLeadData({
           title: '',
@@ -232,7 +236,7 @@ export default function CreateLeadModal({
           source: 'WhatsApp - Zaptick'
         });
         setSelectedPipeline(null);
-        
+
         // Call callback if provided
         if (onLeadCreated) {
           onLeadCreated();
@@ -321,8 +325,8 @@ export default function CreateLeadModal({
           {/* Pipeline Selection */}
           <div className="space-y-2">
             <Label htmlFor="pipeline">Pipeline *</Label>
-            <Select 
-              value={selectedPipeline?.id || ''} 
+            <Select
+              value={selectedPipeline?.id || ''}
               onValueChange={handlePipelineChange}
             >
               <SelectTrigger>
@@ -342,8 +346,8 @@ export default function CreateLeadModal({
           {selectedPipeline && (
             <div className="space-y-2">
               <Label htmlFor="stage">Stage *</Label>
-              <Select 
-                value={leadData.stage} 
+              <Select
+                value={leadData.stage}
                 onValueChange={(value) => {
                   console.log('Stage changed to:', value);
                   setLeadData(prev => ({ ...prev, stage: value }));
@@ -356,8 +360,8 @@ export default function CreateLeadModal({
                   {selectedPipeline.openStages?.map((stage: any) => (
                     <SelectItem key={stage.name} value={stage.name}>
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
+                        <div
+                          className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: stage.color }}
                         />
                         {stage.name}
