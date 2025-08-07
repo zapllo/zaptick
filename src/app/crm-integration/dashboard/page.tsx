@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ExternalLink, 
@@ -17,21 +18,35 @@ import {
   Settings,
   RefreshCw,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Phone,
+  Mail,
+  MessageCircle,
+  Plus,
+  Filter
 } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
+import CreateLeadModal from '@/components/crm-integration/CreateLeadModal';
 
 export default function CrmIntegrationDashboard() {
   const [selectedWabaId, setSelectedWabaId] = useState('');
   const [wabaAccounts, setWabaAccounts] = useState<any[]>([]);
   const [integration, setIntegration] = useState<any>(null);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [stats, setStats] = useState<any>({
     totalLeads: 0,
     recentLeads: [],
-    pipelines: []
+    pipelines: [],
+    totalContacts: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingWabas, setIsLoadingWabas] = useState(true);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [isLoadingPipelines, setIsLoadingPipelines] = useState(false);
   const { toast } = useToast();
 
@@ -42,24 +57,34 @@ export default function CrmIntegrationDashboard() {
   useEffect(() => {
     if (selectedWabaId) {
       fetchDashboardData();
+      fetchContacts();
     }
   }, [selectedWabaId]);
+
+  useEffect(() => {
+    // Filter contacts based on search term
+    if (searchTerm.trim()) {
+      const filtered = contacts.filter(contact =>
+        contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.phone.includes(searchTerm) ||
+        (contact.email && contact.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredContacts(filtered);
+    } else {
+      setFilteredContacts(contacts);
+    }
+  }, [searchTerm, contacts]);
 
   const fetchWabaAccounts = async () => {
     try {
       const response = await fetch('/api/waba-accounts');
       const data = await response.json();
       
-      console.log('WABA accounts response:', data); // Debug log
-      
       if (data.success && data.accounts && data.accounts.length > 0) {
         setWabaAccounts(data.accounts);
-        // Auto-select the first account if only one exists
         if (data.accounts.length === 1) {
           setSelectedWabaId(data.accounts[0].wabaId);
         }
-      } else {
-        console.log('No WABA accounts found'); // Debug log
       }
     } catch (error) {
       console.error('Error fetching WABA accounts:', error);
@@ -73,6 +98,30 @@ export default function CrmIntegrationDashboard() {
     }
   };
 
+  const fetchContacts = async () => {
+    if (!selectedWabaId) return;
+    
+    try {
+      setIsLoadingContacts(true);
+      const response = await fetch(`/api/contacts?wabaId=${selectedWabaId}`);
+      const data = await response.json();
+      
+      if (data.success && data.contacts) {
+        setContacts(data.contacts);
+        setStats(prev => ({ ...prev, totalContacts: data.contacts.length }));
+      }
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch contacts",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+
   const fetchDashboardData = async () => {
     if (!selectedWabaId) return;
     
@@ -82,8 +131,6 @@ export default function CrmIntegrationDashboard() {
       // Fetch integration status
       const integrationResponse = await fetch(`/api/crm-integration?wabaId=${selectedWabaId}`);
       const integrationData = await integrationResponse.json();
-      
-      console.log('Integration data:', integrationData); // Debug log
       
       if (integrationData.success && integrationData.integration) {
         setIntegration(integrationData.integration);
@@ -95,18 +142,11 @@ export default function CrmIntegrationDashboard() {
             const pipelinesResponse = await fetch(`/api/crm-integration/pipelines?wabaId=${selectedWabaId}`);
             const pipelinesData = await pipelinesResponse.json();
             
-            console.log('Pipelines data:', pipelinesData); // Debug log
-            
             if (pipelinesData.success) {
               setStats(prev => ({ ...prev, pipelines: pipelinesData.pipelines }));
             }
           } catch (pipelineError) {
             console.error('Error fetching pipelines:', pipelineError);
-            toast({
-              title: "Warning",
-              description: "Failed to load pipelines from CRM",
-              variant: "destructive"
-            });
           } finally {
             setIsLoadingPipelines(false);
           }
@@ -126,7 +166,7 @@ export default function CrmIntegrationDashboard() {
     }
   };
 
-  const refreshIntegration = async () => {
+  const refreshData = async () => {
     if (!selectedWabaId) {
       toast({
         title: "No Account Selected",
@@ -136,17 +176,42 @@ export default function CrmIntegrationDashboard() {
       return;
     }
     
-    await fetchDashboardData();
+    await Promise.all([fetchDashboardData(), fetchContacts()]);
     toast({
       title: "Refreshed",
-      description: "Integration data has been refreshed"
+      description: "Data has been refreshed"
     });
   };
 
   const handleWabaChange = (wabaId: string) => {
     setSelectedWabaId(wabaId);
     setIntegration(null);
-    setStats({ totalLeads: 0, recentLeads: [], pipelines: [] });
+    setContacts([]);
+    setFilteredContacts([]);
+    setStats({ totalLeads: 0, recentLeads: [], pipelines: [], totalContacts: 0 });
+  };
+
+  const handleCreateLead = (contact: any) => {
+    if (!integration || !integration.isActive) {
+      toast({
+        title: "Integration Required",
+        description: "Please set up CRM integration first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setSelectedContact(contact);
+    setIsLeadModalOpen(true);
+  };
+
+  const onLeadCreated = () => {
+    toast({
+      title: "Lead Created",
+      description: "Contact has been successfully converted to a lead",
+    });
+    // Refresh data to update stats
+    fetchDashboardData();
   };
 
   if (isLoadingWabas) {
@@ -162,7 +227,6 @@ export default function CrmIntegrationDashboard() {
     );
   }
 
-  // If no WABA accounts, show setup message
   if (wabaAccounts.length === 0) {
     return (
       <Layout>
@@ -192,7 +256,6 @@ export default function CrmIntegrationDashboard() {
     );
   }
 
-  // Show WABA selection if multiple accounts and none selected
   if (wabaAccounts.length > 1 && !selectedWabaId) {
     return (
       <Layout>
@@ -290,7 +353,7 @@ export default function CrmIntegrationDashboard() {
           <div>
             <h1 className="text-3xl font-bold">CRM Integration</h1>
             <p className="text-muted-foreground">
-              Manage your Zapllo CRM integration and convert WhatsApp contacts to leads
+              Convert your WhatsApp contacts into CRM leads
             </p>
             {selectedWabaAccount && (
               <p className="text-sm text-muted-foreground mt-1">
@@ -313,7 +376,7 @@ export default function CrmIntegrationDashboard() {
                 </SelectContent>
               </Select>
             )}
-            <Button variant="outline" onClick={refreshIntegration} disabled={!selectedWabaId}>
+            <Button variant="outline" onClick={refreshData} disabled={!selectedWabaId}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -346,6 +409,25 @@ export default function CrmIntegrationDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">WhatsApp Contacts</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isLoadingContacts ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  stats.totalContacts
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ready to convert to leads
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Available Pipelines</CardTitle>
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -358,20 +440,7 @@ export default function CrmIntegrationDashboard() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Ready for lead creation
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">--</div>
-              <p className="text-xs text-muted-foreground">
-                WhatsApp contacts
+                CRM pipelines available
               </p>
             </CardContent>
           </Card>
@@ -390,12 +459,137 @@ export default function CrmIntegrationDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="pipelines" className="space-y-4">
+        <Tabs defaultValue="contacts" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="contacts">Contacts</TabsTrigger>
             <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
             <TabsTrigger value="recent-leads">Recent Leads</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="contacts" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>WhatsApp Contacts</CardTitle>
+                    <CardDescription>
+                      Convert your WhatsApp contacts into CRM leads
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        placeholder="Search contacts..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-64"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingContacts ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin mr-2" />
+                    <span>Loading contacts...</span>
+                  </div>
+                ) : filteredContacts.length > 0 ? (
+                  <div className="space-y-4">
+                    {filteredContacts.map((contact) => (
+                      <div key={contact._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-1">
+                                <h3 className="font-medium text-lg">{contact.name}</h3>
+                                <div className="flex items-center space-x-4 mt-1">
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <Phone className="h-4 w-4 mr-1" />
+                                    {contact.phone}
+                                  </div>
+                                  {contact.email && (
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Mail className="h-4 w-4 mr-1" />
+                                      {contact.email}
+                                    </div>
+                                  )}
+                                </div>
+                                {contact.lastMessageAt && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Last message: {new Date(contact.lastMessageAt).toLocaleString()}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {contact.tags?.length > 0 && (
+                                  <div className="flex gap-1">
+                                    {contact.tags.slice(0, 2).map((tag: string, index: number) => (
+                                      <Badge key={index} variant="secondary" className="text-xs">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {contact.tags.length > 2 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        +{contact.tags.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                                <Badge variant={contact.isActive ? "default" : "secondary"}>
+                                  {contact.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            {contact.notes && (
+                              <p className="text-sm text-muted-foreground mt-2 bg-muted/50 p-2 rounded">
+                                {contact.notes}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center space-x-2 ml-4">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {/* Navigate to chat */}}
+                            >
+                              <MessageCircle className="h-4 w-4 mr-1" />
+                              View Chat
+                            </Button>
+                            <Button 
+                              size="sm"
+                              onClick={() => handleCreateLead(contact)}
+                              disabled={!integration?.isActive}
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Create Lead
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">
+                      {searchTerm ? 'No contacts found' : 'No contacts available'}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {searchTerm 
+                        ? 'Try adjusting your search terms' 
+                        : 'Start conversations on WhatsApp to see contacts here'
+                      }
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="pipelines" className="space-y-4">
             <Card>
@@ -451,8 +645,8 @@ export default function CrmIntegrationDashboard() {
                                       style={{ backgroundColor: stage.color }}
                                     />
                                     <span className="text-sm">{stage.name}</span>
-                                    {stage.won && <Badge variant="outline" className="text-xs bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">Won</Badge>}
-                                    {stage.lost && <Badge variant="outline" className="text-xs bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">Lost</Badge>}
+                                    {stage.won && <Badge variant="outline" className="text-xs bg-green-50 text-green-600">Won</Badge>}
+                                    {stage.lost && <Badge variant="outline" className="text-xs bg-red-50 text-red-600">Lost</Badge>}
                                   </div>
                                 ))}
                               </div>
@@ -517,7 +711,7 @@ export default function CrmIntegrationDashboard() {
                       Connected to Zapllo CRM
                     </p>
                   </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                     Active
                   </Badge>
                 </div>
@@ -532,16 +726,6 @@ export default function CrmIntegrationDashboard() {
                   <Badge variant="outline">Connected</Badge>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">Auto-sync</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically sync data with CRM
-                    </p>
-                  </div>
-                  <Badge variant="outline">Enabled</Badge>
-                </div>
-
                 <div className="pt-4 border-t">
                   <Button variant="outline" onClick={() => window.location.href = '/crm-integration/setup'}>
                     <Settings className="h-4 w-4 mr-2" />
@@ -553,21 +737,14 @@ export default function CrmIntegrationDashboard() {
           </TabsContent>
         </Tabs>
 
-        {/* Debug section - remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Debug Info</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs space-y-1">
-              <div>Selected WABA: {selectedWabaId || 'None'}</div>
-              <div>WABA Accounts: {wabaAccounts.length}</div>
-              <div>Integration Active: {integration?.isActive?.toString() || 'false'}</div>
-              <div>Pipelines Count: {stats.pipelines?.length || 0}</div>
-              <div>Loading Pipelines: {isLoadingPipelines.toString()}</div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Create Lead Modal */}
+        <CreateLeadModal
+          open={isLeadModalOpen}
+          onOpenChange={setIsLeadModalOpen}
+          contact={selectedContact}
+          wabaId={selectedWabaId}
+          onLeadCreated={onLeadCreated}
+        />
       </div>
     </Layout>
   );
