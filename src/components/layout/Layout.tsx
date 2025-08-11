@@ -91,6 +91,11 @@ interface UserData {
   role: 'admin' | 'agent' | 'owner';
   wabaAccounts?: any[];
   image?: string;
+  subscription?: {
+    plan: string;
+    status: 'active' | 'expired' | 'cancelled';
+    endDate?: string;
+  };
 }
 
 interface UserPermissions {
@@ -342,7 +347,7 @@ export default function Layout({ children }: LayoutProps) {
       ...group,
       items: group.items.filter(item => {
         // Check permissions
-        if (item.resource && item.action ) {
+        if (item.resource && item.action) {
           return false;
         }
 
@@ -391,27 +396,27 @@ export default function Layout({ children }: LayoutProps) {
   }, []);
 
   // Add this temporarily to debug the search
-useEffect(() => {
-  if (commandQuery.trim()) {
-    console.log('Search query:', commandQuery);
-    const filtered = getFilteredCommands();
-    console.log('Filtered results:', filtered);
-    
-    // Check specifically for template matches
-    const templateMatches = commandItems.flatMap(group => 
-      group.items.filter(item => {
-        const query = commandQuery.toLowerCase().trim();
-        const matchesLabel = item.label.toLowerCase().includes(query);
-        const matchesDescription = item.description?.toLowerCase().includes(query);
-        const matchesKeywords = item.keywords?.some(keyword => 
-          keyword.toLowerCase().includes(query)
-        );
-        return matchesLabel || matchesDescription || matchesKeywords;
-      })
-    );
-    console.log('Template matches:', templateMatches);
-  }
-}, [commandQuery]);
+  useEffect(() => {
+    if (commandQuery.trim()) {
+      console.log('Search query:', commandQuery);
+      const filtered = getFilteredCommands();
+      console.log('Filtered results:', filtered);
+
+      // Check specifically for template matches
+      const templateMatches = commandItems.flatMap(group =>
+        group.items.filter(item => {
+          const query = commandQuery.toLowerCase().trim();
+          const matchesLabel = item.label.toLowerCase().includes(query);
+          const matchesDescription = item.description?.toLowerCase().includes(query);
+          const matchesKeywords = item.keywords?.some(keyword =>
+            keyword.toLowerCase().includes(query)
+          );
+          return matchesLabel || matchesDescription || matchesKeywords;
+        })
+      );
+      console.log('Template matches:', templateMatches);
+    }
+  }, [commandQuery]);
 
   // Get recent command items
   const getRecentCommandItems = () => {
@@ -711,32 +716,32 @@ useEffect(() => {
             {/* Right actions */}
             <div className="ml-auto flex items-center gap-2">
               {/* Wallet Balance */}
-                <Button
-                  variant="ghost"
-                  className="relative h-10 rounded-xl px-4 hidden lg:flex items-center gap-3 hover:bg-muted/50 transition-colors"
-                  onClick={() => router.push('/wallet')}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-2 rounded-lg">
-                      <Wallet className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex flex-col text-left">
-                      <span className="text-xs text-muted-foreground font-medium">Balance</span>
-                      {walletData.isLoading ? (
-                        <div className="h-4 w-20 bg-muted animate-pulse rounded-md"></div>
-                      ) : (
-                        <span className="text-sm font-semibold">{walletData.formattedBalance}</span>
-                      )}
-                    </div>
-                    {walletData.recentChange > 0 && (
-                      <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 wark:bg-emerald-900/30 wark:text-emerald-400 border-emerald-200 wark:border-emerald-800">
-                        <ArrowUpRight className="h-3 w-3 mr-1" />
-                        +₹{walletData.recentChange.toFixed(2)}
-                      </Badge>
+              <Button
+                variant="ghost"
+                className="relative h-10 rounded-xl px-4 hidden lg:flex items-center gap-3 hover:bg-muted/50 transition-colors"
+                onClick={() => router.push('/wallet')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-2 rounded-lg">
+                    <Wallet className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-xs text-muted-foreground font-medium">Balance</span>
+                    {walletData.isLoading ? (
+                      <div className="h-4 w-20 bg-muted animate-pulse rounded-md"></div>
+                    ) : (
+                      <span className="text-sm font-semibold">{walletData.formattedBalance}</span>
                     )}
                   </div>
-                </Button>
-      
+                  {walletData.recentChange > 0 && (
+                    <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 wark:bg-emerald-900/30 wark:text-emerald-400 border-emerald-200 wark:border-emerald-800">
+                      <ArrowUpRight className="h-3 w-3 mr-1" />
+                      +₹{walletData.recentChange.toFixed(2)}
+                    </Badge>
+                  )}
+                </div>
+              </Button>
+
 
               {/* Updated Notifications Dropdown */}
               <DropdownMenu>
@@ -857,101 +862,100 @@ useEffect(() => {
               </DropdownMenu>
 
               {/* Settings Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-xl hidden md:flex hover:bg-muted/50 transition-colors"
-                    >
-                      <Settings className="h-5 w-5" />
-                      <span className="sr-only">Settings</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-96 p-0 border-0 shadow-lg">
-                    <div className="p-4 border-b bg-muted/30">
-                      <h3 className="font-semibold text-base">System Settings</h3>
-                    </div>
-                    <div className="p-4">
-                      <div className="grid grid-cols-3 gap-3">
-                        <button
-                          className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                          onClick={() => router.push('/settings/whatsapp-profile')}
-                        >
-                          <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 p-3 rounded-xl group-hover:from-green-500/30 group-hover:to-green-600/20 transition-colors">
-                            <MessageCircle className="h-5 w-5 text-green-600" />
-                          </div>
-                          <span className="text-xs font-medium text-center">WhatsApp Profile</span>
-                        </button>
-
-                          <button
-                            className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                            onClick={() => router.push('/settings/developer')}
-                          >
-                            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 p-3 rounded-xl group-hover:from-blue-500/30 group-hover:to-blue-600/20 transition-colors">
-                              <Code2 className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <span className="text-xs font-medium text-center">Developer</span>
-                          </button>
-
-                          <button
-                            className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                            onClick={() => router.push('/settings/agents')}
-                          >
-                            <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 p-3 rounded-xl group-hover:from-indigo-500/30 group-hover:to-indigo-600/20 transition-colors">
-                              <Users className="h-5 w-5 text-indigo-600" />
-                            </div>
-                            <span className="text-xs font-medium text-center">Team</span>
-                          </button>
-
-
-                        <button
-                          className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                          onClick={() => router.push('/contacts')}
-                        >
-                          <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 p-3 rounded-xl group-hover:from-purple-500/30 group-hover:to-purple-600/20 transition-colors">
-                            <User className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <span className="text-xs font-medium text-center">Contacts</span>
-                        </button>
-
-                          <button
-                            className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                            onClick={() => router.push('/settings/roles')}
-                          >
-                            <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-3 rounded-xl group-hover:from-red-500/30 group-hover:to-red-600/20 transition-colors">
-                              <Shield className="h-5 w-5 text-red-600" />
-                            </div>
-                            <span className="text-xs font-medium text-center">Roles</span>
-                          </button>
-
-                        <button
-                          className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                          onClick={() => router.push('/settings/contacts')}
-                        >
-                          <div className="bg-gradient-to-br from-teal-500/20 to-teal-600/10 p-3 rounded-xl group-hover:from-teal-500/30 group-hover:to-teal-600/20 transition-colors">
-                            <Tags className="h-5 w-5 text-teal-600" />
-                          </div>
-                          <span className="text-xs font-medium text-center">Custom Fields</span>
-                        </button>
-
-                          <button
-                            className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
-                            onClick={() => router.push('/wallet/plans')}
-                          >
-                            <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-3 rounded-xl group-hover:from-pink-500/30 group-hover:to-pink-600/20 transition-colors">
-                              <CreditCard className="h-5 w-5 text-pink-600" />
-                            </div>
-                            <span className="text-xs font-medium text-center">Billing</span>
-                          </button>
-                      </div>
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-
-              {/* User Profile Dropdown */}
               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-xl hidden md:flex hover:bg-muted/50 transition-colors"
+                  >
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">Settings</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-96 p-0 border-0 shadow-lg">
+                  <div className="p-4 border-b bg-muted/30">
+                    <h3 className="font-semibold text-base">System Settings</h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                        onClick={() => router.push('/settings/whatsapp-profile')}
+                      >
+                        <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 p-3 rounded-xl group-hover:from-green-500/30 group-hover:to-green-600/20 transition-colors">
+                          <MessageCircle className="h-5 w-5 text-green-600" />
+                        </div>
+                        <span className="text-xs font-medium text-center">WhatsApp Profile</span>
+                      </button>
+
+                      <button
+                        className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                        onClick={() => router.push('/settings/developer')}
+                      >
+                        <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 p-3 rounded-xl group-hover:from-blue-500/30 group-hover:to-blue-600/20 transition-colors">
+                          <Code2 className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <span className="text-xs font-medium text-center">Developer</span>
+                      </button>
+
+                      <button
+                        className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                        onClick={() => router.push('/settings/agents')}
+                      >
+                        <div className="bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 p-3 rounded-xl group-hover:from-indigo-500/30 group-hover:to-indigo-600/20 transition-colors">
+                          <Users className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        <span className="text-xs font-medium text-center">Team</span>
+                      </button>
+
+
+                      <button
+                        className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                        onClick={() => router.push('/contacts')}
+                      >
+                        <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 p-3 rounded-xl group-hover:from-purple-500/30 group-hover:to-purple-600/20 transition-colors">
+                          <User className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <span className="text-xs font-medium text-center">Contacts</span>
+                      </button>
+
+                      <button
+                        className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                        onClick={() => router.push('/settings/roles')}
+                      >
+                        <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 p-3 rounded-xl group-hover:from-red-500/30 group-hover:to-red-600/20 transition-colors">
+                          <Shield className="h-5 w-5 text-red-600" />
+                        </div>
+                        <span className="text-xs font-medium text-center">Roles</span>
+                      </button>
+
+                      <button
+                        className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                        onClick={() => router.push('/settings/contacts')}
+                      >
+                        <div className="bg-gradient-to-br from-teal-500/20 to-teal-600/10 p-3 rounded-xl group-hover:from-teal-500/30 group-hover:to-teal-600/20 transition-colors">
+                          <Tags className="h-5 w-5 text-teal-600" />
+                        </div>
+                        <span className="text-xs font-medium text-center">Custom Fields</span>
+                      </button>
+
+                      <button
+                        className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-muted/50 transition-colors group"
+                        onClick={() => router.push('/wallet/plans')}
+                      >
+                        <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 p-3 rounded-xl group-hover:from-pink-500/30 group-hover:to-pink-600/20 transition-colors">
+                          <CreditCard className="h-5 w-5 text-pink-600" />
+                        </div>
+                        <span className="text-xs font-medium text-center">Billing</span>
+                      </button>
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+
+           <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 rounded-xl px-3 md:flex md:items-center md:gap-3 hover:bg-muted/50 transition-colors">
                     <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
@@ -961,7 +965,29 @@ useEffect(() => {
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden md:block text-left">
-                      <p className="text-sm font-semibold leading-none">{user.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold leading-none">{user.name}</p>
+                        {user.subscription && user.subscription.plan !== 'free' && (
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs font-medium",
+                              user.subscription.status === 'active' 
+                                ? user.subscription.plan === 'starter' 
+                                  ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                  : user.subscription.plan === 'pro'
+                                  ? "bg-green-50 text-green-700 border-green-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-gray-50 text-gray-600 border-gray-200"
+                            )}
+                          >
+                            {user.subscription.plan.charAt(0).toUpperCase() + user.subscription.plan.slice(1)}
+                          </Badge>
+                        )}
+                      </div>
+                      {user.subscription && user.subscription.status !== 'active' && (
+                        <p className="text-xs text-orange-600">Plan Expired</p>
+                      )}
                     </div>
                     <ChevronDown className="hidden md:block h-4 w-4 text-muted-foreground" />
                   </Button>
@@ -975,25 +1001,65 @@ useEffect(() => {
                           {user.name.split(" ").map(n => n[0]).join("").toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                        {user.subscription && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                "text-xs",
+                                user.subscription.status === 'active' 
+                                  ? user.subscription.plan === 'starter' 
+                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                    : user.subscription.plan === 'pro'
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-gray-50 text-gray-600 border-gray-200"
+                              )}
+                            >
+                              {user.subscription.plan === 'free' ? 'Free Plan' : 
+                               `${user.subscription.plan.charAt(0).toUpperCase() + user.subscription.plan.slice(1)} Plan`}
+                            </Badge>
+                            {user.subscription.status !== 'active' && (
+                              <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200">
+                                Expired
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+           
+                  {/* <div className="p-3 border-b bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                        <AvatarImage src={user.image} alt={user.name} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">
+                          {user.name.split(" ").map(n => n[0]).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <p className="font-semibold text-sm">{user.name}</p>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                   <div className="p-2">
                     <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/settings/account')}>
                       <User className="mr-3 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/settings/whatsapp-profile')}>
-                        <Settings className="mr-3 h-4 w-4" />
-                        <span>Settings</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/wallet/plans')}>
-                        <CreditCard className="mr-3 h-4 w-4" />
-                        <span>Billing</span>
-                      </DropdownMenuItem>
+                    <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/settings/whatsapp-profile')}>
+                      <Settings className="mr-3 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="rounded-lg cursor-pointer" onClick={() => router.push('/wallet/plans')}>
+                      <CreditCard className="mr-3 h-4 w-4" />
+                      <span>Billing</span>
+                    </DropdownMenuItem>
 
                   </div>
                   <div className="p-2 border-t">

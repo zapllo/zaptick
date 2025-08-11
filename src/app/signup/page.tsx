@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Zap, Shield, BarChart, CheckCircle, Users, Globe, User, Building2, MapPin, Briefcase } from "lucide-react";
+import { MessageSquare, Zap, Shield, BarChart, CheckCircle, Users, Globe, User, Building2, MapPin, Briefcase, Eye, EyeOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BiCategory } from "react-icons/bi";
 
@@ -145,6 +145,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
   const { signup } = useAuth();
 
   // Personal Information
@@ -255,6 +256,10 @@ export default function SignupPage() {
   const handlePrevStep = () => {
     setCurrentStep(1);
     setError("");
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   const renderStepIndicator = () => (
@@ -489,7 +494,7 @@ export default function SignupPage() {
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full md:w-1/2 -mt-40 p-6 md:p-12 flex items-center justify-center bg-white/50 backdrop-blur-sm relative"
+        className="w-full md:w-1/2 -mt-12 p-6 md:p-12 flex items-center justify-center bg-white/50 backdrop-blur-sm relative"
       >
         {/* Animated gradient background */}
         <div className="absolute inset-0 opacity-10 overflow-hidden">
@@ -581,15 +586,24 @@ export default function SignupPage() {
                           {passwordStrength > 0 ? `Strength: ${['Weak', 'Fair', 'Good', 'Strong'][passwordStrength - 1]}` : 'Min. 6 characters'}
                         </span>
                       </div>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        className="h-11 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          minLength={6}
+                          className="h-11 pr-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={togglePasswordVisibility}
+                          className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
 
                       {/* Password strength indicator */}
                       {password.length > 0 && (
@@ -648,7 +662,7 @@ export default function SignupPage() {
                             autoFocus: false
                           }}
                           containerClass="w-full"
-                          inputClass="w-full h-11 pl-12 pr-4 border border-slate-200 rounded-md focus:border-green-400 focus:ring-2 focus:ring-green-200 bg-white transition-all"
+                          inputClass="w-full h-11 pl-12 p border border-slate-200 rounded-md focus:border-green-400 px-4 focus:ring-2 focus:ring-green-200 bg-white transition-all"
                           buttonClass="border-slate-200 hover:bg-slate-50 rounded-l-md"
                           dropdownClass="bg-white border-slate-200 shadow-lg"
                           searchClass="bg-white border-slate-200"
@@ -681,7 +695,7 @@ export default function SignupPage() {
                           id="companyLocation"
                           placeholder="City, Country"
                           value={companyLocation}
-            onChange={(e) => setCompanyLocation(e.target.value)}
+                          onChange={(e) => setCompanyLocation(e.target.value)}
                           className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
                         />
                       </div>

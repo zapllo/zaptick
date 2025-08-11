@@ -42,6 +42,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/pricing";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface PricingPlan {
   id: string;
@@ -63,6 +65,12 @@ interface PricingPlan {
   borderColor: string;
   badgeColor: string;
   decorativeColor: string;
+}
+
+interface CurrentSubscription {
+  plan: string;
+  status: 'active' | 'expired' | 'cancelled';
+  endDate?: string;
 }
 
 const plans: PricingPlan[] = [
@@ -99,9 +107,9 @@ const plans: PricingPlan[] = [
     decorativeColor: "bg-blue-500/10"
   },
   {
-    id: "pro",
-    name: "Pro",
-    displayName: "Pro",
+    id: "growth",
+    name: "Growth",
+    displayName: "Growth",
     description: "Build complex bots",
     tagline: "Advanced features for growing businesses",
     price: {
@@ -131,9 +139,9 @@ const plans: PricingPlan[] = [
     decorativeColor: "bg-green-500/10"
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    displayName: "Enterprise",
+    id: "advanced",
+    name: "Advanced",
+    displayName: "Advanced",
     description: "AI and ChatGPT bots",
     tagline: "Ultimate solution for large organizations",
     price: {
@@ -141,7 +149,7 @@ const plans: PricingPlan[] = [
       yearly: 0
     },
     features: [
-      "Everything available in Pro",
+      "Everything available in Growth",
       "Custom pricing per agent",
       "Complex journeys",
       "Special customizations",
@@ -222,12 +230,49 @@ export default function PricingPage() {
   const [isYearly, setIsYearly] = useState(true);
   const [loading, setLoading] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
+  const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscription | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
 
+  // Fetch current subscription
+  useEffect(() => {
+    const fetchCurrentSubscription = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user.subscription) {
+            setCurrentSubscription(data.user.subscription);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      } finally {
+        setSubscriptionLoading(false);
+      }
+    };
+
+    fetchCurrentSubscription();
+  }, []);
+
   const getCurrentPrice = (plan: PricingPlan) => {
-    if (plan.id === 'enterprise') return 0;
+    if (plan.id === 'advanced') return 0;
     return isYearly ? plan.price.yearly : plan.price.quarterly;
+  };
+
+  const isCurrentPlan = (planId: string) => {
+    return currentSubscription?.plan === planId && currentSubscription?.status === 'active';
+  };
+
+  const isPlanDowngrade = (planId: string) => {
+    if (!currentSubscription || currentSubscription.status !== 'active') return false;
+    
+    const planHierarchy = ['free', 'starter', 'growth', 'advanced'];
+    const currentIndex = planHierarchy.indexOf(currentSubscription.plan);
+    const selectedIndex = planHierarchy.indexOf(planId);
+    
+    return selectedIndex < currentIndex;
   };
 
   const handleSubscribe = async (planId: string) => {
@@ -240,8 +285,8 @@ export default function PricingPage() {
       return;
     }
 
-    if (planId === "enterprise") {
-      window.location.href = "mailto:sales@zaptick.com?subject=Enterprise Plan Inquiry";
+    if (planId === "advanced") {
+      window.location.href = "mailto:sales@zaptick.com?subject=Advanced Plan Inquiry";
       return;
     }
 
@@ -317,6 +362,15 @@ export default function PricingPage() {
                 title: "Subscription Activated!",
                 description: `Your ${plan.name} plan has been activated successfully.`,
               });
+
+              // Refresh subscription data
+              const updatedResponse = await fetch('/api/auth/me');
+              if (updatedResponse.ok) {
+                const updatedData = await updatedResponse.json();
+                if (updatedData.user.subscription) {
+                  setCurrentSubscription(updatedData.user.subscription);
+                }
+              }
 
               router.push('/wallet');
             } else {
@@ -420,7 +474,7 @@ export default function PricingPage() {
             </p>
           </div>
 
-          {/* Billing Toggle - Updated */}
+          {/* Billing Toggle */}
           <div className="flex items-center justify-center space-x-4 bg-white rounded-full p-1 border border-gray-200 w-fit mx-auto">
             <button
               onClick={() => setIsYearly(false)}
@@ -448,6 +502,58 @@ export default function PricingPage() {
           </div>
         </motion.div>
 
+        {/* Current Subscription Status */}
+        {!subscriptionLoading && currentSubscription && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                  <Crown className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Current Plan</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge 
+                      className={cn(
+                        currentSubscription.status === 'active' 
+                          ? currentSubscription.plan === 'starter' 
+                            ? "bg-blue-100 text-blue-700" 
+                            : currentSubscription.plan === 'growth'
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                          : "bg-gray-100 text-gray-600"
+                      )}
+                    >
+                      {currentSubscription.plan === 'free' ? 'Free Plan' : 
+                       `${currentSubscription.plan.charAt(0).toUpperCase() + currentSubscription.plan.slice(1)} Plan`}
+                    </Badge>
+                    <Badge 
+                      variant={currentSubscription.status === 'active' ? 'default' : 'destructive'}
+                    >
+                      {currentSubscription.status.charAt(0).toUpperCase() + currentSubscription.status.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              {currentSubscription.endDate && (
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">
+                    {currentSubscription.status === 'active' ? 'Expires on' : 'Expired on'}
+                  </p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {format(new Date(currentSubscription.endDate), 'PPP')}
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Pricing Cards */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
@@ -465,10 +571,21 @@ export default function PricingPage() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className="relative group"
               >
-                <div className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br ${plan.bgGradient} p-6 shadow-sm transition-all duration-300 hover:shadow-md ${plan.borderColor} wark:from-muted/40 wark:to-muted/10`}>
+                <div className={cn(
+                  `group relative overflow-hidden rounded-xl border bg-gradient-to-br ${plan.bgGradient} p-6 shadow-sm transition-all duration-300 hover:shadow-md ${plan.borderColor} wark:from-muted/40 wark:to-muted/10`,
+                  isCurrentPlan(plan.id) && "ring-2 ring-primary ring-offset-2"
+                )}>
+                  {/* Current Plan Badge */}
+                  {isCurrentPlan(plan.id) && (
+                    <span className="absolute top-2 right-4 z-[100] inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-medium text-white shadow-lg">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Current Plan
+                    </span>
+                  )}
+
                   {/* Popular Badge */}
-                  {plan.popular && (
-                    <span className="absolute top-2 right-0 z-[100]  transform  inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-medium text-white shadow-lg">
+                  {plan.popular && !isCurrentPlan(plan.id) && (
+                    <span className="absolute top-2 right-0 z-[100] transform inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-medium text-white shadow-lg">
                       <Star className="h-3 w-3" />
                       Most Popular
                     </span>
@@ -488,7 +605,7 @@ export default function PricingPage() {
 
                   {/* Pricing */}
                   <div className="mb-6">
-                    {plan.id === 'enterprise' ? (
+                    {plan.id === 'advanced' ? (
                       <div className="space-y-2">
                         <div className="text-3xl font-bold text-gray-900">Custom Pricing</div>
                         <p className="text-sm text-gray-600">Tailored to your needs</p>
@@ -538,14 +655,18 @@ export default function PricingPage() {
                   {/* CTA Button */}
                   <Button
                     onClick={() => handleSubscribe(plan.id)}
-                    disabled={loading === plan.id}
-                    className={`w-full transition-all duration-200 ${
-                      plan.popular 
+                    disabled={loading === plan.id || isCurrentPlan(plan.id)}
+                    className={cn(
+                      "w-full transition-all duration-200",
+                      isCurrentPlan(plan.id) 
+                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                        : plan.popular 
                         ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl' 
-                        : plan.id === 'enterprise'
+                        : plan.id === 'advanced'
                         ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white'
-                        : 'bg-gray-900 hover:bg-gray-800 text-white'
-                    }`}
+                        : 'bg-gray-900 hover:bg-gray-800 text-white',
+                      isPlanDowngrade(plan.id) && "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                    )}
                     size="lg"
                   >
                     {loading === plan.id ? (
@@ -553,9 +674,19 @@ export default function PricingPage() {
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Processing...
                       </>
+                    ) : isCurrentPlan(plan.id) ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Current Plan
+                      </>
+                    ) : isPlanDowngrade(plan.id) ? (
+                      <>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Downgrade
+                      </>
                     ) : (
                       <>
-                        {plan.id === 'enterprise' ? (
+                        {plan.id === 'advanced' ? (
                           <>
                             <PhoneCall className="h-4 w-4 mr-2" />
                             Contact Sales
@@ -563,7 +694,7 @@ export default function PricingPage() {
                         ) : (
                           <>
                             <Rocket className="h-4 w-4 mr-2" />
-                            Get Started
+                            {currentSubscription?.plan === 'free' ? 'Get Started' : 'Upgrade'}
                           </>
                         )}
                       </>
@@ -615,7 +746,7 @@ export default function PricingPage() {
                         {feature.icon}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 text-lg">{feature.title}</p>
+                     <p className="font-semibold text-gray-900 text-lg">{feature.title}</p>
                       </div>
                     </div>
                   </div>

@@ -641,7 +641,10 @@ function ConversationsPageContent() {
 
     handleContactIdFromUrl();
   }, [contacts, conversations, selectedWabaId]);
-
+// Add this debugging useEffect temporarily
+useEffect(() => {
+  console.log('selectedImageUrl state changed:', selectedImageUrl);
+}, [selectedImageUrl]);
   // Add these helper functions
   const formatTemplatePreview = (text: string) => {
     if (!text) return '';
@@ -2766,7 +2769,7 @@ function ConversationsPageContent() {
         <div className="flex flex-1 overflow-hidden">
           {/* Conversations List Sidebar - Modern Design */}
           <div className={cn(
-            "w-full md:w-80 lg:w-96 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-y-scroll backdrop-blur-md shadow-sm",
+            "w-full md:w-80 lg:w-96 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-y- backdrop-blur-md shadow-sm",
             !isMobileMenuOpen && "hidden md:flex",
             isMobileMenuOpen && "absolute inset-0 z-50 md:relative"
           )}>
@@ -2978,7 +2981,7 @@ function ConversationsPageContent() {
             </div>
 
             {/* Enhanced Conversations List */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 mb-24 overflow-y-auto">
               {isLoadingConversations ? (
                 <div className="space-y-0">
                   {Array.from({ length: 8 }, (_, i) => (
@@ -3631,13 +3634,13 @@ function ConversationsPageContent() {
 
                             {/* Enhanced Messages */}
                             {dateMessages.map((message) => {
-                              console.log('🔍 ALL MESSAGE DEBUG:', {
-                                id: message.id,
-                                messageType: message.messageType,
-                                content: message.content,
-                                senderId: message.senderId,
-                                interactiveData: message.interactiveData
-                              });
+                              // console.log('🔍 ALL MESSAGE DEBUG:', {
+                              //   id: message.id,
+                              //   messageType: message.messageType,
+                              //   content: message.content,
+                              //   senderId: message.senderId,
+                              //   interactiveData: message.interactiveData
+                              // });
 
                               // if (message.messageType === 'template') {
                               //   console.log('Template message data:', {
@@ -3811,7 +3814,7 @@ function ConversationsPageContent() {
                                       {/* Move interactive message handling HERE - outside the text/template condition */}
                                       {message.messageType === 'interactive' && (
                                         <div className="pb-4">
-                                          {console.log('✅ Rendering interactive message:', message)}
+                                          {/* {console.log('✅ Rendering interactive message:', message)} */}
 
                                           {/* Interactive message response */}
                                           <div className="bg-blue-50 border border-blue-100 rounded-md p-2 mb-2">
@@ -3855,10 +3858,27 @@ function ConversationsPageContent() {
                                             <img
                                               src={message.mediaUrl}
                                               alt={message.mediaCaption || "Image"}
-                                              className="rounded-lg w-full max-w-24 max-h-64 object-cover cursor-pointer"
-                                              onClick={() => setSelectedImageUrl(message.mediaUrl)}
+                                              className="rounded-lg w-full max-w-sm max-h-64 object-cover cursor-pointer"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                console.log('Image clicked, setting selectedImageUrl to:', message.mediaUrl);
+                                                setSelectedImageUrl(message.mediaUrl);
+                                              }}
+                                              onError={(e) => {
+                                                console.error('Image failed to load:', message.mediaUrl);
+                                                e.currentTarget.style.display = 'none';
+                                              }}
                                             />
-                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                                            <div
+                                              className="absolute inset-0 bg-black/20 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center cursor-pointer"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                console.log('Eye overlay clicked, setting selectedImageUrl to:', message.mediaUrl);
+                                                setSelectedImageUrl(message.mediaUrl);
+                                              }}
+                                            >
                                               <Eye className="h-6 w-6 text-white" />
                                             </div>
                                           </div>
@@ -3866,8 +3886,8 @@ function ConversationsPageContent() {
                                             <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
                                           )}
 
-                                          {/* Enhanced WhatsApp-style timestamp and status with error handling */}
-                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                          {/* WhatsApp-style timestamp and status */}
+                                          <div className="flex items-center justify-end gap-1 mt-1 absolute bottom-1 right-2">
                                             <span className="text-xs text-gray-500">
                                               {format(new Date(message.timestamp), "h:mm a")}
                                             </span>
@@ -5559,61 +5579,71 @@ function ConversationsPageContent() {
             </DialogContent>
           </Dialog>
 
-          {/* Image Preview Dialog */}
-          <Dialog open={!!selectedImageUrl} onOpenChange={(open) => !open && setSelectedImageUrl(null)}>
-            <DialogContent className="max-w-3xl p-0 overflow-hidden">
-              <div className="relative">
-                <div className="absolute top-2 right-2 z-10">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 text-white"
-                    onClick={() => setSelectedImageUrl(null)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-center bg-black/10 p-2">
-                  <img
-                    src={selectedImageUrl || ''}
-                    alt="Preview"
-                    className="max-h-[80vh] max-w-full object-contain"
-                  />
-                </div>
-              </div>
-              <DialogFooter className="p-3 flex justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(selectedImageUrl || '', '_blank')}
-                >
-                  <span className="flex items-center">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Open Original
-                  </span>
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    if (selectedImageUrl) {
-                      const link = document.createElement('a');
-                      link.href = selectedImageUrl;
-                      link.download = selectedImageUrl.split('/').pop() || 'image';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }
-                  }}
-                >
-                  <span className="flex items-center">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </span>
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+
+      
+
+{/* Image Preview Dialog - Fixed */}
+<Dialog open={!!selectedImageUrl} onOpenChange={(open) => {
+  if (!open) {
+    setSelectedImageUrl(null);
+  }
+}}>
+  <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+    <div className="relative">
+      {/* Close button */}
+      <div className="absolute top-2 right-2 z-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 text-white"
+          onClick={() => setSelectedImageUrl(null)}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {/* Image container */}
+      <div className="flex items-center justify-center bg-black/10 p-2 min-h-[300px]">
+        {selectedImageUrl && (
+          <img
+            src={selectedImageUrl}
+            alt="Preview"
+            className="max-h-[80vh] max-w-full object-contain"
+          />
+        )}
+      </div>
+    </div>
+    
+    {/* Footer with action buttons */}
+    <div className="flex justify-between p-3 bg-gray-50 border-t">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => window.open(selectedImageUrl || '', '_blank')}
+      >
+        <ExternalLink className="h-4 w-4 mr-2" />
+        Open Original
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => {
+          if (selectedImageUrl) {
+            const link = document.createElement('a');
+            link.href = selectedImageUrl;
+            link.download = selectedImageUrl.split('/').pop() || 'image';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        }}
+      >
+        <Download className="h-4 w-4 mr-2" />
+        Download
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
 
           {/* Add Tag Dialog - Updated to match bulk tag dialog style */}
           <Dialog open={showAddTagDialog} onOpenChange={setShowAddTagDialog}>
