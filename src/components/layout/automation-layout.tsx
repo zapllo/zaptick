@@ -131,7 +131,7 @@ export default function AutomationsLayout({ children }: AutomationsLayoutProps) 
             {/* Description Section */}
             <div className="space-y-4 mb-8">
               <p className="text-gray-700 leading-relaxed">
-                Your subscription has expired and you've been moved to the Free plan. 
+                Your subscription has expired and you&apos;ve been moved to the Free plan. 
                 Please renew your subscription to continue accessing automation features.
               </p>
 

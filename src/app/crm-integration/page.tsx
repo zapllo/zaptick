@@ -825,7 +825,7 @@ export default function CrmIntegrationSetup() {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium mt-0.5">3</span>
-                        Generate a new API Key with "Read" and "Write" permissions
+                        Generate a new API Key with &quot;Read&quot; and &quot;Write&quot; permissions
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-medium mt-0.5">4</span>

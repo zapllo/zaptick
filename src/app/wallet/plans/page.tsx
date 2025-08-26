@@ -575,7 +575,7 @@ export default function PricingPage() {
                 <div>
                   <p className="text-sm font-medium text-red-800">Subscription Expired</p>
                   <p className="text-xs text-red-700 mt-1">
-                    Your subscription has expired and you've been moved to the Free plan. Renew to continue using premium features.
+                    Your subscription has expired and you&apos;ve been moved to the Free plan. Renew to continue using premium features.
                   </p>
                 </div>
               </div>

@@ -740,8 +740,7 @@ export default function IntegrationsPage() {
                           <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                             <Star className="h-4 w-4 text-white fill-white" />
                           </div>
-                        </div>
-                        
+                        </div>                        
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-2xl font-bold text-slate-900">Featured: Zapllo CRM</h3>
