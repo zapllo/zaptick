@@ -83,10 +83,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Get CRM integration
-    const integration = await CrmIntegration.findOne({ 
-      userId: decoded.id, 
-      wabaId, 
-      isActive: true 
+    const integration = await CrmIntegration.findOne({
+      userId: decoded.id,
+      wabaId,
+      isActive: true
     });
 
     if (!integration) {
@@ -103,12 +103,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Get contact details
-    const contact = await Contact.findOne({ 
-      _id: contactId, 
+    const contact = await Contact.findOne({
+      _id: contactId,
       userId: decoded.id,
-      wabaId: wabaId 
+      wabaId: wabaId
     });
-    
+
     if (!contact) {
       return NextResponse.json(
         { error: "Contact not found" },
@@ -140,7 +140,8 @@ export async function POST(req: NextRequest) {
         stage: leadData.stage,
         closeDate: closeDate,
         remarks: leadData.remarks || `Lead created from Zaptick WhatsApp conversation with ${contact.name}. Original contact phone: ${contact.phone}`,
-        source: leadData.source || 'WhatsApp - Zaptick',
+        // Remove the source field entirely - let CRM handle it or set it to null
+        source: null, // Changed from leadData.source || 'Zaptick'
         assignedTo: null,
         customFieldValues: {}
       },
@@ -161,7 +162,9 @@ export async function POST(req: NextRequest) {
         platform: 'Zaptick',
         wabaId: wabaId,
         contactId: contactId,
-        createdBy: decoded.id
+        createdBy: decoded.id,
+        // Add source information here instead
+        sourceName: 'Zaptick'
       }
     };
 
@@ -191,10 +194,10 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         errorData = { error: responseText };
       }
-      
+
       console.error('CRM Error Response:', errorData);
       return NextResponse.json(
-        { 
+        {
           error: errorData.error || "Failed to create lead in CRM",
           details: errorData.details || errorData,
           crmResponse: responseText,
@@ -225,14 +228,14 @@ export async function POST(req: NextRequest) {
       leadDetails: result.lead,
       contactDetails: result.contact
     });
-    
+
   } catch (error: any) {
     console.error('=== ERROR IN ZAPTICK CREATE LEAD ===');
     console.error('Error:', error);
     console.error('Stack:', error.stack);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: "Failed to create lead in CRM",
         details: error.message,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined

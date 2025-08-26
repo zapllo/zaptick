@@ -1,3 +1,4 @@
+// src/app/api/auth/me/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
@@ -27,7 +28,32 @@ export async function GET(req: NextRequest) {
     // Fetch company data to get subscription information
     let company = null;
     if (user.companyId) {
-      company = await Company.findById(user.companyId).select('subscriptionPlan subscriptionStatus subscriptionEndDate');
+      company = await Company.findById(user.companyId).select('subscriptionPlan subscriptionStatus subscriptionEndDate walletBalance');
+    }
+
+    // Check if subscription is expired
+    let actualSubscriptionStatus = company?.subscriptionStatus || 'expired';
+    let actualSubscriptionPlan = company?.subscriptionPlan || 'free';
+
+    if (company?.subscriptionEndDate && company?.subscriptionStatus === 'active') {
+      const now = new Date();
+      const endDate = new Date(company.subscriptionEndDate);
+      
+      if (now > endDate) {
+        // Subscription has expired
+        actualSubscriptionStatus = 'expired';
+        actualSubscriptionPlan = 'free'; // Revert to free plan
+        
+        // Optionally update the database to reflect expired status
+        try {
+          await Company.findByIdAndUpdate(user.companyId, {
+            subscriptionStatus: 'expired',
+            subscriptionPlan: 'free'
+          });
+        } catch (updateError) {
+          console.error('Error updating expired subscription:', updateError);
+        }
+      }
     }
 
     return NextResponse.json({
@@ -37,15 +63,12 @@ export async function GET(req: NextRequest) {
         email: user.email,
         role: user.role,
         isOwner: user.isOwner,
+        walletBalance: company?.walletBalance || 0,
         wabaAccounts: user.wabaAccounts,
-        subscription: company ? {
-          plan: company.subscriptionPlan || 'free',
-          status: company.subscriptionStatus || 'expired',
-          endDate: company.subscriptionEndDate
-        } : {
-          plan: 'free',
-          status: 'expired',
-          endDate: null
+        subscription: {
+          plan: actualSubscriptionPlan,
+          status: actualSubscriptionStatus,
+          endDate: company?.subscriptionEndDate
         }
       }
     });

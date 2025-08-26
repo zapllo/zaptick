@@ -60,7 +60,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Reply,
-  LayoutIcon
+  LayoutIcon,
+  CreditCard,
+  ArrowRight
 } from "lucide-react";
 import { FaRegUserCircle } from "react-icons/fa";
 import Layout from "@/components/layout/Layout";
@@ -189,6 +191,13 @@ interface Conversation {
   userId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Add this interface after the existing interfaces
+interface UserSubscription {
+  plan: string;
+  status: 'active' | 'expired' | 'cancelled';
+  endDate?: string;
 }
 
 interface Template {
@@ -432,6 +441,9 @@ function ConversationsPageContent() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  // Add this state variable after the existing state variables
+  const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
 
 
@@ -641,10 +653,10 @@ function ConversationsPageContent() {
 
     handleContactIdFromUrl();
   }, [contacts, conversations, selectedWabaId]);
-// Add this debugging useEffect temporarily
-useEffect(() => {
-  console.log('selectedImageUrl state changed:', selectedImageUrl);
-}, [selectedImageUrl]);
+  // Add this debugging useEffect temporarily
+  useEffect(() => {
+    console.log('selectedImageUrl state changed:', selectedImageUrl);
+  }, [selectedImageUrl]);
   // Add these helper functions
   const formatTemplatePreview = (text: string) => {
     if (!text) return '';
@@ -744,6 +756,7 @@ useEffect(() => {
   const [selectedConversations, setSelectedConversations] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [isBulkSelectMode, setIsBulkSelectMode] = useState(false);
+  const [isLow, setIsLow] = useState(false);
   const [showBulkAssignDialog, setShowBulkAssignDialog] = useState(false);
   const [showBulkTagDialog, setShowBulkTagDialog] = useState(false);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
@@ -1463,6 +1476,7 @@ useEffect(() => {
   };
 
   // API functions
+  // Update the fetchCurrentUser function
   const fetchCurrentUser = async () => {
     try {
       const response = await fetch('/api/auth/me');
@@ -1476,16 +1490,27 @@ useEffect(() => {
           name: data.user.name,
           firstName
         });
+
+        // Set subscription data
+        setUserSubscription(data.user.subscription);
+
+        if (data.user.walletBalance < 250) {
+          setIsLow(true)
+        }
         console.log('Current user set:', {
           id: data.user.id,
           name: data.user.name,
           firstName
         });
+        console.log('Subscription:', data.user.subscription);
+        console.log(isLow, 'is low???')
       } else {
         console.error('No user data in response:', data);
       }
     } catch (error) {
       console.error('Error fetching current user:', error);
+    } finally {
+      setIsCheckingSubscription(false);
     }
   }
 
@@ -2520,6 +2545,122 @@ useEffect(() => {
             {/* Decorative Elements */}
             <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
             <div className="absolute -left-4 -bottom-4 h-12 w-12 rounded-full bg-green-400/20 transition-all duration-300 group-hover:scale-125" />
+
+            {/* Subtle Pattern Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  // Add this check right after the wabaAccounts.length === 0 check
+  if (isCheckingSubscription) {
+    return (
+      <Layout>
+        <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/20 to-background p-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Checking subscription status...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Add this check after the loading check and before the main content
+  if (userSubscription?.status === 'expired') {
+    return (
+      <Layout>
+        <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-red-50/20 to-background p-4">
+          <div className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-red-50/30 p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-red-200 max-w-lg w-full">
+            {/* Header Section */}
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg transition-all duration-300 group-hover:scale-110">
+                  <AlertCircle className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                    Subscription Expired
+                  </h1>
+                  <p className="text-sm text-red-600 font-medium">
+                    Access Restricted
+                  </p>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm">
+                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                Expired
+              </span>
+            </div>
+
+            {/* Description Section */}
+            <div className="space-y-4 mb-8">
+              <p className="text-gray-700 leading-relaxed">
+                Your subscription has expired and you've been moved to the Free plan.
+                Please renew your subscription to continue accessing the conversations feature.
+              </p>
+
+              {userSubscription?.endDate && (
+                <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-red-800 mb-1">
+                        Subscription expired on
+                      </p>
+                      <p className="text-sm text-red-700">
+                        {format(new Date(userSubscription.endDate), 'PPP')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+                    <MessageSquare className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span>Access to conversations</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100">
+                    <Users className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span>Team collaboration features</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                    <Zap className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <span>Advanced automation tools</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="space-y-4">
+              <Button
+                onClick={() => window.location.href = '/wallet/plans'}
+                className="w-full h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                size="lg"
+              >
+                <CreditCard className="h-5 w-5 mr-2" />
+                Renew Subscription
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                <AlertCircle className="h-3 w-3" />
+                <span>Choose from flexible pricing plans</span>
+              </div>
+            </div>
+
+            {/* Decorative Elements */}
+            <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-red-500/10 transition-all duration-300 group-hover:scale-110" />
+            <div className="absolute -left-4 -bottom-4 h-12 w-12 rounded-full bg-red-400/20 transition-all duration-300 group-hover:scale-125" />
 
             {/* Subtle Pattern Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -3663,7 +3804,7 @@ useEffect(() => {
                                 );
                               }
 
-                              // Enhanced Regular Messages - WhatsApp Style
+                              {/* Enhanced Regular Messages - WhatsApp Style */ }
                               return (
                                 <div
                                   key={message.id}
@@ -3681,10 +3822,9 @@ useEffect(() => {
                                       className="flex items-center gap-1 cursor-pointer  rounded-full p-2 transition-colors group"
                                     >
                                       <AlertCircle className="h-6 w-6 text-red-500 group-hover:text-red-600" />
-                                      {/* <Info className="h-2 w-2 text-red-500 group-hover:text-red-600" /> */}
                                     </button>
-
                                   )}
+
                                   <div className="max-w-[65%] min-w-[120px]">
                                     {/* Sender Name - WhatsApp Style */}
                                     <div className={cn(
@@ -3704,7 +3844,7 @@ useEffect(() => {
                                           : "bg-white text-black rounded-bl-sm border border-gray-200"
                                       )}
                                     >
-                                      {/* 🔥 —‑‑‑‑‑‑‑‑‑ NEW REPLY PREVIEW BLOCK ‑‑‑‑‑‑‑‑‑‑‑‑ */}
+                                      {/* Reply Preview Block */}
                                       {message.replyTo && (
                                         <div className="mb-1  rounded border-l-4 border-blue-400 /10 bg-gray-200 px-2 py-2 text-xs text-muted-foreground">
                                           {getOriginalMessageContent(message.replyTo)}
@@ -3811,6 +3951,8 @@ useEffect(() => {
                                           </div>
                                         </div>
                                       )}
+
+
                                       {/* Move interactive message handling HERE - outside the text/template condition */}
                                       {message.messageType === 'interactive' && (
                                         <div className="pb-4">
@@ -4073,24 +4215,25 @@ useEffect(() => {
                                       {/* Enhanced Template Indicator */}
 
                                     </div>
-                                    {message.senderId === 'agent' || message.senderId === 'customer' ? (
-                                      <div className="flex justify-end items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                        <button
-                                          onClick={() =>
-                                            setReplyingTo({
-                                              id: message.whatsappMessageId,
-                                              content: message.content,
-                                              senderName: message.senderName || 'Customer'
-                                            })
-                                          }
-                                          className="hover:text-primary/80 transition"
-                                        >
-                                          <Reply className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    ) : null}
+
 
                                   </div>
+                                  {message.senderId === 'agent' || message.senderId === 'customer' ? (
+                                    <div className="flex justify-end items-center gap-2 mt-1 ml-1  text-xs text-muted-foreground cursor-pointer">
+                                      <button
+                                        onClick={() =>
+                                          setReplyingTo({
+                                            id: message.whatsappMessageId,
+                                            content: message.content,
+                                            senderName: message.senderName || 'Customer'
+                                          })
+                                        }
+                                        className="hover:text-primary/80 cursor-pointer transition"
+                                      >
+                                        <Reply className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ) : null}
                                 </div>
                               );
                             })}
@@ -4143,6 +4286,50 @@ useEffect(() => {
               )}
               {/* Enhanced Message Input - Always Visible */}
               <div className="sticky md:w-[94%] 2xl:w-[95%]  bottom-12 bg-gradient-to-r from-card/95 to-card/90 border-t border-border/50  shadow-lg px-4 pb-6 pt-4  backdrop-blur-md">
+                {/* Low Balance Warning - Add this section */}
+                {isLow && (
+                  <div className="mb-4 mx-auto scale-90">
+                    <Card className="bg-gradient-to-r h-32 mx-4 text-sm p-0 from-red-50/95 to-red-100/95 border-red-200/50 shadow-lg backdrop-blur-sm overflow-hidden">
+                      <CardContent className="pb-2">
+                        <div className="flex items-center gap-4 p-6">
+                          <div className="flex-shrink-0">
+                            <div className="bg-red-200/60 p-4 rounded-full flex items-center justify-center">
+                              <AlertCircle className="h-6 w-6 text-red-600" />
+                            </div>
+                          </div>
+                          <div className="flex-1 space-y-4">
+                            <div>
+                              <h4 className="font-semibold text-red-900 mb-2 text-lg">
+                                Low balance - Top up your wallet
+                              </h4>
+                              <p className="text-red-700 text-sm leading-relaxed">
+                                Your wallet balance is running low. Top up now to continue sending messages without interruption.
+                              </p>
+
+                            </div>
+
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              onClick={() => window.location.href = '/wallet'}
+                              className="bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all duration-200 hover:scale-105"
+                            >
+                              <Zap className="h-4 w-4 mr-2" />
+                              Top Up Wallet
+                            </Button>
+                            <div className="flex items-center gap-2 text-xs text-red-700">
+                              <Clock className="h-3 w-3" />
+                              <span>Balance below ₹250</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+
+
                 {isWithin24Hours() ? (
                   <div className="flex items-end gap-3 relative  mx-auto">
                     {/* Alternative Enhanced Attachment Button - Manual Control */}
@@ -5580,70 +5767,70 @@ useEffect(() => {
           </Dialog>
 
 
-      
 
-{/* Image Preview Dialog - Fixed */}
-<Dialog open={!!selectedImageUrl} onOpenChange={(open) => {
-  if (!open) {
-    setSelectedImageUrl(null);
-  }
-}}>
-  <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
-    <div className="relative">
-      {/* Close button */}
-      <div className="absolute top-2 right-2 z-10">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 text-white"
-          onClick={() => setSelectedImageUrl(null)}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      {/* Image container */}
-      <div className="flex items-center justify-center bg-black/10 p-2 min-h-[300px]">
-        {selectedImageUrl && (
-          <img
-            src={selectedImageUrl}
-            alt="Preview"
-            className="max-h-[80vh] max-w-full object-contain"
-          />
-        )}
-      </div>
-    </div>
-    
-    {/* Footer with action buttons */}
-    <div className="flex justify-between p-3 bg-gray-50 border-t">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => window.open(selectedImageUrl || '', '_blank')}
-      >
-        <ExternalLink className="h-4 w-4 mr-2" />
-        Open Original
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => {
-          if (selectedImageUrl) {
-            const link = document.createElement('a');
-            link.href = selectedImageUrl;
-            link.download = selectedImageUrl.split('/').pop() || 'image';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        }}
-      >
-        <Download className="h-4 w-4 mr-2" />
-        Download
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
+
+          {/* Image Preview Dialog - Fixed */}
+          <Dialog open={!!selectedImageUrl} onOpenChange={(open) => {
+            if (!open) {
+              setSelectedImageUrl(null);
+            }
+          }}>
+            <DialogContent className="max-w-4xl h-fit max-h-screen p-0 overflow-y-scroll">
+              <div className="relative">
+                {/* Close button */}
+                {/* <div className="absolute top-2 right-2 z-10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 text-white"
+                    onClick={() => setSelectedImageUrl(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div> */}
+
+                {/* Image container */}
+                <div className="flex items-center justify-center  min-h-[300px]">
+                  {selectedImageUrl && (
+                    <img
+                      src={selectedImageUrl}
+                      alt="Preview"
+                      className="max-h-[80vh] max-w-full object-contain"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Footer with action buttons */}
+              <div className="flex justify-between p-3 pb-6 bg-gray-50 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(selectedImageUrl || '', '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open Original
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (selectedImageUrl) {
+                      const link = document.createElement('a');
+                      link.href = selectedImageUrl;
+                      link.download = selectedImageUrl.split('/').pop() || 'image';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Add Tag Dialog - Updated to match bulk tag dialog style */}
           <Dialog open={showAddTagDialog} onOpenChange={setShowAddTagDialog}>

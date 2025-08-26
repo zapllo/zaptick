@@ -68,6 +68,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+import { CreditCard, ArrowRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -204,6 +206,14 @@ interface ColumnVisibility {
   [key: string]: boolean; // For dynamic custom field columns
 }
 
+
+// Add this interface after the existing interfaces
+interface UserSubscription {
+  plan: string;
+  status: 'active' | 'expired' | 'cancelled';
+  endDate?: string;
+}
+
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -283,6 +293,30 @@ export default function ContactsPage() {
   const [isAudienceFilterActive, setIsAudienceFilterActive] = useState(false);
   // Inside the ContactsPage component, add these new state variables
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  // Add these state variables after the existing state variables
+  const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
+
+  // Add this function to fetch user subscription status
+  const fetchUserSubscription = async () => {
+    try {
+      const response = await fetch('/api/auth/me');
+      const data = await response.json();
+
+      if (data.user) {
+        setUserSubscription(data.user.subscription);
+      }
+    } catch (error) {
+      console.error('Error fetching user subscription:', error);
+    } finally {
+      setIsCheckingSubscription(false);
+    }
+  };
+
+  // Add this useEffect to fetch subscription status on component mount
+  useEffect(() => {
+    fetchUserSubscription();
+  }, []);
 
 
   useEffect(() => {
@@ -1177,6 +1211,136 @@ export default function ContactsPage() {
     c.lastMessageAt && new Date(c.lastMessageAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   ).length;
   const subscriptionRate = totalContacts > 0 ? Math.round((subscribedContacts / totalContacts) * 100) : 0;
+
+
+ // Add the subscription loading check
+  if (isCheckingSubscription) {
+    return (
+      <ProtectedRoute resource="contacts" action="read">
+        <Layout>
+          <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-accent/20 to-background p-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Checking subscription status...</p>
+            </div>
+          </div>
+        </Layout>
+      </ProtectedRoute>
+    );
+  }
+
+  // Add the subscription expiration check
+  if (userSubscription?.status === 'expired') {
+    return (
+      <ProtectedRoute resource="contacts" action="read">
+        <Layout>
+          <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-red-50/20 to-background p-4">
+            <div className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-red-50/30 p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-red-200 max-w-lg w-full">
+              {/* Header Section */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg transition-all duration-300 group-hover:scale-110">
+                    <AlertCircle className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                      Subscription Expired
+                    </h1>
+                    <p className="text-sm text-red-600 font-medium">
+                      Access Restricted
+                    </p>
+                  </div>
+                </div>
+
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm">
+                  <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  Expired
+                </span>
+              </div>
+
+              {/* Description Section */}
+              <div className="space-y-4 mb-8">
+                <p className="text-gray-700 leading-relaxed">
+                  Your subscription has expired and you've been moved to the Free plan. 
+                  Please renew your subscription to continue accessing the contacts management feature.
+                </p>
+
+                {userSubscription?.endDate && (
+                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-red-800 mb-1">
+                          Subscription expired on
+                        </p>
+                        <p className="text-sm text-red-700">
+                          {format(new Date(userSubscription.endDate), 'PPP')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+                      <Users className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <span>Contact management & organization</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100">
+                      <Upload className="h-4 w-4 text-green-600" />
+                    </div>
+                    <span>Bulk import and export features</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+                      <Tag className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <span>Advanced tagging & segmentation</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
+                      <Filter className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <span>Custom fields & filtering</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="space-y-4">
+                <Button
+                  onClick={() => window.location.href = '/wallet/plans'}
+                  className="w-full h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                  size="lg"
+                >
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Renew Subscription
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>Choose from flexible pricing plans</span>
+                </div>
+              </div>
+
+              {/* Decorative Elements */}
+              <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-red-500/10 transition-all duration-300 group-hover:scale-110" />
+              <div className="absolute -left-4 -bottom-4 h-12 w-12 rounded-full bg-red-400/20 transition-all duration-300 group-hover:scale-125" />
+
+              {/* Subtle Pattern Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </div>
+          </div>
+        </Layout>
+      </ProtectedRoute>
+    );
+  }
+
+
 
   return (
     <ProtectedRoute resource="contacts" action="read">
@@ -2861,7 +3025,7 @@ export default function ContactsPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-<Dialog open={isAddToGroupDialogOpen} onOpenChange={setIsAddToGroupDialogOpen}>
+              <Dialog open={isAddToGroupDialogOpen} onOpenChange={setIsAddToGroupDialogOpen}>
                 <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col p-0">
                   <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0">
                     <div className="flex items-center gap-3">
@@ -2886,7 +3050,7 @@ export default function ContactsPage() {
                         <Label htmlFor="group-select" className="text-sm font-medium text-slate-700">
                           Select Contact Group
                         </Label>
-                        
+
                         {contactGroups.length > 0 ? (
                           <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
                             <SelectTrigger id="group-select" className="bg-white border-slate-200">
@@ -2896,8 +3060,8 @@ export default function ContactsPage() {
                               {contactGroups.map((group) => (
                                 <SelectItem key={group.id} value={group.id}>
                                   <div className="flex items-center gap-3 w-full">
-                                    <div 
-                                      className="w-3 h-3 rounded-full" 
+                                    <div
+                                      className="w-3 h-3 rounded-full"
                                       style={{ backgroundColor: group.color }}
                                     />
                                     <div className="flex-1">
@@ -2932,8 +3096,8 @@ export default function ContactsPage() {
                             return selectedGroup ? (
                               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                                 <div className="flex items-center gap-3">
-                                  <div 
-                                    className="w-4 h-4 rounded-full" 
+                                  <div
+                                    className="w-4 h-4 rounded-full"
                                     style={{ backgroundColor: selectedGroup.color }}
                                   />
                                   <div className="flex-1">

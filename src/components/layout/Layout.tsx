@@ -967,7 +967,7 @@ export default function Layout({ children }: LayoutProps) {
                     <div className="hidden md:block text-left">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold leading-none">{user.name}</p>
-                        {user.subscription && user.subscription.plan !== 'free' && (
+                        {/* {user.subscription && user.subscription.plan !== 'free' && (
                           <Badge 
                             variant="outline" 
                             className={cn(
@@ -983,7 +983,7 @@ export default function Layout({ children }: LayoutProps) {
                           >
                             {user.subscription.plan.charAt(0).toUpperCase() + user.subscription.plan.slice(1)}
                           </Badge>
-                        )}
+                        )} */}
                       </div>
                       {user.subscription && user.subscription.status !== 'active' && (
                         <p className="text-xs text-orange-600">Plan Expired</p>

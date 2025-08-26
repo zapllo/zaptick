@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Check, 
-  MessageSquare, 
-  Bot, 
-  Users, 
-  Zap, 
+import {
+  Check,
+  MessageSquare,
+  Bot,
+  Users,
+  Zap,
   Shield,
   ArrowLeft,
   Loader2,
@@ -36,7 +36,8 @@ import {
   Building2,
   MessageCircle,
   Activity,
-  Target
+  Target,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -267,18 +268,18 @@ export default function PricingPage() {
 
   const isPlanDowngrade = (planId: string) => {
     if (!currentSubscription || currentSubscription.status !== 'active') return false;
-    
+
     const planHierarchy = ['free', 'starter', 'growth', 'advanced'];
     const currentIndex = planHierarchy.indexOf(currentSubscription.plan);
     const selectedIndex = planHierarchy.indexOf(planId);
-    
+
     return selectedIndex < currentIndex;
   };
 
   const handleSubscribe = async (planId: string) => {
     if (!agreedToTerms) {
       toast({
-        title: "Terms Required", 
+        title: "Terms Required",
         description: "Please agree to the terms and conditions to proceed.",
         variant: "destructive",
       });
@@ -291,13 +292,13 @@ export default function PricingPage() {
     }
 
     setLoading(planId);
-    
+
     try {
       const plan = plans.find(p => p.id === planId);
       if (!plan) throw new Error("Plan not found");
 
       const amount = getCurrentPrice(plan);
-      
+
       // Create Razorpay order
       const orderResponse = await fetch('/api/create-order', {
         method: 'POST',
@@ -393,7 +394,7 @@ export default function PricingPage() {
           color: '#1D4B3E',
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: function () {
             setLoading(null);
           }
         }
@@ -419,7 +420,7 @@ export default function PricingPage() {
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
     document.body.appendChild(script);
-    
+
     return () => {
       if (document.body.contains(script)) {
         document.body.removeChild(script);
@@ -430,7 +431,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-50">
+      <div className="backdrop-blur-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -455,7 +456,7 @@ export default function PricingPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
         {/* Hero Section */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -478,21 +479,19 @@ export default function PricingPage() {
           <div className="flex items-center justify-center space-x-4 bg-white rounded-full p-1 border border-gray-200 w-fit mx-auto">
             <button
               onClick={() => setIsYearly(false)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                !isYearly 
-                  ? 'bg-primary text-white shadow-sm' 
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${!isYearly
+                  ? 'bg-primary text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+                }`}
             >
               Quarterly
             </button>
             <button
               onClick={() => setIsYearly(true)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                isYearly 
-                  ? 'bg-primary text-white shadow-sm' 
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${isYearly
+                  ? 'bg-primary text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+                }`}
             >
               Yearly
               <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-0">
@@ -504,7 +503,7 @@ export default function PricingPage() {
 
         {/* Current Subscription Status */}
         {!subscriptionLoading && currentSubscription && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -518,24 +517,38 @@ export default function PricingPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900">Current Plan</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge 
+                    <Badge
                       className={cn(
-                        currentSubscription.status === 'active' 
-                          ? currentSubscription.plan === 'starter' 
-                            ? "bg-blue-100 text-blue-700" 
+                        currentSubscription.status === 'active'
+                          ? currentSubscription.plan === 'starter'
+                            ? "bg-blue-100 text-blue-700"
                             : currentSubscription.plan === 'growth'
-                            ? "bg-green-100 text-green-700"
-                            : "bg-amber-100 text-amber-700"
+                              ? "bg-green-100 text-green-700"
+                              : currentSubscription.plan === 'advanced'
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-gray-100 text-gray-700" // free plan
                           : "bg-gray-100 text-gray-600"
                       )}
                     >
-                      {currentSubscription.plan === 'free' ? 'Free Plan' : 
-                       `${currentSubscription.plan.charAt(0).toUpperCase() + currentSubscription.plan.slice(1)} Plan`}
+                      {currentSubscription.plan === 'free' ? 'Free Plan' :
+                        `${currentSubscription.plan.charAt(0).toUpperCase() + currentSubscription.plan.slice(1)} Plan`}
                     </Badge>
-                    <Badge 
-                      variant={currentSubscription.status === 'active' ? 'default' : 'destructive'}
+                    <Badge
+                      variant={
+                        currentSubscription.status === 'active'
+                          ? 'default'
+                          : currentSubscription.status === 'expired'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                      className={cn(
+                        currentSubscription.status === 'expired' && "bg-red-100 text-red-700 border-red-200"
+                      )}
                     >
-                      {currentSubscription.status.charAt(0).toUpperCase() + currentSubscription.status.slice(1)}
+                      {currentSubscription.status === 'expired'
+                        ? 'Expired'
+                        : currentSubscription.status.charAt(0).toUpperCase() + currentSubscription.status.slice(1)
+                      }
                     </Badge>
                   </div>
                 </div>
@@ -545,17 +558,33 @@ export default function PricingPage() {
                   <p className="text-sm text-gray-600">
                     {currentSubscription.status === 'active' ? 'Expires on' : 'Expired on'}
                   </p>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className={cn(
+                    "text-sm font-medium",
+                    currentSubscription.status === 'expired' ? 'text-red-600' : 'text-gray-900'
+                  )}>
                     {format(new Date(currentSubscription.endDate), 'PPP')}
                   </p>
                 </div>
               )}
             </div>
+
+            {/* Show renewal message for expired plans */}
+            {currentSubscription.status === 'expired' && currentSubscription.plan !== 'free' && (
+              <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200 flex items-start gap-3">
+                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">Subscription Expired</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Your subscription has expired and you've been moved to the Free plan. Renew to continue using premium features.
+                  </p>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
         {/* Pricing Cards */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -658,13 +687,13 @@ export default function PricingPage() {
                     disabled={loading === plan.id || isCurrentPlan(plan.id)}
                     className={cn(
                       "w-full transition-all duration-200",
-                      isCurrentPlan(plan.id) 
+                      isCurrentPlan(plan.id)
                         ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                        : plan.popular 
-                        ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl' 
-                        : plan.id === 'advanced'
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white'
-                        : 'bg-gray-900 hover:bg-gray-800 text-white',
+                        : plan.popular
+                          ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl'
+                          : plan.id === 'advanced'
+                            ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white'
+                            : 'bg-gray-900 hover:bg-gray-800 text-white',
                       isPlanDowngrade(plan.id) && "bg-orange-100 text-orange-700 hover:bg-orange-200"
                     )}
                     size="lg"
@@ -710,7 +739,7 @@ export default function PricingPage() {
         </motion.div>
 
         {/* Why Choose Zaptick */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
@@ -726,7 +755,7 @@ export default function PricingPage() {
               Powerful features designed to help you automate, engage, and grow your business
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {whyChooseFeatures.map((feature, index) => (
               <motion.div
@@ -746,7 +775,7 @@ export default function PricingPage() {
                         {feature.icon}
                       </div>
                       <div>
-                     <p className="font-semibold text-gray-900 text-lg">{feature.title}</p>
+                        <p className="font-semibold text-gray-900 text-lg">{feature.title}</p>
                       </div>
                     </div>
                   </div>
@@ -766,7 +795,7 @@ export default function PricingPage() {
         </motion.div>
 
         {/* Terms and Conditions */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
@@ -795,7 +824,7 @@ export default function PricingPage() {
         </motion.div>
 
         {/* Contact Support */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8 }}
