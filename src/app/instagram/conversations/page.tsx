@@ -319,7 +319,7 @@ export default function InstagramConversationsPage() {
                       <span className="font-medium">24-hour messaging window expired</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      You can only send messages within 24 hours of the customer's last message on Instagram.
+                      You can only send messages within 24 hours of the customer&apos;s last message on Instagram.
                     </p>
                   </div>
                 )}
