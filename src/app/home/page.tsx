@@ -28,6 +28,7 @@ import Layout from '@/components/layout/Layout';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { FaWhatsapp } from 'react-icons/fa';
+import InstagramOnboardingModal from '@/components/instagram/InstagramOnboardingModal';
 
 interface UserData {
   id: string;
@@ -66,7 +67,11 @@ export default function HomePage() {
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // ADD INSTAGRAM STATE
+  const [connectingInstagram, setConnectingInstagram] = useState(false);
 
+  // Add state for modal
+  const [showInstagramOnboarding, setShowInstagramOnboarding] = useState(false);
   /* ------------------------------------------------------------------ */
   /*  Fetch user data on component mount                                */
   /* ------------------------------------------------------------------ */
@@ -110,6 +115,28 @@ export default function HomePage() {
     fetchUserData();
   }, []);
 
+
+  /* ------------------------------------------------------------------ */
+  /*  Instagram connection function                                     */
+  /* ------------------------------------------------------------------ */
+  // Update the Instagram connection function
+  const connectInstagram = () => {
+    setShowInstagramOnboarding(true);
+  };
+
+const handleInstagramConnect = () => {
+  setShowInstagramOnboarding(false);
+  setConnectingInstagram(true);
+  
+  // Use Instagram App ID instead of Facebook App ID
+  const clientId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID; // Changed this
+  const redirectUri = encodeURIComponent(`${window.location.origin}/auth/instagram/callback`);
+  const scope = 'instagram_basic,instagram_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement';
+  
+  const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code&state=instagram_connect`;
+  
+  window.location.href = authUrl;
+};
   /* ------------------------------------------------------------------ */
   /*  Fetch health status                                               */
   /* ------------------------------------------------------------------ */
@@ -339,7 +366,7 @@ export default function HomePage() {
     </ul>
   );
 
-const WhatsAppDetails = () => {
+  const WhatsAppDetails = () => {
     const feat = whatsAppFeatures[activeWhatsAppFeature];
     return (
       <div className="flex flex-col gap-6 rounded-md border p-6">
@@ -478,39 +505,75 @@ const WhatsAppDetails = () => {
               </div>
             )}
 
-            {/* Instagram connected */}
-            <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-pink-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-pink-200 wark:from-muted/40 wark:to-pink-900/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 shadow-lg">
-                    <Instagram className="h-6 w-6 text-white" />
+            {/* Instagram connection status */}
+            {user?.instagramAccounts && user.instagramAccounts.length > 0 ? (
+              <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-pink-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-pink-200 wark:from-muted/40 wark:to-pink-900/10">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 shadow-lg">
+                      <Instagram className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 wark:text-white">Instagram Business</p>
+                      <p className="text-sm text-pink-600 font-medium">Connected & Active</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 wark:text-white">Instagram Business</p>
-                    <p className="text-sm text-pink-600 font-medium">Coming Soon</p>
+
+                  <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 px-2 py-1 text-xs font-medium text-pink-700 wark:bg-pink-900/30 wark:text-pink-400">
+                    <div className="h-1.5 w-1.5 rounded-full bg-pink-500 animate-pulse" />
+                    Business Connected
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
+                    <Instagram className="h-4 w-4" />
+                    <span className="font-mono">@{user.instagramAccounts[0].username}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
+                    <CheckCircle className="h-4 w-4 text-pink-500" />
+                    <span>{user.instagramAccounts[0].followersCount?.toLocaleString()} followers</span>
                   </div>
                 </div>
 
-                <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 px-2 py-1 text-xs font-medium text-pink-700 wark:bg-pink-900/30 wark:text-pink-400">
-                  <div className="h-1.5 w-1.5 rounded-full bg-pink-500" />
-                  Preview
-                </span>
+                {/* Decorative element */}
+                <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-pink-500/10 transition-all duration-300 group-hover:scale-110" />
               </div>
+            ) : (
+              <div className="group relative overflow-hidden rounded-xl border-2 border-dashed border-gray-200 bg-white p-6 transition-all duration-300 hover:border-pink-300 hover:bg-pink-50/30 wark:border-gray-700 wark:bg-muted/40">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 wark:bg-gray-800">
+                      <Instagram className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 wark:text-white">Instagram Business</p>
+                      <p className="text-sm text-gray-500">Not connected</p>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
-                  <Instagram className="h-4 w-4" />
-                  <span className="font-mono">@comingsoon</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-300">
-                  <Info className="h-4 w-4 text-pink-500" />
-                  <span>Instagram automation in development</span>
-                </div>
+                <p className="text-sm text-gray-600 wark:text-gray-300 mb-4">
+                  Connect your Instagram Business account to manage DMs and comments automatically.
+                </p>
+
+                <button
+                  onClick={connectInstagram}
+                  disabled={connectingInstagram}
+                  className="w-full rounded-lg bg-gradient-to-r from-pink-500 to-pink-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:from-pink-600 hover:to-pink-700 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {connectingInstagram ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Connecting...
+                    </div>
+                  ) : (
+                    'Connect Instagram Business'
+                  )}
+                </button>
               </div>
+            )}
 
-              {/* Decorative element */}
-              <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-pink-500/10 transition-all duration-300 group-hover:scale-110" />
-            </div>
           </div>
         </div>
 
@@ -984,7 +1047,14 @@ const WhatsAppDetails = () => {
             </Link> */}
           </div>
         </div>
+         {/* Instagram Onboarding Modal */}
+      <InstagramOnboardingModal
+        isOpen={showInstagramOnboarding}
+        onClose={() => setShowInstagramOnboarding(false)}
+        onConnect={handleInstagramConnect}
+      />
       </main>
+     
     </Layout>
   );
 }

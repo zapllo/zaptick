@@ -17,6 +17,19 @@ export interface IUser extends Document {
     isvNameToken: string;
     templateCount?: number;
   }[];
+  // ADD INSTAGRAM ACCOUNTS
+  instagramAccounts: {
+    instagramBusinessId: string;
+    username: string;
+    name: string;
+    profilePictureUrl?: string;
+    pageId: string;
+    pageName: string;
+    connectedAt: Date;
+    status: 'active' | 'disconnected' | 'pending' | 'expired';
+    followersCount?: number;
+    lastSyncAt?: Date;
+  }[];
   role: 'owner' | 'admin' | 'agent' | 'superadmin'; // Add 'owner' role
   isActive: boolean;
   isOwner: boolean; // Add owner flag
@@ -100,6 +113,25 @@ const UserSchema = new Schema<IUser>(
         },
         isvNameToken: { type: String },
         templateCount: { type: Number, default: 0 }
+      }
+    ],
+    // ADD INSTAGRAM ACCOUNTS FIELD
+    instagramAccounts: [
+      {
+        instagramBusinessId: { type: String, required: true },
+        username: { type: String, required: true },
+        name: { type: String, required: true },
+        profilePictureUrl: String,
+        pageId: { type: String, required: true },
+        pageName: { type: String, required: true },
+        connectedAt: { type: Date, default: Date.now },
+        status: {
+          type: String,
+          enum: ['active', 'disconnected', 'pending', 'expired'],
+          default: 'active'
+        },
+        followersCount: Number,
+        lastSyncAt: Date
       }
     ]
   },
