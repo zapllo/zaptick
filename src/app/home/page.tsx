@@ -130,7 +130,7 @@ const handleInstagramConnect = () => {
   
   // Use Instagram App ID instead of Facebook App ID
   const clientId = process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID; // Changed this
-  const redirectUri = encodeURIComponent(`${window.location.origin}/auth/instagram/callback`);
+  const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
   const scope = 'instagram_basic,instagram_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement';
   
   const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code&state=instagram_connect`;
