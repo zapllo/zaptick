@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle, XCircle, Instagram } from 'lucide-react';
 
-export default function InstagramCallbackPage() {
+function InstagramCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
@@ -137,5 +137,27 @@ export default function InstagramCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+        <div className="flex justify-center mb-4">
+          <Instagram className="h-16 w-16 text-pink-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading...</h1>
+        <p className="text-gray-600">Please wait while we process your request.</p>
+      </div>
+    </div>
+  );
+}
+
+export default function InstagramCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <InstagramCallbackContent />
+    </Suspense>
   );
 }
