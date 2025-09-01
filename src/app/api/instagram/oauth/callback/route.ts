@@ -3,11 +3,9 @@ import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import InstagramAccount from '@/models/InstagramAccount';
-import { InstagramService } from '@/lib/instagram';
 
-// Update these lines at the top:
-const INSTAGRAM_APP_ID = process.env.INSTAGRAM_APP_ID;
-const INSTAGRAM_APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
+const META_APP_ID = process.env.META_APP_ID || process.env.NEXT_PUBLIC_META_APP_ID;
+const META_APP_SECRET = process.env.META_APP_SECRET;
 
 export async function POST(req: NextRequest) {
     try {
@@ -22,184 +20,149 @@ export async function POST(req: NextRequest) {
         }
 
         await dbConnect();
-
         const user = await User.findById(decoded.id);
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
         const { code } = await req.json();
-
         if (!code) {
             return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 });
         }
 
-        const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/instagram/callback`;
+        console.log('Starting Instagram OAuth...');
 
-        // Change the token exchange to use Instagram credentials:
+        // Step 1: Get access token
+        const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/callback`;
+        
         const tokenResponse = await fetch('https://graph.facebook.com/v18.0/oauth/access_token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-                client_id: INSTAGRAM_APP_ID!, // Changed from FACEBOOK_APP_ID
-                client_secret: INSTAGRAM_APP_SECRET!, // Changed from FACEBOOK_APP_SECRET
+                client_id: META_APP_ID!,
+                client_secret: META_APP_SECRET!,
                 redirect_uri: redirectUri,
                 code: code,
             }),
         });
 
-        // Also update the long-lived token exchange:
-        const longLivedUrl = `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${INSTAGRAM_APP_ID}&client_secret=${INSTAGRAM_APP_SECRET}&fb_exchange_token=${shortLivedToken}`;
-
-        const longLivedTokenResponse = await fetch(longLivedUrl);
-        const longLivedTokenData = await longLivedTokenResponse.json();
-
-        if (longLivedTokenData.error) {
-            console.warn('Long-lived token exchange failed, using short-lived token');
+        const tokenData = await tokenResponse.json();
+        
+        if (tokenData.error) {
+            console.error('Token error:', tokenData.error);
+            return NextResponse.json({
+                error: 'Failed to get access token',
+                details: tokenData.error.message
+            }, { status: 400 });
         }
 
-        const accessToken = longLivedTokenData.access_token || shortLivedToken;
-        const expiresIn = longLivedTokenData.expires_in;
+        const accessToken = tokenData.access_token;
+        console.log('Got access token');
 
-        // Step 3: Get user's Facebook pages
-        const pagesResponse = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`);
+        // Step 2: Get user's pages
+        const pagesResponse = await fetch(
+            `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
+        );
         const pagesData = await pagesResponse.json();
 
         if (pagesData.error) {
-            throw new Error(`Failed to fetch pages: ${pagesData.error.message}`);
-        }
-
-        const pages = pagesData.data;
-        if (!pages || pages.length === 0) {
+            console.error('Pages error:', pagesData.error);
             return NextResponse.json({
-                error: 'No Facebook pages found',
-                message: 'You need to have a Facebook page connected to an Instagram Business account to proceed.'
+                error: 'Failed to get pages',
+                details: pagesData.error.message
             }, { status: 400 });
         }
 
-        // Step 4: Find pages with Instagram Business accounts
-        const instagramPages = [];
+        const pages = pagesData.data || [];
+        if (pages.length === 0) {
+            return NextResponse.json({
+                error: 'No Facebook pages found',
+                message: 'You need a Facebook page connected to an Instagram Business account'
+            }, { status: 400 });
+        }
+
+        // Step 3: Find Instagram accounts
+        let instagramAccount = null;
+        let selectedPage = null;
 
         for (const page of pages) {
             try {
-                const pageInstagramResponse = await fetch(
-                    `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account{id,username,name,biography,website,followers_count,media_count,profile_picture_url}&access_token=${page.access_token}`
+                const igResponse = await fetch(
+                    `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account{id,username,name,profile_picture_url,followers_count}&access_token=${page.access_token}`
                 );
+                const igData = await igResponse.json();
 
-                const pageInstagramData = await pageInstagramResponse.json();
-
-                if (pageInstagramData.instagram_business_account) {
-                    instagramPages.push({
-                        page: page,
-                        instagram: pageInstagramData.instagram_business_account,
-                        pageAccessToken: page.access_token
-                    });
+                if (igData.instagram_business_account) {
+                    instagramAccount = igData.instagram_business_account;
+                    selectedPage = page;
+                    console.log('Found Instagram account:', instagramAccount.username);
+                    break;
                 }
             } catch (error) {
-                console.log(`No Instagram account found for page: ${page.name}`);
+                continue;
             }
         }
 
-        if (instagramPages.length === 0) {
+        if (!instagramAccount || !selectedPage) {
             return NextResponse.json({
                 error: 'No Instagram Business accounts found',
-                message: 'None of your Facebook pages have an Instagram Business account connected. Please connect an Instagram Business account to your Facebook page first.'
+                message: 'Connect an Instagram Business account to your Facebook page first'
             }, { status: 400 });
         }
 
-        // Step 5: Connect the first Instagram Business account found (or let user choose)
-        const selectedPage = instagramPages[0];
-        const igAccount = selectedPage.instagram;
-
-        // Check if account already exists
-        const existingAccount = await InstagramAccount.findOne({
-            instagramBusinessId: igAccount.id
-        });
-
-        if (existingAccount && existingAccount.userId.toString() !== decoded.id) {
-            return NextResponse.json({
-                error: 'Instagram account already connected',
-                message: 'This Instagram account is already connected to another ZapTick account.'
-            }, { status: 409 });
-        }
-
-        // Create or update Instagram account
-        const instagramAccount = await InstagramAccount.findOneAndUpdate(
-            { instagramBusinessId: igAccount.id },
+        // Step 4: Save to database
+        const savedAccount = await InstagramAccount.findOneAndUpdate(
+            { instagramBusinessId: instagramAccount.id },
             {
                 userId: decoded.id,
                 companyId: user.companyId,
-                instagramBusinessId: igAccount.id,
-                instagramAccountId: igAccount.id,
-                username: igAccount.username,
-                name: igAccount.name,
-                profilePictureUrl: igAccount.profile_picture_url,
-                followersCount: igAccount.followers_count,
-                mediaCount: igAccount.media_count,
-                biography: igAccount.biography,
-                website: igAccount.website,
+                instagramBusinessId: instagramAccount.id,
+                instagramAccountId: instagramAccount.id,
+                username: instagramAccount.username,
+                name: instagramAccount.name,
+                profilePictureUrl: instagramAccount.profile_picture_url,
+                followersCount: instagramAccount.followers_count,
                 accessToken: accessToken,
-                pageId: selectedPage.page.id,
-                pageName: selectedPage.page.name,
-                pageAccessToken: selectedPage.pageAccessToken,
+                pageId: selectedPage.id,
+                pageName: selectedPage.name,
+                pageAccessToken: selectedPage.access_token,
                 connectedAt: new Date(),
-                status: 'active',
-                permissions: ['instagram_basic', 'instagram_manage_messages', 'instagram_manage_comments'],
-                tokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined
+                status: 'active'
             },
             { upsert: true, new: true }
         );
 
-        // Update user's Instagram accounts
-        await User.findByIdAndUpdate(
-            decoded.id,
-            {
-                $pull: { instagramAccounts: { instagramBusinessId: igAccount.id } }, // Remove if exists
-            }
-        );
-
-        await User.findByIdAndUpdate(
-            decoded.id,
-            {
-                $push: {
-                    instagramAccounts: {
-                        instagramBusinessId: igAccount.id,
-                        username: igAccount.username,
-                        name: igAccount.name,
-                        profilePictureUrl: igAccount.profile_picture_url,
-                        pageId: selectedPage.page.id,
-                        pageName: selectedPage.page.name,
-                        connectedAt: new Date(),
-                        status: 'active',
-                        followersCount: igAccount.followers_count,
-                        lastSyncAt: new Date()
-                    }
+        // Step 5: Update user record
+        await User.findByIdAndUpdate(decoded.id, {
+            $push: {
+                instagramAccounts: {
+                    instagramBusinessId: instagramAccount.id,
+                    username: instagramAccount.username,
+                    name: instagramAccount.name,
+                    profilePictureUrl: instagramAccount.profile_picture_url,
+                    followersCount: instagramAccount.followers_count,
+                    connectedAt: new Date(),
+                    status: 'active'
                 }
             }
-        );
+        });
 
-        console.log(`✅ Instagram account connected: @${igAccount.username} (ID: ${igAccount.id})`);
+        console.log('Instagram account connected successfully');
 
         return NextResponse.json({
             success: true,
             account: {
-                id: instagramAccount._id,
-                instagramBusinessId: igAccount.id,
-                username: igAccount.username,
-                name: igAccount.name,
-                profilePictureUrl: igAccount.profile_picture_url,
-                followersCount: igAccount.followers_count,
-                connectedAt: instagramAccount.connectedAt,
-                pageId: selectedPage.page.id,
-                pageName: selectedPage.page.name
-            },
-            message: 'Instagram Business account connected successfully!'
+                username: instagramAccount.username,
+                name: instagramAccount.name,
+                profilePictureUrl: instagramAccount.profile_picture_url,
+                followersCount: instagramAccount.followers_count
+            }
         });
 
     } catch (error) {
-        console.error('Instagram OAuth callback error:', error);
+        console.error('Instagram OAuth error:', error);
         return NextResponse.json({
             error: 'Failed to connect Instagram account',
             details: error instanceof Error ? error.message : 'Unknown error'
