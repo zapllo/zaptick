@@ -677,8 +677,8 @@ export default function HomePage() {
                 </p>
 
                 <button
-                  onClick={connectInstagram}
-                  disabled={connectingInstagram}
+                  // onClick={connectInstagram}
+                  disabled={true}
                   className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-pink-600 px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-pink-600 hover:to-pink-700 hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   {connectingInstagram ? (
@@ -687,7 +687,7 @@ export default function HomePage() {
                       Connecting...
                     </div>
                   ) : (
-                    'Connect Instagram Business'
+                    'Coming Soon'
                   )}
                 </button>
 

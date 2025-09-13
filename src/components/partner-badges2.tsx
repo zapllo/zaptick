@@ -76,7 +76,7 @@ export default function PartnerBadges({
   };
 
   const content = (
-    <div className={`flex flex-col items-center gap-3 ${className}`}>
+    <div className={`flex flex-col items-start gap-3 ${className}`}>
       {badges.map((badge, index) => (
         <motion.div
           key={index}

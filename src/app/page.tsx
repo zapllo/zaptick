@@ -37,7 +37,7 @@ import {
   Layers,
   Info
 } from "lucide-react";
-import PartnerBadges from "@/components/ui/partner-badges";
+import PartnerBadges from "@/components/partner-badges2";
 
 export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -973,9 +973,9 @@ export default function Home() {
                     </Link>
                   </Button>
 
-                  {/* <Button 
-                    size="lg" 
-                    variant="outline" 
+                  {/* <Button
+                    size="lg"
+                    variant="outline"
                     className="h-14 px-8 text-black border-white/30 hover:bg-white/10 font-semibold text-base"
                   >
                     <Link href="/contact">

@@ -474,9 +474,9 @@ export default function PricingPage() {
                                     animate={{ opacity: 1, y: 0, scale: plan.popular ? 1.02 : 1 }}
                                     exit={{ opacity: 0, y: -30, scale: 0.9 }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
-                                    className="relative group"
+                                    className="relative group h-full"
                                 >
-                                    <div className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${plan.bgGradient} p-8 shadow-lg transition-all duration-300 hover:shadow-xl ${plan.borderColor} ${plan.popular ? 'border-primary shadow-primary/10' : ''}`}>
+                                    <div className={`group relative h-full overflow-hidden rounded-2xl border-2 bg-gradient-to-br ${plan.bgGradient} p-8 shadow-lg transition-all duration-300 hover:shadow-xl ${plan.borderColor} ${plan.popular ? 'border-primary shadow-primary/10' : ''}`}>
                                         {/* Popular Badge */}
                                         {plan.popular && (
                                             <span className="absolute top-2  left-2 z-[100] inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white shadow-lg">
@@ -533,7 +533,7 @@ export default function PricingPage() {
 
                                         {/* Features */}
                                         <div className="space-y-4 mb-8">
-                                            <div className="max-h-64 overflow-y-auto space-y-3">
+                                            <div className="max-h- overflow-y-auto space-y-3">
                                                 {plan.features.slice(0, 8).map((feature, featureIndex) => (
                                                     <motion.div
                                                         key={featureIndex}
