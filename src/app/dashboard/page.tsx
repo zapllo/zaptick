@@ -661,7 +661,7 @@ export default function DashboardPage() {
           </div>
           <h3 className="text-xl font-semibold text-slate-900 wark:text-white mb-2">Get Started</h3>
           <p className="text-slate-600 wark:text-slate-300 mb-6 max-w-md mx-auto">
-            Choose how you'd like to connect your WhatsApp Business Account and start messaging your customers.
+            Choose how you&apos;d like to connect your WhatsApp Business Account and start messaging your customers.
           </p>
         </div>
 
@@ -702,7 +702,7 @@ export default function DashboardPage() {
               <div>
                 <h4 className="text-lg font-semibold text-slate-900 wark:text-white">Need Help Choosing?</h4>
                 <p className="text-sm text-slate-600 wark:text-slate-300">
-                  Not sure which option to use? Here's what we recommend
+                  Not sure which option to use? Here&apos;s what we recommend
                 </p>
               </div>
             </div>
@@ -714,7 +714,7 @@ export default function DashboardPage() {
                   <span className="text-sm font-medium text-green-800 wark:text-green-300">Recommended for new users</span>
                 </div>
                 <p className="text-sm text-green-700 wark:text-green-400">
-                  <strong>Quick Connect:</strong> If you don't have a WhatsApp Business account yet or want the easiest setup process.
+                  <strong>Quick Connect:</strong> If you don&apos;t have a WhatsApp Business account yet or want the easiest setup process.
                 </p>
               </div>
 
