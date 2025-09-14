@@ -134,7 +134,7 @@ export default function Header() {
           >
             Testimonials
           </button>
-           <Link href='/partner-with-zaptick'>
+           <Link href='https://zapllo.notion.site/EXT-Referral-Programme-a18f7fe8ee634bffa917ca0c6f24ad0d?pvs=4'>
             <button
               className="block w-full cursor-pointer text-sm text-left py-2 text-gray-700 hover:text-green-600 transition-colors"
             >

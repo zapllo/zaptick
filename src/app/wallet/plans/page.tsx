@@ -276,144 +276,146 @@ export default function PricingPage() {
     return selectedIndex < currentIndex;
   };
 
-  const handleSubscribe = async (planId: string) => {
-    if (!agreedToTerms) {
-      toast({
-        title: "Terms Required",
-        description: "Please agree to the terms and conditions to proceed.",
-        variant: "destructive",
-      });
-      return;
-    }
+const handleSubscribe = async (planId: string) => {
+  if (!agreedToTerms) {
+    toast({
+      title: "Terms Required",
+      description: "Please agree to the terms and conditions to proceed.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-    if (planId === "advanced") {
-      window.location.href = "mailto:sales@zaptick.com?subject=Advanced Plan Inquiry";
-      return;
-    }
+  if (planId === "advanced") {
+    window.location.href = "mailto:sales@zaptick.com?subject=Advanced Plan Inquiry";
+    return;
+  }
 
-    setLoading(planId);
+  setLoading(planId);
 
-    try {
-      const plan = plans.find(p => p.id === planId);
-      if (!plan) throw new Error("Plan not found");
+  try {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) throw new Error("Plan not found");
 
-      const amount = getCurrentPrice(plan);
+    const baseAmount = getCurrentPrice(plan);
+    const totalAmount = Math.round(baseAmount * 1.18); // Add 18% GST
 
-      // Create Razorpay order
-      const orderResponse = await fetch('/api/create-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: amount * 100,
-          currency: 'INR',
-          receipt: `plan_${planId}_${Date.now()}`,
-          notes: {
-            plan_id: planId,
-            plan_name: plan.name,
-            billing_cycle: isYearly ? 'yearly' : 'quarterly',
-            amount: amount
-          }
-        }),
-      });
-
-      const { orderId } = await orderResponse.json();
-
-      // Initialize Razorpay
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: amount * 100,
+    // Create Razorpay order
+    const orderResponse = await fetch('/api/create-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: totalAmount * 100, // Convert to paise
         currency: 'INR',
-        name: 'Zaptick',
-        description: `${plan.name} - ${isYearly ? 'yearly' : 'quarterly'} subscription`,
-        order_id: orderId,
-        handler: async function (response: any) {
-          try {
-            const verifyResponse = await fetch('/api/verify-payment', {
+        receipt: `plan_${planId}_${Date.now()}`,
+        notes: {
+          plan_id: planId,
+          plan_name: plan.name,
+          billing_cycle: isYearly ? 'yearly' : 'quarterly',
+          base_amount: baseAmount,
+          total_amount: totalAmount
+        }
+      }),
+    });
+
+    const { orderId } = await orderResponse.json();
+
+    // Initialize Razorpay
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: totalAmount * 100, // Amount in paise with GST
+      currency: 'INR',
+      name: 'Zaptick',
+      description: `${plan.name} - ${isYearly ? 'yearly' : 'quarterly'} subscription (incl. 18% GST)`,
+      order_id: orderId,
+      handler: async function (response: any) {
+        try {
+          const verifyResponse = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }),
+          });
+
+          const verifyResult = await verifyResponse.json();
+
+          if (verifyResult.success) {
+            await fetch('/api/subscription/update', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
+                plan_id: planId,
+                billing_cycle: isYearly ? 'yearly' : 'quarterly',
+                payment_id: response.razorpay_payment_id,
+                order_id: response.razorpay_order_id,
+                base_amount: baseAmount,
+                total_amount: totalAmount
               }),
             });
 
-            const verifyResult = await verifyResponse.json();
-
-            if (verifyResult.success) {
-              await fetch('/api/subscription/update', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  plan_id: planId,
-                  billing_cycle: isYearly ? 'yearly' : 'quarterly',
-                  payment_id: response.razorpay_payment_id,
-                  order_id: response.razorpay_order_id,
-                  amount: amount
-                }),
-              });
-
-              toast({
-                title: "Subscription Activated!",
-                description: `Your ${plan.name} plan has been activated successfully.`,
-              });
-
-              // Refresh subscription data
-              const updatedResponse = await fetch('/api/auth/me');
-              if (updatedResponse.ok) {
-                const updatedData = await updatedResponse.json();
-                if (updatedData.user.subscription) {
-                  setCurrentSubscription(updatedData.user.subscription);
-                }
-              }
-
-              router.push('/wallet');
-            } else {
-              throw new Error('Payment verification failed');
-            }
-          } catch (error) {
-            console.error('Payment verification error:', error);
             toast({
-              title: "Payment Error",
-              description: "There was an issue verifying your payment. Please contact support.",
-              variant: "destructive",
+              title: "Subscription Activated!",
+              description: `Your ${plan.name} plan has been activated successfully.`,
             });
+
+            // Refresh subscription data
+            const updatedResponse = await fetch('/api/auth/me');
+            if (updatedResponse.ok) {
+              const updatedData = await updatedResponse.json();
+              if (updatedData.user.subscription) {
+                setCurrentSubscription(updatedData.user.subscription);
+              }
+            }
+
+            router.push('/wallet');
+          } else {
+            throw new Error('Payment verification failed');
           }
-        },
-        prefill: {
-          name: 'Customer',
-          email: 'customer@example.com',
-        },
-        theme: {
-          color: '#1D4B3E',
-        },
-        modal: {
-          ondismiss: function () {
-            setLoading(null);
-          }
+        } catch (error) {
+          console.error('Payment verification error:', error);
+          toast({
+            title: "Payment Error",
+            description: "There was an issue verifying your payment. Please contact support.",
+            variant: "destructive",
+          });
         }
-      };
+      },
+      prefill: {
+        name: 'Customer',
+        email: 'customer@example.com',
+      },
+      theme: {
+        color: '#1D4B3E',
+      },
+      modal: {
+        ondismiss: function () {
+          setLoading(null);
+        }
+      }
+    };
 
-      const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
-    } catch (error) {
-      console.error('Subscription error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to initiate subscription. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
+    const razorpay = new (window as any).Razorpay(options);
+    razorpay.open();
+  } catch (error) {
+    console.error('Subscription error:', error);
+    toast({
+      title: "Error",
+      description: "Failed to initiate subscription. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(null);
+  }
+};
   // Load Razorpay script
   useEffect(() => {
     const script = document.createElement('script');
@@ -480,8 +482,8 @@ export default function PricingPage() {
             <button
               onClick={() => setIsYearly(false)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${!isYearly
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
                 }`}
             >
               Quarterly
@@ -489,8 +491,8 @@ export default function PricingPage() {
             <button
               onClick={() => setIsYearly(true)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${isYearly
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
                 }`}
             >
               Yearly
@@ -583,7 +585,7 @@ export default function PricingPage() {
           </motion.div>
         )}
 
-   {/* Pricing Cards */}
+        {/* Pricing Cards */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -675,52 +677,52 @@ export default function PricingPage() {
                       </div>
                     ))}
                   </div>
-
-                  {/* CTA Button */}
-                  <Button
-                    onClick={() => handleSubscribe(plan.id)}
-                    disabled={loading === plan.id || isCurrentPlan(plan.id)}
-                    className={cn(
-                      "w-full h-11 font-semibold transition-all duration-200",
-                      isCurrentPlan(plan.id)
-                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                        : plan.popular
-                          ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-md hover:shadow-lg'
-                          : plan.id === 'advanced'
-                            ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md'
-                            : 'bg-gray-900 hover:bg-gray-800 text-white shadow-md',
-                      isPlanDowngrade(plan.id) && "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                    )}
-                  >
-                    {loading === plan.id ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : isCurrentPlan(plan.id) ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Current Plan
-                      </>
-                    ) : isPlanDowngrade(plan.id) ? (
-                      'Downgrade'
-                    ) : (
-                      <>
-                        {plan.id === 'advanced' ? (
-                          <>
-                            <PhoneCall className="h-4 w-4 mr-2" />
-                            Contact Sales
-                          </>
-                        ) : (
-                          <>
-                            <Rocket className="h-4 w-4 mr-2" />
-                            {currentSubscription?.plan === 'free' ? 'Get Started' : 'Upgrade'}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </Button>
-
+                  <div className="mb-auto">
+                    {/* CTA Button */}
+                    <Button
+                      onClick={() => handleSubscribe(plan.id)}
+                      disabled={loading === plan.id || isCurrentPlan(plan.id)}
+                      className={cn(
+                        "w-full h-11 font-semibold transition-all duration-200",
+                        isCurrentPlan(plan.id)
+                          ? "bg-gray-100 mt-5 text-gray-500 cursor-not-allowed"
+                          : plan.popular
+                            ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-md hover:shadow-lg'
+                            : plan.id === 'advanced'
+                              ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md mt-16 '
+                              : 'bg-gray-900 hover:bg-gray-800 text-white shadow-md',
+                        isPlanDowngrade(plan.id) && "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                      )}
+                    >
+                      {loading === plan.id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : isCurrentPlan(plan.id) ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Current Plan
+                        </>
+                      ) : isPlanDowngrade(plan.id) ? (
+                        'Downgrade'
+                      ) : (
+                        <>
+                          {plan.id === 'advanced' ? (
+                            <>
+                              <PhoneCall className="h-4 w-4 mr-2" />
+                              Contact Sales
+                            </>
+                          ) : (
+                            <>
+                              <Rocket className="h-4 w-4 mr-2" />
+                              {currentSubscription?.plan === 'free' ? 'Get Started' : 'Upgrade'}
+                            </>
+                          )}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   {/* Subtle background decoration */}
                   <div className="absolute inset-0 -z-10">
                     <div className={`absolute top-0 right-0 w-20 h-20 ${plan.decorativeColor} rounded-full -translate-y-8 translate-x-8 opacity-30`} />
@@ -828,7 +830,7 @@ export default function PricingPage() {
               <PhoneCall className="h-4 w-4" />
               <span>Contact Support</span>
             </a>
-            <a href="/demo" className="flex items-center space-x-2 hover:text-primary transition-colors">
+            <a href="https://forms.gle/QF4nuFBb9WvcwY5S7" className="flex items-center space-x-2 hover:text-primary transition-colors">
               <Settings className="h-4 w-4" />
               <span>Book a Demo</span>
             </a>

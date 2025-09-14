@@ -542,13 +542,7 @@ export default function AccountPage() {
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="text-right">
-                                        <p className="text-sm font-medium">{userData?.name}</p>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                            {getRoleIcon()}
-                                            {getUserRoleDisplay()}
-                                        </p>
-                                    </div>
+
                                 </div>
                             </div>
 
@@ -715,9 +709,11 @@ export default function AccountPage() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-6">
+
+                                                </div>
+ <div className="space-y-6">
                                                         <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 wark:from-blue-900/20 wark:to-indigo-900/20 border border-blue-200 wark:border-blue-800">
-                                                            <div className="flex items-center gap-3 mb-3">
+                                                            <div className="flex  items-center gap-3 mb-3">
                                                                 <div className="p-2 rounded-lg bg-blue-100 wark:bg-blue-900/40">
                                                                     {getRoleIcon()}
                                                                 </div>
@@ -725,10 +721,13 @@ export default function AccountPage() {
                                                                     <h4 className="font-medium text-blue-900 wark:text-blue-100">Account Role</h4>
                                                                     <p className="text-sm text-blue-700 wark:text-blue-300">Your current access level</p>
                                                                 </div>
+                                                                <div className="ml-auto">
+                                                                    <Badge  variant={getUserRoleBadgeVariant() as any} className="mb-2 bg-blue-500">
+                                                                        {getUserRoleDisplay()}
+                                                                    </Badge>
+                                                                </div>
                                                             </div>
-                                                            <Badge variant={getUserRoleBadgeVariant() as any} className="mb-2">
-                                                                {getUserRoleDisplay()}
-                                                            </Badge>
+
                                                             <p className="text-sm text-blue-700 wark:text-blue-300">
                                                                 {userData?.isOwner
                                                                     ? "You have full administrative access to this account."
@@ -753,8 +752,6 @@ export default function AccountPage() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
-
                                                 <div className="pt-6 border-t">
                                                     <div className="flex items-center justify-between">
                                                         <div className="space-y-1">
@@ -800,9 +797,9 @@ export default function AccountPage() {
                                                                                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                                                                             >
                                                                                 {showCurrentPassword ? (
-                                                                                    <EyeOff className="h-4 w-4" />
-                                                                                ) : (
                                                                                     <Eye className="h-4 w-4" />
+                                                                                ) : (
+                                                                                    <EyeOff className="h-4 w-4" />
                                                                                 )}
                                                                             </Button>
                                                                         </div>
@@ -827,9 +824,9 @@ export default function AccountPage() {
                                                                                 onClick={() => setShowNewPassword(!showNewPassword)}
                                                                             >
                                                                                 {showNewPassword ? (
-                                                                                    <EyeOff className="h-4 w-4" />
-                                                                                ) : (
                                                                                     <Eye className="h-4 w-4" />
+                                                                                ) : (
+                                                                                    <EyeOff className="h-4 w-4" />
                                                                                 )}
                                                                             </Button>
                                                                         </div>

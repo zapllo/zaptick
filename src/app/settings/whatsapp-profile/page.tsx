@@ -479,7 +479,54 @@ export default function WhatsAppProfileSettings() {
             <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-green-500/5" />
             <div className="absolute -right-4 -bottom-4 h-20 w-20 rounded-full bg-green-500/10" />
           </div>
-
+ {/* Connected Accounts Section */}
+          {profileData.wabaAccounts.length > 0 && (
+            <Card className="mt-8 mb-8 border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 wark:from-green-900/20 wark:to-emerald-900/20">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                    <FaWhatsapp className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg text-green-900 wark:text-green-200">
+                      Connected WhatsApp Accounts
+                    </CardTitle>
+                    <CardDescription className="text-green-700 wark:text-green-300">
+                      Profile updates will apply to all connected accounts
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {profileData.wabaAccounts.map((account, index) => (
+                    <div
+                      key={account.wabaId}
+                      className="flex items-center justify-between p-4 bg-white/60 wark:bg-gray-800/60 rounded-xl border border-green-200/50 wark:border-green-700/50 transition-all duration-200 hover:bg-white/80 wark:hover:bg-gray-800/80"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/10">
+                          <Phone className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-green-900 wark:text-green-200">
+                            {account.businessName || `Business Account ${index + 1}`}
+                          </p>
+                          <p className="text-sm text-green-700 wark:text-green-300 font-mono">
+                            {account.phoneNumber}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-700">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
+                        Active
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {/* Notification */}
           {notification.type && (
             <div className="mb-6 animate-in slide-in-from-top-2 duration-300">
@@ -722,7 +769,7 @@ export default function WhatsAppProfileSettings() {
             {/* Enhanced WhatsApp Preview */}
             <div className="relative">
               <div className="sticky top-8">
-                <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm wark:bg-gray-800/80 overflow-hidden">
+                <Card className="border-0 shadow-2xl h-full bg-white/80 backdrop-blur-sm wark:bg-gray-800/80 overflow-hidden">
                   <CardHeader className="pb-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/10">
@@ -741,7 +788,7 @@ export default function WhatsAppProfileSettings() {
                     {/* Enhanced Phone Mockup */}
                     <div className="relative">
                       {/* Phone Frame */}
-                      <div className="relative w-80 h-[850px] bg-black rounded-[2.5rem] p-2 shadow-2xl">
+                      <div className="relative w-80 h-[620px] bg-black rounded-[2.5rem] p-2 shadow-2xl">
                         {/* Screen */}
                         <div className="w-full h-full bg-[#ffffff] rounded-[2rem] overflow-hidden relative">
                           {/* Status Bar */}
@@ -1057,6 +1104,7 @@ export default function WhatsAppProfileSettings() {
               </div>
             </DialogContent>
           </Dialog>
+
           {/* Enhanced Help Section */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tips Card */}
@@ -1128,54 +1176,7 @@ export default function WhatsAppProfileSettings() {
             </Card>
           </div>
 
-          {/* Connected Accounts Section */}
-          {profileData.wabaAccounts.length > 0 && (
-            <Card className="mt-8 border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 wark:from-green-900/20 wark:to-emerald-900/20">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
-                    <FaWhatsapp className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg text-green-900 wark:text-green-200">
-                      Connected WhatsApp Accounts
-                    </CardTitle>
-                    <CardDescription className="text-green-700 wark:text-green-300">
-                      Profile updates will apply to all connected accounts
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {profileData.wabaAccounts.map((account, index) => (
-                    <div
-                      key={account.wabaId}
-                      className="flex items-center justify-between p-4 bg-white/60 wark:bg-gray-800/60 rounded-xl border border-green-200/50 wark:border-green-700/50 transition-all duration-200 hover:bg-white/80 wark:hover:bg-gray-800/80"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/10">
-                          <Phone className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-green-900 wark:text-green-200">
-                            {account.businessName || `Business Account ${index + 1}`}
-                          </p>
-                          <p className="text-sm text-green-700 wark:text-green-300 font-mono">
-                            {account.phoneNumber}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 wark:bg-green-900/30 wark:text-green-400 wark:border-green-700">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
-                        Active
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
       </div>
     </Layout>

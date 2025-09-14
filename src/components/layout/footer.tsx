@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, Facebook, Twitter, Instagram, Linkedin, Mail, Zap, QrCode, Link as LinkIcon, MessageSquare, Bot, BarChart2, Users } from "lucide-react";
-import PartnerBadges from "../ui/partner-badges";
+import PartnerBadges from "../partner-badges2";
 import { motion } from 'framer-motion'
 
 export default function Footer() {
@@ -55,16 +55,32 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-8 py-20 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
           {/* Brand Section */}
-          <div className="md:col-span-4">
-            <div className="flex items-center  gap-3 mb-6">
+       <div className="md:col-span-4">
+            <div className="flex items-center gap-3 mb-2">
               <img
                 src="/zaptick.png"
                 alt="ZapTick Logo"
-
-                className="brightness-0  w-56 invert"
+                className="brightness-0 w-56 invert"
               />
             </div>
-            <p className="text-gray-400  max-w-md leading-relaxed">
+
+            <div className=" mb-6">
+              <span className="text-xs text-gray-500 block mb-1">a product by</span>
+              <a
+                href="https://zapllo.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src="https://zapllo.com/logo.png"
+                  alt="Zapllo"
+                  className="h-6 w-auto"
+                />
+              </a>
+            </div>
+
+            <p className="text-gray-400 max-w-md leading-relaxed mb-6">
               Empowering businesses to harness WhatsApp&apos;s potential. From automated conversations to enterprise-grade analytics, we&apos;re your gateway to WhatsApp success.
             </p>
             {/* Partner Badges */}
@@ -72,30 +88,30 @@ export default function Footer() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.2, duration: 0.5 }}
-              className="pt-6 flex mb-8 flex justify-center"
+              className="pt-6  mb-8 flex justify-start"
             >
               <PartnerBadges animated={true} size="md" />
             </motion.div>
             <div className="flex gap-4 mb-8">
-              <Link href="#" className="group relative">
+              <Link href="https://twitter.com/zapllohq" className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                 <div className="relative bg-gray-800 hover:bg-gray-700 p-3 rounded-lg border border-gray-700 transition-all duration-300">
                   <Twitter size={20} className="text-gray-400 group-hover:text-white transition-colors" />
                 </div>
               </Link>
-              <Link href="#" className="group relative">
+              <Link href="https://www.facebook.com/zapllohq" className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                 <div className="relative bg-gray-800 hover:bg-gray-700 p-3 rounded-lg border border-gray-700 transition-all duration-300">
                   <Facebook size={20} className="text-gray-400 group-hover:text-white transition-colors" />
                 </div>
               </Link>
-              <Link href="#" className="group relative">
+              <Link href="https://www.instagram.com/zapllohq" className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                 <div className="relative bg-gray-800 hover:bg-gray-700 p-3 rounded-lg border border-gray-700 transition-all duration-300">
                   <Instagram size={20} className="text-gray-400 group-hover:text-white transition-colors" />
                 </div>
               </Link>
-              <Link href="#" className="group relative">
+              <Link href="https://www.linkedin.com/company/zapllo" className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                 <div className="relative bg-gray-800 hover:bg-gray-700 p-3 rounded-lg border border-gray-700 transition-all duration-300">
                   <Linkedin size={20} className="text-gray-400 group-hover:text-white transition-colors" />
@@ -172,7 +188,7 @@ export default function Footer() {
               </li>
               <li>
                 <Button variant="outline" className="mt-4 border-gray-600 text-black -300 hover:bg-green-600 hover:text-white hover:border-green-600 transition-all duration-300">
-                  <Link href="/contact">Contact Sales</Link>
+                  <Link href="https://zapllo.com/contact">Contact Sales</Link>
                 </Button>
               </li>
             </ul>
@@ -187,9 +203,9 @@ export default function Footer() {
               </p>
 
               <div className="flex gap-6 text-sm">
-                <Link href="#" className="text-gray-400 hover:text-green-400 transition-colors">Privacy Policy</Link>
-                <Link href="#" className="text-gray-400 hover:text-green-400 transition-colors">Terms of Service</Link>
-                <Link href="#" className="text-gray-400 hover:text-green-400 transition-colors">Cookie Policy</Link>
+                <Link href="https://zapllo.com/privacypolicy" className="text-gray-400 hover:text-green-400 transition-colors">Privacy Policy</Link>
+                <Link href="https://zapllo.com/terms" className="text-gray-400 hover:text-green-400 transition-colors">Terms of Service</Link>
+                <Link href="https://zapllo.com/refundpolicy" className="text-gray-400 hover:text-green-400 transition-colors">Refund Policy</Link>
               </div>
             </div>
 
@@ -204,21 +220,7 @@ export default function Footer() {
                   Built with ❤️ for WhatsApp Businesses
                 </div>
               </div>
-              <div className="flex items-center gap-2 ml-4">
-                <span className="text-xs text-gray-600">Powered by</span>
-                <a
-                  href="https://zapllo.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center hover:opacity-80 transition-opacity"
-                >
-                  <img
-                    src="https://zapllo.com/logo.png"
-                    alt="Zapllo"
-                    className="h-4 w-auto"
-                  />
-                </a>
-              </div>
+
             </div>
           </div>
         </div>

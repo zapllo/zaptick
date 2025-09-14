@@ -240,7 +240,7 @@ export default function Home() {
                     size="lg"
                     className="h-14 px-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25 transition-all duration-300"
                   >
-                    <Link href="/signup" className="flex items-center gap-2">
+                    <Link href="https://forms.gle/QF4nuFBb9WvcwY5S7" className="flex items-center gap-2">
                       Book Free Demo
                       <ArrowRight className="h-4 w-4" />
                     </Link>
@@ -862,8 +862,8 @@ export default function Home() {
                 <p className="text-xs font-medium text-gray-700">{integration.alt}</p>
 
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-indigo-600 bg-opacity-90 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <span className="text-white font-medium text-xs px-2 py-1 rounded-full bg-white/20 flex items-center">
+                <div className="absolute inset-0 bg-indigo-600  hover:opacity-70 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <span className="text-black font-medium text-xs px-2 py-1 rounded-full bg-white /20 flex items-center">
                     Connect <ArrowRight className="ml-1 h-3 w-3" />
                   </span>
                 </div>
@@ -967,7 +967,7 @@ export default function Home() {
                     size="lg"
                     className="h-14 px-8 bg-white text-green-700 hover:bg-gray-50 shadow-lg font-semibold text-base"
                   >
-                    <Link href="/demo" className="flex items-center gap-2">
+                    <Link href="https://forms.gle/QF4nuFBb9WvcwY5S7" className="flex items-center gap-2">
                       Book a demo
                       <ArrowRight className="h-4 w-4" />
                     </Link>

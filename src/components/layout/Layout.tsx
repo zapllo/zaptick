@@ -718,10 +718,10 @@ export default function Layout({ children }: LayoutProps) {
               {/* Wallet Balance */}
               <Button
                 variant="ghost"
-                className="relative h-10 rounded-xl px-4 hidden lg:flex items-center gap-3 hover:bg-muted/50 transition-colors"
+                className="relative h-10 rounded-xl hover:bg-transparent  hidden lg:flex items-center  "
                 onClick={() => router.push('/wallet')}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 rounded-xl hover:bg-muted/90 p-2 border">
                   <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-2 rounded-lg">
                     <Wallet className="h-4 w-4 text-primary" />
                   </div>
@@ -968,13 +968,13 @@ export default function Layout({ children }: LayoutProps) {
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold leading-none">{user.name}</p>
                         {/* {user.subscription && user.subscription.plan !== 'free' && (
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={cn(
                               "text-xs font-medium",
-                              user.subscription.status === 'active' 
-                                ? user.subscription.plan === 'starter' 
-                                  ? "bg-blue-50 text-blue-700 border-blue-200" 
+                              user.subscription.status === 'active'
+                                ? user.subscription.plan === 'starter'
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
                                   : user.subscription.plan === 'pro'
                                   ? "bg-green-50 text-green-700 border-green-200"
                                   : "bg-amber-50 text-amber-700 border-amber-200"
@@ -1006,20 +1006,20 @@ export default function Layout({ children }: LayoutProps) {
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                         {user.subscription && (
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={cn(
                                 "text-xs",
-                                user.subscription.status === 'active' 
-                                  ? user.subscription.plan === 'starter' 
-                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                user.subscription.status === 'active'
+                                  ? user.subscription.plan === 'starter'
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
                                     : user.subscription.plan === 'pro'
                                     ? "bg-green-50 text-green-700 border-green-200"
                                     : "bg-amber-50 text-amber-700 border-amber-200"
                                   : "bg-gray-50 text-gray-600 border-gray-200"
                               )}
                             >
-                              {user.subscription.plan === 'free' ? 'Free Plan' : 
+                              {user.subscription.plan === 'free' ? 'Free Plan' :
                                `${user.subscription.plan.charAt(0).toUpperCase() + user.subscription.plan.slice(1)} Plan`}
                             </Badge>
                             {user.subscription.status !== 'active' && (
@@ -1032,7 +1032,7 @@ export default function Layout({ children }: LayoutProps) {
                       </div>
                     </div>
                   </div>
-           
+
                   {/* <div className="p-3 border-b bg-muted/30">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border-2 border-background shadow-sm">

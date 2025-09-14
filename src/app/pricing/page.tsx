@@ -555,16 +555,17 @@ export default function PricingPage() {
                                         </div>
 
                                         {/* CTA Button */}
-                                        <Button
-                                            className={`w-full h-12 transition-all duration-200 ${plan.popular
-                                                ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl'
-                                                : plan.id === 'enterprise'
-                                                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white'
-                                                    : 'bg-gray-900 hover:bg-gray-800 text-white'
-                                                }`}
-                                            size="lg"
-                                        >
-                                            <Link href={plan.id === 'enterprise' ? '/demo' : '/demo'} className="flex items-center gap-2">
+                                        <Link href='https://zapllo.com/contact' className="flex items-center gap-2">
+                                            <Button
+                                                className={`w-full h-12 transition-all duration-200 ${plan.popular
+                                                    ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl'
+                                                    : plan.id === 'enterprise'
+                                                        ? 'bg-gradient-to-r mt-8 from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white'
+                                                        : 'bg-gray-900 hover:bg-gray-800 text-white'
+                                                    }`}
+                                                size="lg"
+                                            >
+
                                                 {plan.id === 'enterprise' ? (
                                                     <>
                                                         <PhoneCall className="h-4 w-4" />
@@ -576,8 +577,8 @@ export default function PricingPage() {
                                                         Get Started
                                                     </>
                                                 )}
-                                            </Link>
-                                        </Button>
+                                            </Button>
+                                        </Link>
 
                                         {/* Decorative element */}
                                         <div className={`absolute -right-8 -top-8 h-20 w-20 rounded-full ${plan.decorativeColor} transition-all duration-300 group-hover:scale-110`} />
@@ -966,7 +967,7 @@ export default function PricingPage() {
                                         size="lg"
                                         className="h-14 px-8 bg-white text-green-700 hover:bg-gray-50 shadow-lg font-semibold text-base"
                                     >
-                                        <Link href="/demo" className="flex items-center gap-2">
+                                        <Link href="https://forms.gle/QF4nuFBb9WvcwY5S7" className="flex items-center gap-2">
                                             Book Free Demo
                                             <ArrowRight className="h-4 w-4" />
                                         </Link>
