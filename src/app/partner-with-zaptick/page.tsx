@@ -157,7 +157,7 @@ export default function PartnersPage() {
             <Header />
 
             {/* Hero Section */}
-            <section className="relative pt-20 pb-32 overflow-hidden">
+            <section className="relative mt-40 pb-32 overflow-hidden">
                 {/* Background Elements */}
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-r from-green-100/40 via-blue-100/30 to-purple-100/40 rounded-full blur-3xl opacity-60" />

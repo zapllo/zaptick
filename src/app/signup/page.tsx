@@ -27,14 +27,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, Zap, Shield, BarChart, CheckCircle, Users, Globe, User, Building2, MapPin, Briefcase, Eye, EyeOff } from "lucide-react";
+import {
+  MessageSquare,
+  Zap,
+  Shield,
+  BarChart,
+  CheckCircle,
+  Users,
+  Globe,
+  User,
+  Building2,
+  MapPin,
+  Briefcase,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Info
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BiCategory } from "react-icons/bi";
 
 // Animation variants
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
 };
 
 const staggerContainer = {
@@ -140,6 +158,22 @@ const INDUSTRY_CATEGORIES = {
 // Get industries array
 const INDUSTRIES = Object.keys(INDUSTRY_CATEGORIES);
 
+// Form validation helpers
+const validateEmail = (email: string) => {
+  const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
+};
+
+const validateUrl = (url: string) => {
+  if (!url) return true; // Empty URLs are valid (optional field)
+  try {
+    new URL(url.startsWith('http') ? url : `https://${url}`);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -147,6 +181,22 @@ export default function SignupPage() {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const { signup } = useAuth();
+
+  // Form validation states
+  const [formErrors, setFormErrors] = useState({
+    name: '',
+    email: '',
+    password: '',
+    companyName: '',
+    companyWebsite: '',
+  });
+  const [formTouched, setFormTouched] = useState({
+    name: false,
+    email: false,
+    password: false,
+    companyName: false,
+    companyWebsite: false,
+  });
 
   // Personal Information
   const [name, setName] = useState("");
@@ -204,16 +254,90 @@ export default function SignupPage() {
     }
 
     let strength = 0;
+    // Minimum 8 characters
     if (password.length >= 8) strength += 1;
+    // At least one uppercase letter
     if (/[A-Z]/.test(password)) strength += 1;
+    // At least one number
     if (/[0-9]/.test(password)) strength += 1;
+    // At least one special character
     if (/[^A-Za-z0-9]/.test(password)) strength += 1;
 
     setPasswordStrength(strength);
+
+    // Update password validation error
+    validateField('password', password);
   }, [password]);
+
+  // Form validation
+  const validateField = (field: string, value: string) => {
+    let errorMessage = '';
+
+    switch (field) {
+      case 'name':
+        if (!value.trim()) {
+          errorMessage = 'Full name is required';
+        } else if (value.trim().length < 2) {
+          errorMessage = 'Name must be at least 2 characters';
+        }
+        break;
+
+      case 'email':
+        if (!value.trim()) {
+          errorMessage = 'Email address is required';
+        } else if (!validateEmail(value)) {
+          errorMessage = 'Please enter a valid email address';
+        }
+        break;
+
+      case 'password':
+        if (!value) {
+          errorMessage = 'Password is required';
+        } else if (value.length < 8) {
+          errorMessage = 'Password must be at least 8 characters';
+        } else if (!/[A-Z]/.test(value)) {
+          errorMessage = 'Include at least one uppercase letter';
+        } else if (!/[0-9]/.test(value)) {
+          errorMessage = 'Include at least one number';
+        } else if (!/[^A-Za-z0-9]/.test(value)) {
+          errorMessage = 'Include at least one special character';
+        }
+        break;
+
+      case 'companyName':
+        if (!value.trim()) {
+          errorMessage = 'Company name is required';
+        }
+        break;
+
+      case 'companyWebsite':
+        if (value && !validateUrl(value)) {
+          errorMessage = 'Please enter a valid URL';
+        }
+        break;
+    }
+
+    setFormErrors(prev => ({ ...prev, [field]: errorMessage }));
+    return !errorMessage;
+  };
+
+  const handleBlur = (field: string, value: string) => {
+    setFormTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field, value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate all fields in step 2
+    const isCompanyNameValid = validateField('companyName', companyName);
+    const isCompanyWebsiteValid = validateField('companyWebsite', companyWebsite);
+
+    if (!isCompanyNameValid || !isCompanyWebsiteValid) {
+      setError("Please correct the errors before submitting");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
@@ -240,14 +364,15 @@ export default function SignupPage() {
   const handleNextStep = () => {
     if (currentStep === 1) {
       // Validate personal info
-      if (!name || !email || !password) {
-        setError("Please fill in all required fields");
+      const isNameValid = validateField('name', name);
+      const isEmailValid = validateField('email', email);
+      const isPasswordValid = validateField('password', password);
+
+      if (!isNameValid || !isEmailValid || !isPasswordValid) {
+        setError("Please correct the errors before continuing");
         return;
       }
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters long");
-        return;
-      }
+
       setError("");
       setCurrentStep(2);
     }
@@ -265,12 +390,12 @@ export default function SignupPage() {
   const renderStepIndicator = () => (
     <div className="flex items-center justify-center mb-6">
       <div className="flex items-center space-x-4">
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep === 1 ? 'bg-green-600 text-white' : 'bg-green-600 text-white'
+        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep === 1 ? 'bg-green-600 text-white' : 'bg-green-600 text-white'
           }`}>
-          {currentStep > 1 ? <CheckCircle className="h-4 w-4" /> : '1'}
+          {currentStep > 1 ? <CheckCircle className="h-5 w-5" /> : '1'}
         </div>
-        <div className={`h-0.5 w-8 ${currentStep > 1 ? 'bg-green-600' : 'bg-gray-300'}`} />
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep === 2 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'
+        <div className={`h-0.5 w-10 ${currentStep > 1 ? 'bg-green-600' : 'bg-gray-300'}`} />
+        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep === 2 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'
           }`}>
           2
         </div>
@@ -312,9 +437,14 @@ export default function SignupPage() {
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
           <Link href="/">
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <img src='/zapzap.png' className="h-12" />
-              </div>
+              <Image
+                src='/zapzap.png'
+                alt="Zaptick Logo"
+                width={180}
+                height={60}
+                className="mb-6"
+                priority
+              />
             </div>
           </Link>
         </motion.div>
@@ -494,7 +624,7 @@ export default function SignupPage() {
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full md:w-1/2 -mt-12 p-6 md:p-12 flex items-center justify-center bg-white/50 backdrop-blur-sm relative"
+        className="w-full md:w-1/2 p-6 md:p-12 flex items-center justify-center bg-white/50 backdrop-blur-sm relative"
       >
         {/* Animated gradient background */}
         <div className="absolute inset-0 opacity-10 overflow-hidden">
@@ -540,31 +670,70 @@ export default function SignupPage() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm"
+                    className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-start gap-2"
                   >
-                    {error}
+                    <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <div>{error}</div>
                   </motion.div>
                 )}
 
                 {currentStep === 1 ? (
                   <>
                     <motion.div variants={fadeIn} className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
+                      <div className="flex justify-between">
+                        <Label htmlFor="name" className="flex items-center gap-1">
+                          Full Name <span className="text-red-500">*</span>
+                        </Label>
+                        {formTouched.name && formErrors.name ? (
+                          <span className="text-xs text-red-500 flex items-center">
+                            <XCircle className="h-3 w-3 mr-1" /> {formErrors.name}
+                          </span>
+                        ) : formTouched.name ? (
+                          <span className="text-xs text-green-500 flex items-center">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Looks good
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="relative">
                         <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="name"
                           placeholder="Jane Doe"
                           value={name}
-                          onChange={(e) => setName(e.target.value)}
+                          onChange={(e) => {
+                            setName(e.target.value);
+                            if (formTouched.name) {
+                              validateField('name', e.target.value);
+                            }
+                          }}
+                          onBlur={() => handleBlur('name', name)}
                           required
-                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                        />
+                          className={`h-11 pl-10 transition-all focus:ring-2 ${
+                            formTouched.name && formErrors.name
+                              ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
+                              : formTouched.name
+                              ? 'border-green-300 focus:ring-green-100 focus:border-green-400'
+                              : 'focus:ring-green-200 focus:border-green-400'
+                          }`}
+/>
                       </div>
                     </motion.div>
 
                     <motion.div variants={fadeIn} className="space-y-2">
-                      <Label htmlFor="email">Business Email *</Label>
+                      <div className="flex justify-between">
+                        <Label htmlFor="email" className="flex items-center gap-1">
+                          Business Email <span className="text-red-500">*</span>
+                        </Label>
+                        {formTouched.email && formErrors.email ? (
+                          <span className="text-xs text-red-500 flex items-center">
+                            <XCircle className="h-3 w-3 mr-1" /> {formErrors.email}
+                          </span>
+                        ) : formTouched.email ? (
+                          <span className="text-xs text-green-500 flex items-center">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Valid email
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="relative">
                         <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -572,76 +741,167 @@ export default function SignupPage() {
                           type="email"
                           placeholder="you@company.com"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (formTouched.email) {
+                              validateField('email', e.target.value);
+                            }
+                          }}
+                          onBlur={() => handleBlur('email', email)}
                           required
-                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                          className={`h-11 pl-10 transition-all focus:ring-2 ${
+                            formTouched.email && formErrors.email
+                              ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
+                              : formTouched.email
+                              ? 'border-green-300 focus:ring-green-100 focus:border-green-400'
+                              : 'focus:ring-green-200 focus:border-green-400'
+                          }`}
                         />
                       </div>
                     </motion.div>
 
                     <motion.div variants={fadeIn} className="space-y-2">
                       <div className="flex justify-between">
-                        <Label htmlFor="password">Password *</Label>
-                        <span className="text-xs text-muted-foreground">
-                          {passwordStrength > 0 ? `Strength: ${['Weak', 'Fair', 'Good', 'Strong'][passwordStrength - 1]}` : 'Min. 6 characters'}
-                        </span>
+                        <Label htmlFor="password" className="flex items-center gap-1">
+                          Password <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          {formTouched.password && formErrors.password ? (
+                            <span className="text-xs text-red-500 flex items-center">
+                              <XCircle className="h-3 w-3 mr-1" /> {formErrors.password}
+                            </span>
+                          ) : formTouched.password && passwordStrength > 0 ? (
+                            <span className={`text-xs flex items-center ${
+                              passwordStrength >= 3 ? 'text-green-500' :
+                              passwordStrength >= 2 ? 'text-yellow-500' : 'text-orange-500'
+                            }`}>
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              {['Weak', 'Fair', 'Good', 'Strong'][passwordStrength - 1]}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="relative">
                         <Input
                           id="password"
                           type={showPassword ? "text" : "password"}
                           value={password}
-                          onChange={(e) => setPassword(e.target.value)}
+                          onChange={(e) => {
+                            setPassword(e.target.value);
+                            if (formTouched.password) {
+                              validateField('password', e.target.value);
+                            }
+                          }}
+                          onBlur={() => handleBlur('password', password)}
                           required
-                          minLength={6}
-                          className="h-11 pr-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                          minLength={8}
+                          className={`h-11 pr-10 transition-all focus:ring-2 ${
+                            formTouched.password && formErrors.password
+                              ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
+                              : formTouched.password && passwordStrength >= 2
+                              ? 'border-green-300 focus:ring-green-100 focus:border-green-400'
+                              : 'focus:ring-green-200 focus:border-green-400'
+                          }`}
                         />
                         <button
                           type="button"
                           onClick={togglePasswordVisibility}
-                          className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+                          className="absolute right-3 top-3 h-5 w-5 text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
 
-                      {/* Password strength indicator */}
-                      {password.length > 0 && (
-                        <div className="flex gap-1 mt-1.5">
-                          {[1, 2, 3, 4].map((level) => (
-                            <motion.div
-                              key={level}
-                              initial={{ width: 0 }}
-                              animate={{ width: "100%" }}
-                              className={`h-1 rounded-full flex-1 ${level <= passwordStrength
-                                ? level === 1
-                                  ? "bg-red-400"
-                                  : level === 2
-                                    ? "bg-orange-400"
-                                    : level === 3
-                                      ? "bg-yellow-400"
-                                      : "bg-green-500"
-                                : "bg-gray-200"
+                      {/* Password requirements */}
+                      {password && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="space-y-1 mt-2"
+                        >
+                          <div className="text-xs text-gray-600 mb-2">Password requirements:</div>
+                          <div className="grid grid-cols-2 gap-1">
+                            <div className={`text-xs flex items-center gap-1 ${password.length >= 8 ? 'text-green-600' : 'text-gray-400'}`}>
+                              {password.length >= 8 ? <CheckCircle2 className="h-3 w-3" /> : <div className="h-3 w-3 border rounded-full"></div>}
+                              8+ characters
+                            </div>
+                            <div className={`text-xs flex items-center gap-1 ${/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-400'}`}>
+                              {/[A-Z]/.test(password) ? <CheckCircle2 className="h-3 w-3" /> : <div className="h-3 w-3 border rounded-full"></div>}
+                              Uppercase
+                            </div>
+                            <div className={`text-xs flex items-center gap-1 ${/[0-9]/.test(password) ? 'text-green-600' : 'text-gray-400'}`}>
+                              {/[0-9]/.test(password) ? <CheckCircle2 className="h-3 w-3" /> : <div className="h-3 w-3 border rounded-full"></div>}
+                              Number
+                            </div>
+                            <div className={`text-xs flex items-center gap-1 ${/[^A-Za-z0-9]/.test(password) ? 'text-green-600' : 'text-gray-400'}`}>
+                              {/[^A-Za-z0-9]/.test(password) ? <CheckCircle2 className="h-3 w-3" /> : <div className="h-3 w-3 border rounded-full"></div>}
+                              Special char
+                            </div>
+                          </div>
+
+                          {/* Password strength indicator */}
+                          <div className="flex gap-1 mt-2">
+                            {[1, 2, 3, 4].map((level) => (
+                              <motion.div
+                                key={level}
+                                initial={{ width: 0 }}
+                                animate={{ width: "100%" }}
+                                className={`h-2 rounded-full flex-1 ${
+                                  level <= passwordStrength
+                                    ? level === 1
+                                      ? "bg-red-400"
+                                      : level === 2
+                                        ? "bg-orange-400"
+                                        : level === 3
+                                          ? "bg-yellow-400"
+                                          : "bg-green-500"
+                                    : "bg-gray-200"
                                 }`}
-                            />
-                          ))}
-                        </div>
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
                       )}
                     </motion.div>
                   </>
                 ) : (
                   <>
                     <motion.div variants={fadeIn} className="space-y-2">
-                      <Label htmlFor="companyName">Company Name *</Label>
+                      <div className="flex justify-between">
+                        <Label htmlFor="companyName" className="flex items-center gap-1">
+                          Company Name <span className="text-red-500">*</span>
+                        </Label>
+                        {formTouched.companyName && formErrors.companyName ? (
+                          <span className="text-xs text-red-500 flex items-center">
+                            <XCircle className="h-3 w-3 mr-1" /> {formErrors.companyName}
+                          </span>
+                        ) : formTouched.companyName ? (
+                          <span className="text-xs text-green-500 flex items-center">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Looks good
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="companyName"
                           placeholder="Your Company Name"
                           value={companyName}
-                          onChange={(e) => setCompanyName(e.target.value)}
+                          onChange={(e) => {
+                            setCompanyName(e.target.value);
+                            if (formTouched.companyName) {
+                              validateField('companyName', e.target.value);
+                            }
+                          }}
+                          onBlur={() => handleBlur('companyName', companyName)}
                           required
-                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                          className={`h-11 pl-10 transition-all focus:ring-2 ${
+                            formTouched.companyName && formErrors.companyName
+                              ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
+                              : formTouched.companyName
+                              ? 'border-green-300 focus:ring-green-100 focus:border-green-400'
+                              : 'focus:ring-green-200 focus:border-green-400'
+                          }`}
                         />
                       </div>
                     </motion.div>
@@ -665,7 +925,7 @@ export default function SignupPage() {
                           inputClass="w-full h-11 pl-12 p border border-slate-200 rounded-md focus:border-green-400 px-4 focus:ring-2 focus:ring-green-200 bg-white transition-all"
                           buttonClass="border-slate-200 hover:bg-slate-50 rounded-l-md"
                           dropdownClass="bg-white border-slate-200 shadow-lg"
-                          searchClass="bg-white border-slate-200"
+                          searchClass="bg-white  border-slate-200"
                           enableSearch={true}
                           disableSearchIcon={false}
                           searchPlaceholder="Search countries..."
@@ -674,15 +934,38 @@ export default function SignupPage() {
                     </motion.div>
 
                     <motion.div variants={fadeIn} className="space-y-2">
-                      <Label htmlFor="companyWebsite">Company Website</Label>
+                      <div className="flex justify-between">
+                        <Label htmlFor="companyWebsite">Company Website</Label>
+                        {formTouched.companyWebsite && formErrors.companyWebsite ? (
+                          <span className="text-xs text-red-500 flex items-center">
+                            <XCircle className="h-3 w-3 mr-1" /> {formErrors.companyWebsite}
+                          </span>
+                        ) : formTouched.companyWebsite && companyWebsite ? (
+                          <span className="text-xs text-green-500 flex items-center">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Valid URL
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="relative">
                         <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="companyWebsite"
                           placeholder="https://www.yourcompany.com"
                           value={companyWebsite}
-                          onChange={(e) => setCompanyWebsite(e.target.value)}
-                          className="h-11 pl-10 transition-all focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                          onChange={(e) => {
+                            setCompanyWebsite(e.target.value);
+                            if (formTouched.companyWebsite) {
+                              validateField('companyWebsite', e.target.value);
+                            }
+                          }}
+                          onBlur={() => handleBlur('companyWebsite', companyWebsite)}
+                          className={`h-11 pl-10 transition-all focus:ring-2 ${
+                            formTouched.companyWebsite && formErrors.companyWebsite
+                              ? 'border-red-300 focus:ring-red-100 focus:border-red-400'
+                              : formTouched.companyWebsite && companyWebsite
+                              ? 'border-green-300 focus:ring-green-100 focus:border-green-400'
+                              : 'focus:ring-green-200 focus:border-green-400'
+                          }`}
                         />
                       </div>
                     </motion.div>
@@ -700,12 +983,12 @@ export default function SignupPage() {
                         />
                       </div>
                     </motion.div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+
+                    <div className="grid grid-cols-1 gap-4">
                       <motion.div variants={fadeIn} className="space-y-2">
                         <Label htmlFor="companyIndustry">Industry</Label>
                         <Select value={companyIndustry} onValueChange={setCompanyIndustry}>
-                          <SelectTrigger className="h-11 transition-all focus:ring-2  w-full focus:ring-green-200 focus:border-green-400">
+                          <SelectTrigger className="h-11 transition-all focus:ring-2 w-full focus:ring-green-200 focus:border-green-400">
                             <div className="flex items-center gap-2">
                               <Briefcase className="h-4 w-4 text-muted-foreground" />
                               <SelectValue placeholder="Select your industry" />
@@ -723,8 +1006,8 @@ export default function SignupPage() {
 
                       <motion.div variants={fadeIn} className="space-y-2">
                         <Label htmlFor="companyCategory">Category</Label>
-                        <Select 
-                          value={companyCategory} 
+                        <Select
+                          value={companyCategory}
                           onValueChange={setCompanyCategory}
                           disabled={!companyIndustry}
                         >
@@ -754,6 +1037,7 @@ export default function SignupPage() {
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Shield className="h-4 w-4 mr-2 text-green-600" />
                           <span>Your data is secured with enterprise-grade encryption</span>
+                          <Info className="h-4 w-4 ml-2" />
                         </div>
                       </div>
                     </TooltipTrigger>
@@ -796,7 +1080,7 @@ export default function SignupPage() {
                       className="w-full h-12 text-base bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg transition-all duration-300"
                       type={currentStep === 1 ? "button" : "submit"}
                       onClick={currentStep === 1 ? handleNextStep : undefined}
-                      disabled={isLoading}
+                      disabled={isLoading || (currentStep === 1 && (!name || !email || !password || formErrors.name || formErrors.email || formErrors.password))}
                     >
                       {isLoading ? (
                         <>

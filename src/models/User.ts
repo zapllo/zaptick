@@ -33,6 +33,8 @@ export interface IUser extends Document {
   role: 'owner' | 'admin' | 'agent' | 'superadmin'; // Add 'owner' role
   isActive: boolean;
   isOwner: boolean; // Add owner flag
+  twoFactorCode: string;
+  twoFactorExpiry: Date;
   isSuperAdmin: boolean; // Add super admin flag
   lastLoginAt?: Date;
   invitedBy?: mongoose.Types.ObjectId;
@@ -115,6 +117,15 @@ const UserSchema = new Schema<IUser>(
         templateCount: { type: Number, default: 0 }
       }
     ],
+    // Two-Factor Authentication fields
+    twoFactorCode: {
+      type: String,
+      select: false // Don't include in queries by default
+    },
+    twoFactorExpiry: {
+      type: Date,
+      select: false // Don't include in queries by default
+    },
     // ADD INSTAGRAM ACCOUNTS FIELD
     instagramAccounts: [
       {

@@ -35,9 +35,124 @@ import {
   Bot,
   Sparkles,
   Layers,
-  Info
+  Info,
+  Building2,
+  ArrowDown,
+  ArrowUp
 } from "lucide-react";
 import PartnerBadges from "@/components/partner-badges2";
+import WhatsAppWidget from "@/components/whatsapp-widget";
+
+
+const useCounter = (end: number, duration: number = 2000, start: number = 0) => {
+  const [count, setCount] = useState(start);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = (timestamp - startTime) / duration;
+
+      if (progress < 1) {
+        setCount(Math.floor(start + (end - start) * progress));
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setCount(end);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [end, duration, start, isVisible]);
+
+  return { count, setIsVisible };
+};
+
+
+
+// Add these animated section components before the main HomePage component
+const AnimatedRatingSection = () => {
+  const { count: reviewCount, setIsVisible } = useCounter(7791, 2500);
+  const [ratingVisible, setRatingVisible] = useState(false);
+
+  return (
+    <motion.div
+      className="text-center"
+      onViewportEnter={() => {
+        setIsVisible(true);
+        setRatingVisible(true);
+      }}
+      viewport={{ once: true }}
+    >
+      <div className="text-4xl font-bold text-gray-900 mb-2">Excellent</div>
+      <motion.div
+        className="flex items-center justify-center gap-1 mb-2"
+        initial={{ scale: 0 }}
+        animate={ratingVisible ? { scale: 1 } : { scale: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        {[1, 2, 3, 4, 5].map((star, index) => (
+          <motion.div
+            key={star}
+            initial={{ opacity: 0, rotate: -180 }}
+            animate={ratingVisible ? { opacity: 1, rotate: 0 } : { opacity: 0, rotate: -180 }}
+            transition={{ duration: 0.3, delay: 0.6 + (index * 0.1) }}
+          >
+            <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
+          </motion.div>
+        ))}
+        <span className="ml-2 text-lg font-semibold text-gray-700">4.9</span>
+      </motion.div>
+      <p className="text-sm text-gray-600">
+        Rated 4.9 out of 5 based on <strong>{reviewCount.toLocaleString()}+</strong> Reviews
+      </p>
+    </motion.div>
+  );
+};
+
+const AnimatedCustomersSection = () => {
+  const { count, setIsVisible } = useCounter(12500, 2000);
+
+  return (
+    <motion.div
+      className="text-center"
+      onViewportEnter={() => setIsVisible(true)}
+      viewport={{ once: true }}
+    >
+      <div className="text-2xl font-bold text-gray-900 mb-1">
+        {count.toLocaleString()}+
+      </div>
+      <p className="text-sm text-gray-600">Happy Customers</p>
+    </motion.div>
+  );
+};
+
+const AnimatedSatisfactionSection = () => {
+  const { count, setIsVisible } = useCounter(98, 1500);
+
+  return (
+    <motion.div
+      className="text-center"
+      onViewportEnter={() => setIsVisible(true)}
+      viewport={{ once: true }}
+    >
+      <div className="text-2xl font-bold text-gray-900 mb-1">
+        {count}%
+      </div>
+      <p className="text-sm text-gray-600">Satisfaction Rate</p>
+    </motion.div>
+  );
+};
 
 export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -152,39 +267,132 @@ export default function Home() {
     }
   ];
 
-  const testimonials = [
-    {
-      quote: "Zaptick transformed our customer communication. Response times decreased by 70% and satisfaction scores hit 98%.",
-      author: "Sarah Johnson",
-      position: "Customer Experience Director",
-      company: "Global Retail Inc.",
-      image: "/avatars/female1.jpg",
-      results: ["Response time -70%", "Satisfaction +45%", "Conversions +38%"]
-    },
-    {
-      quote: "The ROI with Zaptick is extraordinary. WhatsApp campaigns outperform email by 5x with 35%+ conversion rates.",
-      author: "Michael Chen",
-      position: "VP of Digital Marketing",
-      company: "TechSolutions Group",
-      image: "/avatars/man6.jpg",
-      results: ["ROI +420%", "CTR +210%", "Lead quality +67%"]
-    },
-    {
-      quote: "Zaptick reduced our support costs by 60% while improving CSAT. The platform paid for itself in two months.",
-      author: "Elena Rodriguez",
-      position: "Head of Customer Support",
-      company: "Fintech Innovations",
-      image: "/avatars/female2.jpg",
-      results: ["Support costs -60%", "Resolution time -45%", "CSAT +28%"]
-    }
-  ];
+// Add state for testimonials (add this after the existing useState declarations)
+const [visibleCount, setVisibleCount] = useState(6);
+
+// Replace the existing testimonials array with this expanded one
+const allTestimonials = [
+  {
+    quote: "Zaptick transformed our customer support completely. We went from 2-hour response times to instant replies, and our customer satisfaction scores jumped to 98%. The automation handles 80% of our queries perfectly.",
+    author: "Priya Sharma",
+    position: "Customer Success Director",
+    company: "TechFlow Solutions",
+    industry: "Technology",
+    image: "/testimonials/priya-sharma.jpg",
+    results: ["98% customer satisfaction", "80% query automation", "2-hour to instant response", "40% cost reduction"]
+  },
+  {
+    quote: "Our e-commerce sales increased by 340% after implementing Zaptick's WhatsApp commerce features. The abandoned cart recovery alone brought back $50K in lost revenue in the first month.",
+    author: "Rajesh Patel",
+    position: "E-commerce Manager",
+    company: "StyleHub Fashion",
+    industry: "E-commerce",
+    image: "/testimonials/rajesh-patel.jpg",
+    results: ["340% sales increase", "$50K cart recovery", "85% message open rate", "60% conversion improvement"]
+  },
+  {
+    quote: "The WhatsApp API integration was seamless, and the automation capabilities are incredible. Our real estate leads now get instant responses with property details, virtual tours, and scheduling - all automated.",
+    author: "Sarah Chen",
+    position: "Sales Director",
+    company: "Dream Homes Realty",
+    industry: "Real Estate",
+    image: "/testimonials/sarah-chen.jpg",
+    results: ["250% lead conversion", "Instant response time", "90% client satisfaction", "50% more property tours"]
+  },
+  {
+    quote: "As a healthcare provider, patient communication is critical. Zaptick's automated appointment reminders reduced our no-show rate by 60%, and patients love the convenience of WhatsApp updates.",
+    author: "Dr. Amit Kumar",
+    position: "Medical Director",
+    company: "MediCare Plus",
+    industry: "Healthcare",
+    image: "/testimonials/amit-kumar.jpg",
+    results: ["60% no-show reduction", "95% patient satisfaction", "24/7 query support", "50% faster check-ins"]
+  },
+  {
+    quote: "The bulk messaging feature helped us reach 10,000+ customers instantly during our flash sale. The click-through rate was 45%, which is 3x better than our email campaigns.",
+    author: "Maria Rodriguez",
+    position: "Marketing Manager",
+    company: "Global Retail Co",
+    industry: "Retail",
+    image: "/testimonials/maria-rodriguez.jpg",
+    results: ["45% click-through rate", "10K+ instant reach", "3x better than email", "Record sale performance"]
+  },
+  {
+    quote: "Our restaurant chain uses Zaptick for order confirmations, delivery updates, and customer feedback. The customer experience improvement has been remarkable, with 97% positive ratings.",
+    author: "Chef Ramesh Singh",
+    position: "Operations Director",
+    company: "Spice Garden Chain",
+    industry: "Food & Beverage",
+    image: "/testimonials/ramesh-singh.jpg",
+    results: ["97% positive ratings", "30% faster orders", "Real-time updates", "25% repeat customers"]
+  },
+  {
+    quote: "The analytics dashboard gives us incredible insights into customer behavior. We can track message performance, engagement rates, and conversion metrics all in one place.",
+    author: "Jennifer Kim",
+    position: "Data Analytics Lead",
+    company: "InSight Marketing",
+    industry: "Marketing",
+    image: "/testimonials/jennifer-kim.jpg",
+    results: ["Complete analytics view", "Real-time insights", "25% strategy improvement", "Data-driven decisions"]
+  },
+  {
+    quote: "Student engagement improved dramatically after implementing WhatsApp for course updates and doubt resolution. Our completion rates increased by 180% and students are more active than ever.",
+    author: "Prof. Meera Gupta",
+    position: "Academic Director",
+    company: "LearnPro Academy",
+    industry: "Education",
+    image: "/testimonials/meera-gupta.jpg",
+    results: ["180% completion rate", "Real-time doubt solving", "Higher engagement", "24/7 student support"]
+  },
+  {
+    quote: "The team collaboration features are fantastic. Multiple agents can handle different customers simultaneously, and the internal notes system keeps everyone informed.",
+    author: "David Thompson",
+    position: "Support Team Lead",
+    company: "CloudTech Services",
+    industry: "SaaS",
+    image: "/testimonials/david-thompson.jpg",
+    results: ["Multi-agent support", "Team collaboration", "Internal notes system", "Efficient workflow"]
+  },
+  {
+    quote: "Integration with our CRM was smooth and now all WhatsApp conversations sync automatically. Our sales team has complete visibility into customer interactions.",
+    author: "Lisa Wang",
+    position: "CRM Administrator",
+    company: "Enterprise Solutions",
+    industry: "Enterprise",
+    image: "/testimonials/lisa-wang.jpg",
+    results: ["Seamless CRM sync", "Complete visibility", "Automated logging", "Better sales tracking"]
+  },
+  {
+    quote: "The chatbot builder is intuitive and powerful. We created complex workflows without any coding, and the AI responses are getting smarter with each interaction.",
+    author: "Ahmed Hassan",
+    position: "IT Manager",
+    company: "FinTech Innovations",
+    industry: "Financial Services",
+    image: "/testimonials/ahmed-hassan.jpg",
+    results: ["No-code chatbots", "AI-powered responses", "Complex workflows", "Continuous learning"]
+  },
+  {
+    quote: "Customer feedback collection through WhatsApp has a 89% response rate compared to 12% for email surveys. The insights we gather now are invaluable for product improvement.",
+    author: "Sophie Laurent",
+    position: "Product Manager",
+    company: "InnovateLab",
+    industry: "Product Development",
+    image: "/testimonials/sophie-laurent.jpg",
+    results: ["89% response rate", "7x better than email", "Valuable insights", "Product improvements"]
+  }
+];
+
+
+
+// Add this derived state
+const visibleTestimonials = allTestimonials.slice(0, visibleCount);
 
   return (
     <div className="bg-white overflow-hidden">
       <Header />
-
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-32 overflow-hidden">
+      <WhatsAppWidget />
+      {/* Hero Section - Updated padding to account for sticky header */}
+      <section className="relative md:mt-40  overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-r from-green-100/40 via-blue-100/30 to-purple-100/40 rounded-full blur-3xl opacity-60" />
@@ -240,21 +448,21 @@ export default function Home() {
                     size="lg"
                     className="h-14 px-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25 transition-all duration-300"
                   >
-                    <Link href="https://forms.gle/QF4nuFBb9WvcwY5S7" className="flex items-center gap-2">
+                    <Link className="flex items-center gap-1" href="/demo">
                       Book Free Demo
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
-
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-14 px-8 border-2 border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-300"
-                    onClick={() => setIsPlaying(true)}
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Watch Demo
-                  </Button>
+                  <Link href='/'>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="h-14 px-8 border-2 border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-300"
+                    >
+                      <Play className="mr-2 h-4 w-4" />
+                      Watch Demo
+                    </Button>
+                  </Link>
                 </div>
                 {/* Partner Badges */}
                 <motion.div
@@ -714,16 +922,36 @@ export default function Home() {
 
       {/* Testimonials Section */}
       <section id="testimonials" className="py-24 bg-white">
-        <div className=" mx-auto px-4">
+        <div className="container mx-auto px-4">
           <motion.div
             className="text-center max-w-3xl mx-auto mb-20"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            onViewportEnter={() => {
+              // Trigger animations when section comes into view
+              setRatingVisible(true);
+              setCustomersVisible(true);
+              setSatisfactionVisible(true);
+            }}
           >
-            <Badge className="mb-4 px-4 py-2 bg-orange-50 text-orange-700 border-orange-200">
+            <Badge className="mb-6 px-4 py-2 bg-orange-50 text-orange-700 border-orange-200">
               Success Stories
             </Badge>
+
+            {/* Rating Header with Animated Counters */}
+            <div className="flex items-center justify-center gap-8 mb-8 flex-wrap">
+              <AnimatedRatingSection />
+
+              <div className="hidden sm:block w-px h-16 bg-gray-200"></div>
+
+              <AnimatedCustomersSection />
+
+              <div className="hidden sm:block w-px h-16 bg-gray-200"></div>
+
+              <AnimatedSatisfactionSection />
+            </div>
+
             <h2 className="text-4xl font-bold mb-6 text-gray-900">
               Trusted by businesses worldwide
             </h2>
@@ -732,69 +960,116 @@ export default function Home() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {testimonials.map((testimonial, index) => (
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {visibleTestimonials.map((testimonial, index) => (
+                <motion.div
+                  key={index}
+                  className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-gray-50/30 p-8 shadow-sm transition-all duration-500 hover:shadow-xl hover:border-gray-200"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: (index % 6) * 0.1 }}
+                  whileHover={{ y: -5 }}
+                >
+                  {/* Industry Badge */}
+                  <div className="flex items-center justify-between mb-4">
+                    <Badge variant="outline" className="text-xs px-2 py-1">
+                      {testimonial.industry}
+                    </Badge>
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star key={star} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Quote */}
+                  <blockquote className="text-gray-700 font-medium leading-relaxed mb-6 italic line-clamp-4">
+                    &quot;{testimonial.quote}&quot;
+                  </blockquote>
+
+                  {/* Author */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center text-lg font-bold text-blue-700">
+                      {testimonial.author.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900">{testimonial.author}</h4>
+                      <p className="text-sm text-gray-600">{testimonial.position}</p>
+                      <p className="text-sm font-medium text-gray-800">{testimonial.company}</p>
+                    </div>
+                  </div>
+
+                  {/* Key Results */}
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Key Results
+                    </h5>
+                    {testimonial.results.slice(0, 2).map((result, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 font-medium">{result}</span>
+                      </div>
+                    ))}
+                    {testimonial.results.length > 2 && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        +{testimonial.results.length - 2} more improvements
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Decorative element */}
+                  <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-gray-500/5 transition-all duration-300 group-hover:scale-110" />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {allTestimonials.length > visibleCount && (
               <motion.div
-                key={index}
-                className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-gray-50/30 p-8 shadow-sm transition-all duration-500 hover:shadow-xl hover:border-gray-200"
-                initial={{ opacity: 0, y: 30 }}
+                className="text-center mt-12"
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
               >
-                {/* Rating */}
-                <div className="flex mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                  ))}
-                </div>
-
-                {/* Quote */}
-                <blockquote className="text-gray-700 font-medium leading-relaxed mb-8 italic">
-                  &quot;{testimonial.quote}&quot;
-                </blockquote>
-
-                {/* Author */}
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 overflow-hidden border-2 border-white shadow-sm">
-                    <Image
-                      src={testimonial.image}
-                      alt={testimonial.author}
-                      width={48}
-                      height={48}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48' fill='none'%3E%3Crect width='48' height='48' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, sans-serif' font-size='18' fill='%236b7280'%3E" + testimonial.author.charAt(0) + "%3C/text%3E%3C/svg%3E";
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900">{testimonial.author}</h4>
-                    <p className="text-sm text-gray-600">{testimonial.position}</p>
-                    <p className="text-sm font-medium text-gray-800">{testimonial.company}</p>
-                  </div>
-                </div>
-
-                {/* Results */}
-                <div className="space-y-2">
-                  {testimonial.results.map((result, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-gray-700 font-medium">{result}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Decorative element */}
-                <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-gray-500/5 transition-all duration-300 group-hover:scale-110" />
+                <Button
+                  onClick={() => setVisibleCount(prev => Math.min(prev + 6, allTestimonials.length))}
+                  variant="outline"
+                  size="lg"
+                  className="px-8 py-3 text-base font-medium hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 transition-all duration-200"
+                >
+                  Load More Reviews
+                  <ArrowDown className="ml-2 h-5 w-5" />
+                </Button>
+                <p className="text-sm text-gray-500 mt-3">
+                  Showing {visibleCount} of {allTestimonials.length} reviews
+                </p>
               </motion.div>
-            ))}
+            )}
+
+            {/* Show Less Button when all are loaded */}
+            {visibleCount >= allTestimonials.length && allTestimonials.length > 6 && (
+              <motion.div
+                className="text-center mt-8"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+              >
+                <Button
+                  onClick={() => setVisibleCount(6)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  <ArrowUp className="mr-2 h-4 w-4" />
+                  Show Less
+                </Button>
+              </motion.div>
+            )}
           </div>
         </div>
       </section>
-
       {/* Integrations Section */}
       <section id="testimonials" className="py-24 px-4 bg-gradient-to-b from-gray-50 to-white">
         <div className=" mx-auto px-4">
@@ -1016,7 +1291,7 @@ export default function Home() {
       </section>
 
       {/* Video Modal */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {isPlaying && (
           <motion.div
             className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
@@ -1053,7 +1328,7 @@ export default function Home() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
 
       <Footer />
     </div>

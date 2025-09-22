@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 
-const roboto = Roboto({
-  weight: ['400', '500', '700'],
-  variable: "--font-roboto",
+const outfit = Outfit({
+  weight: ['300', '400', '500', '600', '700', '800'],
   subsets: ["latin"],
-});
-
-const robotoMono = Roboto_Mono({
-  weight: ['400', '500'],
-  variable: "--font-roboto-mono", 
-  subsets: ["latin"],
+  variable: "--font-outfit",
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -28,8 +23,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "https://zaptick.io/og.png",
-        width: 1200, // recommended width
-        height: 630, // recommended height
+        width: 1200,
+        height: 630,
         alt: "Image for Zaptick - Transform your WhatsApp into Revenue 🚀 ",
       },
     ],
@@ -42,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ colorScheme: 'light' }}>
+    <html lang="en" className={`${outfit.variable}`} style={{ colorScheme: 'light' }}>
       <head>
         <Script
           src="https://checkout.razorpay.com/v1/checkout.js"
@@ -51,10 +46,7 @@ export default function RootLayout({
         />
         <meta name="color-scheme" content="light" />
       </head>
-      <body
-        className={`${roboto.variable} ${robotoMono.variable} antialiased`}
-        style={{ colorScheme: 'light' }}
-      >
+      <body className={`${outfit.className} antialiased`} style={{ colorScheme: 'light' }}>
         <div id="fb-root"></div>
         <Toaster />
         <AuthProvider>

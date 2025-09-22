@@ -38,16 +38,16 @@ export default function LinkGenerator() {
 
     // Clean phone number (remove spaces, dashes, etc.)
     const cleanNumber = phoneNumber.replace(/\D/g, '');
-    
+
     // Create WhatsApp URL
     const whatsappUrl = `https://wa.me/${cleanNumber}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
-    
+
     setGeneratedLink(whatsappUrl);
   };
 
   const copyToClipboard = async () => {
     if (!generatedLink) return;
-    
+
     try {
       await navigator.clipboard.writeText(generatedLink);
       setCopied(true);
@@ -67,7 +67,7 @@ export default function LinkGenerator() {
       <Header />
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden">
+      <section className="relative mt-40 pb-16 overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-100/40 via-purple-100/30 to-pink-100/40 rounded-full blur-3xl opacity-60" />
@@ -289,7 +289,7 @@ export default function LinkGenerator() {
 
                           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200/50">
                             <p className="text-sm text-gray-700 font-medium">
-                              <span className="text-blue-700">✓</span> Link generated successfully! 
+                              <span className="text-blue-700">✓</span> Link generated successfully!
                               Share it on your website, social media, or anywhere you want customers to reach you.
                             </p>
                           </div>
@@ -451,7 +451,7 @@ export default function LinkGenerator() {
                     <div className={`inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-${step.color}-500 to-${step.color}-600 shadow-lg text-white font-bold text-xl mb-6`}>
                       {step.step}
                     </div>
-                    
+
                     {index < 2 && (
                       <div className="hidden md:block absolute top-8 left-full w-full">
                         <ArrowRight className="h-6 w-6 text-gray-300 mx-auto" />
