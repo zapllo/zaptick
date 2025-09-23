@@ -139,8 +139,6 @@ function useMessageMap(messages: Message[]) {
   }, [messages]);
 }
 
-
-
 // Interface definitions aligned with our models
 interface Contact {
   id: string;
@@ -284,12 +282,6 @@ const formatWhatsAppText = (text: string) => {
   return formattedText;
 };
 
-
-
-
-
-
-
 // Add these skeleton loader components after your imports
 const ConversationSkeleton = () => (
   <div className="p-4 border-b border-border/30 animate-pulse">
@@ -421,6 +413,7 @@ const ChatAreaLoader = () => (
     </div>
   </div>
 );
+
 function ConversationsPageContent() {
   const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -766,6 +759,7 @@ function ConversationsPageContent() {
   const [selectedBulkTags, setSelectedBulkTags] = useState<string[]>([]);
   const [tagSearchQuery, setTagSearchQuery] = useState("");
 
+
   // Helper function to get unique tags from all contacts
   const getUniqueTags = () => {
     return Array.from(new Set(contacts.flatMap(contact => contact.tags || [])))
@@ -923,9 +917,6 @@ function ConversationsPageContent() {
     }
   };
 
-
-
-
   // Add this useEffect to auto-select the first conversation
   useEffect(() => {
     // Auto-select first conversation when page loads
@@ -1055,8 +1046,9 @@ function ConversationsPageContent() {
   }, []);
 
   // Bulk action functions
-  const bulkAssignConversations = async () => {
-    if (!bulkAssignUserId || selectedConversations.length === 0) return;
+  // Add the bulk assign function after the other bulk functions
+  const bulkAssignConversations = async (userId: string) => {
+    if (selectedConversations.length === 0) return;
 
     setIsBulkProcessing(true);
     try {
@@ -1064,30 +1056,49 @@ function ConversationsPageContent() {
         fetch(`/api/conversations/${conversationId}/assign`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ assignedTo: bulkAssignUserId }),
+          body: JSON.stringify({
+            assignedTo: userId,
+            assignedBy: currentUser.name
+          }),
         })
       );
 
-      await Promise.all(promises);
+      const results = await Promise.all(promises);
+      const successCount = results.filter(res => res.ok).length;
 
-      // Refresh conversations
-      await fetchConversations();
+      if (successCount > 0) {
+        const assignedUser = teamMembers.find(m => m.id === userId);
+        toast({
+          title: `Successfully assigned ${successCount} conversation${successCount > 1 ? 's' : ''}`,
+          description: `Assigned to ${assignedUser?.name || 'team member'}`,
+        });
 
-      const assignedUser = teamMembers.find(m => m.id === bulkAssignUserId);
-      toast({
-        title: `${selectedConversations.length} conversations assigned to ${assignedUser?.name}`
-      });
+        // Refresh conversations
+        await fetchConversations();
 
-      setShowBulkAssignDialog(false);
-      setBulkAssignUserId("");
-      clearSelection();
+        // Exit bulk mode
+        setSelectedConversations([]);
+        setIsBulkSelectMode(false);
+      }
+
+      if (results.length > successCount) {
+        toast({
+          title: "Some assignments failed",
+          description: `${results.length - successCount} conversation${results.length - successCount > 1 ? 's' : ''} could not be assigned`,
+          variant: "destructive"
+        });
+      }
+
     } catch (error) {
+      console.error('Error in bulk assign:', error);
       toast({
         title: "Failed to assign conversations",
+        description: "Please try again",
         variant: "destructive"
       });
     } finally {
       setIsBulkProcessing(false);
+      setShowBulkAssignDialog(false);
     }
   };
 
@@ -1636,8 +1647,6 @@ function ConversationsPageContent() {
     }
   };
 
-
-
   // Update your fetchConversations function
   const fetchConversations = async () => {
     try {
@@ -1949,6 +1958,7 @@ function ConversationsPageContent() {
       toast({ title: "Failed to create label", variant: "destructive" });
     }
   };
+
   function getOriginalMessageContent(id: string) {
     const original = messages.find(msg => msg.whatsappMessageId === id || msg.id === id);
     return original?.content || '[Deleted message]';
@@ -2466,8 +2476,6 @@ function ConversationsPageContent() {
     }
   };
 
-
-
   if (wabaAccounts.length === 0) {
     return (
       <Layout>
@@ -2670,90 +2678,84 @@ function ConversationsPageContent() {
     );
   }
 
-
   return (
     <Layout>
       <div className="h-screen flex w-full fixed overflow-hidden   flex-col ">
         {/* Top Navigation Bar - Modern Design */}
-        <div className="h-16 w-[96%] border-b border-border/50 bg-gradient-to-r from-background to-background/95 backdrop-blur-md flex items-center justify-between px-4 lg:px-6 shadow-sm">
-          <div className="flex items-center gap-4">
+        {/* Compact Top Navigation Bar */}
+        <div className="h-12  border-b w-[95.5%] border-slate-200 bg-white flex items-center justify-between px-4 shadow-sm">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden rounded-full hover:bg-accent/50 transition-all duration-200"
+              className="lg:hidden h-8 w-8 rounded-lg hover:bg-slate-100"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              <AlignJustify className="h-5 w-5" />
+              <AlignJustify className="h-4 w-4" />
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5">
-                <MessageSquare className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center justify-center w-6 h-6 rounded-md bg-primary/80 -100">
+                <MessageSquare className="h-3 w-3 text-white -600" />
               </div>
               <div className="hidden md:block">
-                <h1 className="text-lg font-semibold text-foreground">Conversations</h1>
-                <p className="text-xs text-muted-foreground">
-                  {filteredConversations.length} conversation{filteredConversations.length !== 1 ? 's' : ''}
+                <h1 className="text-base font-semibold text-slate-900">Conversations</h1>
+                <p className="text-xs text-slate-500 -mt-0.5">
+                  {filteredConversations.length} chat{filteredConversations.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Enhanced Tag Filter Pills */}
+          {/* Compact Tag Filter Pills */}
           {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).length > 0 ? (
-            <div className="relative flex-1 max-w-2xl mx-8 hidden lg:block">
-              {/* Left scroll button with enhanced styling */}
+            <div className="relative flex-1 max-w-xl mx-6 hidden lg:block">
+              {/* Compact scroll buttons */}
               <div className="absolute left-0 top-0 h-full flex items-center z-20">
-                <div className="bg-gradient-to-r from-background via-background to-background/80 pl-2 pr-4 h-full flex items-center">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={scrollLeft}
-                    className={cn(
-                      "h-8 w-8 rounded-full transition-all duration-200 hover:scale-105",
-                      canScrollLeft
-                        ? "bg-white/80 hover:bg-white shadow-sm border border-border/50"
-                        : "opacity-50 cursor-not-allowed"
-                    )}
-                    disabled={!canScrollLeft}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={scrollLeft}
+                  className={cn(
+                    "h-6 w-6 rounded-full bg-white shadow-sm border border-slate-200",
+                    canScrollLeft ? "hover:bg-slate-50" : "opacity-50 cursor-not-allowed"
+                  )}
+                  disabled={!canScrollLeft}
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
               </div>
 
-              {/* Scrollable tag container with modern styling */}
+              {/* Compact scrollable tag container */}
               <div
                 ref={scrollContainerRef}
                 onScroll={checkScrollability}
-                className="h-10 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth px-12"
+                className="h-8 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth px-8"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
-                <div className="h-full bg-gradient-to-r from-accent/20 to-accent/10 rounded-full border border-border/30 backdrop-blur-sm">
+                <div className="h-full bg-slate-50 rounded-full border border-slate-200">
                   <Tabs
                     value={activeTagFilter ?? "all"}
                     onValueChange={(v) => setActiveTagFilter(v === "all" ? null : v)}
                     className="w-full h-full"
                   >
-                    <TabsList className="h-full bg-transparent flex items-center gap-1 px-4">
-                      {/* ALL Tab - Enhanced */}
+                    <TabsList className="h-full bg-transparent flex items-center gap-0.5 px-3">
+                      {/* Compact ALL Tab */}
                       <TabsTrigger
                         value="all"
-                        className="group relative flex items-center gap-2 px-4 py-2 h-8 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105
-                          data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-accent/50
-                          data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg
-                          border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                        className="flex items-center gap-1.5 px-3 py-1 h-6 rounded-full text-xs font-medium whitespace-nowrap transition-all
+                  data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-slate-200
+                  data-[state=active]:bg-primary -500 data-[state=active]:text-white data-[state=active]:shadow-sm
+                  border-0"
                       >
-                        <div className="flex items-center gap-2">
-                          <Inbox className="h-3.5 w-3.5" />
-                          <span>All</span>
-                          <div className="flex items-center justify-center bg-background/20 text-current text-xs h-5 min-w-5 px-1.5 rounded-full font-medium">
-                            {conversations.length}
-                          </div>
+                        <Inbox className="h-3 w-3" />
+                        <span>All</span>
+                        <div className="bg-white/20 text-xs h-4 min-w-4 px-1 rounded-full flex items-center justify-center font-medium">
+                          {conversations.length}
                         </div>
                       </TabsTrigger>
 
-                      {/* Dynamic Tags - Enhanced */}
-                      {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).map((tag, index) => {
+                      {/* Compact Dynamic Tags */}
+                      {Array.from(new Set(contacts.flatMap(contact => contact.tags || []))).map((tag) => {
                         const tagCount = conversations.filter(conv => {
                           return conv.contact &&
                             Array.isArray(conv.contact.tags) &&
@@ -2766,17 +2768,15 @@ function ConversationsPageContent() {
                           <TabsTrigger
                             key={tag}
                             value={tag}
-                            className="group relative flex items-center gap-2 px-4 py-2 h-8 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 hover:scale-105
-                              data-[state=inactive]:text-muted-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-accent/50
-                              data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg
-                              border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+                            className="flex items-center gap-1.5 px-3 py-1 h-6 rounded-full text-xs font-medium whitespace-nowrap transition-all
+                      data-[state=inactive]:text-slate-600 data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-slate-200
+                      data-[state=active]:bg-primary -500 data-[state=active]:text-white data-[state=active]:shadow-sm
+                      border-0"
                           >
-                            <div className="flex items-center gap-2">
-                              <div className="h-2 w-2 rounded-full bg-current opacity-60"></div>
-                              <span>{tag}</span>
-                              <div className="flex items-center justify-center bg-background/20 text-current text-xs h-5 min-w-5 px-1.5 rounded-full font-medium">
-                                {tagCount}
-                              </div>
+                            <div className="h-1.5 w-1.5 rounded-full bg-current opacity-60"></div>
+                            <span>{tag}</span>
+                            <div className="bg-white/20 text-xs h-4 min-w-4 px-1 rounded-full flex items-center justify-center font-medium">
+                              {tagCount}
                             </div>
                           </TabsTrigger>
                         );
@@ -2786,30 +2786,26 @@ function ConversationsPageContent() {
                 </div>
               </div>
 
-              {/* Right scroll button with enhanced styling */}
+              {/* Compact right scroll button */}
               <div className="absolute right-0 top-0 h-full flex items-center z-20">
-                <div className="bg-gradient-to-l from-background via-background to-background/80 pr-2 pl-4 h-full flex items-center">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={scrollRight}
-                    className={cn(
-                      "h-8 w-8 rounded-full transition-all duration-200 hover:scale-105",
-                      canScrollRight
-                        ? "bg-white/80 hover:bg-white shadow-sm border border-border/50"
-                        : "opacity-50 cursor-not-allowed"
-                    )}
-                    disabled={!canScrollRight}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={scrollRight}
+                  className={cn(
+                    "h-6 w-6 rounded-full bg-white shadow-sm border border-slate-200",
+                    canScrollRight ? "hover:bg-slate-50" : "opacity-50 cursor-not-allowed"
+                  )}
+                  disabled={!canScrollRight}
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
               </div>
             </div>
           ) : null}
 
-          {/* Action Buttons - Enhanced */}
-          <div className="flex items-center gap-2">
+          {/* Compact Action Buttons */}
+          <div className="flex items-center gap-1">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -2818,15 +2814,15 @@ function ConversationsPageContent() {
                     size="icon"
                     onClick={refreshData}
                     disabled={isRefreshing}
-                    className="rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
+                    className="h-8 w-8 rounded-lg hover:bg-slate-100"
                   >
-                    <RefreshCcw className={cn("h-5 w-5", isRefreshing && "animate-spin")} />
+                    <RefreshCcw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-popover/95 backdrop-blur-sm border">
-                  <p className="flex items-center text-black gap-2">
+                <TooltipContent side="bottom" className="bg-slate-900 text-white">
+                  <p className="flex items-center gap-2 text-xs">
                     <RefreshCcw className="h-3 w-3" />
-                    Refresh conversations
+                    Refresh
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -2839,16 +2835,15 @@ function ConversationsPageContent() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setShowContactDialog(true)}
-                    className="rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105 relative group"
+                    className="h-8 w-8 rounded-lg hover:bg-slate-100"
                   >
-                    <PlusCircle className="h-5 w-5 group-hover:rotate-90 transition-transform duration-200" />
-                    <div className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <PlusCircle className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-popover/95 backdrop-blur-sm border">
-                  <p className="flex items-center text-black gap-2">
+                <TooltipContent side="bottom" className="bg-slate-900 text-white">
+                  <p className="flex items-center gap-2 text-xs">
                     <PlusCircle className="h-3 w-3" />
-                    New conversation
+                    New chat
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -2859,462 +2854,337 @@ function ConversationsPageContent() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
+                  className="h-8 w-8 rounded-lg hover:bg-slate-100"
                 >
-                  <MoreVertical className="h-5 w-5" />
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 bg-popover/95 backdrop-blur-sm border-border/50">
+              <DropdownMenuContent align="end" className="w-48 bg-white border-slate-200">
                 <DropdownMenuItem
                   onClick={() => window.location.href = '/contacts'}
-                  className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                  className="cursor-pointer hover:bg-slate-50 p-3"
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 mr-3 group-hover:bg-blue-200 transition-colors">
-                    <User className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Manage Contacts</p>
-                    <p className="text-xs text-muted-foreground">Add, edit, or organize</p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <User className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Contacts</p>
+                      <p className="text-xs text-slate-500">Manage contacts</p>
+                    </div>
                   </div>
                 </DropdownMenuItem>
+
                 <DropdownMenuItem
                   onClick={() => window.location.href = '/templates'}
-                  className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                  className="cursor-pointer hover:bg-slate-50 p-3"
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 mr-3 group-hover:bg-purple-200 transition-colors">
-                    <FileText className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Message Templates</p>
-                    <p className="text-xs text-muted-foreground">Create and manage</p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Templates</p>
+                      <p className="text-xs text-slate-500">Message templates</p>
+                    </div>
                   </div>
                 </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
-                {/* <DropdownMenuItem
-                  onClick={() => window.location.href = '/settings'}
-                  className="cursor-pointer hover:bg-accent/50 transition-colors group"
+
+                <DropdownMenuItem
+                  onClick={() => {
+                    // Export all conversations
+                    console.log('Export all conversations');
+                  }}
+                  className="cursor-pointer hover:bg-slate-50 p-3"
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 mr-3 group-hover:bg-gray-200 transition-colors">
-                    <Settings className="h-4 w-4 text-gray-600" />
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <Download className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Export</p>
+                      <p className="text-xs text-slate-500">Download conversations</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">Settings</p>
-                    <p className="text-xs text-muted-foreground">Configure preferences</p>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => {
+                    // Bulk operations
+                    setIsBulkSelectMode(true);
+                  }}
+                  className="cursor-pointer hover:bg-slate-50 p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                      <LiaCheckDoubleSolid className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Bulk Actions</p>
+                      <p className="text-xs text-slate-500">Select multiple chats</p>
+                    </div>
                   </div>
-                </DropdownMenuItem> */}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
-
         <div className="flex flex-1 overflow-hidden">
-          {/* Conversations List Sidebar - Modern Design */}
+          {/* // ... existing imports and code above ... */}
+
+          {/* // ... existing imports and code above ... */}
+
+          {/* Sleek Compact Conversations List Sidebar */}
           <div className={cn(
-            "w-full md:w-80 lg:w-96 flex flex-col bg-gradient-to-b from-background to-background/95 border-r border-border/50 overflow-y- backdrop-blur-md shadow-sm",
+            "w-full md:w-72 lg:w-80 flex flex-col bg-white border-r border-slate-200 shadow-sm",
             !isMobileMenuOpen && "hidden md:flex",
             isMobileMenuOpen && "absolute inset-0 z-50 md:relative"
           )}>
-            {/* Enhanced Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-card to-card/95 flex-shrink-0">
+            {/* Compact Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
               {isBulkSelectMode ? (
                 <div className="flex items-center gap-3 w-full">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={exitBulkMode}
-                    className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
-                  >
+                  <Button variant="ghost" size="icon" onClick={exitBulkMode} className="h-7 w-7">
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <div className="flex items-center gap-2 flex-1">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                      <LiaCheckDoubleSolid className="h-4 w-4 text-primary" />
+                    <div className="h-6 w-6 rounded-md bg-blue-100 flex items-center justify-center">
+                      <LiaCheckDoubleSolid className="h-3 w-3 text-blue-600" />
                     </div>
                     <div>
-                      <span className="font-semibold text-foreground">
-                        {selectedConversations.length} chat{selectedConversations.length !== 1 ? 's' : ''} selected
-                      </span>
-                      <p className="text-xs text-muted-foreground">Bulk actions available</p>
+                      <span className="font-medium text-sm">{selectedConversations.length} selected</span>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5">
-                    <Inbox className="h-5 w-5 text-primary" />
+                  <div className="h-8 w-8 rounded-lg bg-primary -500 flex items-center justify-center">
+                    <Inbox className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <h2 className="font-semibold text-lg text-foreground">Inbox</h2>
-                    <p className="text-xs text-muted-foreground">
-                      {filteredConversations.length} conversation{filteredConversations.length !== 1 ? 's' : ''}
-                    </p>
+                    <h2 className="font-semibold text-slate-900">Inbox</h2>
+                    <p className="text-xs text-slate-500">{filteredConversations.length} chats</p>
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center relative gap-2">
+              <div className="flex items-center gap-1">
                 {isBulkSelectMode ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
-                      >
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-sm border-border/50">
-                      <DropdownMenuItem
-                        onClick={() => setShowBulkTagDialog(true)}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 mr-3 group-hover:bg-blue-200 transition-colors">
-                          <Tag className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Apply Tag</p>
-                          <p className="text-xs text-muted-foreground">Add tags to conversations</p>
-                        </div>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => setShowBulkTagDialog(true)}>
+                        <Tag className="h-4 w-4 mr-2 text-blue-600" />
+                        Apply Tags
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => { }}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 mr-3 group-hover:bg-purple-200 transition-colors">
-                          <Users className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Add to Broadcast</p>
-                          <p className="text-xs text-muted-foreground">Create broadcast list</p>
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setShowBulkAssignDialog(true)}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 mr-3 group-hover:bg-green-200 transition-colors">
-                          <UserPlus className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Assign To</p>
-                          <p className="text-xs text-muted-foreground">Assign to team member</p>
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => { }}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors group"
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-100 mr-3 group-hover:bg-orange-200 transition-colors">
-                          <UserX className="h-4 w-4 text-orange-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Unassign</p>
-                          <p className="text-xs text-muted-foreground">Remove assignments</p>
-                        </div>
+                      <DropdownMenuItem onClick={() => setShowBulkAssignDialog(true)}>
+                        <UserPlus className="h-4 w-4 mr-2 text-green-600" />
+                        Assign
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => setShowBulkDeleteDialog(true)}
-                        className="cursor-pointer hover:bg-destructive/10 transition-colors group text-destructive"
-                      >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 mr-3 group-hover:bg-red-200 transition-colors">
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Delete Chats</p>
-                          <p className="text-xs text-muted-foreground">Permanently remove</p>
-                        </div>
+                      <DropdownMenuItem onClick={() => setShowBulkDeleteDialog(true)} className="text-red-600">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setIsBulkSelectMode(true)}
-                          className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
-                        >
-                          <LiaCheckDoubleSolid className="h-4 w-4 text-primary" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p className="flex items-center gap-2">
-                          <LiaCheckDoubleSolid className="h-3 w-3" />
-                          Bulk select mode
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <>
+                    <Button variant="ghost" size="icon" onClick={() => setIsBulkSelectMode(true)} className="h-7 w-7">
+                      <LiaCheckDoubleSolid className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant={getActiveFilterCount() > 0 ? "default" : "ghost"}
+                      size="icon"
+                      onClick={() => setShowFilterDialog(true)}
+                      className={cn("h-7 w-7 relative", getActiveFilterCount() > 0 && "bg-blue-500 text-white")}
+                    >
+                      <Filter className="h-3 w-3" />
+                      {getActiveFilterCount() > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                          {getActiveFilterCount()}
+                        </span>
+                      )}
+                    </Button>
+                  </>
                 )}
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={getActiveFilterCount() > 0 ? "default" : "ghost"}
-                        size="icon"
-                        onClick={() => setShowFilterDialog(true)}
-                        className={cn(
-                          "h-8 w-8 rounded-full transition-all duration-200 hover:scale-105 relative",
-                          getActiveFilterCount() > 0
-                            ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
-                            : "hover:bg-accent/50"
-                        )}
-                      >
-                        <Filter className="h-4 w-4" />
-                        {getActiveFilterCount() > 0 && (
-                          <span className="absolute -top-1 -right-1 h-5 w-5 bg-background text-primary text-[10px] font-bold flex items-center justify-center rounded-full ring-2 ring-primary animate-pulse">
-                            {getActiveFilterCount()}
-                          </span>
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p className="flex items-center gap-2">
-                        <Filter className="h-3 w-3" />
-                        {getActiveFilterCount() > 0 ? `${getActiveFilterCount()} filters active` : "Filter conversations"}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
             </div>
 
-            {/* Enhanced Search Bar - Fixed */}
-            <div className="p-4 border-b border-border/50 bg-card/30 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                {searchQuery.trim().length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSearchQuery("")}
-                    className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
+            {/* Compact Search */}
+            <div className="p-3 border-b border-slate-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-slate-400" />
+                <Input
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 text-sm bg-slate-50 border-slate-200 focus:bg-white"
+                />
+                {searchQuery && (
+                  <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">
+                    {filteredConversations.length}
+                  </span>
                 )}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search conversations..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className={cn(
-                      "pl-10 h-10 bg-background/50 border-border/50 focus:border-primary focus:ring-1 focus:ring-primary/20 rounded-lg transition-all duration-200",
-                      searchQuery.trim().length > 0 ? "flex-1" : "w-full"
-                    )}
-                  />
-                  {searchQuery.trim().length > 0 && (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="flex items-center justify-center w-5 h-5 bg-primary/10 rounded-full">
-                        <span className="text-xs font-medium text-primary">
-                          {filteredConversations.length}
-                        </span>
+              </div>
+            </div>
+
+            {/* Compact Conversations List */}
+            <div className="flex-1 overflow-y-auto">
+              {isLoadingConversations ? (
+                <div className="p-2 space-y-2">
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2 animate-pulse">
+                      <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-3 bg-slate-200 rounded w-3/4 mb-1"></div>
+                        <div className="h-2 bg-slate-200 rounded w-1/2"></div>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Enhanced Conversations List */}
-            <div className="flex-1 mb-24 overflow-y-auto">
-              {isLoadingConversations ? (
-                <div className="space-y-0">
-                  {Array.from({ length: 8 }, (_, i) => (
-                    <ConversationSkeleton key={i} />
                   ))}
                 </div>
               ) : (
-                <>
-                  {/* New conversation indicator - Enhanced */}
+                <div className="p-2 space-y-1">
+                  {/* New conversation indicator - Compact */}
                   {selectedContact && (
                     <div
-                      className="group flex items-center border-b border-border/50 p-4 cursor-pointer hover:bg-accent/30 bg-gradient-to-r from-primary/5 to-primary/10 transition-all duration-200"
+                      className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors"
                       onClick={() => {
-                        console.log('Clicking on new conversation with contact:', selectedContact);
                         setIsMobileMenuOpen(false);
                       }}
                     >
-                      <div className="relative mr-3">
-                        <Avatar className="h-12 w-12 ring-2 ring-primary/20 transition-all duration-200 group-hover:ring-primary/40">
-                          <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-semibold">
+                      <div className="relative">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-500 text-white text-xs font-medium">
                             {selectedContact.name.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center animate-pulse">
-                          <Plus className="h-2.5 w-2.5 text-primary-foreground" />
+                        <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                          <Plus className="h-2 w-2 text-white" />
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-foreground">{selectedContact.name}</h3>
-                          <Badge className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-sm">
-                            New
-                          </Badge>
+                          <h3 className="font-medium text-sm truncate">{selectedContact.name}</h3>
+                          <Badge className="bg-blue-500 text-white text-xs px-1.5 py-0.5">New</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">Start conversation</p>
+                        <p className="text-xs text-slate-500">Start conversation</p>
                       </div>
                     </div>
                   )}
 
-                  {/* Existing conversations - Enhanced */}
+                  {/* Compact conversations */}
                   {filteredConversations.map((conversation) => (
                     <div
                       key={conversation.id}
                       className={cn(
-                        "group flex items-center border-b border-border/30 p-4 cursor-pointer transition-all duration-200",
-                        "hover:bg-accent/30 hover:border-border/50",
-                        activeConversation?.id === conversation.id && !isBulkSelectMode ? "bg-accent/50 border-primary/20" : "",
-                        selectedConversations.includes(conversation.id) && "bg-green-50 border-green-200",
-                        isBulkSelectMode && "hover:bg-accent/20"
+                        "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all hover:bg-slate-50",
+                        activeConversation?.id === conversation.id && !isBulkSelectMode ? "bg-blue-50 border border-blue-200" : "",
+                        selectedConversations.includes(conversation.id) && "bg-green-50 border border-green-200"
                       )}
                       onClick={async () => {
                         if (isBulkSelectMode) {
                           toggleConversationSelection(conversation.id);
                         } else {
-                          console.log('Selecting conversation with contact:', conversation.contact);
-
-                          // Always fetch complete conversation details when selecting
+                          // Handle conversation selection
                           if (!conversation.contact?.id) {
-                            console.log('Contact ID missing, fetching conversation details...');
                             const completeConversation = await fetchConversationDetails(conversation.id);
-                            if (completeConversation) {
-                              setActiveConversation(completeConversation);
-                            }
+                            if (completeConversation) setActiveConversation(completeConversation);
                           } else {
                             setActiveConversation(conversation);
                           }
-
                           setSelectedContact(null);
                           setIsMobileMenuOpen(false);
-
-                          // Mark conversation as read if it has unread messages
                           if (conversation.unreadCount > 0) {
                             markConversationAsRead(conversation.id);
                           }
                         }
                       }}
                     >
-                      {/* Enhanced Contact Avatar with Selection */}
-                      <div className="relative mr-3">
+                      {/* Compact Avatar */}
+                      <div className="relative flex-shrink-0">
                         {isBulkSelectMode ? (
                           <div className={cn(
-                            "h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-200",
+                            "h-8 w-8 rounded-full flex items-center justify-center border-2",
                             selectedConversations.includes(conversation.id)
-                              ? "border-primary bg-primary/10 scale-105"
-                              : "border-border bg-muted hover:border-primary/50"
+                              ? "border-green-500 bg-green-100"
+                              : "border-slate-200 bg-slate-50"
                           )}>
                             {selectedConversations.includes(conversation.id) && (
-                              <IoMdCheckmark className="h-5 w-5 text-primary" />
+                              <IoMdCheckmark className="h-4 w-4 text-green-600" />
                             )}
                           </div>
                         ) : (
-                          <div className="relative">
-                            <Avatar className={cn(
-                              "h-12 w-12 transition-all duration-200",
-                              activeConversation?.id === conversation.id && "ring-2 ring-primary/50"
-                            )}>
-                              <AvatarFallback className="bg-gradient-to-br from-muted to-muted/70 text-foreground font-medium">
+                          <>
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-slate-100 text-slate-700 text-xs font-medium">
                                 {conversation.contact.name.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                             {conversation.contact.whatsappOptIn && (
-                              <span className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
-                                <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
-                              </span>
+                              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white"></div>
                             )}
-                          </div>
+                          </>
                         )}
                       </div>
 
-                      {/* Enhanced Message Content */}
+                      {/* Compact Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold text-foreground truncate">{conversation.contact.name}</h3>
-                          <span className="text-xs text-muted-foreground font-medium">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <h3 className="font-medium text-sm truncate">{conversation.contact.name}</h3>
+                          <span className="text-xs text-slate-500 flex-shrink-0">
                             {formatMessageTime(conversation.lastMessageAt)}
                           </span>
                         </div>
 
-                        {/* Enhanced Labels and Tags */}
-                        <div className="flex flex-wrap gap-1 mb-1">
+                        {/* Compact Tags */}
+                        <div className="flex items-center gap-1 mb-1">
                           {conversation.labels && conversation.labels.length > 0 && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] h-4 px-1.5 font-medium",
-                                `bg-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-100 text-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-800 border-${labels.find(l => l.id === conversation.labels[0])?.color || "blue"}-200`
-                              )}
-                            >
+                            <Badge variant="outline" className="text-xs px-1 py-0 h-4 bg-primary/30 -50 text-primary -600 border-blue-200">
                               {labels.find(l => l.id === conversation.labels[0])?.name || "Label"}
                             </Badge>
                           )}
                           {conversation.assignedTo && (
-                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-blue-50 text-blue-700 border-blue-200 font-medium">
-                              {teamMembers.find(u => u.id === conversation.assignedTo)?.name.split(' ')[0] || "Assigned"}
+                            <Badge variant="outline" className="text-xs px-1 py-0 h-4 bg-purple-50 text-purple-600 border-purple-200">
+                              {teamMembers.find(u => u.id === conversation.assignedTo)?.name.split(' ')[0]}
                             </Badge>
                           )}
                         </div>
 
-                        {/* Enhanced Message Preview */}
+                        {/* Compact Message Preview */}
                         <div className="flex items-center justify-between">
-                          <p className="text-sm text-muted-foreground truncate max-w-[180px] leading-relaxed">
+                          <p className="text-xs text-slate-600 truncate flex-1 mr-2">
                             {conversation.lastMessageType === "image" ? (
-                              <span className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-blue-100 flex items-center justify-center">
-                                  <ImageIcon className="h-2 w-2 text-blue-600" />
-                                </div>
-                                Photo
+                              <span className="flex items-center gap-1">
+                                <ImageIcon className="h-3 w-3" />Photo
                               </span>
                             ) : conversation.lastMessageType === "video" ? (
-                              <span className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-purple-100 flex items-center justify-center">
-                                  <Video className="h-2 w-2 text-purple-600" />
-                                </div>
-                                Video
+                              <span className="flex items-center gap-1">
+                                <Video className="h-3 w-3" />Video
                               </span>
                             ) : conversation.lastMessageType === "document" ? (
-                              <span className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-orange-100 flex items-center justify-center">
-                                  <FileText className="h-2 w-2 text-orange-600" />
-                                </div>
-                                Document
-                              </span>
-                            ) : conversation.lastMessageType === "template" ? (
-                              <span className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded bg-green-100 flex items-center justify-center">
-                                  <FileText className="h-2 w-2 text-green-600" />
-                                </div>
-                                Template
+                              <span className="flex items-center gap-1">
+                                <FileText className="h-3 w-3" />Document
                               </span>
                             ) : (
                               conversation.lastMessage
                             )}
                           </p>
 
-                          {/* Enhanced Status Indicators */}
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             {conversation.isWithin24Hours && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                                      <Zap className="h-2.5 w-2.5 text-green-600" />
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>24-hour window active</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center">
+                                <Zap className="h-2 w-2 text-green-600" />
+                              </div>
                             )}
                             {conversation.unreadCount > 0 && (
-                              <div className="flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600 text-white text-xs h-5 min-w-5 px-1.5 rounded-full font-semibold shadow-sm animate-pulse">
+                              <div className="bg-red-500 text-white text-xs h-4 min-w-4 px-1 rounded-full flex items-center justify-center font-medium">
                                 {conversation.unreadCount}
                               </div>
                             )}
@@ -3324,932 +3194,613 @@ function ConversationsPageContent() {
                     </div>
                   ))}
 
-                  {/* Enhanced Empty State */}
+                  {/* Compact Empty State */}
                   {filteredConversations.length === 0 && !selectedContact && (
-                    <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                      {getActiveFilterCount() > 0 ? (
-                        <>
-                          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted to-muted/70 flex items-center justify-center mb-6">
-                            <Filter className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                          <h3 className="text-lg font-semibold text-foreground mb-2">No conversations match filters</h3>
-                          <p className="text-muted-foreground text-sm mb-6 max-w-sm leading-relaxed">
-                            Try adjusting your filters to see more results, or clear all filters to view all conversations.
-                          </p>
-                          <Button
-                            onClick={resetFilters}
-                            size="sm"
-                            variant="outline"
-                            className="hover:bg-accent transition-colors"
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Clear Filters
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-6">
-                            <MessageSquare className="h-8 w-8 text-primary" />
-                          </div>
-                          <h3 className="text-lg font-semibold text-foreground mb-2">No conversations yet</h3>
-                          <p className="text-muted-foreground text-sm mb-6 max-w-sm leading-relaxed">
-                            Start your first conversation with a customer to see it appear here.
-                          </p>
-                          <Button
-                            onClick={() => setShowContactDialog(true)}
-                            size="sm"
-                            className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-sm"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            New Chat
-                          </Button>
-                        </>
-                      )}
+                    <div className="text-center py-8 px-4">
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <MessageSquare className="h-6 w-6 text-slate-400" />
+                      </div>
+                      <h3 className="font-medium text-slate-900 mb-1">
+                        {getActiveFilterCount() > 0 ? "No matches" : "No conversations"}
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-4">
+                        {getActiveFilterCount() > 0
+                          ? "Try adjusting filters"
+                          : "Start your first conversation"
+                        }
+                      </p>
+                      <Button
+                        onClick={getActiveFilterCount() > 0 ? resetFilters : () => setShowContactDialog(true)}
+                        size="sm"
+                        className="h-7 text-xs"
+                      >
+                        {getActiveFilterCount() > 0 ? "Clear Filters" : "New Chat"}
+                      </Button>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Chat Area - Fixed height */}
+          {/* Sleek Compact Chat Area */}
           {(activeConversation || selectedContact) ? (
-            <div className="flex-1   max-h-screen flex flex-col bg-gradient-to-b from-background to-background/95 backdrop-blur-md shadow-sm min-w-0 overflow-hidden">
-              {/* Enhanced Chat Header - Fixed */}
-              {/* Chat Header */}
-
-              <div className="bg-gradient-to-r from-card to-card/95 border-b border-border/50 px-4 py-3 shadow-sm backdrop-blur-md md:w-[94%] 2xl:w-[95%] flex-shrink-0">
+            <div className="flex-1 flex flex-col bg-white min-w-0 overflow-hidden">
+              {/* Compact Header */}
+              <div className="bg-white border-b w-[94.5%] border-slate-200 px-4 py-2 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="md:hidden mr-1 h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200"
+                      className="md:hidden h-7 w-7"
                       onClick={() => setIsMobileMenuOpen(true)}
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
 
-                    <div className="relative">
-                      <Avatar className="h-10 w-10 ring-2 ring-primary/20 transition-all duration-200 hover:ring-primary/40">
-                        <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-semibold">
-                          {getCurrentChatTitle().charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {getCurrentContact()?.whatsappOptIn && (
-                        <span className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
-                          <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
-                        </span>
-                      )}
-                    </div>
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary -500 text-white text-xs font-medium">
+                        {getCurrentChatTitle().charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h2 className="font-semibold text-foreground text-lg">{getCurrentChatTitle()}</h2>
-                        <div className="flex items-center gap-1.5">
-                          <Circle className={cn(
-                            "h-2.5 w-2.5 transition-all duration-200",
-                            activeConversation?.status === 'active' && "fill-green-500 text-green-500",
-                            activeConversation?.status === 'pending' && "fill-amber-500 text-amber-500",
-                            activeConversation?.status === 'resolved' && "fill-blue-500 text-blue-500",
-                            activeConversation?.status === 'closed' && "fill-slate-500 text-slate-500",
-                            !activeConversation && "fill-green-500 text-green-500"
-                          )} />
-                          <span className="text-xs text-muted-foreground font-medium">
-                            {selectedContact ? 'New Conversation' :
-                              activeConversation?.status === 'active' ? 'Active' :
-                                activeConversation?.status === 'closed' ? 'Closed' :
-                                  activeConversation?.status === 'resolved' ? 'Resolved' : 'Pending'}
-                          </span>
-                        </div>
+                        <h2 className="font-medium text-slate-900">{getCurrentChatTitle()}</h2>
+                        <Circle className={cn(
+                          "h-2 w-2",
+                          activeConversation?.status === 'active' && "fill-green-500 text-green-500",
+                          activeConversation?.status === 'pending' && "fill-amber-500 text-amber-500",
+                          activeConversation?.status === 'resolved' && "fill-blue-500 text-blue-500",
+                          activeConversation?.status === 'closed' && "fill-slate-500 text-slate-500",
+                          !activeConversation && "fill-green-500 text-green-500"
+                        )} />
                       </div>
 
-                      <div className="flex items-center gap-2 flex-wrap mt-1">
-                        {getCurrentContact()?.tags && getCurrentContact()?.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 max-w-[250px]">
-                            {getCurrentContact()?.tags.map((tag, index) => (
-                              <Badge
-                                key={index}
-                                variant="outline"
-                                className="text-[10px] h-4 px-1.5 bg-primary/10 text-primary border-primary/20 font-medium hover:bg-primary/20 transition-colors"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        {activeConversation?.labels && activeConversation.labels.length > 0 && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[10px] h-4 px-1.5 font-medium",
-                              labels.find(l => l.id === activeConversation.labels[0])?.color
-                                ? `bg-${labels.find(l => l.id === activeConversation.labels[0])?.color}-100 text-${labels.find(l => l.id === activeConversation.labels[0])?.color}-800 border-${labels.find(l => l.id === activeConversation.labels[0])?.color}-200`
-                                : "bg-blue-100 text-blue-800 border-blue-200"
-                            )}
-                          >
-                            {labels.find(l => l.id === activeConversation.labels[0])?.name || "Label"}
+                      {/* Compact Tags */}
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {getCurrentContact()?.tags && getCurrentContact()?.tags.slice(0, 2).map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs px-1 py-0 h-4 bg-priamry/30 -50 text-primary -600">
+                            {tag}
                           </Badge>
+                        ))}
+                        {getCurrentContact()?.tags && getCurrentContact()?.tags.length > 2 && (
+                          <span className="text-xs text-slate-500">+{getCurrentContact()?.tags.length - 2}</span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Enhanced Action Buttons */}
-                  <div className="flex items-center gap-2 -ml-4">
-                    {activeConversation?.assignedTo ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="h-8 border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-all duration-200 hover:scale-105"
-                          >
-                            <User className="h-3 w-3" />
-                            {teamMembers.find(u => u.id === activeConversation.assignedTo)?.name.split(' ')[0] || 'Agent'}
-                            <ChevronDown className="h-3 w-3 ml-0.5" />
-                          </Badge>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              <span>Reassign to</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-popover/95 backdrop-blur-sm border-border/50">
-                              {teamMembers.map(member => (
-                                <DropdownMenuItem
-                                  key={member.id}
-                                  onClick={() => assignConversation(member.id)}
-                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
-                                >
-                                  <div className="flex items-center w-full">
-                                    <User className="h-4 w-4 mr-2" />
-                                    <span>{member.name}</span>
-                                    {member.id === activeConversation.assignedTo && (
-                                      <Check className="h-4 w-4 ml-auto text-primary" />
-                                    )}
-                                  </div>
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => assignConversation('')}
-                            className="text-red-600 cursor-pointer hover:bg-red-50 transition-colors"
-                          >
-                            <UserX className="h-4 w-4 mr-2" />
-                            <span>Unassign</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="h-8 bg-accent/50 text-muted-foreground border-border/50 cursor-pointer hover:bg-accent/80 hover:text-foreground transition-all duration-200 hover:scale-105"
-                          >
-                            <UserPlus className="h-3 w-3" />
-                            Assign
-                            <ChevronDown className="h-3 w-3 ml-0.5" />
-                          </Badge>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
-                          {teamMembers.map(member => (
-                            <DropdownMenuItem
-                              key={member.id}
-                              onClick={() => assignConversation(member.id)}
-                              className="cursor-pointer hover:bg-accent/50 transition-colors"
-                            >
-                              <User className="h-4 w-4 mr-2" />
-                              <span>{member.name}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                  {/* Compact Action Buttons */}
+                  <div className="flex items-center gap-1">
+                    {activeConversation?.assignedTo && (
+                      <Badge variant="outline" className="text-xs px-2 py-1 h-6 bg-blue-50 text-blue-600">
+                        {teamMembers.find(u => u.id === activeConversation.assignedTo)?.name.split(' ')[0]}
+                      </Badge>
                     )}
 
-                    <div className='flex items-center gap-2 ml-2'>
-                      {/* Enhanced Tag Button */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger className="cursor-pointer" asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
-                                >
-                                  <Tag className="h-4 w-4 text-primary" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-sm border-border/50">
-                                {getCurrentContact()?.tags && getCurrentContact()?.tags.map((tag, index) => (
-                                  <DropdownMenuCheckboxItem
-                                    key={index}
-                                    checked={true}
-                                    onCheckedChange={() => handleRemoveTag(tag)}
-                                    className="cursor-pointer hover:bg-accent/50 transition-colors"
-                                  >
-                                    {tag}
-                                  </DropdownMenuCheckboxItem>
-                                ))}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowAddTagDialog(true)}>
+                      <Tag className="h-3 w-3" />
+                    </Button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <UserPlus className="h-4 w-4 mr-2 text-blue-600" />
+                            <span>Assign to</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-44">
+                            {teamMembers.map(member => (
+                              <DropdownMenuItem
+                                key={member.id}
+                                onClick={() => assignConversation(member.id)}
+                                className="cursor-pointer"
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                <span>{member.name}</span>
+                                {member.id === activeConversation?.assignedTo && (
+                                  <Check className="h-4 w-4 ml-auto text-primary" />
+                                )}
+                              </DropdownMenuItem>
+                            ))}
+                            {activeConversation?.assignedTo && (
+                              <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={() => setShowAddTagDialog(true)}
-                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                                  onClick={() => assignConversation('')}
+                                  className="text-red-600 cursor-pointer"
                                 >
-                                  <Plus className="h-4 w-4 mr-2 text-primary" />
-                                  Add New Tag
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  <span>Unassign</span>
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Manage tags</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                              </>
+                            )}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
 
-                      {/* Enhanced Actions Menu */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
-                          >
-                            <MoreVertical className="h-4 w-4 text-primary" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 bg-popover/95 backdrop-blur-sm border-border/50">
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
-                              <UserPlus className="h-4 w-4 mr-2 text-blue-600" />
-                              <span>Assign to</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
-                              {teamMembers.map(member => (
-                                <DropdownMenuItem
-                                  key={member.id}
-                                  onClick={() => assignConversation(member.id)}
-                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
-                                >
-                                  <User className="h-4 w-4 mr-2" />
-                                  <span>{member.name}</span>
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
-                              <Tag className="h-4 w-4 mr-2 text-purple-600" />
-                              <span>Add label</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
-                              {labels.map(label => (
-                                <DropdownMenuItem
-                                  key={label.id}
-                                  onClick={() => addLabelToConversation(label.id)}
-                                  className="cursor-pointer hover:bg-accent/50 transition-colors"
-                                  style={{
-                                    backgroundColor: `rgb(${label.color === 'red' ? '254 226 226' :
-                                      label.color === 'blue' ? '219 234 254' :
-                                        label.color === 'green' ? '220 252 231' :
-                                          label.color === 'yellow' ? '254 249 195' :
-                                            label.color === 'purple' ? '243 232 255' :
-                                              label.color === 'orange' ? '255 237 213' :
-                                                label.color === 'pink' ? '252 231 243' :
-                                                  label.color === 'gray' ? '243 244 246' : '219 234 254'})`,
-                                    color: `rgb(${label.color === 'red' ? '153 27 27' :
-                                      label.color === 'blue' ? '30 64 175' :
-                                        label.color === 'green' ? '22 101 52' :
-                                          label.color === 'yellow' ? '133 77 14' :
-                                            label.color === 'purple' ? '107 33 168' :
-                                              label.color === 'orange' ? '154 52 18' :
-                                                label.color === 'pink' ? '157 23 77' :
-                                                  label.color === 'gray' ? '55 65 81' : '30 64 175'})`
-                                  }}
-                                >
-                                  <span>{label.name}</span>
-                                </DropdownMenuItem>
-                              ))}
-                              {labels.length > 0 && <DropdownMenuSeparator />}
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <Tag className="h-4 w-4 mr-2 text-purple-600" />
+                            <span>Add label</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-44">
+                            {labels.map(label => (
                               <DropdownMenuItem
-                                onClick={() => setShowCreateLabelDialog(true)}
-                                className="text-primary hover:bg-primary/10 cursor-pointer transition-colors"
+                                key={label.id}
+                                onClick={() => addLabelToConversation(label.id)}
+                                className="cursor-pointer"
+                                style={{
+                                  backgroundColor: `${label.color === 'red' ? 'rgb(254 226 226)' :
+                                    label.color === 'blue' ? 'rgb(219 234 254)' :
+                                      label.color === 'green' ? 'rgb(220 252 231)' :
+                                        label.color === 'yellow' ? 'rgb(254 249 195)' :
+                                          label.color === 'purple' ? 'rgb(243 232 255)' :
+                                            label.color === 'orange' ? 'rgb(255 237 213)' :
+                                              'rgb(219 234 254)'}`,
+                                  color: `${label.color === 'red' ? 'rgb(153 27 27)' :
+                                    label.color === 'blue' ? 'rgb(30 64 175)' :
+                                      label.color === 'green' ? 'rgb(22 101 52)' :
+                                        label.color === 'yellow' ? 'rgb(133 77 14)' :
+                                          label.color === 'purple' ? 'rgb(107 33 168)' :
+                                            label.color === 'orange' ? 'rgb(154 52 18)' :
+                                              'rgb(30 64 175)'}`
+                                }}
                               >
-                                <Plus className="h-4 w-4 mr-2" />
-                                <span>Create new label</span>
+                                <span>{label.name}</span>
                               </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-
-                          <DropdownMenuItem
-                            onClick={() => setShowNoteDialog(true)}
-                            className="cursor-pointer hover:bg-accent/50 transition-colors"
-                          >
-                            <Clipboard className="h-4 w-4 mr-2 text-green-600" />
-                            <span>Add note</span>
-                          </DropdownMenuItem>
-
-                          <DropdownMenuSeparator />
-
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-accent/50 transition-colors">
-                              <Clock className="h-4 w-4 mr-2 text-amber-600" />
-                              <span>Change status</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="w-48 bg-popover/95 backdrop-blur-sm border-border/50">
-                              <DropdownMenuItem
-                                onClick={() => changeConversationStatus('active')}
-                                className="text-green-700 cursor-pointer hover:bg-green-50 transition-colors"
-                              >
-                                <Circle className="h-4 w-4 mr-2 fill-green-500 text-green-500" />
-                                <span>Active</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => changeConversationStatus('pending')}
-                                className="text-amber-700 cursor-pointer hover:bg-amber-50 transition-colors"
-                              >
-                                <Circle className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
-                                <span>Pending</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => changeConversationStatus('resolved')}
-                                className="text-blue-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-2 text-blue-500" />
-                                <span>Resolved</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => changeConversationStatus('closed')}
-                                className="text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors"
-                              >
-                                <Archive className="h-4 w-4 mr-2 text-slate-500" />
-                                <span>Closed</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-
-                          <DropdownMenuSeparator />
-
-                          <DropdownMenuItem
-                            onClick={() => setShowTemplateDialog(true)}
-                            className="cursor-pointer hover:bg-accent/50 transition-colors"
-                          >
-                            <FileText className="h-4 w-4 mr-2 text-indigo-600" />
-                            <span>Send template</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
-                      {/* Enhanced Contact Info Button */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-full hover:bg-accent/50 transition-all duration-200 hover:scale-105"
-                              onClick={() => setShowInfoPanel(true)}
+                            ))}
+                            {labels.length > 0 && <DropdownMenuSeparator />}
+                            <DropdownMenuItem
+                              onClick={() => setShowCreateLabelDialog(true)}
+                              className="text-primary cursor-pointer"
                             >
-                              <FaRegUserCircle className='h-4 w-4 text-primary' />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Contact info</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                              <Plus className="h-4 w-4 mr-2" />
+                              <span>Create new label</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuItem
+                          onClick={() => setShowNoteDialog(true)}
+                          className="cursor-pointer"
+                        >
+                          <Clipboard className="h-4 w-4 mr-2 text-green-600" />
+                          <span>Add note</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <Clock className="h-4 w-4 mr-2 text-amber-600" />
+                            <span>Change status</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-40">
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('active')}
+                              className="text-green-700 cursor-pointer"
+                            >
+                              <Circle className="h-4 w-4 mr-2 fill-green-500 text-green-500" />
+                              <span>Active</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('pending')}
+                              className="text-amber-700 cursor-pointer"
+                            >
+                              <Circle className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
+                              <span>Pending</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('resolved')}
+                              className="text-blue-700 cursor-pointer"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2 text-blue-500" />
+                              <span>Resolved</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => changeConversationStatus('closed')}
+                              className="text-slate-700 cursor-pointer"
+                            >
+                              <Archive className="h-4 w-4 mr-2 text-slate-500" />
+                              <span>Closed</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                          onClick={() => setShowTemplateDialog(true)}
+                          className="cursor-pointer"
+                        >
+                          <FileText className="h-4 w-4 mr-2 text-indigo-600" />
+                          <span>Send template</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            // Add export conversation functionality
+                            console.log('Export conversation');
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Download className="h-4 w-4 mr-2 text-slate-600" />
+                          <span>Export chat</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            // Add delete conversation functionality
+                            console.log('Delete conversation');
+                          }}
+                          className="cursor-pointer text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          <span>Delete conversation</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowInfoPanel(true)}>
+                      <FaRegUserCircle className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-
               </div>
 
-              {/* Enhanced Messages Area */}
-              <div className="flex-1 max-h-[95%] md:w-[94%] 2xl:w-[95%] h-fit flex flex-col overflow-y-scroll relative">
+              {/* Compact Messages Area */}
+              <div style={{ backgroundImage: "url('/bg.png')" }} className="flex-1 w-[93.5%] mb-32 flex flex-col relative overflow-hidden">
+
                 <div
                   ref={scrollAreaRef}
-                  className="flex-1 overflow-y-auto"
-                  style={{ backgroundImage: "url('/bg.png')" }}
+                  className="flex-1 overflow-y-auto bg-slate-50/30"
                   onScroll={handleScroll}
                 >
-                  <div className="p-4 bg-cover bg-center bg-no-repeat min-h-full">
-                    <div className="space-y-4 mx-auto">
-                      {/* Enhanced Empty State for New Conversations */}
-                      {selectedContact && messages.length === 0 && (
-                        <div className="text-center py-12">
-                          <div className="relative inline-block">
-                            <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6 rounded-2xl w-fit mx-auto mb-6 backdrop-blur-sm border border-primary/20">
-                              <MessageSquare className="h-12 w-12 text-primary mx-auto" />
-                            </div>
-                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center animate-pulse">
-                              <Plus className="h-3 w-3 text-primary-foreground" />
+                  <div className="p-3 space-y-3">
+                    {/* Compact Empty State */}
+                    {selectedContact && messages.length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mx-auto mb-3">
+                          <MessageSquare className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <h3 className="font-medium text-slate-900 mb-1">Start conversation</h3>
+                        <p className="text-sm text-slate-600">
+                          Send your first message to {selectedContact.name}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Compact Messages */}
+                    {Object.entries(getGroupedMessages()).map(([dateKey, dateMessages]) => {
+                      const dateLabel = getDateGroupLabel(dateMessages[0].timestamp);
+                      return (
+                        <div key={dateKey} className="space-y-2">
+                          {/* Compact Date Separator */}
+                          <div className="flex justify-center my-3">
+                            <div className="bg-white px-3 py-1 rounded-full text-xs text-slate-500 border border-slate-200">
+                              {dateLabel}
                             </div>
                           </div>
-                          <h3 className="text-xl font-semibold text-foreground mb-3">Start the conversation</h3>
-                          <p className="text-muted-foreground  mx-auto leading-relaxed">
-                            Send your first message to <span className="font-medium text-foreground">{selectedContact.name}</span> to begin the conversation.
-                          </p>
-                        </div>
-                      )}
 
-                      {/* Messages */}
-                      {Object.entries(getGroupedMessages()).map(([dateKey, dateMessages]) => {
-                        const dateLabel = getDateGroupLabel(dateMessages[0].timestamp);
-
-                        return (
-                          <div key={dateKey} className="space-y-6">
-                            {/* Enhanced Date Separator */}
-                            <div className="flex items-center justify-center my-8">
-                              <div className="bg-background/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium text-muted-foreground border border-border/50 shadow-sm">
-                                {dateLabel}
-                              </div>
-                            </div>
-
-
-                            {/* Enhanced Messages */}
-                            {dateMessages.map((message) => {
-                              // console.log('🔍 ALL MESSAGE DEBUG:', {
-                              //   id: message.id,
-                              //   messageType: message.messageType,
-                              //   content: message.content,
-                              //   senderId: message.senderId,
-                              //   interactiveData: message.interactiveData
-                              // });
-
-                              // if (message.messageType === 'template') {
-                              //   console.log('Template message data:', {
-                              //     id: message.id,
-                              //     templateName: message.templateName,
-                              //     templateId: message.templateId,
-                              //     mediaUrl: message.mediaUrl,
-                              //     templateButtons: message.templateButtons,
-                              //     content: message.content
-                              //   });
-                              // }
-                              // Enhanced System Messages
-                              if (message.messageType === 'system' || message.messageType === 'note') {
-                                return (
-                                  <div key={message.id} className="flex justify-center pb-6">
-                                    <div className="bg-background/80 backdrop-blur-sm  px-4 py-2 rounded-xl text-sm text-muted-foreground max-w-[80%] text-center border border-border/30 shadow-sm">
-                                      {message.content}
-                                    </div>
-                                  </div>
-                                );
-                              }
-
-                              {/* Enhanced Regular Messages - WhatsApp Style */ }
+                          {/* Compact Messages */}
+                          {dateMessages.map((message) => {
+                            if (message.messageType === 'system' || message.messageType === 'note') {
                               return (
-                                <div
-                                  key={message.id}
-                                  className={cn(
-                                    "flex group mb-1",
-                                    message.senderId === "agent" ? "justify-end" : "justify-start"
-                                  )}
-                                >
-                                  {message.status === 'failed' && (
-                                    <button
-                                      onClick={() => {
-                                        setSelectedErrorMessage(message);
-                                        setShowErrorDialog(true);
-                                      }}
-                                      className="flex items-center gap-1 cursor-pointer  rounded-full p-2 transition-colors group"
-                                    >
-                                      <AlertCircle className="h-6 w-6 text-red-500 group-hover:text-red-600" />
-                                    </button>
-                                  )}
-
-                                  <div className="max-w-[65%] min-w-[120px]">
-                                    {/* Sender Name - WhatsApp Style */}
-                                    <div className={cn(
-                                      "text-xs font-medium text-muted-foreground mb-1 px-1",
-                                      message.senderId === "agent" ? "text-right" : "text-left"
-                                    )}>
-                                      {message.senderId === "agent"
-                                        ? (message.senderName || currentUser.name)
-                                        : getCurrentContact()?.name}
-                                    </div>
-
-                                    <div
-                                      className={cn(
-                                        "px-3 py-2 rounded-lg relative shadow-sm",
-                                        message.senderId === "agent"
-                                          ? "bg-[#dcf8c6] text-black rounded-br-sm"
-                                          : "bg-white text-black rounded-bl-sm border border-gray-200"
-                                      )}
-                                    >
-                                      {/* Reply Preview Block */}
-                                      {message.replyTo && (
-                                        <div className="mb-1  rounded border-l-4 border-blue-400 /10 bg-gray-200 px-2 py-2 text-xs text-muted-foreground">
-                                          {getOriginalMessageContent(message.replyTo)}
-                                        </div>
-                                      )}
-                                      {/* Enhanced Message Content */}
-                                      {['text', 'template'].includes(message.messageType) && (
-                                        <div className="pb-4">
-                                          {message.messageType === 'template' ? (
-                                            <div>
-                                              {/* Display template image if it has mediaUrl */}
-                                              {message.mediaUrl && (
-                                                <div className="mb-2">
-                                                  <div className="relative group/image">
-                                                    <img
-                                                      src={message.mediaUrl}
-                                                      alt="Template image"
-                                                      className="rounded-lg w-full max-w-sm max-h-64 object-cover cursor-pointer"
-                                                      onClick={() => setSelectedImageUrl(message.mediaUrl)}
-                                                    />
-                                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                                                      {/* <Eye className="h-6 w-6 text-white" /> */}
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              )}
-
-                                              {/* Template content */}
-                                              <div
-                                                className="text-xs leading-relaxed whitespace-pre-wrap break-words max-w-sm w-full mb-2"
-                                                dangerouslySetInnerHTML={{ __html: formatWhatsAppText(message.content) }}
-                                              />
-
-                                              {/* Template buttons */}
-                                              {message.templateButtons && message.templateButtons.length > 0 && (
-                                                <div className="mt-2 pt-2 border-t border-gray-200">
-                                                  <div className="space-y-1">
-                                                    {message.templateButtons.map((button, index) => (
-                                                      <button
-                                                        key={index}
-                                                        className="w-full text-center text-xs text-blue-600 font-medium py-2 border border-gray-200 rounded bg-gray-50 transition-colors flex items-center justify-center gap-1"
-                                                        onClick={() => {
-                                                          if (button.type === 'URL' && button.url) {
-                                                            window.open(button.url, '_blank');
-                                                          } else if (button.type === 'PHONE_NUMBER' && button.phone_number) {
-                                                            window.open(`tel:${button.phone_number}`, '_self');
-                                                          }
-                                                        }}
-                                                      >
-                                                        {button.type === 'URL' && <ExternalLink className="h-3 w-3" />}
-                                                        {button.type === 'PHONE_NUMBER' && <Phone className="h-3 w-3" />}
-                                                        {button.type === 'COPY_CODE' && (
-                                                          <svg width="13px" height="13px" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <g clipPath="url(#clip0_38_32111)">
-                                                              <path d="M6.66699 8.33268C6.66699 7.89065 6.84259 7.46673 7.15515 7.15417C7.46771 6.84161 7.89163 6.66602 8.33366 6.66602H15.0003C15.4424 6.66602 15.8663 6.84161 16.1788 7.15417C16.4914 7.46673 16.667 7.89065 16.667 8.33268V14.9993C16.667 15.4414 16.4914 15.8653 16.1788 16.1779C15.8663 16.4904 15.4424 16.666 15.0003 16.666H8.33366C7.89163 16.666 7.46771 16.4904 7.15515 16.1779C6.84259 15.8653 6.66699 15.4414 6.66699 14.9993V8.33268Z" stroke="#0096DE" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"></path>
-                                                              <path d="M13.333 6.66732V5.00065C13.333 4.55862 13.1574 4.1347 12.8449 3.82214C12.5323 3.50958 12.1084 3.33398 11.6663 3.33398H4.99967C4.55765 3.33398 4.13372 3.50958 3.82116 3.82214C3.5086 4.1347 3.33301 4.55862 3.33301 5.00065V11.6673C3.33301 12.1093 3.5086 12.5333 3.82116 12.8458C4.13372 13.1584 4.55765 13.334 4.99967 13.334H6.66634" stroke="#0096DE" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"></path>
-                                                            </g>
-                                                            <defs>
-                                                              <clipPath id="clip0_38_32111">
-                                                                <rect width="20" height="20" fill="white"></rect>
-                                                              </clipPath>
-                                                            </defs>
-                                                          </svg>
-                                                        )}
-                                                        {button.text}
-                                                      </button>
-                                                    ))}
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          ) : (
-                                            // Regular text message
-                                            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                                              {message.content}
-                                            </p>
-                                          )}
-
-                                          {/* Enhanced WhatsApp-style timestamp and status in bottom right */}
-                                          <div className="flex items-center justify-end gap-1 mt-1 absolute bottom-1 right-2">
-                                            <span className="text-xs text-gray-500">
-                                              {format(new Date(message.timestamp), "h:mm a")}
-                                            </span>
-                                            {message.senderId === "agent" && (
-                                              <div className="flex items-center gap-1">
-                                                {message.status === 'sent' && (
-                                                  <Check className="h-3 w-3 text-gray-400" />
-                                                )}
-                                                {message.status === 'delivered' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-gray-400" />
-                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'read' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-blue-500" />
-                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-
-
-                                      {/* Move interactive message handling HERE - outside the text/template condition */}
-                                      {message.messageType === 'interactive' && (
-                                        <div className="pb-4">
-                                          {/* {console.log('✅ Rendering interactive message:', message)} */}
-
-                                          {/* Interactive message response */}
-                                          <div className="bg-blue-50 border border-blue-100 rounded-md p-2 mb-2">
-                                            <div className="flex items-start gap-2">
-                                              <div className="bg-blue-100 rounded-full p-1.5 mt-0.5">
-                                                <Reply className="h-3.5 w-3.5 text-blue-600" />
-                                              </div>
-                                              <div>
-                                                <p className="text-xs text-blue-600 font-medium mb-0.5">
-                                                  {message.interactiveData?.type === 'button_reply'
-                                                    ? 'Quick Reply'
-                                                    : message.interactiveData?.type === 'list_reply'
-                                                      ? 'List Selection'
-                                                      : 'Interactive Response'}
-                                                </p>
-                                                <p className="text-sm font-medium text-gray-800">
-                                                  {message.content}
-                                                </p>
-                                                {/* {message.interactiveData?.id && (
-                                                  <p className="text-xs text-gray-500 mt-0.5">
-                                                    Button ID: {message.interactiveData.id}
-                                                  </p>
-                                                )} */}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* WhatsApp-style timestamp */}
-                                          <div className="flex items-center justify-end gap-1 mt-1 absolute bottom-1 right-2">
-                                            <span className="text-xs text-gray-500">
-                                              {format(new Date(message.timestamp), "h:mm a")}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Enhanced Media Messages - WhatsApp Style */}
-                                      {message.messageType === 'image' && (
-                                        <div className="pb-4">
-                                          <div className="relative group/image mb-1">
-                                            <img
-                                              src={message.mediaUrl}
-                                              alt={message.mediaCaption || "Image"}
-                                              className="rounded-lg w-full max-w-sm max-h-64 object-cover cursor-pointer"
-                                              onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                console.log('Image clicked, setting selectedImageUrl to:', message.mediaUrl);
-                                                setSelectedImageUrl(message.mediaUrl);
-                                              }}
-                                              onError={(e) => {
-                                                console.error('Image failed to load:', message.mediaUrl);
-                                                e.currentTarget.style.display = 'none';
-                                              }}
-                                            />
-                                            <div
-                                              className="absolute inset-0 bg-black/20 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center cursor-pointer"
-                                              onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                console.log('Eye overlay clicked, setting selectedImageUrl to:', message.mediaUrl);
-                                                setSelectedImageUrl(message.mediaUrl);
-                                              }}
-                                            >
-                                              <Eye className="h-6 w-6 text-white" />
-                                            </div>
-                                          </div>
-                                          {message.mediaCaption && (
-                                            <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
-                                          )}
-
-                                          {/* WhatsApp-style timestamp and status */}
-                                          <div className="flex items-center justify-end gap-1 mt-1 absolute bottom-1 right-2">
-                                            <span className="text-xs text-gray-500">
-                                              {format(new Date(message.timestamp), "h:mm a")}
-                                            </span>
-                                            {message.senderId === "agent" && (
-                                              <div className="flex items-center gap-1">
-                                                {message.status === 'sent' && (
-                                                  <Check className="h-3 w-3 text-gray-400" />
-                                                )}
-                                                {message.status === 'delivered' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-gray-400" />
-                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'read' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-blue-500" />
-                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'failed' && (
-                                                  <TooltipProvider>
-                                                    <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                        <button
-                                                          onClick={() => {
-                                                            setSelectedErrorMessage(message);
-                                                            setShowErrorDialog(true);
-                                                          }}
-                                                          className="flex items-center gap-1 hover:bg-red-50 rounded-full p-1 transition-colors group"
-                                                        >
-                                                          <AlertCircle className="h-3 w-3 text-red-500 group-hover:text-red-600" />
-                                                          <Info className="h-2 w-2 text-red-500 group-hover:text-red-600" />
-                                                        </button>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent side="top" className="bg-red-50 border-red-200">
-                                                        <p className="text-red-800 text-xs">Message failed to send - Click for details</p>
-                                                      </TooltipContent>
-                                                    </Tooltip>
-                                                  </TooltipProvider>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {message.messageType === 'video' && (
-                                        <div className="pb-4">
-                                          <video
-                                            src={message.mediaUrl}
-                                            controls
-                                            className="rounded-lg max-w-sm max-h-64 w-full mb-1"
-                                          />
-                                          {message.mediaCaption && (
-                                            <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
-                                          )}
-
-                                          {/* WhatsApp-style timestamp and status */}
-                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
-                                            <span className="text-xs text-gray-500">
-                                              {format(new Date(message.timestamp), "h:mm a")}
-                                            </span>
-                                            {message.senderId === "agent" && (
-                                              <div className="flex items-center">
-                                                {message.status === 'sent' && (
-                                                  <Check className="h-3 w-3 text-gray-400" />
-                                                )}
-                                                {message.status === 'delivered' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-gray-400" />
-                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'read' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-blue-500" />
-                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'failed' && (
-                                                  <AlertCircle className="h-3 w-3 text-red-500" />
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {message.messageType === 'audio' && (
-                                        <div className="pb-4">
-                                          <audio
-                                            src={message.mediaUrl}
-                                            controls
-                                            className="w-64 rounded-lg mb-1"
-                                          />
-                                          {message.mediaCaption && (
-                                            <p className="text-sm mb-2 break-words">{message.mediaCaption}</p>
-                                          )}
-
-                                          {/* WhatsApp-style timestamp and status */}
-                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
-                                            <span className="text-xs text-gray-500">
-                                              {format(new Date(message.timestamp), "h:mm a")}
-                                            </span>
-                                            {message.senderId === "agent" && (
-                                              <div className="flex items-center">
-                                                {message.status === 'sent' && (
-                                                  <Check className="h-3 w-3 text-gray-400" />
-                                                )}
-                                                {message.status === 'delivered' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-gray-400" />
-                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'read' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-blue-500" />
-                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'failed' && (
-                                                  <AlertCircle className="h-3 w-3 text-red-500" />
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {message.messageType === 'document' && (
-                                        <div className="pb-4">
-                                          <a
-                                            href={message.mediaUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-200 group/doc border border-gray-200 mb-1"
-                                          >
-                                            <div className="p-2 bg-blue-100 rounded-lg mr-3 group-hover/doc:bg-blue-200 transition-colors">
-                                              <FileText className="h-5 w-5 text-blue-600" />
-                                            </div>
-                                            <div className="flex-1">
-                                              <p className="text-sm font-medium text-gray-900">
-                                                {message.mediaCaption || message.mediaUrl?.split('/').pop() || "Document"}
-                                              </p>
-                                              <p className="text-xs text-gray-500">Click to open</p>
-                                            </div>
-                                            <ExternalLink className="h-4 w-4 text-gray-400 opacity-0 group-hover/doc:opacity-100 transition-opacity" />
-                                          </a>
-
-                                          {/* WhatsApp-style timestamp and status */}
-                                          <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
-                                            <span className="text-xs text-gray-500">
-                                              {format(new Date(message.timestamp), "h:mm a")}
-                                            </span>
-                                            {message.senderId === "agent" && (
-                                              <div className="flex items-center">
-                                                {message.status === 'sent' && (
-                                                  <Check className="h-3 w-3 text-gray-400" />
-                                                )}
-                                                {message.status === 'delivered' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-gray-400" />
-                                                    <Check className="h-3 w-3 text-gray-400 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'read' && (
-                                                  <div className="relative">
-                                                    <Check className="h-3 w-3 text-blue-500" />
-                                                    <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
-                                                  </div>
-                                                )}
-                                                {message.status === 'failed' && (
-                                                  <AlertCircle className="h-3 w-3 text-red-500" />
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Enhanced Template Indicator */}
-
-                                    </div>
-
-
+                                <div key={message.id} className="flex justify-center">
+                                  <div className="bg-slate-100 px-3 py-1 rounded-full text-xs text-slate-600">
+                                    {message.content}
                                   </div>
-                                  {message.senderId === 'agent' || message.senderId === 'customer' ? (
-                                    <div className="flex justify-end items-center gap-2 mt-1 ml-1  text-xs text-muted-foreground cursor-pointer">
-                                      <button
-                                        onClick={() =>
-                                          setReplyingTo({
-                                            id: message.whatsappMessageId,
-                                            content: message.content,
-                                            senderName: message.senderName || 'Customer'
-                                          })
-                                        }
-                                        className="hover:text-primary/80 cursor-pointer transition"
-                                      >
-                                        <Reply className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  ) : null}
                                 </div>
                               );
-                            })}
+                            }
 
+                            return (
+                              <div
+                                key={message.id}
+                                className={cn(
+                                  "flex group",
+                                  message.senderId === "agent" ? "justify-end" : "justify-start"
+                                )}
+                              >
+                                <div className="max-w-[40%]">
+                                  <div
+                                    className={cn(
+                                      "px-3 min-w-28 py-2 rounded-xl text-sm relative",
+                                      message.senderId === "agent"
+                                        ? "bg-[#DCF8C6] text-black rounded-br-sm"
+                                        : "bg-white text-slate-900 rounded-bl-sm border border-slate-200"
+                                    )}
+                                  >
+                                    {/* Reply preview - compact */}
+                                    {message.replyTo && (
+                                      <div className={cn(
+                                        "mb-2 p-2 rounded border-l-2 text-xs",
+                                        message.senderId === "agent"
+                                          ? "border-blue-300 bg-blue-400/20"
+                                          : "border-slate-300 bg-slate-50"
+                                      )}>
+                                        {getOriginalMessageContent(message.replyTo)}
+                                      </div>
+                                    )}
 
-                          </div>
-                        );
-                      })}
+                                    {/* Text messages - compact */}
+                                    {['text', 'template'].includes(message.messageType) && (
+                                      <div className="pb-4">
+                                        {message.messageType === 'template' ? (
+                                          <div>
+                                            {message.mediaUrl && (
+                                              <img
+                                                src={message.mediaUrl}
+                                                alt="Template"
+                                                className="rounded w-full  max-h-56 object-cover mb-2 cursor-pointer"
+                                                onClick={() => setSelectedImageUrl(message.mediaUrl)}
+                                              />
+                                            )}
+                                            <div
+                                              className="text-sm whitespace-pre-wrap break-words"
+                                              dangerouslySetInnerHTML={{ __html: formatWhatsAppText(message.content) }}
+                                            />
+                                            {message.templateButtons && (
+                                              <div className="mt-2 space-y-1">
+                                                {message.templateButtons.map((button, index) => (
+                                                  <button
+                                                    key={index}
+                                                    className={cn(
+                                                      "w-full text-xs py-1.5 bg-white/80 px-2 rounded border transition-colors",
+                                                      message.senderId === "agent"
+                                                        ? "border border-black/30"
+                                                        : "border black/30"
+                                                    )}
+                                                  >
+                                                    {button.text}
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="break-words">{message.content}</div>
+                                        )}
 
-                      <div ref={messagesEndRef} />
-                    </div>
+                                        {/* Compact timestamp */}
+                                        <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                          <span className={cn(
+                                            "text-xs",
+                                            message.senderId === "agent" ? "text-black/60" : "text-black/50"
+                                          )}>
+                                            {format(new Date(message.timestamp), "h:mm a")}
+                                          </span>
+                                          {message.senderId === "agent" && (
+                                            <div className="flex items-center">
+                                              {message.status === 'read' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-blue-500" />
+                                                  <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : message.status === 'delivered' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-slate-500" />
+                                                  <Check className="h-3 w-3 text-slate-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : (
+                                                <Check className="h-3 w-3 text-slate-500" />
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Interactive messages - compact */}
+                                    {message.messageType === 'interactive' && (
+                                      <div className="pb-4">
+                                        <div className={cn(
+                                          "border rounded p-2 mb-2 text-xs",
+                                          message.senderId === "agent"
+                                            ? "border-blue-300/50 bg-blue-400/20"
+                                            : "border-blue-200 bg-blue-50"
+                                        )}>
+                                          <div className="flex items-start gap-2">
+                                            <Reply className="h-3 w-3 text-blue-600 mt-0.5" />
+                                            <div>
+                                              <p className="font-medium text-blue-600 mb-0.5">
+                                                {message.interactiveData?.type === 'button_reply'
+                                                  ? 'Quick Reply'
+                                                  : message.interactiveData?.type === 'list_reply'
+                                                    ? 'List Selection'
+                                                    : 'Interactive Response'}
+                                              </p>
+                                              <p className="text-slate-800">{message.content}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                          <span className="text-xs text-black/50">
+                                            {format(new Date(message.timestamp), "h:mm a")}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Image messages - compact */}
+                                    {message.messageType === 'image' && (
+                                      <div className="pb-4">
+                                        <img
+                                          src={message.mediaUrl}
+                                          alt="Image"
+                                          className="rounded w-full max-w-48 max-h-32 object-cover cursor-pointer mb-1"
+                                          onClick={() => setSelectedImageUrl(message.mediaUrl)}
+                                        />
+                                        {message.mediaCaption && (
+                                          <p className="text-sm mb-1">{message.mediaCaption}</p>
+                                        )}
+                                        <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                          <span className={cn(
+                                            "text-xs",
+                                            message.senderId === "agent" ? "text-black/60" : "text-black/50"
+                                          )}>
+                                            {format(new Date(message.timestamp), "h:mm a")}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Video messages - compact */}
+                                    {message.messageType === 'video' && (
+                                      <div className="pb-4">
+                                        <video
+                                          src={message.mediaUrl}
+                                          controls
+                                          className="rounded w-full max-w-48 max-h-32 object-cover mb-1"
+                                        />
+                                        {message.mediaCaption && (
+                                          <p className="text-sm mb-1">{message.mediaCaption}</p>
+                                        )}
+                                        <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                          <span className={cn(
+                                            "text-xs",
+                                            message.senderId === "agent" ? "text-black/60" : "text-black/50"
+                                          )}>
+                                            {format(new Date(message.timestamp), "h:mm a")}
+                                          </span>
+                                          {message.senderId === "agent" && (
+                                            <div className="flex items-center">
+                                              {message.status === 'read' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-blue-500" />
+                                                  <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : message.status === 'delivered' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-slate-500" />
+                                                  <Check className="h-3 w-3 text-slate-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : (
+                                                <Check className="h-3 w-3 text-slate-500" />
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Audio messages - compact */}
+                                    {message.messageType === 'audio' && (
+                                      <div className="pb-4">
+                                        <audio
+                                          src={message.mediaUrl}
+                                          controls
+                                          className="w-48 rounded mb-1"
+                                        />
+                                        {message.mediaCaption && (
+                                          <p className="text-sm mb-1">{message.mediaCaption}</p>
+                                        )}
+                                        <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                          <span className={cn(
+                                            "text-xs",
+                                            message.senderId === "agent" ? "text-black/60" : "text-black/50"
+                                          )}>
+                                            {format(new Date(message.timestamp), "h:mm a")}
+                                          </span>
+                                          {message.senderId === "agent" && (
+                                            <div className="flex items-center">
+                                              {message.status === 'read' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-blue-500" />
+                                                  <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : message.status === 'delivered' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-slate-500" />
+                                                  <Check className="h-3 w-3 text-slate-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : (
+                                                <Check className="h-3 w-3 text-slate-500" />
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Document messages - compact */}
+                                    {message.messageType === 'document' && (
+                                      <div className="pb-4">
+                                        <a
+                                          href={message.mediaUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center p-2 bg-slate-100 rounded gap-2 hover:bg-slate-200"
+                                        >
+                                          <FileText className="h-4 w-4 text-blue-600" />
+                                          <span className="text-sm truncate">{message.mediaCaption || "Document"}</span>
+                                        </a>
+                                        <div className="flex items-center justify-end gap-1 absolute bottom-1 right-2">
+                                          <span className="text-xs text-slate-500">
+                                            {format(new Date(message.timestamp), "h:mm a")}
+                                          </span>
+                                          {message.senderId === "agent" && (
+                                            <div className="flex items-center">
+                                              {message.status === 'read' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-blue-500" />
+                                                  <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : message.status === 'delivered' ? (
+                                                <div className="relative">
+                                                  <Check className="h-3 w-3 text-slate-500" />
+                                                  <Check className="h-3 w-3 text-slate-500 absolute -right-1 top-0" />
+                                                </div>
+                                              ) : (
+                                                <Check className="h-3 w-3 text-slate-500" />
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Compact Reply Button */}
+                                  {(message.senderId === 'agent' || message.senderId === 'customer') && (
+                                    <button
+                                      onClick={() => setReplyingTo({
+                                        id: message.whatsappMessageId,
+                                        content: message.content,
+                                        senderName: message.senderName || 'Customer'
+                                      })}
+                                      className={cn(
+                                        "opacity-0 group-hover:opacity-100 transition-opacity mt-1 text-xs text-slate-500 hover:text-blue-600",
+                                        message.senderId === "agent" ? "text-right" : "text-left"
+                                      )}
+                                    >
+                                      <Reply className="h-3 w-3 inline mr-1" />Reply
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
                   </div>
                 </div>
 
+                {/* Compact scroll button */}
                 {!shouldAutoScroll && (
-                  <div className="absolute bottom-16 right-4 z-10">
+                  <div className="absolute bottom-16 right-4">
                     <Button
                       onClick={() => {
                         setUserScrolledUp(false);
@@ -4257,163 +3808,107 @@ function ConversationsPageContent() {
                         setShouldAutoScroll(true);
                         scrollToBottom();
                       }}
-                      className="rounded-full h-8 w-8 shadow-lg bg-primary/90 hover:bg-primary text-primary-foreground"
+                      size="icon"
+                      className="h-8 w-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
                     >
-                      <ChevronDown className="h-6 w-6" />
+                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
               </div>
+
+              {/* Compact Reply Preview */}
               {replyingTo && (
-                <div className='relative w-full'>
-                  <div className="mb-2 px-4 py-2 absolute -mt-24 z-[100] w-[95%]  border-l-4 border-blue-500 border-b-0 bg-blue-50 text-sm text-blue-900 rounded">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <strong>{replyingTo.senderName}:</strong>
-                        <div className="truncate max-w-xs">{replyingTo.content}</div>
+                <div className="px-4 flex absolute w-full bottom-36 py-2 pb-6  bg-blue-50 border-t border-blue-200">
+                  <div className="flex justify-between items-center">
+                    <div className="flex  items-center gap-2 flex-1 min-w-0">
+                      <Reply className="h-3 w-3 text-blue-600" />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs text-blue-600 font-medium">{replyingTo.senderName}: </span>
+                        <span className="text-xs text-slate-700 truncate">
+                          {replyingTo.content.length > 100
+                            ? `${replyingTo.content.substring(0, 100)}...`
+                            : replyingTo.content
+                          }
+                        </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setReplyingTo(null)}
-                        className="text-blue-500"
-                      >
-                        ✕
+                    </div>
+
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setReplyingTo(null)}
+                    className="h-6  w-6 2xl:ml-[64%] xl:ml-[58%] text-blue-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Compact Message Input */}
+              <div className="bg-white border-t absolute bottom-16 w-full border-slate-200 p-3">
+                {/* Compact Low Balance Warning */}
+                {isLow && (
+                  <div className="mb-3">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-900">Low Balance</p>
+                        <p className="text-xs text-red-700">Top up to continue messaging</p>
+                      </div>
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white h-7 text-xs">
+                        Top Up
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
-              {/* Enhanced Message Input - Always Visible */}
-              <div className="sticky md:w-[94%] 2xl:w-[95%]  bottom-12 bg-gradient-to-r from-card/95 to-card/90 border-t border-border/50  shadow-lg px-4 pb-6 pt-4  backdrop-blur-md">
-                {/* Low Balance Warning - Add this section */}
-                {isLow && (
-                  <div className="mb-4 mx-auto scale-90">
-                    <Card className="bg-gradient-to-r h-32 mx-4 text-sm p-0 from-red-50/95 to-red-100/95 border-red-200/50 shadow-lg backdrop-blur-sm overflow-hidden">
-                      <CardContent className="pb-2">
-                        <div className="flex items-center gap-4 p-6">
-                          <div className="flex-shrink-0">
-                            <div className="bg-red-200/60 p-4 rounded-full flex items-center justify-center">
-                              <AlertCircle className="h-6 w-6 text-red-600" />
-                            </div>
-                          </div>
-                          <div className="flex-1 space-y-4">
-                            <div>
-                              <h4 className="font-semibold text-red-900 mb-2 text-lg">
-                                Low balance - Top up your wallet
-                              </h4>
-                              <p className="text-red-700 text-sm leading-relaxed">
-                                Your wallet balance is running low. Top up now to continue sending messages without interruption.
-                              </p>
-
-                            </div>
-
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Button
-                              onClick={() => window.location.href = '/wallet'}
-                              className="bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all duration-200 hover:scale-105"
-                            >
-                              <Zap className="h-4 w-4 mr-2" />
-                              Top Up Wallet
-                            </Button>
-                            <div className="flex items-center gap-2 text-xs text-red-700">
-                              <Clock className="h-3 w-3" />
-                              <span>Balance below ₹250</span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
                 )}
 
-
-
                 {isWithin24Hours() ? (
-                  <div className="flex items-end gap-3 relative  mx-auto">
-                    {/* Alternative Enhanced Attachment Button - Manual Control */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="relative w-10">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                              className="h-10 w-10 absolute -mt-14 rounded-full bg-accent/50 hover:bg-accent/80 borr/50 border-primary transition-all duration-200 hover:scale-105"
+                  <div className="flex flex-1 items-center relative = items-end gap-2">
+                    {/* Compact Attachment */}
+                    <div className="relative">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                        className="h-9  w-9 rounded-full"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+
+                      {showAttachmentMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowAttachmentMenu(false)} />
+                          <div className="absolute bottom-10 left-0 z-50 w-48 bg-white border border-slate-200 rounded-lg shadow-lg p-1">
+                            <div
+                              onClick={() => { handleMediaUpload('IMAGE'); setShowAttachmentMenu(false); }}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 rounded cursor-pointer"
                             >
-                              <Paperclip className="h-4 w-4" />
-                            </Button>
-
-                            {/* Custom Dropdown Menu */}
-                            {showAttachmentMenu && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-40"
-                                  onClick={() => setShowAttachmentMenu(false)}
-                                />
-                                <div className="absolute bottom-12 left-0 z-50 w-56 p-2 bg-popover/95 backdrop-blur-sm border border-border/50 rounded-md shadow-lg">
-                                  <div
-                                    onClick={() => {
-                                      handleMediaUpload('IMAGE');
-                                      setShowAttachmentMenu(false);
-                                    }}
-                                    className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group"
-                                  >
-                                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                      <ImageIcon className="h-4 w-4 text-blue-600" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium text-sm">Photo or Video</p>
-                                      <p className="text-xs text-muted-foreground">Send media files</p>
-                                    </div>
-                                  </div>
-
-                                  <div
-                                    onClick={() => {
-                                      handleMediaUpload('DOCUMENT');
-                                      setShowAttachmentMenu(false);
-                                    }}
-                                    className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
-                                  >
-                                    <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                                      <FileText className="h-4 w-4 text-orange-600" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium text-sm">Document</p>
-                                      <p className="text-xs text-muted-foreground">Share files</p>
-                                    </div>
-                                  </div>
-
-                                  <div
-                                    onClick={() => {
-                                      setShowTemplateDialog(true);
-                                      setShowAttachmentMenu(false);
-                                    }}
-                                    className="flex items-center gap-3 px-3 py-3 cursor-pointer rounded-lg hover:bg-accent/50 transition-colors group mt-1"
-                                  >
-                                    <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                      <FileText className="h-4 w-4 text-purple-600" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium text-sm">Template</p>
-                                      <p className="text-xs text-muted-foreground">Use saved templates</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </>
-                            )}
+                              <ImageIcon className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm">Photo/Video</span>
+                            </div>
+                            <div
+                              onClick={() => { handleMediaUpload('DOCUMENT'); setShowAttachmentMenu(false); }}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 rounded cursor-pointer"
+                            >
+                              <FileText className="h-4 w-4 text-orange-600" />
+                              <span className="text-sm">Document</span>
+                            </div>
+                            <div
+                              onClick={() => { setShowTemplateDialog(true); setShowAttachmentMenu(false); }}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 rounded cursor-pointer"
+                            >
+                              <FileText className="h-4 w-4 text-purple-600" />
+                              <span className="text-sm">Template</span>
+                            </div>
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="bg-popover/95 backdrop-blur-sm border-border/50">
-                          <p>Attach files</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </>
+                      )}
+                    </div>
 
-                    {/* Enhanced Message Input */}
-                    <div className="flex-1 relative w-[99%]">
+                    {/* Compact Message Input */}
+                    <div className="flex w-full items-center gap-2  relative">
                       <Textarea
                         placeholder="Type a message..."
                         value={messageInput}
@@ -4424,45 +3919,32 @@ function ConversationsPageContent() {
                             handleSend();
                           }
                         }}
-                        className="min-h-[72px] w-[99%] resize-none pr-16 py-3 pl-4 rounded-xl bg-background/95 backdrop-blur-sm border-primary focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-200 shadow-sm"
+                        className="w-[62%] 2xl:w-[69%] 3xl:[69%]"
                         rows={1}
                       />
-
-                      {/* Enhanced Input Actions */}
-                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-                        <div className="relative">
+                      <div className='relative'>
+                        {/* Compact Emoji */}
+                        <div className="  z-[100]  transform ">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="p-0 rounded-full hover:bg-accent/50 cursor-pointer transition-all duration-200 hover:scale-105"
+                            className="p-1 h-6 w-6 rounded-full hover:bg-slate-200"
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                           >
-                            <Smile className={cn(
-                              "h-8 w-8 scale-110 -ml-2 transition-colors duration-200",
-                              showEmojiPicker ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                            )} />
+                            <Smile className="scale-125 text-slate-500" />
                           </Button>
 
-                          {/* Enhanced Emoji Picker */}
                           {showEmojiPicker && (
                             <>
-                              {/* Backdrop overlay - this handles the outside click */}
-                              <div
-                                className="fixed inset-0 z-40 bg-transparent"
-                                onClick={() => setShowEmojiPicker(false)}
-                              />
-                              {/* Emoji picker container */}
-                              <div className="absolute bottom-12 right-0 z-50">
-                                <div className="relative shadow-xl rounded-lg border border-border/50 backdrop-blur-sm">
+                              <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)} />
+                              <div className="absolute bottom-8 right-0 z-50">
+                                <div className="shadow-xl rounded-lg border border-slate-200 bg-white">
                                   <EmojiPicker
                                     onEmojiClick={handleEmojiClick}
                                     searchDisabled={false}
-                                    skinTonesDisabled={false}
-                                    width={320}
-                                    height={400}
-                                    previewConfig={{
-                                      showPreview: true
-                                    }}
+                                    width={300}
+                                    height={350}
+                                    previewConfig={{ showPreview: false }}
                                   />
                                 </div>
                               </div>
@@ -4470,130 +3952,97 @@ function ConversationsPageContent() {
                           )}
                         </div>
                       </div>
-                    </div>
-
-
-
-
-                    {/* Add File Upload Dialog */}
-                    <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
-                      <DialogContent className="max-w-">
-                        <DialogHeader>
-                          <DialogTitle>
-                            Upload {uploadType === 'IMAGE' ? 'Photo/Video' : uploadType === 'VIDEO' ? 'Video' : 'Document'}
-                          </DialogTitle>
-                          <DialogDescription>
-                            Select a file to upload and send to your contact
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <FileUpload
-                          onFileSelect={handleFileSelect}
-                          onUploadComplete={handleUploadComplete}
-                          accept={
-                            uploadType === 'IMAGE' ? 'image/*,video/*' :
-                              uploadType === 'VIDEO' ? 'video/*' :
-                                'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                          }
-                          type={uploadType}
-                        />
-                      </DialogContent>
-                    </Dialog>
-                    {/* Enhanced Send Button */}
-                    <div className='relative w-10'>
+                      {/* Compact Send Button */}
                       <Button
                         onClick={handleSend}
                         disabled={!messageInput.trim() || isSending}
                         size="icon"
                         className={cn(
-                          "h-12 w-12 rounded-full border-primary absolute -ml-4 -mt-14 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50",
+                          "h-9 w-9 rounded-full    transition-all",
                           !messageInput.trim() || isSending
-                            ? "bg-muted text-muted-foreground cursor-not-allowed"
-                            : "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground hover:scale-105"
+                            ? "bg-slate-300 text-slate-500"
+                            : "bg-primary -500 hover:bg-primary/80 -600 text-white"
                         )}
                       >
                         {isSending ? (
-                          <div className="animate-spin rounded-full  border-2 border-primary/50 border-t-transparent"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
                         ) : (
-                          <Send className="h-6 w-6 scale-105 text-whi" />
+                          <Send className="h-4 w-4" />
                         )}
-                      </Button></div>
+                      </Button>
+
+                    </div>
 
 
                   </div>
                 ) : (
-                  /* Enhanced 24-hour Window Expired Card */
-                  <div className=" mx-auto">
-                    <Card className="bg-gradient-to-r from-amber-50/95 to-amber-100/95 border-amber-200/50 shadow-lg backdrop-blur-sm overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="flex items-start gap-4 p-6">
-                          <div className="flex-shrink-0">
-                            <div className="bg-amber-200/60 p-4 rounded-full flex items-center justify-center">
-                              <AlertCircle className="h-6 w-6 text-amber-600" />
-                            </div>
-                          </div>
-                          <div className="flex-1 space-y-4">
-                            <div>
-                              <h4 className="font-semibold text-amber-900 mb-2 text-lg">
-                                24-hour messaging window expired
-                              </h4>
-                              <p className="text-amber-700 text-sm leading-relaxed">
-                                For WhatsApp policy compliance, you can only send pre-approved message templates
-                                when the 24-hour conversation window has expired.
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Button
-                                onClick={() => setShowTemplateDialog(true)}
-                                className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-all duration-200 hover:scale-105"
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Choose Template
-                              </Button>
-                              <div className="flex items-center gap-2 text-xs text-amber-700">
-                                <Clock className="h-3 w-3" />
-                                <span>Templates only</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                  /* Compact 24-hour expired warning */
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-900">24-hour window expired</p>
+                        <p className="text-xs text-amber-700">Only templates can be sent now</p>
+                      </div>
+                      <Button
+                        onClick={() => setShowTemplateDialog(true)}
+                        size="sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white h-7 text-xs"
+                      >
+                        Templates
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
+
+              {/* Compact File Upload Dialog */}
+              <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg">
+                      Upload {uploadType === 'IMAGE' ? 'Photo/Video' : uploadType === 'VIDEO' ? 'Video' : 'Document'}
+                    </DialogTitle>
+                    <DialogDescription className="text-sm">
+                      Select a file to send
+                    </DialogDescription>
+                  </DialogHeader>
+                  <FileUpload
+                    onFileSelect={handleFileSelect}
+                    onUploadComplete={handleUploadComplete}
+                    accept={
+                      uploadType === 'IMAGE' ? 'image/*,video/*' :
+                        uploadType === 'VIDEO' ? 'video/*' :
+                          'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    }
+                    type={uploadType}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           ) : (
-            /* Enhanced Empty State */
-            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-background/95 to-accent/5 backdrop-blur-md">
-              <div className="text-center p-8 max-w-md">
-                <div className="relative inline-block mb-8">
-                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-6 rounded-2xl backdrop-blur-sm border border-primary/20">
-                    <MessageSquare className="h-12 w-12 text-primary mx-auto" />
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center animate-pulse">
-                    <Plus className="h-3 w-3 text-primary-foreground" />
-                  </div>
+            /* Compact Empty State */
+            <div className="flex-1 flex items-center justify-center bg-slate-50/50">
+              <div className="text-center p-8">
+                <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="h-8 w-8 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-semibold text-foreground mb-3">
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">
                   No conversation selected
                 </h2>
-                <p className="text-muted-foreground mb-8 leading-relaxed">
-                  Choose a conversation from the sidebar or start a new one to begin messaging your customers.
+                <p className="text-slate-600 mb-6 text-sm">
+                  Choose a conversation from the sidebar to start messaging.
                 </p>
                 <Button
                   onClick={() => setShowContactDialog(true)}
-                  className="h-12 px-8 rounded-xl font-medium shadow-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground transition-all duration-200 hover:scale-105"
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
                 >
-                  <PlusCircle className="h-5 w-5 mr-2" />
-                  Start conversation
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Start Conversation
                 </Button>
               </div>
             </div>
           )}
-
-
-
 
 
 
@@ -4614,6 +4063,7 @@ function ConversationsPageContent() {
               </div>
             </SheetContent>
           </Sheet>
+
           {/* Message Error Details Dialog - Modernized */}
           <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
             <DialogContent className="max-w-2xl  m-auto  p-0 overflow-y-scroll h-fit max-h-screen">
@@ -4809,6 +4259,7 @@ function ConversationsPageContent() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
           {/* Contact Selection Dialog - enhanced UI */}
           <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
             <DialogContent className="max-w-2xl">
@@ -5775,7 +5226,7 @@ function ConversationsPageContent() {
               setSelectedImageUrl(null);
             }
           }}>
-            <DialogContent className="max-w-4xl h-fit max-h-screen p-0 overflow-y-scroll">
+            <DialogContent className="max-w-4xl h- itemc max-h-screen p-0 overflow-y-scroll">
               <div className="relative">
                 {/* Close button */}
                 {/* <div className="absolute top-2 right-2 z-10">
@@ -5790,19 +5241,19 @@ function ConversationsPageContent() {
                 </div> */}
 
                 {/* Image container */}
-                <div className="flex items-center justify-center  min-h-[300px]">
+                <div className="flex items-center pt-5 justify-center  min-h-[300px]">
                   {selectedImageUrl && (
                     <img
                       src={selectedImageUrl}
                       alt="Preview"
-                      className="max-h-[80vh] max-w-full object-contain"
+                      className="max-h-80 max-w-full object-contain"
                     />
                   )}
                 </div>
               </div>
 
               {/* Footer with action buttons */}
-              <div className="flex justify-between p-3 pb-6 bg-gray-50 border-t">
+              <div className="flex justify-between p-3 pb-6 border-t">
                 <Button
                   variant="outline"
                   size="sm"
@@ -6327,8 +5778,6 @@ export default function ConversationsPage() {
     </Suspense>
   );
 }
-
-
 
 // Template Card Component
 const TemplateCard = ({
