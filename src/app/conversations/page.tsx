@@ -584,55 +584,192 @@ function ConversationsPageContent() {
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
 
   // Add this near the top of your component where other useEffects are defined
+  // Add this useEffect to the ConversationsPageContent component - replace the existing one
+  // Replace the existing useEffect with this updated version
   useEffect(() => {
     const handleContactIdFromUrl = async () => {
       const searchParams = new URLSearchParams(window.location.search);
       const contactId = searchParams.get('contactId');
 
-      if (contactId && contacts.length > 0) {
+      console.log('🔍 URL Parameter Check:', {
+        contactId,
+        contactsLength: contacts.length,
+        conversationsLength: conversations.length,
+        selectedWabaId,
+        isLoadingConversations
+      });
+
+      // Wait for both contacts AND conversations to be loaded
+      if (contactId && contacts.length > 0 && conversations.length >= 0 && !isLoadingConversations) {
         // Find the contact with the matching ID
         const matchingContact = contacts.find(contact => contact.id === contactId);
 
+        console.log('🔍 Contact Search Result:', {
+          contactId,
+          matchingContact: matchingContact ? {
+            id: matchingContact.id,
+            name: matchingContact.name,
+            phone: matchingContact.phone
+          } : null,
+          allContactIds: contacts.map(c => ({ id: c.id, name: c.name, phone: c.phone }))
+        });
+
         if (matchingContact) {
-          console.log('Found matching contact from URL param:', matchingContact);
+          console.log('✅ Found matching contact from URL param:', {
+            contactId: matchingContact.id,
+            contactName: matchingContact.name,
+            contactPhone: matchingContact.phone
+          });
+
+          // Log all conversations for debugging
+          console.log('🔍 All conversations data:', conversations.map(conv => ({
+            id: conv.id,
+            contactData: conv.contact ? {
+              id: conv.contact.id,
+              _id: conv.contact._id,
+              name: conv.contact.name,
+              phone: conv.contact.phone
+            } : 'NO CONTACT DATA'
+          })));
 
           // Check if there's an existing conversation with this contact
-          const existingConversation = conversations.find(
-            conv => conv.contact && (conv.contact.id === contactId || conv.contact._id === contactId)
-          );
+          const existingConversation = conversations.find(conv => {
+            console.log('🔍 Checking conversation:', {
+              conversationId: conv.id,
+              hasContact: !!conv.contact,
+              contactData: conv.contact ? {
+                id: conv.contact.id,
+                _id: conv.contact._id,
+                name: conv.contact.name,
+                phone: conv.contact.phone
+              } : null
+            });
+
+            if (!conv.contact) {
+              console.log('❌ Conversation has no contact data:', conv.id);
+              return false;
+            }
+
+            // Check multiple possible ID properties
+            const convContactId = conv.contact.id || conv.contact._id;
+            const idMatch = convContactId === contactId ||
+              conv.contact.id === matchingContact.id ||
+              conv.contact._id === matchingContact.id;
+
+            const phoneMatch = conv.contact.phone === matchingContact.phone;
+
+            console.log('🔍 Conversation match check:', {
+              conversationId: conv.id,
+              convContactId,
+              contactIdFromUrl: contactId,
+              matchingContactId: matchingContact.id,
+              idMatch,
+              phoneMatch,
+              finalMatch: idMatch || phoneMatch
+            });
+
+            return idMatch || phoneMatch;
+          });
+
+          console.log('🔍 Existing conversation search result:', {
+            found: !!existingConversation,
+            conversationData: existingConversation ? {
+              id: existingConversation.id,
+              contactId: existingConversation.contact?.id,
+              contactName: existingConversation.contact?.name,
+              unreadCount: existingConversation.unreadCount
+            } : null
+          });
 
           if (existingConversation) {
-            console.log('Opening existing conversation:', existingConversation);
+            console.log('✅ Opening existing conversation:', {
+              conversationId: existingConversation.id,
+              contactName: existingConversation.contact?.name,
+              unreadCount: existingConversation.unreadCount
+            });
+
             setActiveConversation(existingConversation);
             setSelectedContact(null);
+
+            // Mark as read if it has unread messages
+            if (existingConversation.unreadCount > 0) {
+              console.log('📖 Marking conversation as read');
+              markConversationAsRead(existingConversation.id);
+            }
           } else {
-            console.log('Starting new conversation with contact:', matchingContact);
+            console.log('❌ No existing conversation found, starting new chat with contact:', {
+              contactId: matchingContact.id,
+              contactName: matchingContact.name,
+              contactPhone: matchingContact.phone
+            });
+
             setSelectedContact(matchingContact);
             setActiveConversation(null);
             setMessages([]);
           }
 
           // Clear the URL parameter without page reload
+          console.log('🧹 Clearing URL parameter');
           window.history.replaceState({}, document.title, '/conversations');
         } else {
-          console.log('Contact ID from URL not found in contacts list:', contactId);
+          console.log('❌ Contact ID from URL not found in contacts list:', contactId);
+          console.log('🔍 Available contact IDs:', contacts.map(c => c.id));
+
           // If contacts are loaded but the specified contact isn't found, fetch it directly
           if (selectedWabaId) {
             try {
+              console.log('🌐 Fetching contact directly from API:', contactId);
               const response = await fetch(`/api/contacts/${contactId}`);
               const data = await response.json();
 
+              console.log('🌐 Direct contact fetch result:', data);
+
               if (data.success && data.contact) {
-                console.log('Fetched contact directly:', data.contact);
-                setSelectedContact(data.contact);
-                setActiveConversation(null);
-                setMessages([]);
+                console.log('✅ Fetched contact directly:', {
+                  contactId: data.contact.id,
+                  contactName: data.contact.name,
+                  contactPhone: data.contact.phone
+                });
+
+                // Check for existing conversation with the fetched contact
+                const existingConversation = conversations.find(conv => {
+                  if (!conv.contact) return false;
+
+                  const convContactId = conv.contact.id || conv.contact._id;
+                  const idMatch = convContactId === data.contact.id;
+                  const phoneMatch = conv.contact.phone === data.contact.phone;
+
+                  console.log('🔍 Direct fetch conversation match check:', {
+                    conversationId: conv.id,
+                    convContactId,
+                    fetchedContactId: data.contact.id,
+                    idMatch,
+                    phoneMatch
+                  });
+
+                  return idMatch || phoneMatch;
+                });
+
+                if (existingConversation) {
+                  console.log('✅ Found existing conversation for fetched contact:', existingConversation.id);
+                  setActiveConversation(existingConversation);
+                  setSelectedContact(null);
+
+                  if (existingConversation.unreadCount > 0) {
+                    markConversationAsRead(existingConversation.id);
+                  }
+                } else {
+                  console.log('❌ No existing conversation for fetched contact, creating new chat');
+                  setSelectedContact(data.contact);
+                  setActiveConversation(null);
+                  setMessages([]);
+                }
 
                 // Clear the URL parameter without page reload
                 window.history.replaceState({}, document.title, '/conversations');
               }
             } catch (error) {
-              console.error('Error fetching specific contact:', error);
+              console.error('❌ Error fetching specific contact:', error);
               toast({
                 title: "Error",
                 description: "Couldn't find the specified contact",
@@ -641,11 +778,18 @@ function ConversationsPageContent() {
             }
           }
         }
+      } else if (contactId && (contacts.length === 0 || isLoadingConversations)) {
+        console.log('⏳ Contact ID provided but data not fully loaded yet:', {
+          contactId,
+          contactsLength: contacts.length,
+          conversationsLength: conversations.length,
+          isLoadingConversations
+        });
       }
     };
 
     handleContactIdFromUrl();
-  }, [contacts, conversations, selectedWabaId]);
+  }, [contacts, conversations, selectedWabaId, isLoadingConversations]); // Added isLoadingConversations to dependencies
   // Add this debugging useEffect temporarily
   useEffect(() => {
     console.log('selectedImageUrl state changed:', selectedImageUrl);
@@ -1647,35 +1791,80 @@ function ConversationsPageContent() {
     }
   };
 
-  // Update your fetchConversations function
+  // Update the fetchConversations function with logging
   const fetchConversations = async () => {
     try {
       setIsLoadingConversations(true);
+      console.log('🌐 Fetching conversations...');
+
       const response = await fetch('/api/conversations');
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Conversations API response:', {
+          success: data.success,
+          conversationsCount: data.conversations?.length || 0,
+          sampleConversation: data.conversations?.[0] ? {
+            id: data.conversations[0].id,
+            contactData: data.conversations[0].contact
+          } : null
+        });
+
+        // Log detailed contact data for first few conversations
+        if (data.conversations && data.conversations.length > 0) {
+          console.log('📊 First 3 conversations contact data:',
+            data.conversations.slice(0, 3).map(conv => ({
+              conversationId: conv.id,
+              hasContact: !!conv.contact,
+              contactId: conv.contact?.id,
+              contactName: conv.contact?.name,
+              contactPhone: conv.contact?.phone,
+              fullContact: conv.contact
+            }))
+          );
+        }
+
         setConversations(data.conversations || []);
       }
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error('❌ Error fetching conversations:', error);
     } finally {
       setIsLoadingConversations(false);
     }
   };
-
-  // Add this near your fetchContacts function
+  // Update the fetchContacts function with logging
   const fetchContacts = async () => {
     try {
+      console.log('🌐 Fetching contacts...');
       const params = new URLSearchParams();
       if (selectedWabaId) params.append('wabaId', selectedWabaId);
+
       const response = await fetch(`/api/contacts?${params}`);
       const data = await response.json();
+
+      console.log('✅ Contacts API response:', {
+        success: data.success,
+        contactsCount: data.contacts?.length || 0,
+        sampleContact: data.contacts?.[0] ? {
+          id: data.contacts[0].id,
+          name: data.contacts[0].name,
+          phone: data.contacts[0].phone
+        } : null
+      });
+
       if (data.success) {
+        console.log('📊 First 5 contacts:',
+          data.contacts.slice(0, 5).map(contact => ({
+            id: contact.id,
+            name: contact.name,
+            phone: contact.phone
+          }))
+        );
+
         setContacts(data.contacts);
         console.log("Fetched contacts with tags:", data.contacts.map(c => ({ name: c.name, tags: c.tags })));
       }
     } catch (error) {
-      console.error('Error fetching contacts:', error);
+      console.error('❌ Error fetching contacts:', error);
     }
   };
 
@@ -1890,7 +2079,6 @@ function ConversationsPageContent() {
   }, [activeConversation, scrollLocked, isUserScrolling]);
 
 
-  // Also make sure the fetchConversationDetails function is working properly
   const fetchConversationDetails = async (conversationId: string) => {
     try {
       console.log('Fetching details for conversation:', conversationId);
@@ -1914,7 +2102,27 @@ function ConversationsPageContent() {
         // Update the conversations list with complete details
         setConversations(prevConversations =>
           prevConversations.map(conv =>
-            conv.id === conversationId ? data.conversation : conv
+            conv.id === conversationId ? {
+              ...data.conversation,
+              // Ensure contact data is properly structured
+              contact: {
+                ...data.conversation.contact,
+                id: data.conversation.contact.id || data.conversation.contact._id
+              }
+            } : conv
+          )
+        );
+
+        // Also update filtered conversations
+        setFilteredConversations(prevFiltered =>
+          prevFiltered.map(conv =>
+            conv.id === conversationId ? {
+              ...data.conversation,
+              contact: {
+                ...data.conversation.contact,
+                id: data.conversation.contact.id || data.conversation.contact._id
+              }
+            } : conv
           )
         );
 
@@ -3581,19 +3789,59 @@ function ConversationsPageContent() {
                                           </span>
                                           {message.senderId === "agent" && (
                                             <div className="flex items-center">
-                                              {message.status === 'read' ? (
-                                                <div className="relative">
-                                                  <Check className="h-3 w-3 text-blue-500" />
-                                                  <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
-                                                </div>
-                                              ) : message.status === 'delivered' ? (
-                                                <div className="relative">
-                                                  <Check className="h-3 w-3 text-slate-500" />
-                                                  <Check className="h-3 w-3 text-slate-500 absolute -right-1 top-0" />
-                                                </div>
-                                              ) : (
-                                                <Check className="h-3 w-3 text-slate-500" />
-                                              )}
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <div className="-help">
+                                                      {message.status === 'read' ? (
+                                                        <div className="relative">
+                                                          <Check className="h-3 w-3 text-blue-500" />
+                                                          <Check className="h-3 w-3 text-blue-500 absolute -right-1 top-0" />
+                                                        </div>
+                                                      ) : message.status === 'delivered' ? (
+                                                        <div className="relative">
+                                                          <Check className="h-3 w-3 text-slate-500" />
+                                                          <Check className="h-3 w-3 text-slate-500 absolute -right-1 top-0" />
+                                                        </div>
+                                                      ) : message.status === 'sent' ? (
+                                                        <Check className="h-3 w-3 text-slate-500" />
+                                                      ) : message.status === 'failed' ? (
+                                                        <AlertCircle className="h-3 w-3 text-red-500" />
+                                                      ) : (
+                                                        <Clock className="h-3 w-3 text-slate-400" />
+                                                      )}
+                                                    </div>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side="bottom" className="bg-slate-900 -ml-12 text-white text-xs">
+                                                    <div className="text-center">
+                                                      <p className="font-medium capitalize">{message.status}</p>
+                                                      {message.sentAt && (
+                                                        <p className="text-slate-300">
+                                                          Sent: {format(new Date(message.sentAt), "MMM d, h:mm a")}
+                                                        </p>
+                                                      )}
+                                                      {message.deliveredAt && message.status === 'delivered' && (
+                                                        <p className="text-slate-300">
+                                                          Delivered: {format(new Date(message.deliveredAt), "MMM d, h:mm a")}
+                                                        </p>
+                                                      )}
+                                                      {message.readAt && message.status === 'read' && (
+                                                        <div>
+                                                          <p className="text-slate-300">
+                                                            Delivered: {format(new Date(message.deliveredAt), "MMM d, h:mm a")}
+                                                          </p>
+                                                          <p className="text-slate-300">
+                                                            Read: {format(new Date(message.readAt), "MMM d, h:mm a")}
+                                                          </p>
+                                                        </div>
+                                                      )}
+                                                      {message.status === 'failed' && (
+                                                        <p className="text-red-300">Failed to deliver</p>
+                                                      )}
+                                                    </div>
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
                                             </div>
                                           )}
                                         </div>
@@ -5426,6 +5674,18 @@ function ConversationsPageContent() {
 
     if (!contact) return null;
 
+    function getConversationNotes() {
+      if (!activeConversation?.messages) return [];
+
+      return messages.filter(msg => msg.messageType === 'note')
+        .map(msg => ({
+          content: msg.content.replace('📝 Note: ', ''), // Remove the prefix
+          timestamp: msg.timestamp,
+          id: msg.id
+        }));
+    }
+
+
     // Handle WhatsApp opt-in toggle
     const handleOptInToggle = async (checked: boolean) => {
       if (!contact) return;
@@ -5726,6 +5986,7 @@ function ConversationsPageContent() {
         </div>
 
         {/* Notes Section - Enhanced styling */}
+        {/* // Then in the Notes Section of ContactInfoPanel, replace the existing notes display: */}
         <div className="bg-card rounded-lg border border-border/50 p-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-medium text- flex items-center gap-2 text-primary">
@@ -5742,24 +6003,53 @@ function ConversationsPageContent() {
               Add
             </Button>
           </div>
-          {contact.notes ? (
-            <div className="text-sm p-3 rounded-md bg-accent/30 border border-border/50 hover:border-accent transition-colors">
-              <p className="text-foreground leading-relaxed">{contact.notes}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-6 border border-dashed border-border/50 rounded-md">
-              <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
-              <p className="text-sm text-muted-foreground italic">No notes available</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 text-primary hover:text-primary"
-                onClick={() => setShowNoteDialog(true)}
-              >
-                Add a note
-              </Button>
-            </div>
-          )}
+
+          {/* Display conversation notes */}
+          {(() => {
+            const conversationNotes = getConversationNotes();
+            const contactNotes = contact.notes;
+
+            return (
+              <div className="space-y-3">
+                {/* Contact notes (if any) */}
+                {contactNotes && (
+                  <div className="text-sm p-3 rounded-md bg-accent/30 border border-border/50 hover:border-accent transition-colors">
+                    <div className="flex items-start justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">Contact Note</span>
+                    </div>
+                    <p className="text-foreground leading-relaxed">{contactNotes}</p>
+                  </div>
+                )}
+
+                {/* Conversation notes */}
+                {conversationNotes.length > 0 ? (
+                  conversationNotes.map((note, index) => (
+                    <div key={note.id} className="text-sm p-3 rounded-md bg-blue-50 border border-blue-200 hover:border-blue-300 transition-colors">
+                      <div className="flex items-start justify-between mb-1">
+                        <span className="text-xs text-blue-600">
+                          Conversation Note • {format(new Date(note.timestamp), "MMM d, h:mm a")}
+                        </span>
+                      </div>
+                      <p className="text-slate-800 leading-relaxed">{note.content}</p>
+                    </div>
+                  ))
+                ) : (!contactNotes && (
+                  <div className="flex flex-col items-center justify-center p-6 border border-dashed border-border/50 rounded-md">
+                    <FileText className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground italic">No notes available</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 text-primary hover:text-primary"
+                      onClick={() => setShowNoteDialog(true)}
+                    >
+                      Add a note
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
     );

@@ -137,24 +137,19 @@ async function processStatusUpdates(v: any) {
   if (!wabaAcc) return;
 
   // Process each status update
-  for (const status of v.statuses) {
+ for (const status of v.statuses) {
     try {
       const whatsappMessageId = status.id;
       const statusValue = status.status;
-      const timestamp = new Date(parseInt(status.timestamp) * 1000);
+      const timestamp = new Date(parseInt(status.timestamp) * 1000); // This is the event timestamp
 
-      console.log(`Processing status update: ${whatsappMessageId} => ${statusValue}`);
+      console.log(`Processing status update: ${whatsappMessageId} => ${statusValue} at ${timestamp}`);
 
-      // Find the conversation with this message
       const conversation = await Conversation.findOne({
         "messages.whatsappMessageId": whatsappMessageId
       });
 
       if (conversation) {
-        // Find the contact
-        const contact = await Contact.findById(conversation.contactId);
-
-        // Find the specific message in the conversation
         const messageIndex = conversation.messages.findIndex(
           (msg: any) => msg.whatsappMessageId === whatsappMessageId
         );
@@ -163,47 +158,47 @@ async function processStatusUpdates(v: any) {
           // Update the message status
           conversation.messages[messageIndex].status = statusValue;
 
-          // Handle failed messages - add comprehensive error information
-          if (statusValue === 'failed') {
-            console.log(`❌ Message failed: ${whatsappMessageId}`, status);
+          // ** NEW: Store specific timestamps based on status **
+          switch (statusValue) {
+            case 'sent':
+              conversation.messages[messageIndex].sentAt = timestamp;
+              break;
+            case 'delivered':
+              conversation.messages[messageIndex].deliveredAt = timestamp;
+              break;
+            case 'read':
+              conversation.messages[messageIndex].readAt = timestamp;
+              break;
+            case 'failed':
+              // Handle failed messages as before
+              let errorMessage = 'Message delivery failed';
+              let errorCode = 'unknown';
 
-            let errorMessage = 'Message delivery failed';
-            let errorCode = 'unknown';
+              if (status.errors && status.errors.length > 0) {
+                const error = status.errors[0];
+                errorMessage = error.title || error.message || error.details || errorMessage;
+                errorCode = error.code?.toString() || error.error_code?.toString() || 'api_error';
+              }
 
-            // Check multiple possible error locations in the status object
-            if (status.errors && status.errors.length > 0) {
-              const error = status.errors[0];
-              errorMessage = error.title || error.message || error.details || errorMessage;
-              errorCode = error.code?.toString() || error.error_code?.toString() || 'api_error';
-            } else if (status.error) {
-              // Sometimes error is at root level
-              errorMessage = status.error.message || status.error.title || errorMessage;
-              errorCode = status.error.code?.toString() || 'api_error';
-            } else if (status.error_code) {
-              // Direct error code
-              errorCode = status.error_code.toString();
-              errorMessage = getErrorMessageFromCode(status.error_code);
-            }
-
-            conversation.messages[messageIndex].errorMessage = errorMessage;
-            conversation.messages[messageIndex].errorCode = errorCode;
-
-            // Increment retry count
-            conversation.messages[messageIndex].retryCount =
-              (conversation.messages[messageIndex].retryCount || 0) + 1;
-
-            console.log(`Error details saved: ${errorMessage} (${errorCode})`);
+              conversation.messages[messageIndex].errorMessage = errorMessage;
+              conversation.messages[messageIndex].errorCode = errorCode;
+              conversation.messages[messageIndex].retryCount =
+                (conversation.messages[messageIndex].retryCount || 0) + 1;
+              break;
           }
 
           await conversation.save();
-          console.log(`Updated message status to ${statusValue} for message ${whatsappMessageId}`);
+          console.log(`Updated message status to ${statusValue} at ${timestamp} for message ${whatsappMessageId}`);
 
-          // Send webhook for status update
+          // Send webhook with timestamp information
           if (contact) {
             await sendWebhookForMessage(
               {
                 whatsappMessageId,
                 timestamp,
+                sentAt: conversation.messages[messageIndex].sentAt,
+                deliveredAt: conversation.messages[messageIndex].deliveredAt,
+                readAt: conversation.messages[messageIndex].readAt,
                 errorMessage: conversation.messages[messageIndex].errorMessage,
                 errorCode: conversation.messages[messageIndex].errorCode
               },
@@ -213,15 +208,6 @@ async function processStatusUpdates(v: any) {
               statusValue as 'sent' | 'delivered' | 'read' | 'failed'
             );
           }
-        } else {
-          console.log(`Message not found in conversation: ${whatsappMessageId}`);
-        }
-      } else {
-        console.log(`Could not find conversation with message ID: ${whatsappMessageId}`);
-
-        // For failed messages that we can't find in existing conversations
-        if (statusValue === 'failed') {
-          await handleOrphanedFailedMessage(status, phoneNumberId);
         }
       }
     } catch (err) {
@@ -229,7 +215,6 @@ async function processStatusUpdates(v: any) {
     }
   }
 }
-
 
 
 // Helper function to get user-friendly error messages from error codes
@@ -1109,15 +1094,15 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
       }
     } else if (autoReply.replyType === 'template') {
       messageContent = `Template: ${autoReply.templateName}`;
-      
+
       // ** NEW: Deduct template cost before sending **
       const user = await User.findOne({ 'wabaAccounts.wabaId': wabaAcc.wabaId });
       if (user && user.companyId) {
         const companyId = typeof user.companyId === 'object' ? user.companyId._id.toString() : user.companyId.toString();
-        
+
         // Determine template type (you may need to store this in autoReply or infer it)
         const templateType = autoReply.templateType || 'utility'; // Default to utility
-        
+
         const costResult = await deductTemplateMessageCost(
           autoReply.templateName,
           templateType,
@@ -1129,10 +1114,10 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
 
         if (!costResult.success) {
           console.error(`❌ Template cost deduction failed: ${costResult.error}`);
-          
+
           // Send low balance message instead
           const lowBalanceMessage = `⚠️ Unable to send template message due to insufficient wallet balance. Please recharge your account.`;
-          
+
           await recordAutoReplyInConversation(
             contact,
             { ...autoReply, replyMessage: lowBalanceMessage },
@@ -1140,7 +1125,7 @@ async function sendAutoReplyMessage(contact: any, autoReply: any, wabaAcc: any) 
             messageId,
             lowBalanceMessage
           );
-          
+
           return;
         }
 
@@ -1560,10 +1545,10 @@ async function handleAutoReply(
           const user = await User.findById(userId);
           if (user && user.companyId) {
             const companyId = typeof user.companyId === 'object' ? user.companyId._id.toString() : user.companyId.toString();
-            
+
             // Determine template type from template or campaign
             const templateType = template.category || autoReply.templateType || 'marketing';
-            
+
             const costResult = await deductTemplateMessageCost(
               template.name,
               templateType,

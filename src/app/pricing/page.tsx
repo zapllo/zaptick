@@ -555,7 +555,7 @@ export default function PricingPage() {
                                         </div>
 
                                         {/* CTA Button */}
-                                        <Link href='https://zapllo.com/contact' className="flex items-center gap-2">
+                                        <Link href='/demo' className="flex items-center gap-2">
                                             <Button
                                                 className={`w-full h-12 transition-all duration-200 ${plan.popular
                                                     ? 'bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl'

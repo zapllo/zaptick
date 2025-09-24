@@ -934,8 +934,102 @@ class WorkflowEngine {
     }
   }
 
+  // Add a new method to handle keyword triggers from button/list interactions
+  async checkAndTriggerFromInteraction(
+    contactId: string,
+    interactionData: {
+      messageType: 'button_click' | 'list_selection';
+      buttonId?: string;
+      buttonTitle?: string;
+      listId?: string;
+      listTitle?: string;
+      wabaId: string;
+      phoneNumberId: string;
+      userId: string;
+    }
+  ): Promise<void> {
+    try {
+      console.log(`🔍 Checking for workflow triggers from interaction:`, interactionData);
+
+      // Extract the keyword from button/list interaction
+      const keyword = (interactionData.buttonTitle ||
+        interactionData.buttonId ||
+        interactionData.listTitle ||
+        interactionData.listId || '').toLowerCase().trim();
+
+      if (!keyword) {
+        console.log('❌ No keyword found in interaction data');
+        return;
+      }
+
+      console.log(`🔑 Extracted keyword from interaction: "${keyword}"`);
+
+      // Find workflows with matching trigger keywords for this user and WABA
+      const workflows = await Workflow.find({
+        userId: interactionData.userId,
+        wabaId: interactionData.wabaId,
+        isActive: true,
+        'nodes.type': 'trigger'
+      });
+
+      console.log(`📋 Found ${workflows.length} active workflows to check`);
+
+      for (const workflow of workflows) {
+        const triggerNode = workflow.nodes.find((node: any) => node.type === 'trigger');
+        if (!triggerNode?.data?.config?.keywords) continue;
+
+        const triggerKeywords = triggerNode.data.config.keywords
+          .map((k: string) => k.toLowerCase().trim())
+          .filter((k: string) => k.length > 0);
+
+        console.log(`🎯 Checking workflow "${workflow.name}" with keywords:`, triggerKeywords);
+
+        // Check if any trigger keyword matches the interaction keyword
+        const keywordMatch = triggerKeywords.some((triggerKeyword: string) => {
+          // Exact match
+          if (keyword === triggerKeyword) return true;
+
+          // Check if button/list title contains the keyword
+          if (interactionData.buttonTitle &&
+            interactionData.buttonTitle.toLowerCase().includes(triggerKeyword)) return true;
+
+          if (interactionData.listTitle &&
+            interactionData.listTitle.toLowerCase().includes(triggerKeyword)) return true;
+
+          return false;
+        });
+
+        if (keywordMatch) {
+          console.log(`✅ Keyword match found! Triggering workflow: ${workflow.name}`);
+
+          // Prepare trigger data with interaction context
+          const triggerData = {
+            messageType: interactionData.messageType,
+            messageContent: keyword,
+            buttonId: interactionData.buttonId,
+            buttonTitle: interactionData.buttonTitle,
+            listId: interactionData.listId,
+            listTitle: interactionData.listTitle,
+            triggeredBy: 'interaction',
+            timestamp: new Date()
+          };
+
+          // Trigger the workflow
+          await this.triggerWorkflow(workflow._id.toString(), contactId, triggerData);
+
+          // Only trigger the first matching workflow to avoid duplicates
+          break;
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error checking workflow triggers from interaction:', error);
+    }
+  }
+
   // Updated method to continue workflow based on user input
 
+  // Update the existing continueWorkflow method to also check for new triggers
   async continueWorkflow(
     workflowId: string,
     contactId: string,
@@ -946,12 +1040,31 @@ class WorkflowEngine {
       contextMessageId?: string;
       timestamp: Date;
       textContent?: string;
+      wabaId?: string;
+      phoneNumberId?: string;
+      userId?: string;
     }
   ): Promise<void> {
     console.log(`🔍 Looking for workflow execution:`);
     console.log(`   Workflow ID: ${workflowId}`);
     console.log(`   Contact ID: ${contactId}`);
     console.log(`   User input:`, userInput);
+
+    // First, check if this interaction should trigger a new workflow
+    if ((userInput.messageType === 'button_click' || userInput.messageType === 'list_selection') &&
+      userInput.wabaId && userInput.phoneNumberId && userInput.userId) {
+
+      await this.checkAndTriggerFromInteraction(contactId, {
+        messageType: userInput.messageType,
+        buttonId: userInput.buttonId,
+        buttonTitle: userInput.buttonTitle,
+        listId: userInput.buttonId, // List selections use buttonId
+        listTitle: userInput.buttonTitle, // List selections use buttonTitle
+        wabaId: userInput.wabaId,
+        phoneNumberId: userInput.phoneNumberId,
+        userId: userInput.userId
+      });
+    }
 
     // Log all current executions for debugging
     const allExecutions = Array.from(this.executions.values());
@@ -993,6 +1106,7 @@ class WorkflowEngine {
       return;
     }
 
+    // Rest of the existing continueWorkflow logic remains the same...
     console.log(`🔄 Continuing workflow execution: ${execution.workflowId}`);
     console.log(`   Current node: ${execution.currentNodeId}`);
     console.log(`   Execution status: ${execution.status}`);
@@ -1124,6 +1238,7 @@ class WorkflowEngine {
       execution.variables.error = error instanceof Error ? error.message : 'Unknown error';
     }
   }
+
   // Helper method to find next node based on button click
   private findNextNodeForButtonClick(
     workflow: any,

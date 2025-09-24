@@ -1,4 +1,3 @@
-// src/app/wallet/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -48,6 +47,12 @@ import {
   Loader2,
   Download,
   Search,
+  TrendingUp,
+  TrendingDown,
+  Star,
+  Shield,
+  Sparkles,
+  Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -119,13 +124,13 @@ const WalletPage = () => {
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [paymentInitiated, setPaymentInitiated] = useState(false);
   const { toast } = useToast();
+
   // Predefined amounts for quick selection
   const suggestedAmounts = [500, 1000, 2000, 5000, 10000];
 
   useEffect(() => {
     loadWalletData();
   }, [currentPage, transactionType]);
-
 
   // Add this function to reset dialog values
   const resetDialogValues = () => {
@@ -141,7 +146,6 @@ const WalletPage = () => {
       resetDialogValues();
     }
   };
-
 
   const loadWalletData = async () => {
     setIsLoading(true);
@@ -190,7 +194,6 @@ const WalletPage = () => {
       transaction.referenceType?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
-
 
   // Calculate GST and total amount
   const calculateGST = (amount: number) => {
@@ -363,7 +366,6 @@ const WalletPage = () => {
     }
   };
 
-
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -428,108 +430,178 @@ const WalletPage = () => {
   };
 
   return (
-
-    <div className=" p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold">Wallet</h1>
-          <p className="text-muted-foreground">Manage your account balance and transactions</p>
-        </div>
-        <Button onClick={() => setShowAddFundsDialog(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Funds
-        </Button>
-      </div>
-
-      {/* Wallet Balance Card */}
-      <div className="grid grid-cols-1  gap-6 mb-8">
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Wallet Balance</CardTitle>
-            <CardDescription>Current available funds</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoading ? (
-              <div className="h-20 flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : (
-              <>
-                <div className="text-3xl font-bold">
-                  {walletSummary.formattedBalance}
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">This month</span>
-                  <span>
-                    {formatCurrency(walletSummary.thisMonth.credits - walletSummary.thisMonth.debits)}
-                  </span>
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center">
-                      <ArrowUp className="h-3 w-3 mr-1 text-green-600" />
-                      Total Added
-                    </span>
-                    <span className="text-green-600">
-                      {formatCurrency(walletSummary.totalCredits)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center">
-                      <ArrowDown className="h-3 w-3 mr-1 text-red-600" />
-                      Total Spent
-                    </span>
-                    <span className="text-red-600">
-                      {formatCurrency(walletSummary.totalDebits)}
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-          <CardFooter>
+    <div className="space-y-8 p-6 pb-12">
+      {/* Modern Header */}
+      <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-primary/5 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/20 wark:from-muted/40 wark:to-primary/10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+              <Wallet className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 wark:text-white">
+                Wallet Overview
+              </h1>
+              <p className="text-slate-600 wark:text-slate-300">
+                Manage your account balance and transactions
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 rounded-full bg-slate-100 wark:bg-slate-800 px-3 py-1">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs font-medium text-slate-600 wark:text-slate-300">Secure payment gateway</span>
+            </div>
             <Button
-              variant="outline"
-              className="w-full"
               onClick={() => setShowAddFundsDialog(true)}
+              className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               Add Funds
             </Button>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
+        <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-primary/10 transition-all duration-300 group-hover:scale-110" />
+      </div>
 
+      {/* Wallet Balance Cards */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Main Balance Card */}
+        <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-blue-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-blue-200 wark:from-muted/40 wark:to-blue-900/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                <Wallet className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="font-semibold text-slate-900 wark:text-white">Current Balance</h3>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadWalletData}
+              className="gap-2 hover:bg-blue-50 wark:hover:bg-blue-900/20"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
 
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <>
+              <div className="text-3xl font-bold text-slate-900 wark:text-white mb-2">
+                {walletSummary.formattedBalance}
+              </div>
+              <div className="flex items-center gap-2 text-sm mb-4">
+                <span className="text-slate-600 wark:text-slate-400">This month:</span>
+                <span className={cn(
+                  "font-medium",
+                  walletSummary.thisMonth.credits - walletSummary.thisMonth.debits >= 0
+                    ? "text-green-600 wark:text-green-400"
+                    : "text-red-600 wark:text-red-400"
+                )}>
+                  {walletSummary.thisMonth.credits - walletSummary.thisMonth.debits >= 0 ? '+' : ''}
+                  {formatCurrency(walletSummary.thisMonth.credits - walletSummary.thisMonth.debits)}
+                </span>
+              </div>
+              <Button
+                onClick={() => setShowAddFundsDialog(true)}
+                className="w-full gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                Add Funds
+              </Button>
+            </>
+          )}
+
+          <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-blue-500/10 transition-all duration-300 group-hover:scale-110" />
+        </div>
+
+        {/* Total Added Card */}
+        <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-green-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-green-200 wark:from-muted/40 wark:to-green-900/10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+              <TrendingUp className="h-5 w-5 text-white" />
+            </div>
+            <h3 className="font-semibold text-slate-900 wark:text-white">Total Added</h3>
+          </div>
+
+          <div className="text-2xl font-bold text-green-600 wark:text-green-400 mb-2">
+            {formatCurrency(walletSummary.totalCredits)}
+          </div>
+          <div className="text-sm text-slate-600 wark:text-slate-400">
+            All-time funds added to wallet
+          </div>
+
+          <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-green-500/10 transition-all duration-300 group-hover:scale-110" />
+        </div>
+
+        {/* Total Spent Card */}
+        <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-red-50/30 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:border-red-200 wark:from-muted/40 wark:to-red-900/10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg">
+              <TrendingDown className="h-5 w-5 text-white" />
+            </div>
+            <h3 className="font-semibold text-slate-900 wark:text-white">Total Spent</h3>
+          </div>
+
+          <div className="text-2xl font-bold text-red-600 wark:text-red-400 mb-2">
+            {formatCurrency(walletSummary.totalDebits)}
+          </div>
+          <div className="text-sm text-slate-600 wark:text-slate-400">
+            All-time spending from wallet
+          </div>
+
+          <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-red-500/10 transition-all duration-300 group-hover:scale-110" />
+        </div>
       </div>
 
       {/* Transaction History */}
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">Transaction History</h2>
-            <p className="text-muted-foreground">
-              View and filter your past wallet transactions
-            </p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900 wark:text-white">Transaction History</h2>
+              <p className="text-sm text-slate-600 wark:text-slate-300">
+                View and filter your past wallet transactions
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 rounded-full bg-slate-100 wark:bg-slate-800 px-3 py-1">
+            <div className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
+            <span className="text-xs font-medium text-slate-600 wark:text-slate-300">
+              {transactions.length} transactions
+            </span>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-slate-50/30 p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:border-slate-200 wark:from-muted/40 wark:to-slate-900/10">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search transactions..."
-                className="pl-10 w-full md:w-[220px]"
+                className="pl-10 bg-white wark:bg-slate-800 border-slate-200 wark:border-slate-700 focus:border-primary"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <Select
-              value={transactionType}
-              onValueChange={setTransactionType}
-            >
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="All Transactions" />
+            <Select value={transactionType} onValueChange={setTransactionType}>
+              <SelectTrigger className="md:w-[200px] bg-white wark:bg-slate-800 border-slate-200 wark:border-slate-700">
+                <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Transactions</SelectItem>
@@ -539,125 +611,170 @@ const WalletPage = () => {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" onClick={loadWalletData} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
+            <Button
+              variant="outline"
+              onClick={loadWalletData}
+              className="gap-2 border-slate-200 wark:border-slate-700 hover:border-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
               Refresh
             </Button>
           </div>
+
+          <div className="absolute -right-6 -top-6 h-12 w-12 rounded-full bg-slate-500/10 transition-all duration-300 group-hover:scale-110" />
         </div>
 
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-60">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                  <p className="text-muted-foreground">Loading transaction history...</p>
+        {/* Transactions Table */}
+        <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-br from-white to-slate-50/30 shadow-sm transition-all duration-300 hover:shadow-md hover:border-slate-200 wark:from-muted/40 wark:to-slate-900/10">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <div className="relative mb-4">
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-500 animate-pulse" />
                 </div>
+                <p className="font-medium text-slate-900 wark:text-white">Loading transactions...</p>
+                <p className="text-sm text-slate-500">Fetching your transaction history</p>
               </div>
-            ) : filteredTransactions.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        <div className="font-medium">{transaction.description}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {transaction.referenceType && `Type: ${transaction.referenceType}`}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getTransactionBadge(transaction.type)}
-                      </TableCell>
-                      <TableCell className={
-                        transaction.type === "credit" || transaction.type === "refund"
-                          ? "text-green-600 font-medium"
-                          : "text-red-600 font-medium"
-                      }>
-                        {transaction.type === "credit" || transaction.type === "refund" ? "+" : "-"}
-                        {formatCurrency(transaction.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm">{formatDate(transaction.createdAt)}</span>
-                          <span className="text-xs text-muted-foreground">{formatTime(transaction.createdAt)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          {getStatusIcon(transaction.status)}
-                          <span className="capitalize text-sm">{transaction.status}</span>
-                        </div>
-                      </TableCell>
+            </div>
+          ) : filteredTransactions.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-slate-50/50 wark:bg-slate-800/50">
+                    <TableRow className="border-slate-200 wark:border-slate-700">
+                      <TableHead className="font-semibold text-slate-700 wark:text-slate-300">Description</TableHead>
+                      <TableHead className="font-semibold text-slate-700 wark:text-slate-300">Type</TableHead>
+                      <TableHead className="font-semibold text-slate-700 wark:text-slate-300">Amount</TableHead>
+                      <TableHead className="font-semibold text-slate-700 wark:text-slate-300">Date & Time</TableHead>
+                      <TableHead className="font-semibold text-slate-700 wark:text-slate-300">Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-12">
-                <Search className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                <h3 className="font-medium mb-1">No transactions found</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {searchQuery
-                    ? `No transactions match your search "${searchQuery}"`
-                    : "You don't have any transactions yet. Add funds to get started."}
-                </p>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransactions.map((transaction) => (
+                      <TableRow key={transaction.id} className="border-slate-200 wark:border-slate-700 hover:bg-slate-50/50 wark:hover:bg-slate-800/50 transition-colors">
+                        <TableCell>
+                          <div className="font-medium text-slate-900 wark:text-white">{transaction.description}</div>
+                          {transaction.referenceType && (
+                            <div className="text-xs text-slate-500 wark:text-slate-400 mt-1">
+                              Type: {transaction.referenceType}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {getTransactionBadge(transaction.type)}
+                        </TableCell>
+                        <TableCell className={cn(
+                          "font-semibold",
+                          transaction.type === "credit" || transaction.type === "refund"
+                            ? "text-green-600 wark:text-green-400"
+                            : "text-red-600 wark:text-red-400"
+                        )}>
+                          {transaction.type === "credit" || transaction.type === "refund" ? "+" : "-"}
+                          {formatCurrency(transaction.amount)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-900 wark:text-white">
+                              {formatDate(transaction.createdAt)}
+                            </span>
+                            <span className="text-xs text-slate-500 wark:text-slate-400">
+                              {formatTime(transaction.createdAt)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(transaction.status)}
+                            <span className="capitalize text-sm font-medium text-slate-700 wark:text-slate-300">
+                              {transaction.status}
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            )}
-          </CardContent>
-          {transactions.length > 0 && (
-            <CardFooter className="flex items-center justify-between border-t p-4">
-              <div className="text-sm text-muted-foreground">
-                Showing page {currentPage} of {totalPages}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1 || isLoading}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages || isLoading}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardFooter>
-          )}
-        </Card>
-      </div>
 
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-slate-200 wark:border-slate-700 p-4 bg-slate-50/50 wark:bg-slate-800/50">
+                  <div className="text-sm text-slate-600 wark:text-slate-400">
+                    Showing page {currentPage} of {totalPages}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1 || isLoading}
+                      className="gap-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages || isLoading}
+                      className="gap-2"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-20">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 wark:bg-slate-800 mx-auto mb-4">
+                <Search className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="font-semibold text-slate-900 wark:text-white mb-2">No transactions found</h3>
+              <p className="text-sm text-slate-600 wark:text-slate-300 max-w-md mx-auto leading-relaxed">
+                {searchQuery
+                  ? `No transactions match your search "${searchQuery}"`
+                  : "You don't have any transactions yet. Add funds to get started."}
+              </p>
+              {!searchQuery && (
+                <Button
+                  onClick={() => setShowAddFundsDialog(true)}
+                  className="mt-6 gap-2 bg-gradient-to-r from-primary to-primary/90"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Your First Funds
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-slate-500/10 transition-all duration-300 group-hover:scale-110" />
+        </div>
+      </div>
 
       {/* Add Funds Dialog */}
       <Dialog open={showAddFundsDialog} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col p-0 z-50">
-          <DialogHeader className="px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <DialogHeader className="px-6 py-4 border-b border-slate-200 wark:border-slate-700 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/20 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-green-600" />
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-semibold text-slate-900">
+                <DialogTitle className="text-xl font-semibold text-slate-900 wark:text-white">
                   Add Funds to Wallet
                 </DialogTitle>
-                <DialogDescription className="text-slate-600 mt-1">
+                <DialogDescription className="text-slate-600 wark:text-slate-400 mt-1">
                   Enter the amount you want to add to your wallet
                 </DialogDescription>
               </div>
@@ -669,18 +786,18 @@ const WalletPage = () => {
               {/* Amount Input Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  <h3 className="text-sm font-semibold text-slate-700 wark:text-slate-300 uppercase tracking-wider">
                     Amount
                   </h3>
                 </div>
 
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <Label htmlFor="amount" className="text-sm font-medium text-green-800 mb-2 block">
+                <div className="group relative overflow-hidden p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                  <Label htmlFor="amount" className="text-sm font-medium text-primary mb-2 block">
                     Amount (INR)
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-green-600 font-medium text-lg">
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary font-medium text-lg">
                       ₹
                     </span>
                     <Input
@@ -689,14 +806,16 @@ const WalletPage = () => {
                       min="100"
                       value={amount}
                       onChange={(e) => setAmount(Number(e.target.value))}
-                      className="pl-8 h-12 text-lg font-semibold bg-white border-green-300 focus:border-green-500 focus:ring-green-500/20"
+                      className="pl-8 h-12 text-lg font-semibold bg-white wark:bg-slate-800 border-primary/30 focus:border-primary focus:ring-primary/20"
                       placeholder="Enter amount"
                     />
                   </div>
-                  <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
+                  <p className="text-xs text-primary/80 mt-2 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
                     Minimum amount: ₹100
                   </p>
+
+                  <div className="absolute -right-4 -top-4 h-8 w-8 rounded-full bg-primary/20 transition-all duration-300 group-hover:scale-110" />
                 </div>
               </div>
 
@@ -704,12 +823,12 @@ const WalletPage = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  <h3 className="text-sm font-semibold text-slate-700 wark:text-slate-300 uppercase tracking-wider">
                     Quick Amounts
                   </h3>
                 </div>
 
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="group relative overflow-hidden p-4 bg-gradient-to-br from-blue-50/50 to-blue-50/80 wark:from-blue-900/10 wark:to-blue-900/20 rounded-xl border border-blue-200/50 wark:border-blue-800/50">
                   <div className="grid grid-cols-3 gap-2">
                     {[100, 500, 1000, 2000, 5000, 10000].map((amt) => (
                       <Button
@@ -722,13 +841,15 @@ const WalletPage = () => {
                           "h-10 transition-all duration-200",
                           amount === amt
                             ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg scale-105 border-blue-600"
-                            : "bg-white hover:bg-blue-50 border-blue-300 text-blue-700 hover:border-blue-400"
+                            : "bg-white wark:bg-slate-800 hover:bg-blue-50 wark:hover:bg-blue-900/20 border-blue-300 wark:border-blue-700 text-blue-700 wark:text-blue-400 hover:border-blue-400"
                         )}
                       >
                         ₹{amt.toLocaleString()}
                       </Button>
                     ))}
                   </div>
+
+                  <div className="absolute -right-4 -top-4 h-8 w-8 rounded-full bg-blue-500/20 transition-all duration-300 group-hover:scale-110" />
                 </div>
               </div>
 
@@ -737,45 +858,47 @@ const WalletPage = () => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-                    <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                    <h3 className="text-sm font-semibold text-slate-700 wark:text-slate-300 uppercase tracking-wider">
                       Payment Breakdown
                     </h3>
                   </div>
 
-                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="group relative overflow-hidden p-4 bg-gradient-to-br from-purple-50/50 to-purple-50/80 wark:from-purple-900/10 wark:to-purple-900/20 rounded-xl border border-purple-200/50 wark:border-purple-800/50">
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-purple-200">
-                        <span className="text-sm font-medium text-purple-800 flex items-center gap-2">
+                      <div className="flex justify-between items-center p-3 bg-white wark:bg-slate-800 rounded-lg border border-purple-200/50 wark:border-purple-800/50">
+                        <span className="text-sm font-medium text-purple-800 wark:text-purple-300 flex items-center gap-2">
                           <Wallet className="h-4 w-4" />
                           Wallet Credit Amount
                         </span>
-                        <span className="text-sm font-semibold text-purple-900">
+                        <span className="text-sm font-semibold text-purple-900 wark:text-purple-200">
                           ₹{amount.toLocaleString()}
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-purple-200">
-                        <span className="text-sm text-purple-700 flex items-center gap-2">
+                      <div className="flex justify-between items-center p-3 bg-white wark:bg-slate-800 rounded-lg border border-purple-200/50 wark:border-purple-800/50">
+                        <span className="text-sm text-purple-700 wark:text-purple-400 flex items-center gap-2">
                           <CreditCard className="h-4 w-4" />
                           GST (18%)
                         </span>
-                        <span className="text-sm font-medium text-purple-800">
+                        <span className="text-sm font-medium text-purple-800 wark:text-purple-300">
                           ₹{calculateGST(amount).gst.toFixed(2)}
                         </span>
                       </div>
 
-                      <div className="h-px bg-purple-200 my-2" />
+                      <div className="h-px bg-purple-200 wark:bg-purple-800 my-2" />
 
-                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-100 to-purple-200 rounded-lg border border-purple-300">
-                        <span className="text-sm font-semibold text-purple-900 flex items-center gap-2">
+                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-100 to-purple-200 wark:from-purple-900/30 wark:to-purple-900/50 rounded-lg border border-purple-300 wark:border-purple-700">
+                        <span className="text-sm font-semibold text-purple-900 wark:text-purple-100 flex items-center gap-2">
                           <ArrowRight className="h-4 w-4" />
                           Total Amount to Pay
                         </span>
-                        <span className="text-lg font-bold text-purple-900">
+                        <span className="text-lg font-bold text-purple-900 wark:text-purple-100">
                           ₹{calculateGST(amount).total.toFixed(2)}
                         </span>
                       </div>
                     </div>
+
+                    <div className="absolute -right-4 -top-4 h-8 w-8 rounded-full bg-purple-500/20 transition-all duration-300 group-hover:scale-110" />
                   </div>
                 </div>
               )}
@@ -783,41 +906,43 @@ const WalletPage = () => {
               {/* Security Notice */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <h3 className="text-sm font-semibold text-slate-700 wark:text-slate-300 uppercase tracking-wider">
                     Security Information
                   </h3>
                 </div>
 
-                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                <div className="group relative overflow-hidden p-4 bg-gradient-to-br from-green-50/50 to-green-50/80 wark:from-green-900/10 wark:to-green-900/20 rounded-xl border border-green-200/50 wark:border-green-800/50">
                   <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <CreditCard className="h-4 w-4 text-emerald-600" />
+                    <div className="h-8 w-8 rounded-full bg-green-100 wark:bg-green-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Shield className="h-4 w-4 text-green-600 wark:text-green-400" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-emerald-800 mb-1">
+                      <h4 className="text-sm font-semibold text-green-800 wark:text-green-300 mb-1">
                         Secure Payment Gateway
                       </h4>
-                      <p className="text-sm text-emerald-700 leading-relaxed">
+                      <p className="text-sm text-green-700 wark:text-green-400 leading-relaxed">
                         Your payment will be processed securely through Razorpay with 256-bit SSL encryption.
                         GST will be collected as per government regulations.
                       </p>
                       <div className="flex items-center gap-2 mt-2">
-                        <CheckCircle className="h-3 w-3 text-emerald-600" />
-                        <span className="text-xs text-emerald-600 font-medium">
+                        <CheckCircle className="h-3 w-3 text-green-600 wark:text-green-400" />
+                        <span className="text-xs text-green-600 wark:text-green-400 font-medium">
                           PCI DSS Compliant
                         </span>
                       </div>
                     </div>
                   </div>
+
+                  <div className="absolute -right-4 -top-4 h-8 w-8 rounded-full bg-green-500/20 transition-all duration-300 group-hover:scale-110" />
                 </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t border-slate-100 flex-shrink-0 bg-white">
+          <DialogFooter className="px-6 py-4 border-t border-slate-200 wark:border-slate-700 flex-shrink-0 bg-slate-50/50 wark:bg-slate-800/50">
             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 text-sm text-slate-500">
+              <div className="flex items-center gap-2 text-sm text-slate-600 wark:text-slate-400">
                 <Wallet className="h-4 w-4" />
                 <span>
                   {amount >= 100
@@ -831,13 +956,13 @@ const WalletPage = () => {
                   variant="outline"
                   onClick={() => handleDialogClose(false)}
                   disabled={isPaymentProcessing}
-                  className="hover:bg-slate-50"
+                  className="hover:bg-slate-100 wark:hover:bg-slate-700"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAddFunds}
-                  className="gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
                   disabled={amount < 100 || isPaymentProcessing}
                 >
                   {isPaymentProcessing ? (
@@ -858,7 +983,6 @@ const WalletPage = () => {
         </DialogContent>
       </Dialog>
     </div>
-
   );
 };
 

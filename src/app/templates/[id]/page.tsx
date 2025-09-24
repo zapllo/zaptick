@@ -327,7 +327,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
 
                   <div className="bg-white mt-12 p-3 rounded-lg ml-1 shadow-sm">
                     {/* Authentication template preview */}
-                    <div className="text-[12px] max-w-[100%] whitespace-pre-wrap">
+                    <div className="text-[12px] max-w-full whitespace-pre-wrap break-words">
                       <div>
                         <p className="font-bold">WhatsApp Authentication</p>
                         <p className="mt-2">Your verification code is: <span className="font-bold">{sampleCode}</span></p>
@@ -371,31 +371,14 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
     );
   }
 
-  // For limited time offer templates, show special preview
-  if (form.category === 'LIMITED_TIME_OFFER') {
+  // For carousel templates, show carousel preview
+  if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
     const formattedContent = formatWhatsAppText(form.content);
-    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // Calculate expiration time display
-    const getExpirationDisplay = () => {
-      if (form.offerExpirationDate && form.offerExpirationTime) {
-        const expirationDateTime = new Date(`${form.offerExpirationDate}T${form.offerExpirationTime}`);
-        const now = new Date();
-        const diffMs = expirationDateTime.getTime() - now.getTime();
-
-        if (diffMs > 0) {
-          const hours = Math.floor(diffMs / (1000 * 60 * 60));
-          const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-          return `${hours}h ${minutes}m`;
-        }
-      }
-      return '2h 30m'; // Default display
-    };
 
     return (
       <div className="device-mockup mx-auto max-w-[320px]">
         <div
-          className={`relative ${deviceType === 'iphone' ? 'pt-12 pb-[40px]' : 'pt-[40px] pb-[30px]'}`}
+          className={` relative ${deviceType === 'iphone' ? 'pt-12 pb-[40px]' : 'pt-[40px] pb-[30px]'}`}
           style={{
             backgroundImage: `url(${deviceType === 'iphone'
               ? '/layout/iphone-view-layout.png'
@@ -412,6 +395,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
             <div className="flex-1 p-4 overflow-y-auto">
               <div className="flex mb-3 mt-2">
                 <div className="relative w-full max-w-[85%]">
+                  {/* Bubble tail */}
                   {deviceType !== 'iphone' && (
                     <div
                       className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff]"
@@ -420,102 +404,11 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                   )}
 
                   <div className="bg-white mt-12 p-3 rounded-lg ml-1 shadow-sm">
-                    {/* Header Media */}
-                    {form.headerType === 'image' && form.mediaUrl && (
-                      <div className="mb-2">
-                        <img
-                          src={form.mediaUrl}
-                          alt="Offer header"
-                          className="w-full h-32 object-cover rounded"
-                        />
-                      </div>
-                    )}
-
-                    {/* Text Header */}
-                    {form.headerType === 'text' && form.headerText && (
-                      <div className="font-bold mb-2 text-[12px]">{form.headerText}</div>
-                    )}
-
-                    {/* Message Content */}
-                    <div className="text-[12px] max-w-[100%] whitespace-pre-wrap">
-                      <div dangerouslySetInnerHTML={{ __html: formattedContent || "" }} />
-                    </div>
-
-                    {/* Limited Time Offer Display */}
-                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-red-600" />
-                          <span className="text-[10px] font-medium text-red-800">Limited Time Offer</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-red-600">
-                          {getExpirationDisplay()} left
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end items-center gap-1 pt-2 text-[10px] opacity-70">
-                      <span>{currentTime}</span>
-                    </div>
-
-                    {/* Buttons section */}
-                    {form.buttons.length > 0 && (
-                      <div className="mt-1 pt-2 border-t border-gray-200">
-                        <div className="space-y-1.5">
-                          {form.buttons.slice(0, 2).map((button, index) => (
-                            <button
-                              key={index}
-                              className="w-full text-left gap-2 text-[12px] text-[#0097DF] font-medium flex justify-center items-center"
-                            >
-                              {button.type === 'COPY_CODE' && <Copy className="h-3 w-3" />}
-                              {button.type === 'URL' && <ExternalLink className="h-3 w-3" />}
-                              {button.text || `Button ${index + 1}`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // For carousel templates, show carousel preview with S3 media
-  if (form.category === 'CAROUSEL' || form.category === 'CAROUSEL_UTILITY') {
-    const formattedContent = formatWhatsAppText(form.content);
-
-    return (
-      <div className="device-mockup mx-auto max-w-[320px]">
-        {/* ... existing device wrapper ... */}
-        <div
-          className={`relative ${deviceType === 'iphone' ? 'pt-12 pb-[40px]' : 'pt-[40px] pb-[30px]'}`}
-          style={{
-            backgroundImage: `url(${deviceType === 'iphone'
-              ? '/layout/iphone-view-layout.png'
-              : '/layout/android-view-layout.png'})`,
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            height: '650px',
-            width: '100%'
-          }}
-        >
-          <div className="app-content flex flex-col h-[520px] mx-auto overflow-hidden rounded-2xl"
-            style={{ width: '94%' }}>
-            <div className="flex-1 p-4 overflow-y-auto">
-              <div className="flex mb-3 mt-2">
-                <div className="relative w-full max-w-[85%]">
-                  {/* ... existing message bubble styling ... */}
-
-                  <div className="bg-white mt-12 p-3 rounded-lg ml-1 shadow-sm">
-                    <div className="text-[12px] max-w-[100%]">
+                    {/* Carousel preview */}
+                    <div className="text-[12px] max-w-full">
+                      {/* Body text before carousel */}
                       {form.content && (
-                        <div className="mb-3">
+                        <div className="mb-3 break-words">
                           <div dangerouslySetInnerHTML={{ __html: formattedContent || "" }} />
                         </div>
                       )}
@@ -525,16 +418,19 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-1 rounded-lg ml-1">
-                    <div className="text-[12px] max-w-[100%]">
+                  <div className=" mt-1  rounded-lg ml-1 ">
+                    {/* Carousel preview */}
+                    <div className="text-[12px] max-w-full">
+                      {/* Carousel cards container */}
                       <div className="flex gap-2 overflow-x-auto scrollbar-hide w-[270px] pb-2">
                         {form.carouselCards.length > 0 ? form.carouselCards.map((card, index) => (
                           <div key={index} className="flex-shrink-0 w-[180px] border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                            {/* Card header media */}
                             {card.header && card.header.mediaUrl && (
                               <div className="h-32 bg-gray-200 overflow-hidden">
                                 {card.header.format === 'IMAGE' ? (
                                   <img
-                                    src={card.header.mediaUrl} // This will be the S3 URL
+                                    src={card.header.mediaUrl}
                                     alt={`Card ${index + 1}`}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -562,11 +458,13 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                               </div>
                             )}
 
+                            {/* Card body */}
                             <div className="p-2">
-                              <p className="text-[10px] mb-2">
+                              <p className="text-[10px] mb-2 break-words">
                                 {card.body.text || `Card ${index + 1} content`}
                               </p>
 
+                              {/* Card buttons */}
                               {card.buttons && card.buttons.length > 0 && (
                                 <div className="space-y-1">
                                   {card.buttons.map((button, buttonIndex) => (
@@ -605,10 +503,20 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
     );
   }
 
-  // Regular template preview (existing code)
+  // Regular template preview - Updated to match create template styling
+  const previewContent = form.content
+    .replace(/\{\{1\}\}/g, form.variables[0]?.example || "John")
+    .replace(/\{\{2\}\}/g, form.variables[1]?.example || "SAVE20")
+    .replace(/\{\{3\}\}/g, form.variables[2]?.example || "June 30, 2024")
+    .replace(/\{\{4\}\}/g, form.variables[3]?.example || "Sample Value")
+    .replace(/\{\{5\}\}/g, form.variables[4]?.example || "Example");
+
   const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const displayButtons = form.buttons.slice(0, 2);
-  const showSeeAllOptions = form.buttons.length > 3;
+
+  // Updated button display logic to match create template
+  const displayButtons = form.buttons.length <= 3 ? form.buttons : form.buttons.slice(0, 2);
+  const showSeeMoreOptions = form.buttons.length > 3;
+
   const formattedContent = formatWhatsAppText(form.content);
 
   return (
@@ -628,10 +536,11 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
       >
         <div className="app-content flex flex-col h-[520px] mx-auto overflow-hidden rounded-2xl"
           style={{ width: '94%' }}>
-          <div className="flex-1 p-4 overflow-y-auto">
-            {form.content && (
-              <div className="flex mb-3 mt-2">
+          <div className="flex-1 p-4 mt-8 overflow-y-auto">
+            {previewContent && (
+              <div className="flex mb-3 -mt-2">
                 <div className="relative w-full max-w-[85%]">
+                  {/* Bubble tail */}
                   {deviceType === 'iphone' && (
                     <div
                       className="absolute w-[20px] h-[20px] rounded-[10px] left-[-14px] bottom-[14px]"
@@ -644,13 +553,11 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                   )}
                   {deviceType !== 'iphone' && (
                     <div
-                      className="absolute left-[-8px] top-0 w-0 h-0 border-t-[8px] border-r-[8px] border-b-0 border-l-0 border-solid border-transparent border-r-[#ffffff]"
-                      style={{ transform: 'translateY(6px)' }}
                     ></div>
                   )}
 
                   <div className="bg-white mt-12 p-3 rounded-lg ml-1 shadow-sm">
-                    {/* Media Header - Updated to use S3 URLs */}
+                    {/* Media Header */}
                     {(form.headerType === 'image' || form.headerType === 'video' || form.headerType === 'document') && form.mediaUrl && (
                       <div className="mb-2">
                         {form.headerText && (
@@ -659,11 +566,10 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                         <div className="bg-gray-200 rounded overflow-hidden">
                           {form.headerType === 'image' && (
                             <img
-                              src={form.mediaUrl} // This will be the S3 URL
+                              src={form.mediaUrl}
                               alt="Header image"
                               className="w-full h-32 object-cover"
                               onError={(e) => {
-                                console.log('Failed to load header image:', form.mediaUrl);
                                 const img = e.target as HTMLImageElement;
                                 if (img && img.style) {
                                   img.style.display = 'none';
@@ -678,13 +584,10 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                           {form.headerType === 'video' && (
                             <div className="relative">
                               <video
-                                src={form.mediaUrl} // This will be the S3 URL
+                                src={form.mediaUrl}
                                 className="w-full h-32 object-cover"
                                 controls={false}
                                 muted
-                                onError={() => {
-                                  console.log('Failed to load header video:', form.mediaUrl);
-                                }}
                               />
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="bg-black bg-opacity-50 rounded-full p-2">
@@ -723,7 +626,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                     )}
 
                     {/* Message Content */}
-                    <div className="text-[12px] max-w-[100%] whitespace-pre-wrap">
+                    <div className="text-[12px] max-w-full whitespace-pre-wrap break-words">
                       <div dangerouslySetInnerHTML={{ __html: formattedContent || "" }} />
                     </div>
 
@@ -738,25 +641,25 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                       <span>{currentTime}</span>
                     </div>
 
-                    {/* Buttons section */}
+                    {/* Buttons section - Updated styling to match create template */}
                     {form.buttons.length > 0 && (
-                      <div className="mt-1 pt-2 border-t border-gray-200">
+                      <div className="mt-1">
                         <div className="space-y-1.5">
                           {displayButtons.map((button, index) => (
                             <button
                               key={index}
-                              className={`w-full text-left gap-2 text-[12px] text-[#0097DF] font-medium flex justify-center items-center ${index < displayButtons.length - 1 ? 'border-b border-gray-200' : ''}`}
+                              className={`w-full text-center gap-2 text-[12px] text-[#0097DF] p-1 bg-gray-100 rounded font-medium flex justify-center items-center ${index < displayButtons.length - 1 ? 'border border-gray-200' : ''}`}
                             >
-                              {button.type === 'URL' && <svg width="13px" height="13px" viewBox="0 0 24 24" fill="#0096DE" xmlns="http://www.w3.org/2000/svg"><path d="M13 3L16.293 6.293L9.29297 13.293L10.707 14.707L17.707 7.707L21 11V3H13Z"></path><path d="M19 19H5V5H12L10 3H5C3.897 3 3 3.897 3 5V19C3 20.103 3.897 21 5 21H19C20.103 21 21 20.103 21 19V14L19 12V19Z"></path></svg>}
+                              {button.type === 'URL' && <svg width="13px" height="13px" className="" viewBox="0 0 24 24" fill="#0096DE" xmlns="http://www.w3.org/2000/svg"><path d="M13 3L16.293 6.293L9.29297 13.293L10.707 14.707L17.707 7.707L21 11V3H13Z"></path><path d="M19 19H5V5H12L10 3H5C3.897 3 3 3.897 3 5V19C3 20.103 3.897 21 5 21H19C20.103 21 21 20.103 21 19V14L19 12V19Z"></path></svg>}
                               {button.type === 'PHONE_NUMBER' && <svg xmlns="http://www.w3.org/2000/svg" width="13px" height="13px" fill="#0096DE" viewBox="0 0 18 18"><path d="M17.01 12.38C15.78 12.38 14.59 12.18 13.48 11.82C13.3061 11.7611 13.1191 11.7523 12.9405 11.7948C12.7618 11.8372 12.5988 11.9291 12.47 12.06L10.9 14.03C8.07 12.68 5.42 10.13 4.01 7.2L5.96 5.54C6.23 5.26 6.31 4.87 6.2 4.52C5.83 3.41 5.64 2.22 5.64 0.99C5.64 0.45 5.19 0 4.65 0H1.19C0.65 0 0 0.24 0 0.99C0 10.28 7.73 18 17.01 18C17.72 18 18 17.37 18 16.82V13.37C18 12.83 17.55 12.38 17.01 12.38Z"></path></svg>}
                               {button.type === 'COPY_CODE' && <svg width="13px" height="13px" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><g clipPath="url(#clip0_38_32111)"><path d="M6.66699 8.33268C6.66699 7.89065 6.84259 7.46673 7.15515 7.15417C7.46771 6.84161 7.89163 6.66602 8.33366 6.66602H15.0003C15.4424 6.66602 15.8663 6.84161 16.1788 7.15417C16.4914 7.46673 16.667 7.89065 16.667 8.33268V14.9993C16.667 15.4414 16.4914 15.8653 16.1788 16.1779C15.8663 16.4904 15.4424 16.666 15.0003 16.666H8.33366C7.89163 16.666 7.46771 16.4904 7.15515 16.1779C6.84259 15.8653 6.66699 15.4414 6.66699 14.9993V8.33268Z" stroke="#0096DE" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"></path><path d="M13.333 6.66732V5.00065C13.333 4.55862 13.1574 4.1347 12.8449 3.82214C12.5323 3.50958 12.1084 3.33398 11.6663 3.33398H4.99967C4.55765 3.33398 4.13372 3.50958 3.82116 3.82214C3.5086 4.1347 3.33301 4.55862 3.33301 5.00065V11.6673C3.33301 12.1093 3.5086 12.5333 3.82116 12.8458C4.13372 13.1584 4.55765 13.334 4.99967 13.334H6.66634" stroke="#0096DE" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"></path></g><defs><clipPath id="clip0_38_32111"><rect width="20" height="20" fill="white"></rect></clipPath></defs></svg>}
-                              {button.text || `Button ${index + 1}`}
+                              {button.text || ``}
                             </button>
                           ))}
-                          {showSeeAllOptions && (
-                            <button className="w-full text-left pt-2 justify-center text-[12px] text-[#0097DF] font-medium flex gap-2 border-t items-center">
+                          {showSeeMoreOptions && (
+                            <button className="w-full text-center pt-2 justify-center text-[12px] text-[#0097DF] font-medium flex gap-2 border-t items-center">
                               <svg width="13px" height="13px" viewBox="0 0 19 16" fill="#0096DE" xmlns="http://www.w3.org/2000/svg"><path d="M2 6.5C1.17 6.5 0.5 7.17 0.5 8C0.5 8.83 1.17 9.5 2 9.5C2.83 9.5 3.5 8.83 3.5 8C3.5 7.17 2.83 6.5 2 6.5ZM2 0.5C1.17 0.5 0.5 1.17 0.5 2C0.5 2.83 1.17 3.5 2 3.5C2.83 3.5 3.5 2.83 3.5 2C3.5 1.17 2.83 0.5 2 0.5ZM2 12.5C1.17 12.5 0.5 13.18 0.5 14C0.5 14.82 1.18 15.5 2 15.5C2.82 15.5 3.5 14.82 3.5 14C3.5 13.18 2.83 12.5 2 12.5ZM5 15H19V13H5V15ZM5 9H19V7H5V9ZM5 1V3H19V1H5Z"></path></svg>
-                              See all options
+                              See more options
                             </button>
                           )}
                         </div>
@@ -2427,7 +2330,7 @@ export default function EditTemplatePage() {
               Template category cannot be changed after creation.
             </p>
 
-            <div className="grid grid-cols-1">
+            <div className="grid grid-cols-1 gap-4">
               {categoryOptions.map((category) => (
                 <div
                   key={category.id}

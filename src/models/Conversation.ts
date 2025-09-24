@@ -54,18 +54,18 @@ export interface IConversation extends Document {
 }
 
 const MessageSchema = new Schema({
-  id: { 
-    type: String, 
-    required: true 
+  id: {
+    type: String,
+    required: true
   },
-  senderId: { 
-    type: String, 
-    enum: ['customer', 'agent', 'system'], 
-    required: true 
+  senderId: {
+    type: String,
+    enum: ['customer', 'agent', 'system'],
+    required: true
   },
-  content: { 
-    type: String, 
-    required: true 
+  content: {
+    type: String,
+    required: true
   },
   messageType: {
     type: String,
@@ -76,28 +76,44 @@ const MessageSchema = new Schema({
     type: String,
     default: null
   },
-  timestamp: { 
-    type: Date, 
-    default: Date.now 
+  timestamp: {
+    type: Date,
+    default: Date.now
   },
   status: {
     type: String,
     enum: ['sent', 'delivered', 'read', 'failed'],
     default: 'sent'
   },
+
+  // Add these new timestamp fields
+  sentAt: {
+    type: Date,
+    default: null
+  },
+  deliveredAt: {
+    type: Date,
+    default: null
+  },
+  readAt: {
+    type: Date,
+    default: null
+  },
+
+
   whatsappMessageId: {
     type: String,
     sparse: true // Allow null/undefined values but create index for existing values
   },
   templateName: String,
-  
+
   // Media fields
   mediaId: String,
   mediaUrl: String,
   mimeType: String,
   fileName: String,
   mediaCaption: String,
-  
+
   // Interactive message data
   interactiveData: {
     type: {
@@ -108,7 +124,7 @@ const MessageSchema = new Schema({
     title: String,
     description: String
   },
-  
+
   // Error handling fields - PROPERLY DEFINED
   errorMessage: {
     type: String,
@@ -118,11 +134,11 @@ const MessageSchema = new Schema({
     type: String,
     default: null
   },
-  retryCount: { 
-    type: Number, 
-    default: 0 
+  retryCount: {
+    type: Number,
+    default: 0
   },
-  
+
   senderName: String
 }, {
   _id: false // Disable automatic _id for subdocuments to avoid conflicts
@@ -204,15 +220,15 @@ ConversationSchema.index({ userId: 1, status: 1, lastMessageAt: -1 });
 ConversationSchema.index({ 'messages.whatsappMessageId': 1 }, { sparse: true });
 
 // Add a method to find messages by WhatsApp message ID
-ConversationSchema.methods.findMessageByWhatsAppId = function(whatsappMessageId: string) {
+ConversationSchema.methods.findMessageByWhatsAppId = function (whatsappMessageId: string) {
   return this.messages.find((msg: any) => msg.whatsappMessageId === whatsappMessageId);
 };
 
 // Add a method to update message status
-ConversationSchema.methods.updateMessageStatus = function(
-  whatsappMessageId: string, 
-  status: string, 
-  errorMessage?: string, 
+ConversationSchema.methods.updateMessageStatus = function (
+  whatsappMessageId: string,
+  status: string,
+  errorMessage?: string,
   errorCode?: string
 ) {
   const message = this.findMessageByWhatsAppId(whatsappMessageId);
@@ -229,24 +245,24 @@ ConversationSchema.methods.updateMessageStatus = function(
 };
 
 // Add a static method to find conversations with failed messages
-ConversationSchema.statics.findWithFailedMessages = function() {
+ConversationSchema.statics.findWithFailedMessages = function () {
   return this.find({
     'messages.status': 'failed'
   });
 };
 
 // Pre-save middleware to ensure data consistency
-ConversationSchema.pre('save', function(next) {
+ConversationSchema.pre('save', function (next) {
   // Ensure unreadCount is never negative
   if (this.unreadCount < 0) {
     this.unreadCount = 0;
   }
-  
+
   // Update isWithin24Hours based on lastMessageAt
   if (this.lastMessageAt) {
     this.isWithin24Hours = this.lastMessageAt.getTime() > (Date.now() - 24 * 60 * 60 * 1000);
   }
-  
+
   // Ensure all messages have required fields
   this.messages.forEach((message: any) => {
     if (!message.id) {
@@ -262,12 +278,12 @@ ConversationSchema.pre('save', function(next) {
       message.retryCount = 0;
     }
   });
-  
+
   next();
 });
 
 // Post-save middleware for logging
-ConversationSchema.post('save', function(doc) {
+ConversationSchema.post('save', function (doc) {
   const failedMessages = doc.messages.filter((msg: any) => msg.status === 'failed');
   if (failedMessages.length > 0) {
     console.log(`Conversation ${doc._id} has ${failedMessages.length} failed messages`);

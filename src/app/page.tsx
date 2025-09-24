@@ -1242,7 +1242,7 @@ const visibleTestimonials = allTestimonials.slice(0, visibleCount);
                     size="lg"
                     className="h-14 px-8 bg-white text-green-700 hover:bg-gray-50 shadow-lg font-semibold text-base"
                   >
-                    <Link href="https://forms.gle/QF4nuFBb9WvcwY5S7" className="flex items-center gap-2">
+                    <Link href="/demo" className="flex items-center gap-2">
                       Book a demo
                       <ArrowRight className="h-4 w-4" />
                     </Link>
