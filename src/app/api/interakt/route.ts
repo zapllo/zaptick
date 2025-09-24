@@ -31,6 +31,100 @@ export async function GET(req: NextRequest) {
   return new Response(challenge ?? 'OK', { status: 200 });
 }
 
+
+
+// ---------- Interakt Partner Events (WABA_ONBOARDED etc.) -------------------
+
+async function processPartnerEvent(value: any) {
+  try {
+    const event = value?.event;
+    if (!event) return;
+
+    // We care about WABA_ONBOARDED for saving credentials
+    if (event === 'WABA_ONBOARDED') {
+      const wabaId = value?.waba_id || value?.waba_info?.waba_id || value?.waba?.id;
+      const phoneNumberId = value?.phone_number_id || value?.waba_info?.phone_number_id;
+      const isvNameToken = value?.isv_name_token;
+      const setupUserId = value?.setup?.userId || value?.waba_info?.setup?.userId;
+
+      if (!wabaId || !phoneNumberId || !isvNameToken) {
+        console.warn('WABA_ONBOARDED missing fields:', { wabaId, phoneNumberId, isvNameToken });
+        return;
+      }
+
+      // Find user to attach WABA to. Prefer setup.userId (we pass this from tp-signup extras)
+      let user = null;
+      if (setupUserId) {
+        user = await User.findById(setupUserId);
+      }
+      if (!user) {
+        // Fallback: find by phoneNumberId if needed (less reliable)
+        user = await User.findOne({ 'wabaAccounts.phoneNumberId': phoneNumberId }) ||
+          await User.findOne({ 'wabaAccounts.wabaId': wabaId });
+      }
+      if (!user) {
+        console.warn('WABA_ONBOARDED: No user found for setupUserId / wabaId / phoneNumberId');
+        return;
+      }
+
+      // Upsert wabaAccounts entry
+      const existsIndex = user.wabaAccounts.findIndex(
+        (acc: any) => acc.wabaId === wabaId && acc.phoneNumberId === phoneNumberId
+      );
+
+      const baseData = {
+        wabaId,
+        phoneNumberId,
+        businessName: '',     // can be enriched via profile API later
+        phoneNumber: '',      // can be enriched via "get phone numbers" API
+        connectedAt: new Date(),
+        status: 'active',
+        isvNameToken,
+        templateCount: 0
+      };
+
+      if (existsIndex >= 0) {
+        // update existing
+        user.wabaAccounts[existsIndex] = {
+          ...user.wabaAccounts[existsIndex].toObject?.() ?? user.wabaAccounts[existsIndex],
+          ...baseData,
+        };
+      } else {
+        user.wabaAccounts.push(baseData as any);
+      }
+
+      await user.save();
+      console.log('✅ WABA_ONBOARDED saved to user:', { userId: user._id, wabaId, phoneNumberId });
+
+      // OPTIONAL: kick off background enrichment (profile/phone details) if you want
+      // await enqueueWabaEnrichmentJob({ userId: user._id.toString(), wabaId, phoneNumberId, isvNameToken });
+    }
+
+    // Optionally handle disconnect
+    if (event === 'WABA_DISCONNECTED') {
+      const wabaId = value?.waba_id;
+      const phoneNumberId = value?.phone_number_id;
+
+      if (wabaId && phoneNumberId) {
+        const user = await User.findOne({ 'wabaAccounts.wabaId': wabaId, 'wabaAccounts.phoneNumberId': phoneNumberId });
+        if (user) {
+          const idx = user.wabaAccounts.findIndex(
+            (a: any) => a.wabaId === wabaId && a.phoneNumberId === phoneNumberId
+          );
+          if (idx >= 0) {
+            user.wabaAccounts[idx].status = 'disconnected';
+            await user.save();
+            console.log('⚠️ WABA_DISCONNECTED marked in DB:', { userId: user._id, wabaId, phoneNumberId });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('processPartnerEvent error:', e);
+  }
+}
+
+
 /* ---------- webhook ------------------------------------------------------ */
 
 export async function POST(req: NextRequest) {
@@ -41,6 +135,12 @@ export async function POST(req: NextRequest) {
 
   const body = JSON.parse(raw);
   const value = body?.entry?.[0]?.changes?.[0]?.value ?? {};
+
+  // Handle Interakt partner/onboarding events (e.g., WABA_ONBOARDED)
+  if (value?.event) {
+    await processPartnerEvent(value);
+  }
+
 
   if (value.messaging_product === 'whatsapp' && value.messages) {
     await processIncomingMessages(value);
@@ -137,7 +237,7 @@ async function processStatusUpdates(v: any) {
   if (!wabaAcc) return;
 
   // Process each status update
- for (const status of v.statuses) {
+  for (const status of v.statuses) {
     try {
       const whatsappMessageId = status.id;
       const statusValue = status.status;
@@ -191,6 +291,7 @@ async function processStatusUpdates(v: any) {
           console.log(`Updated message status to ${statusValue} at ${timestamp} for message ${whatsappMessageId}`);
 
           // Send webhook with timestamp information
+          const contact = await Contact.findById(conversation.contactId);
           if (contact) {
             await sendWebhookForMessage(
               {
@@ -202,12 +303,10 @@ async function processStatusUpdates(v: any) {
                 errorMessage: conversation.messages[messageIndex].errorMessage,
                 errorCode: conversation.messages[messageIndex].errorCode
               },
-              contact,
-              user,
-              wabaAcc,
-              statusValue as 'sent' | 'delivered' | 'read' | 'failed'
+              contact, user, wabaAcc, statusValue as 'sent' | 'delivered' | 'read' | 'failed'
             );
           }
+
         }
       }
     } catch (err) {

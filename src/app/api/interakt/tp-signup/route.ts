@@ -1,118 +1,103 @@
+// /app/api/interakt/tp-signup/route.ts
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 const TP_SIGNUP_URL = 'https://api.interakt.ai/v1/organizations/tp-signup/';
 const INT_API_TOKEN = process.env.INTERAKT_API_TOKEN!;
+const SOLUTION_ID = process.env.NEXT_PUBLIC_SOLUTION_ID!;
 
 export async function POST(request: NextRequest) {
   try {
     const { wabaId, phoneNumberId, businessName, phoneNumber, userId } = await request.json();
 
-    console.log('=== INTERAKT TP SIGNUP API CALL ===');
-    console.log('User ID:', userId);
-    console.log('WABA ID:', wabaId);
-    console.log('Phone Number ID:', phoneNumberId);
-    console.log('Business Name:', businessName);
-    console.log('Phone Number:', phoneNumber);
-
+    // Basic validations
     if (!wabaId || !phoneNumberId) {
-      console.error('❌ Missing required WABA data');
-      return NextResponse.json({
-        error: 'Missing required WABA data',
-        details: 'WABA ID and Phone Number ID are required'
-      }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required data', details: 'wabaId and phoneNumberId are required' },
+        { status: 400 }
+      );
     }
-
     if (!INT_API_TOKEN) {
-      console.error('❌ Missing Interakt API token');
-      return NextResponse.json({
-        error: 'Server configuration error',
-        details: 'Missing Interakt API token'
-      }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Server misconfigured', details: 'Missing INTERAKT_API_TOKEN' },
+        { status: 500 }
+      );
+    }
+    if (!SOLUTION_ID) {
+      return NextResponse.json(
+        { error: 'Server misconfigured', details: 'Missing NEXT_PUBLIC_SOLUTION_ID' },
+        { status: 500 }
+      );
     }
 
-    // Prepare the payload according to Interakt's TP Signup API specification
-    const tpSignupPayload = {
+    // IMPORTANT: Interakt expects solution_id inside waba_info
+    // event must be PARTNER_ADDED
+    // Authorization header is the raw token (no "Bearer ")
+    const payload = {
       object: 'tech_partner',
-      entry: [{
-        changes: [{
-          value: {
-            event: 'PARTNER_ADDED',
-            waba_info: {
-              waba_id: wabaId,
-              phone_number_id: phoneNumberId,
-              business_name: businessName || 'New Business',
-              phone_number: phoneNumber || '',
-              // Include user ID in the setup for tracking
-              setup: {
-                userId: userId,
-              }
-            }
-          }
-        }]
-      }]
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                event: 'PARTNER_ADDED',
+                waba_info: {
+                  waba_id: wabaId,
+                  solution_id: SOLUTION_ID,
+                  ...(phoneNumber ? { phone_number: phoneNumber } : {}),
+                  // we can pass setup metadata; Interakt echoes this in webhook
+                  setup: {
+                    userId: userId ?? null,
+                    businessName: businessName ?? null,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
     };
 
-    console.log('📤 Sending to Interakt TP Signup:', JSON.stringify(tpSignupPayload, null, 2));
-
-    const response = await fetch(TP_SIGNUP_URL, {
+    const res = await fetch(TP_SIGNUP_URL, {
       method: 'POST',
       headers: {
-        // According to Interakt docs, use just the token value, not "Bearer {token}"
-        'Authorization': INT_API_TOKEN,
+        Authorization: INT_API_TOKEN, // token only, no Bearer
         'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
-      body: JSON.stringify(tpSignupPayload),
+      body: JSON.stringify(payload),
     });
 
-    const responseText = await response.text();
-    let responseData;
-
+    const text = await res.text();
+    let data: any = text;
     try {
-      responseData = JSON.parse(responseText);
+      data = JSON.parse(text);
     } catch {
-      responseData = responseText;
+      /* Interakt sometimes returns plain text on errors; keep as-is */
     }
 
-    console.log('📥 Interakt response status:', response.status);
-    console.log('📥 Interakt response:', responseData);
-
-    if (response.ok) {
-      console.log('✅ Interakt TP Signup successful');
-      console.log('⏳ Waiting for WABA_ONBOARDED webhook from Interakt...');
-
-      return NextResponse.json({
-        success: true,
-        message: 'TP Signup initiated successfully',
-        wabaId,
-        phoneNumberId,
-        businessName,
-        response: responseData
-      });
-    } else {
-      console.error('❌ Interakt TP Signup failed');
-
-      let errorMessage = 'TP Signup failed';
-      if (typeof responseData === 'object' && responseData.error) {
-        errorMessage = responseData.error.message || responseData.error;
-      } else if (typeof responseData === 'string') {
-        errorMessage = responseData;
-      }
-
-      return NextResponse.json({
-        error: 'TP Signup failed',
-        details: errorMessage,
-        status: response.status,
-        wabaId,
-        phoneNumberId
-      }, { status: response.status >= 400 && response.status < 500 ? response.status : 500 });
+    if (!res.ok) {
+      // Try to surface useful error
+      const details =
+        (typeof data === 'object' && (data.error?.message || data.error)) || data || 'TP signup failed';
+      return NextResponse.json(
+        { error: 'TP signup failed', status: res.status, details, echo: { wabaId, phoneNumberId } },
+        { status: res.status >= 400 && res.status < 600 ? res.status : 500 }
+      );
     }
 
-  } catch (error) {
-    console.error('❌ Error in TP Signup:', error);
-
+    // Success: Interakt will later ping your webhook with WABA_ONBOARDED
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 500 });
+      success: true,
+      message: 'TP signup initiated. Await WABA_ONBOARDED webhook.',
+      echo: { wabaId, phoneNumberId, userId, businessName, phoneNumber },
+      interakt: data,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: 'Internal error', details: err?.message ?? 'Unknown error' },
+      { status: 500 }
+    );
   }
 }

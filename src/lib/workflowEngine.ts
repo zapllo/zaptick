@@ -1292,7 +1292,6 @@ class WorkflowEngine {
           execution.completedAt = new Date();
         }
       }
-
     } catch (error) {
       console.error('❌ Error continuing workflow:', error);
       execution.status = 'failed';
