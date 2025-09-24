@@ -313,11 +313,20 @@ export default function DashboardPage() {
       }
     };
 
-    const handleWABASignupCompleted = () => {
-      console.log('WABA signup completed, refreshing...');
+    const handleWABASignupCompleted = (event: any) => {
+      console.log('📢 WABA signup completed event received:', event.detail);
+      console.log('   - Database updated:', event.detail?.databaseUpdated);
+      console.log('   - Recovered:', event.detail?.recovered);
+      console.log('   - Credentials count:', event.detail?.credentials?.length);
+
+      // Clear pending state
+      clearPendingState();
+
+      // Wait a moment for backend processing then refresh
       setTimeout(() => {
+        console.log('🔄 Refreshing dashboard data after signup completion...');
         fetchUserData();
-      }, 2000); // Small delay to ensure backend processing
+      }, 2000);
     };
 
     window.addEventListener('wabaConnected', handleWABAConnected);
