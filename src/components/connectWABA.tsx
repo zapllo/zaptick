@@ -89,9 +89,17 @@ export default function ConnectWabaButton() {
       }
     };
 
+    // Update the callTPSignup function with extensive logging
     const callTPSignup = async (wabaData: any) => {
+      console.log('\n🚀 ===== CALLING TP SIGNUP =====');
+      console.log('📤 WABA data being sent:', JSON.stringify(wabaData, null, 2));
+
       try {
-        console.log('🔄 Calling Interakt TP signup:', wabaData);
+        console.log('🌐 Making API call to /api/interakt/tp-signup');
+        console.log('📋 Request details:');
+        console.log('   - Method: POST');
+        console.log('   - Headers: Content-Type: application/json');
+        console.log('   - Body:', JSON.stringify(wabaData, null, 2));
 
         const response = await fetch('/api/interakt/tp-signup', {
           method: 'POST',
@@ -99,18 +107,51 @@ export default function ConnectWabaButton() {
           body: JSON.stringify(wabaData),
         });
 
+        console.log('📡 Response received:');
+        console.log('   - Status:', response.status);
+        console.log('   - OK:', response.ok);
+        console.log('   - Status Text:', response.statusText);
+
+        const result = await response.json();
+        console.log('📥 Response body:', JSON.stringify(result, null, 2));
+
         if (response.ok) {
-          console.log('✅ TP signup successful');
-          alert('WhatsApp Business Account connected successfully!');
-          window.dispatchEvent(new CustomEvent('wabaSignupCompleted'));
+          console.log('✅ TP signup API call successful!');
+          console.log('🎯 Success details:');
+          console.log('   - WABA ID:', result.wabaId);
+          console.log('   - Phone Number ID:', result.phoneNumberId);
+          console.log('   - Database Updated:', result.databaseUpdated);
+
+          // Dispatch custom event for other components to listen
+          const eventDetail = {
+            wabaId: wabaData.wabaId,
+            phoneNumberId: wabaData.phoneNumberId,
+            businessName: wabaData.businessName
+          };
+
+          console.log('📢 Dispatching wabaSignupCompleted event:', eventDetail);
+          window.dispatchEvent(new CustomEvent('wabaSignupCompleted', {
+            detail: eventDetail
+          }));
+
+          alert('✅ WhatsApp Business Account connected successfully!\n\nWABA ID: ' + wabaData.wabaId + '\nPhone ID: ' + wabaData.phoneNumberId);
+
         } else {
-          const error = await response.json();
-          console.error('❌ TP signup failed:', error);
-          alert(`Setup failed: ${error.error || 'Please contact support'}`);
+          console.error('❌ TP signup API call failed');
+          console.error('   - Status:', response.status);
+          console.error('   - Error:', result.error);
+          console.error('   - Details:', result.details);
+
+          alert(`❌ Setup failed: ${result.error || 'Please contact support'}\n\nDetails: ${result.details || 'No additional details'}`);
         }
       } catch (error) {
-        console.error('❌ TP signup error:', error);
-        alert('Setup failed. Please contact support.');
+        console.error('❌ CRITICAL ERROR in TP signup call:', error);
+        console.error('   - Error message:', error instanceof Error ? error.message : 'Unknown error');
+        console.error('   - Stack:', error instanceof Error ? error.stack : 'No stack trace');
+
+        alert('❌ Setup failed due to network error. Please contact support.');
+      } finally {
+        console.log('🏁 ===== TP SIGNUP CALL ENDED =====\n');
       }
     };
 

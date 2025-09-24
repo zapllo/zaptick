@@ -35,92 +35,200 @@ export async function GET(req: NextRequest) {
 
 // ---------- Interakt Partner Events (WABA_ONBOARDED etc.) -------------------
 
+// Add this at the top of the processPartnerEvent function
 async function processPartnerEvent(value: any) {
+  console.log('\n🔔 ===== PROCESSING PARTNER EVENT =====');
+  console.log('📥 Raw partner event value:', JSON.stringify(value, null, 2));
+
   try {
     const event = value?.event;
-    if (!event) return;
+    console.log('🎯 Event type:', event);
 
-    // We care about WABA_ONBOARDED for saving credentials
+    if (!event) {
+      console.log('⚠️ No event type found in partner event');
+      return;
+    }
+
+    // Handle WABA_ONBOARDED
     if (event === 'WABA_ONBOARDED') {
+      console.log('🎉 Processing WABA_ONBOARDED event');
+
+      // Try multiple possible locations for WABA data
       const wabaId = value?.waba_id || value?.waba_info?.waba_id || value?.waba?.id;
-      const phoneNumberId = value?.phone_number_id || value?.waba_info?.phone_number_id;
-      const isvNameToken = value?.isv_name_token;
+      const phoneNumberId = value?.phone_number_id || value?.waba_info?.phone_number_id || value?.phone_number?.id;
+      const isvNameToken = value?.isv_name_token || value?.isvNameToken || value?.waba_info?.isv_name_token;
       const setupUserId = value?.setup?.userId || value?.waba_info?.setup?.userId;
 
-      if (!wabaId || !phoneNumberId || !isvNameToken) {
-        console.warn('WABA_ONBOARDED missing fields:', { wabaId, phoneNumberId, isvNameToken });
+      console.log('📋 Extracted WABA_ONBOARDED data:');
+      console.log('   - WABA ID:', wabaId);
+      console.log('   - Phone Number ID:', phoneNumberId);
+      console.log('   - ISV Name Token:', isvNameToken);
+      console.log('   - Setup User ID:', setupUserId);
+
+      if (!wabaId || !phoneNumberId) {
+        console.warn('❌ WABA_ONBOARDED missing required fields');
+        console.warn('   - WABA ID present:', !!wabaId);
+        console.warn('   - Phone Number ID present:', !!phoneNumberId);
+        console.warn('   - ISV Name Token present:', !!isvNameToken);
         return;
       }
 
-      // Find user to attach WABA to. Prefer setup.userId (we pass this from tp-signup extras)
+      console.log('✅ WABA_ONBOARDED data validation passed');
+
+      // Find user
+      console.log('👤 Looking for user to update...');
       let user = null;
+
       if (setupUserId) {
-        user = await User.findById(setupUserId);
+        console.log('🔍 Searching by setup user ID:', setupUserId);
+        try {
+          user = await User.findById(setupUserId);
+          console.log('📋 User found by setup ID:', user ? 'YES' : 'NO');
+
+          if (user) {
+            console.log('👤 Found user details:');
+            console.log('   - Name:', user.name);
+            console.log('   - Email:', user.email);
+            console.log('   - Current WABA count:', user.wabaAccounts?.length || 0);
+          }
+        } catch (userError) {
+          console.error('❌ Error finding user by setup ID:', userError);
+        }
       }
+
       if (!user) {
-        // Fallback: find by phoneNumberId if needed (less reliable)
-        user = await User.findOne({ 'wabaAccounts.phoneNumberId': phoneNumberId }) ||
-          await User.findOne({ 'wabaAccounts.wabaId': wabaId });
+        console.log('🔍 Fallback: Searching by WABA credentials...');
+        try {
+          user = await User.findOne({
+            $or: [
+              { 'wabaAccounts.phoneNumberId': phoneNumberId },
+              { 'wabaAccounts.wabaId': wabaId }
+            ]
+          });
+          console.log('📋 User found by WABA credentials:', user ? 'YES' : 'NO');
+        } catch (fallbackError) {
+          console.error('❌ Error in fallback user search:', fallbackError);
+        }
       }
+
       if (!user) {
-        console.warn('WABA_ONBOARDED: No user found for setupUserId / wabaId / phoneNumberId');
+        console.warn('❌ WABA_ONBOARDED: No user found for any search criteria');
+        console.warn('   - Setup User ID:', setupUserId);
+        console.warn('   - WABA ID:', wabaId);
+        console.warn('   - Phone Number ID:', phoneNumberId);
         return;
       }
 
-      // Upsert wabaAccounts entry
+      console.log('✅ User found for WABA_ONBOARDED update');
+
+      // Update WABA account
+      console.log('🔄 Updating WABA account in database...');
+
       const existsIndex = user.wabaAccounts.findIndex(
-        (acc: any) => acc.wabaId === wabaId && acc.phoneNumberId === phoneNumberId
+        (acc) => acc.wabaId === wabaId || acc.phoneNumberId === phoneNumberId
       );
 
-      const baseData = {
+      console.log('🔍 Existing WABA account index:', existsIndex);
+
+      const updateData = {
         wabaId,
         phoneNumberId,
-        businessName: '',     // can be enriched via profile API later
-        phoneNumber: '',      // can be enriched via "get phone numbers" API
+        businessName: value?.business_name || value?.waba_info?.business_name || '',
+        phoneNumber: value?.phone_number || value?.waba_info?.phone_number || '',
         connectedAt: new Date(),
         status: 'active',
-        isvNameToken,
+        isvNameToken: isvNameToken || '',
         templateCount: 0
       };
 
+      console.log('📱 WABA update data:');
+      console.log(JSON.stringify(updateData, null, 2));
+
       if (existsIndex >= 0) {
-        // update existing
+        console.log('🔄 Updating existing WABA account');
         user.wabaAccounts[existsIndex] = {
           ...user.wabaAccounts[existsIndex].toObject?.() ?? user.wabaAccounts[existsIndex],
-          ...baseData,
+          ...updateData,
         };
       } else {
-        user.wabaAccounts.push(baseData as any);
+        console.log('➕ Adding new WABA account');
+        user.wabaAccounts.push(updateData);
       }
 
-      await user.save();
-      console.log('✅ WABA_ONBOARDED saved to user:', { userId: user._id, wabaId, phoneNumberId });
+      try {
+        const savedUser = await user.save();
+        console.log('✅ WABA_ONBOARDED: User updated successfully in database');
+        console.log('📱 Final WABA accounts count:', savedUser.wabaAccounts.length);
+        console.log('🎯 Updated WABA details:');
 
-      // OPTIONAL: kick off background enrichment (profile/phone details) if you want
-      // await enqueueWabaEnrichmentJob({ userId: user._id.toString(), wabaId, phoneNumberId, isvNameToken });
+        const updatedWaba = existsIndex >= 0
+          ? savedUser.wabaAccounts[existsIndex]
+          : savedUser.wabaAccounts[savedUser.wabaAccounts.length - 1];
+
+        console.log('   - WABA ID:', updatedWaba.wabaId);
+        console.log('   - Phone Number ID:', updatedWaba.phoneNumberId);
+        console.log('   - Status:', updatedWaba.status);
+        console.log('   - ISV Token:', updatedWaba.isvNameToken);
+
+      } catch (saveError) {
+        console.error('❌ CRITICAL: Failed to save WABA_ONBOARDED update');
+        console.error('   - Error:', saveError);
+        console.error('   - User ID:', user._id);
+        console.error('   - WABA ID:', wabaId);
+        console.error('   - Phone Number ID:', phoneNumberId);
+      }
+
+      console.log('🎉 WABA_ONBOARDED processing completed');
     }
 
-    // Optionally handle disconnect
+    // Handle WABA_DISCONNECTED
     if (event === 'WABA_DISCONNECTED') {
+      console.log('🚫 Processing WABA_DISCONNECTED event');
+
       const wabaId = value?.waba_id;
       const phoneNumberId = value?.phone_number_id;
 
+      console.log('📋 WABA_DISCONNECTED data:');
+      console.log('   - WABA ID:', wabaId);
+      console.log('   - Phone Number ID:', phoneNumberId);
+
       if (wabaId && phoneNumberId) {
-        const user = await User.findOne({ 'wabaAccounts.wabaId': wabaId, 'wabaAccounts.phoneNumberId': phoneNumberId });
+        console.log('🔍 Finding user with WABA to disconnect...');
+
+        const user = await User.findOne({
+          'wabaAccounts.wabaId': wabaId,
+          'wabaAccounts.phoneNumberId': phoneNumberId
+        });
+
         if (user) {
+          console.log('👤 User found for disconnection:', user.email);
+
           const idx = user.wabaAccounts.findIndex(
-            (a: any) => a.wabaId === wabaId && a.phoneNumberId === phoneNumberId
+            (a) => a.wabaId === wabaId && a.phoneNumberId === phoneNumberId
           );
+
           if (idx >= 0) {
+            console.log('🔄 Updating WABA status to disconnected');
             user.wabaAccounts[idx].status = 'disconnected';
+
             await user.save();
-            console.log('⚠️ WABA_DISCONNECTED marked in DB:', { userId: user._id, wabaId, phoneNumberId });
+            console.log('✅ WABA_DISCONNECTED: Status updated successfully');
+          } else {
+            console.warn('⚠️ WABA account not found in user\'s accounts');
           }
+        } else {
+          console.warn('⚠️ User not found for WABA disconnection');
         }
+      } else {
+        console.warn('⚠️ WABA_DISCONNECTED missing required data');
       }
     }
+
   } catch (e) {
-    console.error('processPartnerEvent error:', e);
+    console.error('❌ CRITICAL ERROR in processPartnerEvent:', e);
+    console.error('   - Stack:', e instanceof Error ? e.stack : 'No stack trace');
+  } finally {
+    console.log('🏁 ===== PARTNER EVENT PROCESSING ENDED =====\n');
   }
 }
 
