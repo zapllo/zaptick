@@ -1067,7 +1067,7 @@ class WorkflowEngine {
 
   // Updated method to continue workflow based on user input
 
-  // Update the existing continueWorkflow method to also check for new triggers
+  // Update the continueWorkflow method to handle button clicks for paused condition nodes
   async continueWorkflow(
     workflowId: string,
     contactId: string,
@@ -1144,7 +1144,6 @@ class WorkflowEngine {
       return;
     }
 
-    // Rest of the existing continueWorkflow logic remains the same...
     console.log(`🔄 Continuing workflow execution: ${execution.workflowId}`);
     console.log(`   Current node: ${execution.currentNodeId}`);
     console.log(`   Execution status: ${execution.status}`);
@@ -1177,7 +1176,31 @@ class WorkflowEngine {
         return;
       }
 
-      // Handle button clicks for paused button nodes
+      // Handle button/list clicks for paused condition nodes
+      if (execution.status === 'paused' &&
+        execution.variables.waitingForCondition &&
+        (userInput.messageType === 'button_click' || userInput.messageType === 'list_selection')) {
+
+        console.log(`🔘 Resuming paused condition node with button/list interaction: "${userInput.buttonId || userInput.buttonTitle}"`);
+
+        // Set the button/list data in execution variables for condition evaluation
+        execution.variables.buttonId = userInput.buttonId;
+        execution.variables.buttonTitle = userInput.buttonTitle;
+        execution.variables.triggeredBy = 'interaction';
+        execution.status = 'running';
+        delete execution.variables.waitingForCondition;
+        execution.lastActivity = new Date();
+
+        const executionId = Array.from(this.executions.entries())
+          .find(([_, exec]) => exec === execution)?.[0];
+
+        if (executionId) {
+          await this.executeNextNode(executionId);
+        }
+        return;
+      }
+
+      // Handle button clicks for paused button/list nodes
       if (execution.status === 'paused' &&
         (execution.variables.waitingForButtonInput || execution.variables.waitingForListInput) &&
         (userInput.messageType === 'button_click' || userInput.messageType === 'list_selection')) {
