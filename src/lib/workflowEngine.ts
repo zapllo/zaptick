@@ -703,9 +703,16 @@ class WorkflowEngine {
   ): Promise<string | null> {
     try {
       // Check if we're waiting for user input
-      const waitingForInput = node.data.config?.waitForUserInput !== false; // default true
+      const waitForUserInput = node.data.config?.waitForUserInput !== false; // default true
 
-      if (waitingForInput && !execution.variables.userReply) {
+      // If this execution was triggered by a button/list interaction, use that data immediately
+      const hasInteractionData = execution.variables.buttonId ||
+        execution.variables.buttonTitle ||
+        execution.variables.listId ||
+        execution.variables.listTitle ||
+        execution.variables.triggeredBy === 'interaction';
+
+      if (waitForUserInput && !execution.variables.userReply && !hasInteractionData) {
         console.log(`     ⏸️ Condition node waiting for user input`);
 
         // Mark execution as paused and waiting for input
@@ -716,8 +723,30 @@ class WorkflowEngine {
         return null; // Stop execution here
       }
 
-      // Use user reply if available, otherwise fall back to trigger message
-      const messageContent = (execution.variables.userReply || execution.variables.messageContent || '').toLowerCase();
+      // Use available data in order of priority:
+      // 1. User reply (from text response)
+      // 2. Button/List interaction data
+      // 3. Original trigger message content
+      let messageContent = '';
+
+      if (execution.variables.userReply) {
+        messageContent = execution.variables.userReply.toLowerCase();
+      } else if (hasInteractionData) {
+        // Use button/list data for evaluation
+        messageContent = (
+          execution.variables.buttonTitle ||
+          execution.variables.buttonId ||
+          execution.variables.listTitle ||
+          execution.variables.listId ||
+          execution.variables.messageContent ||
+          ''
+        ).toLowerCase();
+
+        console.log(`     🔘 Using interaction data for condition: "${messageContent}"`);
+      } else {
+        messageContent = (execution.variables.messageContent || '').toLowerCase();
+      }
+
       const conditionType = node.data.config?.conditionType;
       const conditionValue = node.data.config?.conditionValue;
 
@@ -748,9 +777,18 @@ class WorkflowEngine {
 
       console.log(`     ✅ Condition result: ${result}`);
 
-      // Clear the user reply after evaluation
+      // Clear the user reply and interaction data after evaluation
       if (execution.variables.userReply) {
         delete execution.variables.userReply;
+        delete execution.variables.waitingForCondition;
+      }
+
+      // Clear interaction data after use
+      if (hasInteractionData) {
+        delete execution.variables.buttonId;
+        delete execution.variables.buttonTitle;
+        delete execution.variables.listId;
+        delete execution.variables.listTitle;
         delete execution.variables.waitingForCondition;
       }
 
