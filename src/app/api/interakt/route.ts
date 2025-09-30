@@ -49,122 +49,91 @@ async function processPartnerEvent(value: any) {
       return;
     }
 
-    // Handle WABA_ONBOARDED
+    // Handle WABA_ONBOARDED (this is what the webhook sends back)
     if (event === 'WABA_ONBOARDED') {
       console.log('🎉 Processing WABA_ONBOARDED event');
 
-      // Try multiple possible locations for WABA data
-      const wabaId = value?.waba_id || value?.waba_info?.waba_id || value?.waba?.id;
-      const phoneNumberId = value?.phone_number_id || value?.waba_info?.phone_number_id || value?.phone_number?.id;
-      const isvNameToken = value?.isv_name_token || value?.isvNameToken || value?.waba_info?.isv_name_token;
-      const setupUserId = value?.setup?.userId || value?.waba_info?.setup?.userId;
+      // Extract credentials according to the docs response format
+      const wabaId = value?.waba_id;
+      const phoneNumberId = value?.phone_number_id;
+      const isvNameToken = value?.isv_name_token;
 
       console.log('📋 Extracted WABA_ONBOARDED data:');
       console.log('   - WABA ID:', wabaId);
       console.log('   - Phone Number ID:', phoneNumberId);
       console.log('   - ISV Name Token:', isvNameToken);
-      console.log('   - Setup User ID:', setupUserId);
 
       if (!wabaId || !phoneNumberId) {
         console.warn('❌ WABA_ONBOARDED missing required fields');
         console.warn('   - WABA ID present:', !!wabaId);
         console.warn('   - Phone Number ID present:', !!phoneNumberId);
-        console.warn('   - ISV Name Token present:', !!isvNameToken);
         return;
       }
 
       console.log('✅ WABA_ONBOARDED data validation passed');
 
-      // Find user
+      // Find user with this WABA (could be pending from TP signup)
       console.log('👤 Looking for user to update...');
-      let user = null;
-
-      if (setupUserId) {
-        console.log('🔍 Searching by setup user ID:', setupUserId);
-        try {
-          user = await User.findById(setupUserId);
-          console.log('📋 User found by setup ID:', user ? 'YES' : 'NO');
-
-          if (user) {
-            console.log('👤 Found user details:');
-            console.log('   - Name:', user.name);
-            console.log('   - Email:', user.email);
-            console.log('   - Current WABA count:', user.wabaAccounts?.length || 0);
-          }
-        } catch (userError) {
-          console.error('❌ Error finding user by setup ID:', userError);
-        }
-      }
+      let user = await User.findOne({
+        $or: [
+          { 'wabaAccounts.wabaId': wabaId },
+          { 'wabaAccounts.phoneNumberId': phoneNumberId }
+        ]
+      });
 
       if (!user) {
-        console.log('🔍 Fallback: Searching by WABA credentials...');
-        try {
-          user = await User.findOne({
-            $or: [
-              { 'wabaAccounts.phoneNumberId': phoneNumberId },
-              { 'wabaAccounts.wabaId': wabaId }
-            ]
-          });
-          console.log('📋 User found by WABA credentials:', user ? 'YES' : 'NO');
-        } catch (fallbackError) {
-          console.error('❌ Error in fallback user search:', fallbackError);
-        }
-      }
-
-      if (!user) {
-        console.warn('❌ WABA_ONBOARDED: No user found for any search criteria');
-        console.warn('   - Setup User ID:', setupUserId);
+        console.warn('❌ WABA_ONBOARDED: No user found for WABA credentials');
         console.warn('   - WABA ID:', wabaId);
         console.warn('   - Phone Number ID:', phoneNumberId);
         return;
       }
 
       console.log('✅ User found for WABA_ONBOARDED update');
+      console.log('👤 User details:', user.email);
 
-      // Update WABA account
+      // Update WABA account with final credentials
       console.log('🔄 Updating WABA account in database...');
 
-      const existsIndex = user.wabaAccounts.findIndex(
+      const wabaIndex = user.wabaAccounts.findIndex(
         (acc) => acc.wabaId === wabaId || acc.phoneNumberId === phoneNumberId
       );
 
-      console.log('🔍 Existing WABA account index:', existsIndex);
+      console.log('🔍 WABA account index:', wabaIndex);
 
       const updateData = {
         wabaId,
         phoneNumberId,
-        businessName: value?.business_name || value?.waba_info?.business_name || '',
-        phoneNumber: value?.phone_number || value?.waba_info?.phone_number || '',
-        connectedAt: new Date(),
-        status: 'active',
         isvNameToken: isvNameToken || '',
-        templateCount: 0
+        status: 'active',
+        connectedAt: new Date()
       };
 
-      console.log('📱 WABA update data:');
-      console.log(JSON.stringify(updateData, null, 2));
-
-      if (existsIndex >= 0) {
+      if (wabaIndex >= 0) {
         console.log('🔄 Updating existing WABA account');
-        user.wabaAccounts[existsIndex] = {
-          ...user.wabaAccounts[existsIndex].toObject?.() ?? user.wabaAccounts[existsIndex],
+        user.wabaAccounts[wabaIndex] = {
+          ...user.wabaAccounts[wabaIndex].toObject?.() ?? user.wabaAccounts[wabaIndex],
           ...updateData,
         };
       } else {
         console.log('➕ Adding new WABA account');
-        user.wabaAccounts.push(updateData);
+        user.wabaAccounts.push({
+          ...updateData,
+          businessName: 'WhatsApp Business',
+          phoneNumber: '',
+          templateCount: 0
+        });
       }
 
       try {
         const savedUser = await user.save();
         console.log('✅ WABA_ONBOARDED: User updated successfully in database');
         console.log('📱 Final WABA accounts count:', savedUser.wabaAccounts.length);
-        console.log('🎯 Updated WABA details:');
 
-        const updatedWaba = existsIndex >= 0
-          ? savedUser.wabaAccounts[existsIndex]
+        const updatedWaba = wabaIndex >= 0
+          ? savedUser.wabaAccounts[wabaIndex]
           : savedUser.wabaAccounts[savedUser.wabaAccounts.length - 1];
 
+        console.log('🎯 Updated WABA details:');
         console.log('   - WABA ID:', updatedWaba.wabaId);
         console.log('   - Phone Number ID:', updatedWaba.phoneNumberId);
         console.log('   - Status:', updatedWaba.status);
