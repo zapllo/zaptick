@@ -28,13 +28,10 @@ export default function ConnectWabaButton() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-
         const text = await res.text();
         let json: any = text;
-        try { json = JSON.parse(text); } catch {}
-
+        try { json = JSON.parse(text); } catch { }
         log(`📡 TP-signup response [${res.status}]`, json);
-
         if (res.ok) {
           alert("WABA connected! Waiting for final activation (WABA_ONBOARDED)...");
           window.dispatchEvent(new CustomEvent("wabaSignupCompleted"));
@@ -50,53 +47,68 @@ export default function ConnectWabaButton() {
       }
     };
 
+    const safeFacebookOrigin = (origin: string) => {
+      try {
+        const h = new URL(origin).hostname;              // may throw on "", "null"
+        return /(^|\.)facebook\.com$|(^|\.)fb\.com$/i.test(h);
+      } catch {
+        return false;
+      }
+    };
+
     const handleMessage = (event: MessageEvent) => {
-      // Accept FB subdomains safely
-      const origin = event.origin || "";
-      if (!/\.facebook\.com$|\.fb\.com$/i.test(new URL(origin).hostname)) {
-        return;
+      // Loosen for debug, but keep a guard
+      if (!safeFacebookOrigin(event.origin)) {
+        // For first run, log and continue so we can see payloads; tighten later.
+        console.warn("[ConnectWaba] Untrusted origin, but logging for debug:", event.origin);
+        // return;  // <— re-enable once verified
       }
 
-      log("📨 Raw embedded-signup message", event.data);
+      log("📨 postMessage received:", { origin: event.origin, data: event.data });
 
       let data: any = event.data;
       try {
         if (typeof data === "string") data = JSON.parse(data);
-      } catch {
-        // not JSON
-      }
+      } catch { /* non-JSON */ }
 
-      if (data?.type !== "WA_EMBEDDED_SIGNUP") return;
+      // Accept common shapes
+      const isWA = data?.type === "WA_EMBEDDED_SIGNUP" ||
+        data?.source === "WA_EMBEDDED_SIGNUP" ||
+        data?.topic === "WA_EMBEDDED_SIGNUP";
+      if (!isWA && data?.event !== "FINISH") return; // nothing for us
 
-      log("🎯 WA_EMBEDDED_SIGNUP event", data);
+      log("🎯 Embedded Signup event", data);
+
       if (data.event === "FINISH") {
-        const w = data.data || {};
-        const wabaId = w.waba_id || w.wabaId;
-        const businessName = w.business_name || "New Business";
+        const w = data.data || data.payload || {};
+        // Try multiple locations for WABA ID
+        const wabaId =
+          w.waba_id || w.wabaId ||
+          w?.waba?.id || w?.waba?.waba_id ||
+          w?.whatsapp_business_account_id;
 
-        // Some FINISH payloads include MSISDN, not phone_number_id
+        const businessName = w.business_name || w.businessName || "New Business";
         const phoneNumber =
-          w.phone_number || w.display_phone_number || w.phone || "";
+          w.phone_number || w.display_phone_number || w.phone || w?.msisdn || "";
 
-        // REQUIRED by Partner API:
         const solutionId = process.env.NEXT_PUBLIC_SOLUTION_ID;
 
-        log("📦 Extracted from FINISH:", { wabaId, phoneNumber, businessName, solutionId });
+        log("📦 FINISH extracted:", { wabaId, phoneNumber, businessName, solutionId, userId: user?.id });
 
-        if (!wabaId || !solutionId || !user?.id) {
-          log("❌ Missing required TP-signup fields", { wabaId, solutionId, userId: user?.id });
+        if (!solutionId || !user?.id) {
           setIsConnecting(false);
-          alert("Missing WABA ID / Solution ID / User ID. Check env and login.");
+          alert("Missing Solution ID / User ID. Check env and login.");
           return;
         }
 
-        // ✅ DO NOT wait for phone_number_id; send TP-signup now
+        // ✅ Call TP-signup even if wabaId is missing; include raw FINISH so backend can reconcile
         callTPSignup({
-          wabaId,
-          solutionId,
-          phoneNumber: phoneNumber || undefined, // optional
-          businessName,                          // for your DB
           userId: user.id,
+          solutionId,
+          wabaId: wabaId || undefined,
+          phoneNumber: phoneNumber || undefined,
+          businessName,
+          finishPayload: w,           // helps backend/Interakt support edge cases
         });
       } else if (data.event === "CANCEL") {
         log("⚠️ User cancelled signup");
