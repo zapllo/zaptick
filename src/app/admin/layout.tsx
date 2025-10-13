@@ -48,6 +48,12 @@ const navigation = [
         description: 'Manage all platform users'
     },
     {
+        title: 'TP-Signup',
+        href: '/admin/tp-signup',
+        icon: Users,
+        description: 'WABA Onboarding Management'
+    },
+    {
         name: 'Template Rates',
         href: '/admin/template-rates',
         icon: Globe,
@@ -108,7 +114,7 @@ export default function AdminLayout({
             </div>
 
             {/* Navigation */}
-       <nav className="flex-1 space-y-1 px-4 py-4">
+            <nav className="flex-1 space-y-1 px-4 py-4">
                 <div className="space-y-1">
                     {navigation.map((item) => {
                         const isActive = pathname === item.href;
