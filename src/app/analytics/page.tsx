@@ -174,10 +174,10 @@ export default function AnalyticsPage() {
       try {
         const response = await fetch('/api/auth/me');
         if (!response.ok) throw new Error('Failed to fetch user data');
-        
+
         const data = await response.json();
         setUser(data.user);
-        
+
         if (data.user.wabaAccounts?.length > 0) {
           setSelectedWaba(data.user.wabaAccounts[0].wabaId);
         }
@@ -205,7 +205,7 @@ export default function AnalyticsPage() {
         wabaId: selectedWaba
       });
 
-      const response = await fetch(`/api/analytics?${params}`);
+      const response = await fetch(`/api/admin/analytics?${params}`);
       if (!response.ok) throw new Error('Failed to fetch analytics');
 
       const data = await response.json();
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
 
 
 
-  
+
   // Fetch analytics when dependencies change
   useEffect(() => {
     if (selectedWaba) {
@@ -248,14 +248,14 @@ export default function AnalyticsPage() {
     return ((current - previous) / previous * 100).toFixed(1);
   };
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    change, 
-    icon: Icon, 
+  const StatCard = ({
+    title,
+    value,
+    change,
+    icon: Icon,
     color = 'primary',
     suffix = '',
-    loading = false 
+    loading = false
   }: {
     title: string;
     value: number | string;
@@ -398,7 +398,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-4 flex-wrap">
                 {/* WABA Selector */}
                 {/* <Select value={selectedWaba} onValueChange={setSelectedWaba}>
@@ -517,21 +517,21 @@ export default function AnalyticsPage() {
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="day" />
                     <YAxis />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'white', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
                         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="count" 
-                      stroke="#10B981" 
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#10B981"
                       strokeWidth={2}
-                      fillOpacity={1} 
-                      fill="url(#colorMessages)" 
+                      fillOpacity={1}
+                      fill="url(#colorMessages)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -554,7 +554,7 @@ export default function AnalyticsPage() {
                 </div>
                 <Progress value={analytics?.messageMetrics.deliveryRate || 0} className="h-2" />
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Read Rate</span>
@@ -562,7 +562,7 @@ export default function AnalyticsPage() {
                 </div>
                 <Progress value={analytics?.messageMetrics.readRate || 0} className="h-2" />
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Response Rate</span>
@@ -570,7 +570,7 @@ export default function AnalyticsPage() {
                 </div>
                 <Progress value={analytics?.messageMetrics.responseRate || 0} className="h-2" />
               </div>
-              
+
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Avg. Response Time</span>
@@ -732,10 +732,10 @@ export default function AnalyticsPage() {
                         <p className="text-sm font-medium">{template.readRate}%</p>
                         <p className="text-xs text-muted-foreground">Read</p>
                       </div>
-                      {/* 
+                      {/*
                       <Button variant="outline" size="sm">
                         View Details
-                      </Button> 
+                      </Button>
                       */}
                     </div>
                   </div>
@@ -809,14 +809,14 @@ export default function AnalyticsPage() {
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-muted-foreground">{analytics?.messageMetrics.deliveryRate || 0}%</span>
                     <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-green-500 rounded-full transition-all duration-500" 
+                      <div
+                        className="h-full bg-green-500 rounded-full transition-all duration-500"
                         style={{ width: `${analytics?.messageMetrics.deliveryRate || 0}%` }}
                       ></div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
@@ -829,7 +829,7 @@ export default function AnalyticsPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
@@ -864,8 +864,8 @@ export default function AnalyticsPage() {
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-muted-foreground">{item.percentage}%</span>
                       <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary rounded-full transition-all duration-500" 
+                        <div
+                          className="h-full bg-primary rounded-full transition-all duration-500"
                           style={{ width: `${item.percentage}%` }}
                         ></div>
                       </div>
@@ -961,14 +961,14 @@ export default function AnalyticsPage() {
               <div className="space-y-6">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-600">
-                    {analytics?.contactsInRange && analytics?.contactsInPrevious 
+                    {analytics?.contactsInRange && analytics?.contactsInPrevious
                       ? `+${getPercentageChange(analytics.contactsInRange, analytics.contactsInPrevious)}%`
                       : '+0%'
                     }
                   </p>
                   <p className="text-sm text-muted-foreground">Contact Growth</p>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">New Contacts</span>

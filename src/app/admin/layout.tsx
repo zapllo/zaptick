@@ -19,12 +19,34 @@ import {
     CreditCard,
     IndianRupee,
     LogOut,
-    User
+    User,
+    Brain,
+    Activity,
+    Home,
+    Database
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const navigation = [
+    {
+        name: 'Dashboard',
+        href: '/admin/dashboard',
+        icon: Home,
+        description: 'Platform overview and analytics'
+    },
+    {
+        name: 'Companies',
+        href: '/admin/companies',
+        icon: Building2,
+        description: 'Manage all registered companies'
+    },
+    {
+        name: 'Users',
+        href: '/admin/users',
+        icon: Users,
+        description: 'Manage all platform users'
+    },
     {
         name: 'Template Rates',
         href: '/admin/template-rates',
@@ -36,6 +58,12 @@ const navigation = [
         href: '/admin/default-template-rates',
         icon: Target,
         description: 'Configure global default template rates'
+    },
+    {
+        name: 'Analytics',
+        href: '/admin/analytics',
+        icon: BarChart3,
+        description: 'Advanced platform analytics'
     },
 ];
 
@@ -63,22 +91,24 @@ export default function AdminLayout({
             router.push('/login');
         }
     };
+
     const SidebarContent = () => (
         <div className="flex h-full flex-col">
             {/* Logo */}
             <div className="flex h-16 shrink-0 items-center border-b px-6">
                 <div className="flex items-center gap-2">
-                    <div className="flex  items-center justify-center rounded-lg ">
-                        <img src='/tick.png' className='h-12' />
+                    <div className="flex items-center justify-center rounded-lg">
+                        <img src='/tick.png' className='h-12' alt="Logo" />
                     </div>
                     <div>
                         <h1 className="text-lg font-semibold">Admin Panel</h1>
+                        <p className="text-xs text-muted-foreground">System Management</p>
                     </div>
                 </div>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 space-y-1 px-4 py-4">
+       <nav className="flex-1 space-y-1 px-4 py-4">
                 <div className="space-y-1">
                     {navigation.map((item) => {
                         const isActive = pathname === item.href;
@@ -108,13 +138,33 @@ export default function AdminLayout({
                         );
                     })}
                 </div>
+
+                {/* Quick Stats */}
+                <div className="mt-6 pt-4 border-t">
+                    <div className="space-y-2 px-3">
+                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Quick Stats
+                        </h3>
+                        <div className="space-y-1 text-xs">
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">System Status</span>
+                                <span className="text-green-600 font-medium">Operational</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Database</span>
+                                <span className="text-green-600 font-medium">Connected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </nav>
+
             {/* User Profile & Logout */}
             <div className="border-t p-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <IndianRupee className="h-4 w-4" />
-                        <span>Template Rate Management</span>
+                        <Database className="h-4 w-4" />
+                        <span>Admin Console</span>
                     </div>
                 </div>
 
@@ -125,7 +175,7 @@ export default function AdminLayout({
                                 <Avatar className="h-8 w-8">
                                     <AvatarImage src="" />
                                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                        AZ
+                                        SA
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex flex-col items-start text-xs">
@@ -136,7 +186,16 @@ export default function AdminLayout({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
-                            <DropdownMenuSeparator />                          
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                                <User className="mr-2 h-4 w-4" />
+                                Profile Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <Settings className="mr-2 h-4 w-4" />
+                                System Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 onClick={handleLogout}
                                 className="text-red-600 focus:text-red-600 focus:bg-red-50"

@@ -104,13 +104,13 @@ const UserSchema = new Schema<IUser>(
     wabaAccounts: [
       {
         wabaId: { type: String, required: true },
-        phoneNumberId: { type: String, required: true },
+        phoneNumberId: { type: String},
         businessName: { type: String, default: '' },
         phoneNumber: { type: String, default: '' },
         connectedAt: { type: Date, default: Date.now },
         status: {
           type: String,
-          enum: ['active', 'disconnected', 'pending'],
+          enum: ['active', 'disconnected', 'pending', 'failed'],
           default: 'active'
         },
         isvNameToken: { type: String },

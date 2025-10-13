@@ -1,28 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Company from '@/models/Company';
+import User from '@/models/User';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
 
-    const companies = await Company.find(
-      {}, 
-      'name templateRates walletBalance currency industry category location subscriptionPlan subscriptionStatus createdAt isActive'
-    )
-    .sort({ name: 1 })
-    .lean();
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1;
 
-    // Ensure walletBalance is a number and handle any edge cases
-    const processedCompanies = companies.map(company => ({
-      ...company,
-      walletBalance: typeof company.walletBalance === 'number' ? company.walletBalance : 0,
-      currency: company.currency || 'INR'
-    }));
+    const skip = (page - 1) * limit;
+
+    // Build aggregation pipeline
+    const pipeline: any[] = [
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: 'companyId',
+          as: 'users'
+        }
+      },
+      {
+        $addFields: {
+          totalUsers: { $size: '$users' },
+          activeUsers: {
+            $size: {
+              $filter: {
+                input: '$users',
+                cond: { $eq: ['$$this.isActive', true] }
+              }
+            }
+          }
+        }
+      },
+      {
+        $sort: { [sortBy]: sortOrder }
+      },
+      {
+        $skip: skip
+      },
+      {
+        $limit: limit
+      }
+    ];
+
+    const companies = await Company.aggregate(pipeline);
+    const totalCompanies = await Company.countDocuments();
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCompanies / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     return NextResponse.json({
       success: true,
-      companies: processedCompanies
+      companies,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCompanies,
+        hasNextPage,
+        hasPrevPage,
+        limit
+      }
     });
 
   } catch (error) {
@@ -34,30 +79,77 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  try {
+    await dbConnect();
+
+    const body = await req.json();
+
+    // Validate required fields
+    if (!body.name) {
+      return NextResponse.json(
+        { success: false, error: 'Company name is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if company name already exists
+    const existingCompany = await Company.findOne({ name: body.name });
+    if (existingCompany) {
+      return NextResponse.json(
+        { success: false, error: 'Company name already exists' },
+        { status: 400 }
+      );
+    }
+
+    const company = await Company.create({
+      ...body,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Company created successfully',
+      company
+    });
+
+  } catch (error) {
+    console.error('Error creating company:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to create company' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(req: NextRequest) {
   try {
     await dbConnect();
 
     const body = await req.json();
-    const { companyId, walletBalance, currency } = body;
+    const { companyId, walletBalance, aiCredits, currency, ...otherUpdates } = body;
 
-    if (!companyId || walletBalance === undefined || walletBalance === null) {
+    if (!companyId) {
       return NextResponse.json(
-        { success: false, error: 'Company ID and wallet balance are required' },
+        { success: false, error: 'Company ID is required' },
         { status: 400 }
       );
     }
 
-    // Ensure walletBalance is a valid number
-    const numericBalance = parseFloat(walletBalance);
-    if (isNaN(numericBalance) || numericBalance < 0) {
-      return NextResponse.json(
-        { success: false, error: 'Wallet balance must be a valid positive number' },
-        { status: 400 }
-      );
+    const updateData: any = { ...otherUpdates, updatedAt: new Date() };
+
+    // Handle wallet balance update
+    if (typeof walletBalance === 'number') {
+      updateData.walletBalance = Math.max(0, walletBalance);
     }
 
-    const updateData: any = { walletBalance: numericBalance };
+    // Handle AI credits update
+    if (typeof aiCredits === 'number') {
+      updateData.aiCredits = Math.max(0, aiCredits);
+    }
+
+    // Handle currency update
     if (currency) {
       updateData.currency = currency;
     }
@@ -65,7 +157,7 @@ export async function PATCH(req: NextRequest) {
     const company = await Company.findByIdAndUpdate(
       companyId,
       updateData,
-      { new: true, select: 'name walletBalance currency' }
+      { new: true, runValidators: true }
     );
 
     if (!company) {
@@ -77,18 +169,16 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Wallet balance updated successfully',
-      company: {
-        ...company.toObject(),
-        walletBalance: typeof company.walletBalance === 'number' ? company.walletBalance : 0
-      }
+      message: 'Company updated successfully',
+      company
     });
 
   } catch (error) {
-    console.error('Error updating wallet balance:', error);
+    console.error('Error updating company:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update wallet balance' },
+      { success: false, error: 'Failed to update company' },
       { status: 500 }
     );
   }
 }
+

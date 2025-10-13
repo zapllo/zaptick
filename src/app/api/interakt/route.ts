@@ -21,6 +21,7 @@ import Chatbot from '@/models/Chatbot';
 import { generateChatbotResponse } from '@/lib/openai';
 import { WalletService } from '@/lib/wallet-service';
 import { KnowledgeBaseService } from '@/lib/knowledge-base';
+import InteraktPartnerEvent from '@/models/InteraktPartnerEvent';
 
 const INT_TOKEN = process.env.INTERAKT_API_TOKEN;
 
@@ -81,6 +82,13 @@ async function processPartnerEvent(value: any) {
         ]
       });
 
+      await InteraktPartnerEvent.create({
+        eventType: event,
+        wabaId, phoneNumberId,
+        userId: user?._id,
+        raw: value
+      });
+      
       if (!user) {
         console.warn('❌ WABA_ONBOARDED: No user found for WABA credentials');
         console.warn('   - WABA ID:', wabaId);
