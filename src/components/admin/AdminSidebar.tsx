@@ -42,6 +42,12 @@ const navigationItems = [
     description: 'User management and analytics'
   },
   {
+    title: 'TP-Signup',
+    href: '/admin/tp-signup',
+    icon: Users,
+    description: 'WABA Onboarding Management'
+  },
+  {
     title: 'Financial',
     href: '/admin/financial',
     icon: Wallet,
