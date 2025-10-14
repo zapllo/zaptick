@@ -585,7 +585,8 @@ async function processMessage(
             buttonData?.text,
             wabaAcc,
             userId,
-            m.context?.id // The message ID this is replying to
+            m.context?.id,
+            'button'                    // <- ADD THIS
           );
           break;
         }
@@ -612,7 +613,8 @@ async function processMessage(
               buttonReply.title,
               wabaAcc,
               userId,
-              m.context?.id // The message ID this is replying to
+              m.context?.id,
+              'button'                  // <- ADD THIS
             );
 
           } else if (m.interactive?.type === 'list_reply') {
@@ -634,7 +636,8 @@ async function processMessage(
               listReply.title,
               wabaAcc,
               userId,
-              m.context?.id
+              m.context?.id,
+              'list'                    // <- ADD THIS
             );
           }
           break;
@@ -941,64 +944,33 @@ async function checkForWorkflowContinuation(
 // New function to handle workflow continuation based on button/list interactions
 async function checkAndContinueWorkflow(
   contact: any,
-  buttonId: string,
-  buttonTitle: string,
+  idOrPayload: string | undefined,
+  title: string | undefined,
   wabaAcc: any,
   userId: string,
-  contextMessageId?: string
+  contextMsgId: string | undefined,
+  kind: 'button' | 'list'
 ) {
-  try {
-    console.log(`🔄 Checking for workflow continuation: buttonId="${buttonId}", title="${buttonTitle}"`);
-    console.log(`   Contact ID: ${contact._id}`);
-    console.log(`   WABA ID: ${wabaAcc.wabaId}`);
+  const buttonId = (idOrPayload || title || '').trim();
+  const buttonTitle = (title || idOrPayload || '').trim();
 
-    const workflowEngine = WorkflowEngine.getInstance();
-
-    // Get all executions for debugging
-    const allExecutions = workflowEngine.getAllExecutions();
-    console.log(`📋 Total executions in engine: ${allExecutions.length}`);
-
-    // Find any execution for this contact (running or paused)
-    const contactExecutions = allExecutions.filter(exec =>
-      exec.contactId === contact._id.toString()
-    );
-
-    console.log(`👤 Executions for this contact: ${contactExecutions.length}`);
-    contactExecutions.forEach((exec, index) => {
-      console.log(`   Execution ${index + 1}: WorkflowID=${exec.workflowId}, Status=${exec.status}, LastActivity=${exec.lastActivity}`);
-    });
-
-    // Find the most recent execution for this contact
-    const recentExecution = contactExecutions
-      .filter(exec => exec.status === 'running' || exec.status === 'paused')
-      .sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime())[0];
-
-    if (!recentExecution) {
-      console.log('❌ No running/paused workflow execution found for this contact');
-      return;
+  await WorkflowEngine.getInstance().continueWorkflow(
+    '', // empty: allow cold-start
+    contact._id.toString(),
+    {
+      messageType: kind === 'button' ? 'button_click' : 'list_selection',
+      buttonId,
+      buttonTitle,
+      contextMessageId: contextMsgId,
+      timestamp: new Date(),
+      // 🔴 CRITICAL: pass all three IDs so cold-start trigger can run
+      wabaId: wabaAcc.wabaId,               // e.g. "678587558311219"
+      phoneNumberId: wabaAcc.phoneNumberId, // e.g. "824268904098903"
+      userId: userId?.toString?.() ?? userId
     }
-
-    console.log(`✅ Found workflow execution: ${recentExecution.workflowId} (${recentExecution.status})`);
-
-    // Continue the workflow with the button response
-    await workflowEngine.continueWorkflow(
-      recentExecution.workflowId,
-      contact._id.toString(),
-      {
-        buttonId,
-        buttonTitle,
-        contextMessageId,
-        messageType: 'button_click',
-        timestamp: new Date()
-      }
-    );
-
-    console.log(`✅ Workflow continuation attempted for button click: ${buttonId}`);
-
-  } catch (error) {
-    console.error('❌ Error continuing workflow:', error);
-  }
+  );
 }
+
 // Update the checkAndTriggerWorkflows function
 async function checkAndTriggerWorkflows(
   messageContent: string,

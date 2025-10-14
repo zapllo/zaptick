@@ -1068,6 +1068,7 @@ class WorkflowEngine {
   // Updated method to continue workflow based on user input
 
   // Update the continueWorkflow method to handle button clicks for paused condition nodes
+  // ---- PATCH: replace the whole continueWorkflow(...) with this ----
   async continueWorkflow(
     workflowId: string,
     contactId: string,
@@ -1084,55 +1085,70 @@ class WorkflowEngine {
     }
   ): Promise<void> {
     console.log(`🔍 Looking for workflow execution:`);
-    console.log(`   Workflow ID: ${workflowId}`);
+    console.log(`   Workflow ID: ${workflowId || '(empty - cold start allowed)'}`);
     console.log(`   Contact ID: ${contactId}`);
     console.log(`   User input:`, userInput);
 
-    // First, check if this interaction should trigger a new workflow
-    if ((userInput.messageType === 'button_click' || userInput.messageType === 'list_selection') &&
-      userInput.wabaId && userInput.phoneNumberId && userInput.userId) {
+    // Derive IDs from Contact if missing
+    if ((userInput.messageType === 'button_click' || userInput.messageType === 'list_selection')) {
+      if (!userInput.wabaId || !userInput.phoneNumberId || !userInput.userId) {
+        try {
+          const contact = await Contact.findById(contactId);
+          if (contact) {
+            userInput.wabaId = userInput.wabaId || contact.wabaId;
+            userInput.phoneNumberId = userInput.phoneNumberId || contact.phoneNumberId;
+            userInput.userId = userInput.userId || contact.userId?.toString();
+            console.log('🧩 Derived IDs from contact:', {
+              wabaId: userInput.wabaId,
+              phoneNumberId: userInput.phoneNumberId,
+              userId: userInput.userId
+            });
+          }
+        } catch (e) {
+          console.warn('⚠️ Could not derive IDs from contact:', e);
+        }
+      }
+    }
+
+    // ALWAYS attempt cold-start trigger for interactions first
+    if ((userInput.messageType === 'button_click' || userInput.messageType === 'list_selection')
+      && userInput.wabaId && userInput.phoneNumberId && userInput.userId) {
 
       await this.checkAndTriggerFromInteraction(contactId, {
         messageType: userInput.messageType,
         buttonId: userInput.buttonId,
         buttonTitle: userInput.buttonTitle,
-        listId: userInput.buttonId, // List selections use buttonId
-        listTitle: userInput.buttonTitle, // List selections use buttonTitle
+        listId: userInput.buttonId,
+        listTitle: userInput.buttonTitle,
         wabaId: userInput.wabaId,
         phoneNumberId: userInput.phoneNumberId,
         userId: userInput.userId
       });
     }
 
-    // Log all current executions for debugging
+    // Find an existing execution (tolerate empty workflowId)
     const allExecutions = Array.from(this.executions.values());
     console.log(`   📋 Total executions in memory: ${allExecutions.length}`);
     allExecutions.forEach((exec, index) => {
       console.log(`   Execution ${index + 1}: WorkflowID=${exec.workflowId}, ContactID=${exec.contactId}, Status=${exec.status}`);
     });
 
-    // Find matching execution from the Map - try multiple ways to find it
     let execution = Array.from(this.executions.values()).find(
-      exec => exec.workflowId === workflowId &&
+      exec =>
+        (workflowId ? exec.workflowId === workflowId : true) &&
         exec.contactId === contactId &&
         (exec.status === 'running' || exec.status === 'paused')
     );
 
-    // If not found by exact match, try by contact ID only for recent executions
     if (!execution) {
       console.log(`❌ No exact match found, searching by contact ID only...`);
       const candidateExecutions = Array.from(this.executions.values()).filter(
         exec => exec.contactId === contactId &&
           (exec.status === 'running' || exec.status === 'paused') &&
-          (Date.now() - exec.lastActivity.getTime()) < 30 * 60 * 1000 // Within last 30 minutes
+          (Date.now() - exec.lastActivity.getTime()) < 30 * 60 * 1000
       );
 
       console.log(`   Found ${candidateExecutions.length} candidate executions by contact ID`);
-      candidateExecutions.forEach((exec, index) => {
-        console.log(`   Candidate ${index + 1}: WorkflowID=${exec.workflowId}, Status=${exec.status}, LastActivity=${exec.lastActivity}`);
-      });
-
-      // Take the most recent one
       if (candidateExecutions.length > 0) {
         execution = candidateExecutions.sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime())[0];
         console.log(`✅ Found candidate execution: ${execution.workflowId} (${execution.status})`);
@@ -1140,7 +1156,7 @@ class WorkflowEngine {
     }
 
     if (!execution) {
-      console.log('❌ No running/paused execution found to continue');
+      console.log('❌ No running/paused execution found to continue (cold-start was already attempted).');
       return;
     }
 
@@ -1151,39 +1167,30 @@ class WorkflowEngine {
 
     try {
       const workflow = await Workflow.findById(execution.workflowId);
-      if (!workflow) {
-        throw new Error('Workflow not found');
-      }
+      if (!workflow) throw new Error('Workflow not found');
 
-      // Handle text responses for paused condition nodes
+      // Resume paused condition via text
       if (execution.status === 'paused' &&
         execution.variables.waitingForCondition &&
         userInput.messageType === 'text_response') {
 
         console.log(`📝 Resuming paused workflow with text response: "${userInput.textContent}"`);
-
         execution.variables.userReply = userInput.textContent;
         execution.status = 'running';
         delete execution.variables.waitingForCondition;
         execution.lastActivity = new Date();
 
-        const executionId = Array.from(this.executions.entries())
-          .find(([_, exec]) => exec === execution)?.[0];
-
-        if (executionId) {
-          await this.executeNextNode(executionId);
-        }
+        const executionId = Array.from(this.executions.entries()).find(([_, exec]) => exec === execution)?.[0];
+        if (executionId) await this.executeNextNode(executionId);
         return;
       }
 
-      // Handle button/list clicks for paused condition nodes
+      // Resume paused condition via button/list
       if (execution.status === 'paused' &&
         execution.variables.waitingForCondition &&
         (userInput.messageType === 'button_click' || userInput.messageType === 'list_selection')) {
 
-        console.log(`🔘 Resuming paused condition node with button/list interaction: "${userInput.buttonId || userInput.buttonTitle}"`);
-
-        // Set the button/list data in execution variables for condition evaluation
+        console.log(`🔘 Resuming paused condition node with interaction: "${userInput.buttonId || userInput.buttonTitle}"`);
         execution.variables.buttonId = userInput.buttonId;
         execution.variables.buttonTitle = userInput.buttonTitle;
         execution.variables.triggeredBy = 'interaction';
@@ -1191,23 +1198,17 @@ class WorkflowEngine {
         delete execution.variables.waitingForCondition;
         execution.lastActivity = new Date();
 
-        const executionId = Array.from(this.executions.entries())
-          .find(([_, exec]) => exec === execution)?.[0];
-
-        if (executionId) {
-          await this.executeNextNode(executionId);
-        }
+        const executionId = Array.from(this.executions.entries()).find(([_, exec]) => exec === execution)?.[0];
+        if (executionId) await this.executeNextNode(executionId);
         return;
       }
 
-      // Handle button clicks for paused button/list nodes
+      // Resume paused button/list node
       if (execution.status === 'paused' &&
         (execution.variables.waitingForButtonInput || execution.variables.waitingForListInput) &&
         (userInput.messageType === 'button_click' || userInput.messageType === 'list_selection')) {
 
-        console.log(`🔘 Resuming paused workflow with button/list interaction: "${userInput.buttonId}"`);
-
-        // Find the next node based on button/list ID
+        console.log(`🔘 Resuming paused workflow with interaction: "${userInput.buttonId}"`);
         const nextNodeId = this.findNextNodeForButtonClick(
           workflow,
           execution.currentNodeId,
@@ -1223,11 +1224,8 @@ class WorkflowEngine {
           delete execution.variables.waitingForListInput;
           execution.lastActivity = new Date();
 
-          const executionId = Array.from(this.executions.entries())
-            .find(([_, exec]) => exec === execution)?.[0];
-          if (executionId) {
-            await this.executeNextNode(executionId);
-          }
+          const executionId = Array.from(this.executions.entries()).find(([_, exec]) => exec === execution)?.[0];
+          if (executionId) await this.executeNextNode(executionId);
         } else {
           console.log('🏁 No next node found for interaction, completing execution');
           execution.status = 'completed';
@@ -1238,32 +1236,20 @@ class WorkflowEngine {
         return;
       }
 
-      // Handle button/list interactions for running workflows (legacy support)
+      // Legacy running + button/list node
       if (execution.status === 'running') {
         console.log(`🔄 Handling interaction for running workflow`);
 
-        const contact = await Contact.findById(contactId);
-        if (!contact) {
-          throw new Error('Contact not found');
-        }
-
         const user = await User.findById(workflow.userId);
-        if (!user) {
-          throw new Error('User not found');
-        }
+        if (!user) throw new Error('User not found');
 
         const wabaAccount = user.wabaAccounts?.find((acc: any) => acc.wabaId === workflow.wabaId);
-        if (!wabaAccount) {
-          throw new Error('WABA account not found');
-        }
+        if (!wabaAccount) throw new Error('WABA account not found');
 
         const currentNode = workflow.nodes.find((node: any) => node.id === execution.currentNodeId);
-        if (!currentNode) {
-          throw new Error('Current node not found');
-        }
+        if (!currentNode) throw new Error('Current node not found');
 
         let nextNodeId: string | null = null;
-
         if (currentNode.type === 'action' &&
           (currentNode.data.config?.actionType === 'send_button' ||
             currentNode.data.config?.actionType === 'send_list')) {
@@ -1281,11 +1267,8 @@ class WorkflowEngine {
           execution.executionPath.push(nextNodeId);
           execution.lastActivity = new Date();
 
-          const executionId = Array.from(this.executions.entries())
-            .find(([_, exec]) => exec === execution)?.[0];
-          if (executionId) {
-            await this.executeNextNode(executionId);
-          }
+          const executionId = Array.from(this.executions.entries()).find(([_, exec]) => exec === execution)?.[0];
+          if (executionId) await this.executeNextNode(executionId);
         } else {
           console.log('🏁 No next node found, completing execution');
           execution.status = 'completed';
