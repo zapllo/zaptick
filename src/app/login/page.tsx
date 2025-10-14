@@ -92,6 +92,8 @@ export default function LoginPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // ... existing code ...
+
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -112,7 +114,18 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // If credentials are valid, proceed to 2FA
+      // Check if user is admin - skip 2FA for admin
+      if (email.toLowerCase() === 'admin@zaptick.io') {
+        // Login successful for admin, redirect based on role
+        if (data.user.role === 'superadmin') {
+          window.location.href = '/admin/template-rates';
+        } else {
+          window.location.href = '/dashboard';
+        }
+        return;
+      }
+
+      // For non-admin users, proceed to 2FA
       setStep(2);
       setTimeLeft(300); // Reset timer
       setCanResend(false);
@@ -126,6 +139,8 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // ... existing code ...
 
   const sendOTP = async () => {
     try {
@@ -290,7 +305,7 @@ export default function LoginPage() {
               <>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="h-12 w-12 rounded-full overflow-hidden bg-green-50 flex items-center justify-center flex-shrink-0">
-<Smartphone className="h-6 w-6 text-green-600" />
+                    <Smartphone className="h-6 w-6 text-green-600" />
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">Manage on the go</h3>
