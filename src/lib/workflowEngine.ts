@@ -18,6 +18,8 @@ export interface WorkflowExecution {
   lastActivity?: Date;
 }
 
+const norm = (s?: any) => (s == null ? '' : String(s)).toLowerCase().trim();
+
 class WorkflowEngine {
   private static instance: WorkflowEngine;
   private executions = new Map<string, WorkflowExecution>();
@@ -972,7 +974,8 @@ class WorkflowEngine {
     }
   }
 
-  // Add a new method to handle keyword triggers from button/list interactions
+  // Add at top of file if not present:
+
   async checkAndTriggerFromInteraction(
     contactId: string,
     interactionData: {
@@ -989,11 +992,14 @@ class WorkflowEngine {
     try {
       console.log(`🔍 Checking for workflow triggers from interaction:`, interactionData);
 
-      // Extract the keyword from button/list interaction
-      const keyword = (interactionData.buttonTitle ||
+      // The incoming "keyword" we want to match against workflow trigger keywords
+      const keyword = norm(
+        interactionData.buttonTitle ||
         interactionData.buttonId ||
         interactionData.listTitle ||
-        interactionData.listId || '').toLowerCase().trim();
+        interactionData.listId ||
+        ''
+      );
 
       if (!keyword) {
         console.log('❌ No keyword found in interaction data');
@@ -1002,7 +1008,7 @@ class WorkflowEngine {
 
       console.log(`🔑 Extracted keyword from interaction: "${keyword}"`);
 
-      // Find workflows with matching trigger keywords for this user and WABA
+      // Only examine active workflows for this user + WABA
       const workflows = await Workflow.find({
         userId: interactionData.userId,
         wabaId: interactionData.wabaId,
@@ -1013,34 +1019,66 @@ class WorkflowEngine {
       console.log(`📋 Found ${workflows.length} active workflows to check`);
 
       for (const workflow of workflows) {
-        const triggerNode = workflow.nodes.find((node: any) => node.type === 'trigger');
-        if (!triggerNode?.data?.config?.keywords) continue;
+        // Find a trigger node with a config
+        const triggerNode = (workflow.nodes || []).find((n: any) => n?.type === 'trigger');
+        const cfg = triggerNode?.data?.config || {};
 
-        const triggerKeywords = triggerNode.data.config.keywords
-          .map((k: string) => k.toLowerCase().trim())
-          .filter((k: string) => k.length > 0);
+        // Some builders store trigger type; if you use it, keep this check relaxed
+        // e.g. if (cfg.triggerType && cfg.triggerType !== 'keyword') continue;
 
-        console.log(`🎯 Checking workflow "${workflow.name}" with keywords:`, triggerKeywords);
+        // --- NORMALIZE KEYWORDS TO ARRAY -----------------------------------
+        // Accept shapes: array | string (CSV or space/newline separated) | object with 'values'
+        let raw = cfg.keywords;
+        let keywords: string[] = [];
 
-        // Check if any trigger keyword matches the interaction keyword
-        const keywordMatch = triggerKeywords.some((triggerKeyword: string) => {
-          // Exact match
-          if (keyword === triggerKeyword) return true;
+        if (Array.isArray(raw)) {
+          keywords = raw;
+        } else if (typeof raw === 'string') {
+          // split on commas, semicolons, newlines, or multiple spaces
+          keywords = raw
+            .split(/[,\n;]+| {2,}/g)
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+        } else if (raw && typeof raw === 'object') {
+          // common CMS shape: { values: [...] } or { items: [...] }
+          if (Array.isArray((raw as any).values)) keywords = (raw as any).values;
+          else if (Array.isArray((raw as any).items)) keywords = (raw as any).items;
+        }
 
-          // Check if button/list title contains the keyword
-          if (interactionData.buttonTitle &&
-            interactionData.buttonTitle.toLowerCase().includes(triggerKeyword)) return true;
+        // Fallback: some designers save single word under a different field
+        if (keywords.length === 0 && typeof cfg.keyword === 'string') {
+          keywords = [cfg.keyword];
+        }
 
-          if (interactionData.listTitle &&
-            interactionData.listTitle.toLowerCase().includes(triggerKeyword)) return true;
+        // Normalize final list (lowercase/trim, unique)
+        const triggerKeywords = Array.from(
+          new Set(
+            keywords
+              .map(norm)
+              .filter((k: string) => k.length > 0)
+          )
+        );
 
+        console.log(`🎯 Workflow "${workflow.name}" trigger keywords:`, triggerKeywords);
+
+        if (triggerKeywords.length === 0) {
+          // nothing to check for this workflow
+          continue;
+        }
+
+        // Matching strategy:
+        // 1) exact match
+        // 2) allow button text to contain the keyword (e.g., "FBE – Start" contains "fbe")
+        const keywordMatch = triggerKeywords.some((tk: string) => {
+          if (keyword === tk) return true;
+          if (keyword.includes(tk)) return true;
+          // (Optionally) allow prefix/suffix rules, e.g. tk.includes(keyword)
           return false;
         });
 
         if (keywordMatch) {
           console.log(`✅ Keyword match found! Triggering workflow: ${workflow.name}`);
 
-          // Prepare trigger data with interaction context
           const triggerData = {
             messageType: interactionData.messageType,
             messageContent: keyword,
@@ -1052,18 +1090,16 @@ class WorkflowEngine {
             timestamp: new Date()
           };
 
-          // Trigger the workflow
           await this.triggerWorkflow(workflow._id.toString(), contactId, triggerData);
-
-          // Only trigger the first matching workflow to avoid duplicates
+          // Trigger only the first matching workflow to avoid duplicates
           break;
         }
       }
-
     } catch (error) {
       console.error('❌ Error checking workflow triggers from interaction:', error);
     }
   }
+
 
   // Updated method to continue workflow based on user input
 
