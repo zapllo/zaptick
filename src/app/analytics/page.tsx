@@ -300,7 +300,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className={`p-3 rounded-lg ${colorClasses[color]} group-hover:scale-110 transition-transform duration-200`}>
-           <Icon className="h-6 w-6" />
+              <Icon className="h-6 w-6" />
             </div>
           </div>
         </CardContent>
@@ -379,29 +379,29 @@ export default function AnalyticsPage() {
   return (
     <Layout>
       <div className="space-y-8 p-6">
-      {/* Clean Header */}
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-600 rounded-lg">
-                    <BarChart3 className="h-6 w-6 text-white" />
+        {/* Clean Header */}
+        <div className="bg-white rounded-xl border shadow-sm p-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 rounded-lg">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold">
+                      BETA
+                    </Badge>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold">
-                        BETA
-                      </Badge>
-                    </div>
-                    <p className="text-gray-600">Comprehensive insights into your WhatsApp Business performance</p>
-                  </div>
+                  <p className="text-gray-600">Comprehensive insights into your WhatsApp Business performance</p>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-4 flex-wrap">
-                {/* WABA Selector */}
-                {/* <Select value={selectedWaba} onValueChange={setSelectedWaba}>
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* WABA Selector */}
+              {/* <Select value={selectedWaba} onValueChange={setSelectedWaba}>
                   <SelectTrigger className="w-[220px] border-gray-300">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-gray-500" />
@@ -420,44 +420,44 @@ export default function AnalyticsPage() {
                   </SelectContent>
                 </Select> */}
 
-                {/* Time Range Selector */}
-                <Select value={timeRange} onValueChange={setTimeRange}>
-                  <SelectTrigger className="w-[160px] border-gray-300">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <SelectValue />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeRanges?.map((range) => (
-                      <SelectItem key={range.value} value={range.value}>
-                        {range.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Time Range Selector */}
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-[160px] border-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {timeRanges?.map((range) => (
+                    <SelectItem key={range.value} value={range.value}>
+                      {range.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                {/* Action Buttons */}
-                <Button
-                  variant="outline"
-                  onClick={fetchAnalytics}
-                  disabled={refreshing}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
+              {/* Action Buttons */}
+              <Button
+                variant="outline"
+                onClick={fetchAnalytics}
+                disabled={refreshing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
 
-                {/* <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
+              {/* <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
                   <Download className="h-4 w-4" />
                   Export
                   <Badge variant="secondary" className="ml-1 text-xs bg-blue-100 text-blue-800">
                     Beta
                   </Badge>
                 </Button> */}
-              </div>
             </div>
           </div>
+        </div>
 
         {/* Key Metrics */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -487,7 +487,7 @@ export default function AnalyticsPage() {
           />
           <StatCard
             title="Delivery Rate"
-            value={analytics?.messageMetrics.deliveryRate || 0}
+            value={analytics?.messageMetrics?.deliveryRate || 0}
             icon={CheckCircle2}
             color="success"
             suffix="%"
@@ -510,8 +510,8 @@ export default function AnalyticsPage() {
                   <AreaChart data={analytics?.messageTrend || []}>
                     <defs>
                       <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -550,25 +550,25 @@ export default function AnalyticsPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Delivery Rate</span>
-                  <span className="text-sm font-medium">{analytics?.messageMetrics.deliveryRate || 0}%</span>
+                  <span className="text-sm font-medium">{analytics?.messageMetrics?.deliveryRate || 0}%</span>
                 </div>
-                <Progress value={analytics?.messageMetrics.deliveryRate || 0} className="h-2" />
+                <Progress value={analytics?.messageMetrics?.deliveryRate || 0} className="h-2" />
               </div>
 
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Read Rate</span>
-                  <span className="text-sm font-medium">{analytics?.messageMetrics.readRate || 0}%</span>
+                  <span className="text-sm font-medium">{analytics?.messageMetrics?.readRate || 0}%</span>
                 </div>
-                <Progress value={analytics?.messageMetrics.readRate || 0} className="h-2" />
+                <Progress value={analytics?.messageMetrics?.readRate || 0} className="h-2" />
               </div>
 
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Response Rate</span>
-                  <span className="text-sm font-medium">{analytics?.messageMetrics.responseRate || 0}%</span>
+                  <span className="text-sm font-medium">{analytics?.messageMetrics?.responseRate || 0}%</span>
                 </div>
-                <Progress value={analytics?.messageMetrics.responseRate || 0} className="h-2" />
+                <Progress value={analytics?.messageMetrics?.responseRate || 0} className="h-2" />
               </div>
 
               <div className="pt-4 border-t">
@@ -576,7 +576,7 @@ export default function AnalyticsPage() {
                   <span className="text-sm text-muted-foreground">Avg. Response Time</span>
                   <div className="flex items-center gap-1">
                     <Timer className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{analytics?.messageMetrics.responseTime || 0}h</span>
+                    <span className="text-sm font-medium">{analytics?.messageMetrics?.responseTime || 0}h</span>
                   </div>
                 </div>
               </div>
@@ -603,28 +603,28 @@ export default function AnalyticsPage() {
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                       <span className="text-sm text-muted-foreground">Approved</span>
                     </div>
-                    <p className="text-2xl font-bold">{analytics?.templateStats.approved || 0}</p>
+                    <p className="text-2xl font-bold">{analytics?.templateStats?.approved || 0}</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
                       <span className="text-sm text-muted-foreground">Pending</span>
                     </div>
-                    <p className="text-2xl font-bold">{analytics?.templateStats.pending || 0}</p>
+                    <p className="text-2xl font-bold">{analytics?.templateStats?.pending || 0}</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <span className="text-sm text-muted-foreground">Rejected</span>
                     </div>
-                    <p className="text-2xl font-bold">{analytics?.templateStats.rejected || 0}</p>
+                    <p className="text-2xl font-bold">{analytics?.templateStats?.rejected || 0}</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
                       <span className="text-sm text-muted-foreground">Disabled</span>
                     </div>
-                    <p className="text-2xl font-bold">{analytics?.templateStats.disabled || 0}</p>
+                    <p className="text-2xl font-bold">{analytics?.templateStats?.disabled || 0}</p>
                   </div>
                 </div>
 
@@ -634,15 +634,15 @@ export default function AnalyticsPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Marketing</span>
-                      <Badge variant="secondary">{analytics?.templateStats.categories.marketing || 0}</Badge>
+                      <Badge variant="secondary">{analytics?.templateStats?.categories.marketing || 0}</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Authentication</span>
-                      <Badge variant="secondary">{analytics?.templateStats.categories.authentication || 0}</Badge>
+                      <Badge variant="secondary">{analytics?.templateStats?.categories.authentication || 0}</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Utility</span>
-                      <Badge variant="secondary">{analytics?.templateStats.categories.utility || 0}</Badge>
+                      <Badge variant="secondary">{analytics?.templateStats?.categories.utility || 0}</Badge>
                     </div>
                   </div>
                 </div>
@@ -663,26 +663,26 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Total Contacts</p>
-                    <p className="text-2xl font-bold">{analytics?.contactMetrics.total || 0}</p>
+                    <p className="text-2xl font-bold">{analytics?.contactMetrics?.total || 0}</p>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">New Contacts</p>
-                    <p className="text-2xl font-bold text-green-600">{analytics?.contactMetrics.new || 0}</p>
+                    <p className="text-2xl font-bold text-green-600">{analytics?.contactMetrics?.new || 0}</p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Engagement Rate</span>
-                    <span className="text-sm font-medium">{analytics?.contactMetrics.engagementRate || 0}%</span>
+                    <span className="text-sm font-medium">{analytics?.contactMetrics?.engagementRate || 0}%</span>
                   </div>
-                  <Progress value={parseFloat(analytics?.contactMetrics.engagementRate || '0')} className="h-2" />
+                  <Progress value={parseFloat(analytics?.contactMetrics?.engagementRate || '0')} className="h-2" />
                 </div>
 
                 <div className="space-y-3">
                   <h4 className="font-medium">Recent Activity</h4>
                   <div className="space-y-2">
-                    {analytics?.recentMessages.slice(0, 3).map((message, index) => (
+                    {analytics?.recentMessages?.slice(0, 3).map((message, index) => (
                       <div key={message.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                         <div className={`w-2 h-2 rounded-full ${message.read ? 'bg-green-500' : 'bg-blue-500'} animate-pulse`}></div>
                         <div className="flex-1 min-w-0">
@@ -709,8 +709,8 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics?.templateStats.mostUsed.length > 0 ? (
-                analytics.templateStats.mostUsed.map((template, index) => (
+              {analytics?.templateStats?.mostUsed.length > 0 ? (
+                analytics.templateStats?.mostUsed.map((template, index) => (
                   <div key={template.name} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-lg">
@@ -729,7 +729,7 @@ export default function AnalyticsPage() {
                         <p className="text-xs text-muted-foreground">Delivery</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-sm font-medium">{template.readRate}%</p>
+                        <p className="text-sm font-medium">{template?.readRate}%</p>
                         <p className="text-xs text-muted-foreground">Read</p>
                       </div>
                       {/*
@@ -764,7 +764,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {analytics?.recentMessages.length > 0 ? (
+              {analytics?.recentMessages?.length > 0 ? (
                 analytics.recentMessages.map((message, index) => (
                   <div key={message.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex-shrink-0 p-2 bg-primary/10 rounded-lg">
@@ -917,9 +917,9 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center">
-                <ProgressRing progress={analytics?.messageTypesData.text || 0} size={120} color="#10B981">
+                <ProgressRing progress={analytics?.messageTypesData?.text || 0} size={120} color="#10B981">
                   <div className="text-center">
-                    <p className="text-xl font-bold">{analytics?.messageTypesData.text || 0}%</p>
+                    <p className="text-xl font-bold">{analytics?.messageTypesData?.text || 0}%</p>
                     <p className="text-xs text-muted-foreground">Text</p>
                   </div>
                 </ProgressRing>
@@ -930,21 +930,21 @@ export default function AnalyticsPage() {
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-sm">Text Messages</span>
                   </div>
-                  <span className="text-sm font-medium">{analytics?.messageTypesData.text || 0}%</span>
+                  <span className="text-sm font-medium">{analytics?.messageTypesData?.text || 0}%</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                     <span className="text-sm">Templates</span>
                   </div>
-                  <span className="text-sm font-medium">{analytics?.messageTypesData.template || 0}%</span>
+                  <span className="text-sm font-medium">{analytics?.messageTypesData?.template || 0}%</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                     <span className="text-sm">Media</span>
                   </div>
-                  <span className="text-sm font-medium">{analytics?.messageTypesData.media || 0}%</span>
+                  <span className="text-sm font-medium">{analytics?.messageTypesData?.media || 0}%</span>
                 </div>
               </div>
             </CardContent>
@@ -985,7 +985,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Engagement</span>
-                    <span className="text-sm font-medium text-green-600">{analytics?.contactMetrics.engagementRate || 0}%</span>
+                    <span className="text-sm font-medium text-green-600">{analytics?.contactMetrics?.engagementRate || 0}%</span>
                   </div>
                 </div>
 
@@ -1013,17 +1013,17 @@ export default function AnalyticsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Active Campaigns</span>
-                  <Badge variant="outline">{analytics?.campaignMetrics.active || 0}</Badge>
+                  <Badge variant="outline">{analytics?.campaignMetrics?.active || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Total Sent</span>
-                <span className="text-sm font-medium">{formatNumber(analytics?.campaignMetrics.totalSent || 0)}</span>
+                  <span className="text-sm font-medium">{formatNumber(analytics?.campaignMetrics?.totalSent || 0)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Conversion Rate</span>
-                  <span className="text-sm font-medium">{analytics?.campaignMetrics.conversionRate || 0}%</span>
+                  <span className="text-sm font-medium">{analytics?.campaignMetrics?.conversionRate || 0}%</span>
                 </div>
-                <Progress value={analytics?.campaignMetrics.conversionRate || 0} className="h-2" />
+                <Progress value={analytics?.campaignMetrics?.conversionRate || 0} className="h-2" />
               </div>
             </CardContent>
           </Card>
@@ -1040,17 +1040,17 @@ export default function AnalyticsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Active Workflows</span>
-                  <Badge variant="outline">{analytics?.workflowMetrics.active || 0}</Badge>
+                  <Badge variant="outline">{analytics?.workflowMetrics?.active || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Total Executions</span>
-                  <span className="text-sm font-medium">{formatNumber(analytics?.workflowMetrics.totalExecutions || 0)}</span>
+                  <span className="text-sm font-medium">{formatNumber(analytics?.workflowMetrics?.totalExecutions || 0)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Time Saved</span>
-                  <span className="text-sm font-medium">{analytics?.workflowMetrics.timeSaved || 0}h</span>
+                  <span className="text-sm font-medium">{analytics?.workflowMetrics?.timeSaved || 0}h</span>
                 </div>
-                <Progress value={Math.min((analytics?.workflowMetrics.timeSaved || 0) * 2, 100)} className="h-2" />
+                <Progress value={Math.min((analytics?.workflowMetrics?.timeSaved || 0) * 2, 100)} className="h-2" />
               </div>
             </CardContent>
           </Card>
@@ -1067,17 +1067,17 @@ export default function AnalyticsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">This Period</span>
-                  <span className="text-sm font-medium">₹{analytics?.costMetrics.thisMonth || 0}</span>
+                  <span className="text-sm font-medium">₹{analytics?.costMetrics?.thisMonth || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Cost per Message</span>
-                  <span className="text-sm font-medium">₹{analytics?.costMetrics.costPerMessage || 0}</span>
+                  <span className="text-sm font-medium">₹{analytics?.costMetrics?.costPerMessage || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Savings vs Email</span>
-                  <span className="text-sm font-medium text-green-600">{analytics?.costMetrics.savingsVsEmail || 0}%</span>
+                  <span className="text-sm font-medium text-green-600">{analytics?.costMetrics?.savingsVsEmail || 0}%</span>
                 </div>
-                <Progress value={analytics?.costMetrics.savingsVsEmail || 0} className="h-2" />
+                <Progress value={analytics?.costMetrics?.savingsVsEmail || 0} className="h-2" />
               </div>
             </CardContent>
           </Card>
