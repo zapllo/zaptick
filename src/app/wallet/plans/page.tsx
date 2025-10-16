@@ -82,8 +82,8 @@ const plans: PricingPlan[] = [
     description: "Build simple bots",
     tagline: "Perfect for small businesses getting started",
     price: {
-      quarterly: 8832, // ₹2500 * 3 months + 18% GST = ₹8,832
-      yearly: 2500 // Display yearly as the base price per month
+      quarterly: 5999, // ₹2500 * 3 months + 18% GST = ₹8,832
+      yearly: 1599 // Display yearly as the base price per month
     },
     yearlyDiscount: 15,
     features: [
@@ -114,8 +114,8 @@ const plans: PricingPlan[] = [
     description: "Build complex bots",
     tagline: "Advanced features for growing businesses",
     price: {
-      quarterly: 12390, // ₹3500 * 3 months + 18% GST = ₹12,390
-      yearly: 3500 // Display yearly as the base price per month
+      quarterly: 8999, // ₹3500 * 3 months + 18% GST = ₹12,390
+      yearly: 2599 // Display yearly as the base price per month
     },
     yearlyDiscount: 15,
     features: [
@@ -259,7 +259,14 @@ export default function PricingPage() {
 
   const getCurrentPrice = (plan: PricingPlan) => {
     if (plan.id === 'advanced') return 0;
-    return isYearly ? plan.price.yearly : plan.price.quarterly;
+
+    if (isYearly) {
+      // For yearly, multiply monthly price by 12
+      return plan.price.yearly * 12;
+    } else {
+      // For quarterly, show quarterly price
+      return plan.price.quarterly;
+    }
   };
 
   const isCurrentPlan = (planId: string) => {
@@ -276,146 +283,146 @@ export default function PricingPage() {
     return selectedIndex < currentIndex;
   };
 
-const handleSubscribe = async (planId: string) => {
-  if (!agreedToTerms) {
-    toast({
-      title: "Terms Required",
-      description: "Please agree to the terms and conditions to proceed.",
-      variant: "destructive",
-    });
-    return;
-  }
+  const handleSubscribe = async (planId: string) => {
+    if (!agreedToTerms) {
+      toast({
+        title: "Terms Required",
+        description: "Please agree to the terms and conditions to proceed.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  if (planId === "advanced") {
-    window.location.href = "mailto:sales@zaptick.com?subject=Advanced Plan Inquiry";
-    return;
-  }
+    if (planId === "advanced") {
+      window.location.href = "mailto:sales@zaptick.com?subject=Advanced Plan Inquiry";
+      return;
+    }
 
-  setLoading(planId);
+    setLoading(planId);
 
-  try {
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) throw new Error("Plan not found");
+    try {
+      const plan = plans.find(p => p.id === planId);
+      if (!plan) throw new Error("Plan not found");
 
-    const baseAmount = getCurrentPrice(plan);
-    const totalAmount = Math.round(baseAmount * 1.18); // Add 18% GST
+      const baseAmount = getCurrentPrice(plan);
+      const totalAmount = Math.round(baseAmount * 1.18); // Add 18% GST
 
-    // Create Razorpay order
-    const orderResponse = await fetch('/api/create-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: totalAmount * 100, // Convert to paise
+      // Create Razorpay order
+      const orderResponse = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: totalAmount * 100, // Convert to paise
+          currency: 'INR',
+          receipt: `plan_${planId}_${Date.now()}`,
+          notes: {
+            plan_id: planId,
+            plan_name: plan.name,
+            billing_cycle: isYearly ? 'yearly' : 'quarterly',
+            base_amount: baseAmount,
+            total_amount: totalAmount
+          }
+        }),
+      });
+
+      const { orderId } = await orderResponse.json();
+
+      // Initialize Razorpay
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: totalAmount * 100, // Amount in paise with GST
         currency: 'INR',
-        receipt: `plan_${planId}_${Date.now()}`,
-        notes: {
-          plan_id: planId,
-          plan_name: plan.name,
-          billing_cycle: isYearly ? 'yearly' : 'quarterly',
-          base_amount: baseAmount,
-          total_amount: totalAmount
-        }
-      }),
-    });
-
-    const { orderId } = await orderResponse.json();
-
-    // Initialize Razorpay
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: totalAmount * 100, // Amount in paise with GST
-      currency: 'INR',
-      name: 'Zaptick',
-      description: `${plan.name} - ${isYearly ? 'yearly' : 'quarterly'} subscription (incl. 18% GST)`,
-      order_id: orderId,
-      handler: async function (response: any) {
-        try {
-          const verifyResponse = await fetch('/api/verify-payment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            }),
-          });
-
-          const verifyResult = await verifyResponse.json();
-
-          if (verifyResult.success) {
-            await fetch('/api/subscription/update', {
+        name: 'Zaptick',
+        description: `${plan.name} - ${isYearly ? 'yearly' : 'quarterly'} subscription (incl. 18% GST)`,
+        order_id: orderId,
+        handler: async function (response: any) {
+          try {
+            const verifyResponse = await fetch('/api/verify-payment', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                plan_id: planId,
-                billing_cycle: isYearly ? 'yearly' : 'quarterly',
-                payment_id: response.razorpay_payment_id,
-                order_id: response.razorpay_order_id,
-                base_amount: baseAmount,
-                total_amount: totalAmount
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
               }),
             });
 
-            toast({
-              title: "Subscription Activated!",
-              description: `Your ${plan.name} plan has been activated successfully.`,
-            });
+            const verifyResult = await verifyResponse.json();
 
-            // Refresh subscription data
-            const updatedResponse = await fetch('/api/auth/me');
-            if (updatedResponse.ok) {
-              const updatedData = await updatedResponse.json();
-              if (updatedData.user.subscription) {
-                setCurrentSubscription(updatedData.user.subscription);
+            if (verifyResult.success) {
+              await fetch('/api/subscription/update', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  plan_id: planId,
+                  billing_cycle: isYearly ? 'yearly' : 'quarterly',
+                  payment_id: response.razorpay_payment_id,
+                  order_id: response.razorpay_order_id,
+                  base_amount: baseAmount,
+                  total_amount: totalAmount
+                }),
+              });
+
+              toast({
+                title: "Subscription Activated!",
+                description: `Your ${plan.name} plan has been activated successfully.`,
+              });
+
+              // Refresh subscription data
+              const updatedResponse = await fetch('/api/auth/me');
+              if (updatedResponse.ok) {
+                const updatedData = await updatedResponse.json();
+                if (updatedData.user.subscription) {
+                  setCurrentSubscription(updatedData.user.subscription);
+                }
               }
+
+              router.push('/wallet');
+            } else {
+              throw new Error('Payment verification failed');
             }
-
-            router.push('/wallet');
-          } else {
-            throw new Error('Payment verification failed');
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            toast({
+              title: "Payment Error",
+              description: "There was an issue verifying your payment. Please contact support.",
+              variant: "destructive",
+            });
           }
-        } catch (error) {
-          console.error('Payment verification error:', error);
-          toast({
-            title: "Payment Error",
-            description: "There was an issue verifying your payment. Please contact support.",
-            variant: "destructive",
-          });
+        },
+        prefill: {
+          name: 'Customer',
+          email: 'customer@example.com',
+        },
+        theme: {
+          color: '#1D4B3E',
+        },
+        modal: {
+          ondismiss: function () {
+            setLoading(null);
+          }
         }
-      },
-      prefill: {
-        name: 'Customer',
-        email: 'customer@example.com',
-      },
-      theme: {
-        color: '#1D4B3E',
-      },
-      modal: {
-        ondismiss: function () {
-          setLoading(null);
-        }
-      }
-    };
+      };
 
-    const razorpay = new (window as any).Razorpay(options);
-    razorpay.open();
-  } catch (error) {
-    console.error('Subscription error:', error);
-    toast({
-      title: "Error",
-      description: "Failed to initiate subscription. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(null);
-  }
-};
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error('Subscription error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initiate subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
   // Load Razorpay script
   useEffect(() => {
     const script = document.createElement('script');
@@ -497,7 +504,7 @@ const handleSubscribe = async (planId: string) => {
             >
               Yearly
               <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 border-0">
-                Save 15%
+                Save upto 20%
               </Badge>
             </button>
           </div>
@@ -617,7 +624,7 @@ const handleSubscribe = async (planId: string) => {
 
                   {/* Popular Badge */}
                   {plan.popular && !isCurrentPlan(plan.id) && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-primary/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
+                    <div className="absolute  -right-12 top-1 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-primary to-primary/90 px-3 py-1 text-xs font-medium text-white shadow-lg">
                       <Star className="h-3 w-3 fill-current" />
                       Most Popular
                     </div>
@@ -646,7 +653,7 @@ const handleSubscribe = async (planId: string) => {
                             ₹{getCurrentPrice(plan).toLocaleString()}
                           </span>
                           <span className="text-gray-600">
-                            {isYearly ? '/mo' : '/qtr'}
+                            {isYearly ? '/year' : '/qtr'}
                           </span>
                         </div>
                         <div className="text-xs text-gray-500">
@@ -655,7 +662,7 @@ const handleSubscribe = async (planId: string) => {
                               Billed annually
                               {plan.yearlyDiscount && (
                                 <span className="text-green-600 font-medium ml-1">
-                                  (Save {plan.yearlyDiscount}%)
+                                  (Save upto 20%)
                                 </span>
                               )}
                             </>
@@ -663,6 +670,12 @@ const handleSubscribe = async (planId: string) => {
                             'Billed quarterly'
                           )}
                         </div>
+                        {/* Show monthly equivalent for yearly plans */}
+                        {isYearly && (
+                          <div className="text-xs text-gray-500">
+                            ₹{plan.price.yearly.toLocaleString()}/month when paid yearly
+                          </div>
+                        )}
                         <div className="text-xs text-gray-500">+ 18% GST</div>
                       </div>
                     )}

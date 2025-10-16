@@ -19,11 +19,19 @@ import {
   Settings,
   Activity,
   ChevronRight,
-  X
+  X,
+  Crown,
+  Star,
+  TrendingUp,
+  Rocket,
+  Lock,
+  Lightbulb,
+  CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/layout/Layout";
+import Link from "next/link";
 
 interface AutomationsLayoutProps {
   children: React.ReactNode;
@@ -31,6 +39,7 @@ interface AutomationsLayoutProps {
 
 interface UserSubscription {
   plan: string;
+  planName: string;
   status: 'active' | 'expired' | 'cancelled';
   endDate?: string;
 }
@@ -67,6 +76,8 @@ const navigationItems = [
   }
 ];
 
+const RESTRICTED_PLANS = ['starter', 'free'];
+
 export default function AutomationsLayout({ children }: AutomationsLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -99,6 +110,8 @@ export default function AutomationsLayout({ children }: AutomationsLayoutProps) 
     }
     return pathname.startsWith(href);
   };
+
+  const isRestrictedPlan = userSubscription?.plan && RESTRICTED_PLANS.includes(userSubscription.plan);
 
   // Show loading screen while checking subscription
   if (isCheckingSubscription) {
@@ -231,14 +244,158 @@ export default function AutomationsLayout({ children }: AutomationsLayoutProps) 
     );
   }
 
-  // Render normal layout with sidebar if subscription is active
+  // Show upgrade screen for starter/free plans
+  if (isRestrictedPlan) {
+    return (
+      <Layout>
+        <div className="h-screen mt-36 flex items-center justify-center bg-gradient-to-br from-background via-purple-50/20 to-background wark:from-slate-900 wark:via-purple-900/10 wark:to-slate-900/50 p-4">
+          <div className="group relative overflow-hidden rounded-2xl border bg-gradient-to-br from-white to-purple-50/30 wark:from-slate-800 wark:to-purple-900/10 p-8 shadow-xl transition-all duration-300 hover:shadow-2xl hover:border-purple-200 wark:hover:border-purple-700 max-w-2xl w-full">
+            {/* Header Section */}
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg transition-all duration-300 group-hover:scale-110">
+                  <Rocket className="h-10 w-10 text-white" />
+                </div>
+                <div className="text-left">
+                  <h1 className="text-3xl font-bold text-gray-900 wark:text-white mb-2">
+                    Unlock Automation Power
+                  </h1>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 wark:bg-orange-900/30 px-3 py-1.5 text-sm font-medium text-orange-700 wark:text-orange-300 shadow-sm border border-orange-200 wark:border-orange-700">
+                      <Crown className="h-4 w-4" />
+                      {userSubscription?.planName || 'Starter'} Plan
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-purple-600 wark:text-purple-400 font-medium">Growth+ Required</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Features Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="text-center p-6 rounded-xl bg-blue-50/50 wark:bg-blue-900/20 border border-blue-100 wark:border-blue-800 transition-all duration-300 hover:scale-105">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mx-auto mb-4">
+                  <Bot className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="font-semibold text-blue-900 wark:text-blue-100 mb-2">Smart Auto Replies</h3>
+                <p className="text-sm text-blue-700 wark:text-blue-300">Intelligent keyword-based responses that handle customer inquiries 24/7</p>
+              </div>
+
+              <div className="text-center p-6 rounded-xl bg-green-50/50 wark:bg-green-900/20 border border-green-100 wark:border-green-800 transition-all duration-300 hover:scale-105">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg mx-auto mb-4">
+                  <Workflow className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="font-semibold text-green-900 wark:text-green-100 mb-2">Advanced Workflows</h3>
+                <p className="text-sm text-green-700 wark:text-green-300">Multi-step sequences that guide customers through complex interactions</p>
+              </div>
+
+              <div className="text-center p-6 rounded-xl bg-purple-50/50 wark:bg-purple-900/20 border border-purple-100 wark:border-purple-800 transition-all duration-300 hover:scale-105">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg mx-auto mb-4">
+                  <Sparkles className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="font-semibold text-purple-900 wark:text-purple-100 mb-2">AI Chatbots</h3>
+                <p className="text-sm text-purple-700 wark:text-purple-300">Conversational AI that understands context and provides human-like responses</p>
+              </div>
+            </div>
+
+            {/* Benefits Section */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 wark:from-slate-800/50 wark:to-slate-700/30 rounded-xl p-6 mb-8">
+              <div className="flex items-start gap-3 mb-4">
+                <Lightbulb className="h-6 w-6 text-amber-500 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-gray-900 wark:text-white mb-2">Why upgrade to Growth plan?</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 text-amber-500" />
+                      <span className="text-gray-700 wark:text-gray-300">Save time with automated responses</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 text-amber-500" />
+                      <span className="text-gray-700 wark:text-gray-300">24/7 customer support automation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 text-amber-500" />
+                      <span className="text-gray-700 wark:text-gray-300">Increase customer satisfaction</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-4 w-4 text-amber-500" />
+                      <span className="text-gray-700 wark:text-gray-300">Scale your business efficiently</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Locked Features List */}
+            <div className="mb-8">
+              <h4 className="font-semibold text-gray-900 wark:text-white mb-4 flex items-center gap-2">
+                <Lock className="h-5 w-5 text-gray-500" />
+                Currently Locked Features
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  "Unlimited auto replies",
+                  "Advanced trigger matching",
+                  "Multi-step workflows",
+                  "AI-powered chatbots",
+                  "Template message support",
+                  "Priority customer support",
+                  "Advanced analytics",
+                  "Team collaboration"
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm text-gray-600 wark:text-gray-400">
+                    <Lock className="h-3 w-3 text-gray-400" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-4" style={{ position: 'relative', zIndex: 9999 }}>
+              <Button
+                onClick={() => router.push('/wallet/plans')}
+                className="w-full cursor-pointer h-14 bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] text-lg"
+                size="lg"
+              >
+                <TrendingUp className="h-6 w-6 mr-3" />
+                Upgrade to Growth Plan
+                <ArrowRight className="h-5 w-5 ml-3" />
+              </Button>
+
+              <div className="flex items-center justify-center gap-4 text-xs text-gray-500 wark:text-gray-400">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span>30-day money-back guarantee</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span>Instant activation</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Decorative Elements */}
+            <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-purple-500/10 wark:bg-purple-400/20 transition-all duration-300 group-hover:scale-110" />
+            <div className="absolute -left-8 -bottom-8 h-20 w-20 rounded-full bg-blue-400/20 wark:bg-blue-300/30 transition-all duration-300 group-hover:scale-125" />
+
+            {/* Subtle Pattern Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Render normal layout with sidebar if subscription allows automation
   return (
     <Layout>
       <div className="flex h-full bg-gradient-to-br from-slate-50 via-white to-slate-100/50 wark:from-slate-900 wark:via-slate-800 wark:to-slate-900/50">
         {/* Sidebar */}
         <div className={cn(
           "border-r bg-gradient-to-b from-white to-slate-50/50 wark:from-slate-800 wark:to-slate-900/50 border-slate-200 wark:border-slate-700 transition-all duration-300",
-          sidebarCollapsed ? "w-20" : "w-72"
+          sidebarCollapsed ? "w-20" : "w-80"
         )}>
           <div className="flex h-full flex-col">
             {/* Header */}
@@ -260,8 +417,6 @@ export default function AutomationsLayout({ children }: AutomationsLayoutProps) 
               </div>
             </div>
 
-
-
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
               {navigationItems.map((item, index) => {
@@ -272,7 +427,7 @@ export default function AutomationsLayout({ children }: AutomationsLayoutProps) 
                     <Button
                       variant="ghost"
                       className={cn(
-                        "w-full justify-start h-auto p-3 rounded-xl transition-all duration-300 hover:scale-[1.02] border",
+                        "w-full justify-start  h-auto p-3  rounded-xl transition-all duration-300 hover:scale-[1.02] border",
                         isActive
                           ? "bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 shadow-sm"
                           : "border-transparent hover:bg-slate-50 wark:hover:bg-slate-800/50 hover:border-slate-200 wark:hover:border-slate-700",
@@ -315,9 +470,7 @@ export default function AutomationsLayout({ children }: AutomationsLayoutProps) 
                           </div>
                         )}
 
-                        {!sidebarCollapsed && isActive && (
-                          <div className="w-1 h-6 bg-primary rounded-full" />
-                        )}
+                      
                       </div>
                     </Button>
 

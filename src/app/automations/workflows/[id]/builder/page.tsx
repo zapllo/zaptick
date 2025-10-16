@@ -2830,7 +2830,7 @@ const validateFileType = (file: File, expectedType: string): boolean => {
                     await saveWorkflow();
                     setIsSettingsOpen(false);
                   }}
-                  className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+                  className=" hover:to-secondary/90"
                 >
                   Save Settings
                 </Button>

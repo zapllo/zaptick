@@ -42,7 +42,9 @@ import {
   Lightbulb,
   Rocket,
   Crown,
-  Star
+  Star,
+  Gauge,
+  Lock
 } from "lucide-react";
 
 import Layout from "@/components/layout/Layout";
@@ -129,6 +131,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import AutomationsLayout from "@/components/layout/automation-layout";
+import { useRouter } from "next/navigation";
 
 interface AutoReply {
   _id: string;
@@ -162,7 +165,15 @@ interface WorkflowOption {
   description?: string;
   isActive: boolean;
 }
-
+interface LimitInfo {
+  currentCount: number;
+  limit: number;
+  canCreateMore: boolean;
+  plan: string;
+  planName: string;
+  subscriptionStatus: string;
+  remainingSlots: number;
+}
 export default function AutomationsPage() {
   const [autoReplies, setAutoReplies] = useState<AutoReply[]>([]);
   const [wabaAccounts, setWabaAccounts] = useState<WabaAccount[]>([]);
@@ -173,6 +184,8 @@ export default function AutomationsPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [limitInfo, setLimitInfo] = useState<LimitInfo | null>(null);
+  const [isLoadingLimits, setIsLoadingLimits] = useState(false);
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -180,7 +193,7 @@ export default function AutomationsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedAutoReply, setSelectedAutoReply] = useState<AutoReply | null>(null);
-
+  const router = useRouter();
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -202,10 +215,33 @@ export default function AutomationsPage() {
     fetchWabaAccounts();
   }, []);
 
+  // Add function to fetch limits
+  const fetchLimits = async () => {
+    if (!selectedWabaId) return;
+
+    setIsLoadingLimits(true);
+    try {
+      const response = await fetch(`/api/auto-replies/limit?wabaId=${selectedWabaId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setLimitInfo(data.data);
+      } else {
+        console.error('Failed to fetch limits:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching limits:', error);
+    } finally {
+      setIsLoadingLimits(false);
+    }
+  };
+
+  // Update useEffect to fetch limits
   useEffect(() => {
     if (selectedWabaId) {
       fetchAutoReplies();
       fetchWorkflows();
+      fetchLimits(); // Add this line
     }
   }, [selectedWabaId]);
 
@@ -605,83 +641,161 @@ export default function AutomationsPage() {
   return (
     <AutomationsLayout>
       <TooltipProvider>
-     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50 wark:from-slate-900 wark:via-slate-800 wark:to-slate-900/50">
-  <div className="mx-auto p-6 space-y-8">
-    {/* Modern Header Section */}
-    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 shadow-sm">
-              <Bot className="h-6 w-6 text-primary" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50 wark:from-slate-900 wark:via-slate-800 wark:to-slate-900/50">
+          <div className="mx-auto p-6 space-y-8">
+            {/* Modern Header Section */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 shadow-sm">
+                      <Bot className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-500 animate-pulse" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent wark:from-white wark:to-slate-200">
+                      Auto Replies
+                    </h1>
+                    <p className="text-slate-600 wark:text-slate-300 font-medium">
+                      Intelligent automated responses for your WhatsApp Business
+                    </p>
+                  </div>
+                </div>
+
+                {/* Auto Reply Stats Pills */}
+                <div className="flex items-center gap-3 mt-4">
+                  <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
+                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
+                      {totalReplies} Total
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
+                      {activeReplies} Active
+                    </span>
+                  </div>
+                  {/* Limit Information */}
+                  {limitInfo && (
+                    <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 wark:from-purple-900/20 wark:to-blue-900/20 border border-purple-200 wark:border-purple-700 px-3 py-1.5 shadow-sm">
+                      <Gauge className="h-3 w-3 text-purple-600 wark:text-purple-400" />
+                      <span className="text-xs font-medium text-purple-700 wark:text-purple-300">
+                        {limitInfo.currentCount}/{limitInfo.limit === Infinity ? '∞' : limitInfo.limit} Used
+                      </span>
+                    </div>
+                  )}
+
+                  {limitInfo && limitInfo.planName && (
+                    <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 wark:from-amber-900/20 wark:to-orange-900/20 border border-amber-200 wark:border-amber-700 px-3 py-1.5 shadow-sm">
+                      <Crown className="h-3 w-3 text-amber-600 wark:text-amber-400" />
+                      <span className="text-xs font-medium text-amber-700 wark:text-amber-300">
+                        {limitInfo.planName} Plan
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
+                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                    <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
+                      {totalTriggers.toLocaleString()} Triggers
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
+                    <div className="h-2 w-2 rounded-full bg-amber-500" />
+                    <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
+                      {responseRate}% Response
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 border-slate-200 wark:border-slate-700 hover:border-green-300 wark:hover:border-green-600 hover:bg-green-50 wark:hover:bg-green-900/20"
+                  onClick={() => {
+                    // Export functionality
+                    toast({
+                      title: "Coming Soon",
+                      description: "Export functionality will be available soon",
+                    });
+                  }}
+                  disabled={filteredAutoReplies.length === 0}
+                >
+                  <Download className="h-4 w-4" />
+                  Export
+                </Button>
+                {limitInfo && !limitInfo.canCreateMore ? (
+                  <div className="relative group">
+                    <Button
+                      disabled
+                      className="bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-lg opacity-60 cursor-not-allowed"
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Create Auto Reply
+                    </Button>
+                    <div className="absolute top-full mt-2 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                      <div className="bg-slate-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                        {limitInfo.subscriptionStatus !== 'active' ? (
+                          <>Subscription required to create auto replies</>
+                        ) : (
+                          <>You've reached the limit for {limitInfo.planName} plan ({limitInfo.limit} auto replies)</>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Auto Reply
+                    {limitInfo && limitInfo.limit !== Infinity && (
+                      <span className="ml-2 text-xs opacity-75">
+                        ({limitInfo.remainingSlots} left)
+                      </span>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-500 animate-pulse" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent wark:from-white wark:to-slate-200">
-              Auto Replies
-            </h1>
-            <p className="text-slate-600 wark:text-slate-300 font-medium">
-              Intelligent automated responses for your WhatsApp Business
-            </p>
-          </div>
-        </div>
 
-        {/* Auto Reply Stats Pills */}
-        <div className="flex items-center gap-3 mt-4">
-          <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
-            <div className="h-2 w-2 rounded-full bg-blue-500" />
-            <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
-              {totalReplies} Total
-            </span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
-              {activeReplies} Active
-            </span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
-            <div className="h-2 w-2 rounded-full bg-purple-500" />
-            <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
-              {totalTriggers.toLocaleString()} Triggers
-            </span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
-            <div className="h-2 w-2 rounded-full bg-amber-500" />
-            <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
-              {responseRate}% Response
-            </span>
-          </div>
-        </div>
-      </div>
+            {limitInfo && limitInfo.currentCount >= limitInfo.limit * 0.8 && limitInfo.limit !== Infinity && (
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 wark:from-amber-900/20 wark:to-orange-900/20 border border-amber-200 wark:border-amber-700 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 wark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-amber-800 wark:text-amber-200 mb-1">
+                      Approaching Auto Reply Limit
+                    </h3>
+                    <p className="text-sm text-amber-700 wark:text-amber-300 mb-3">
+                      You're using {limitInfo.currentCount} of {limitInfo.limit} auto replies in your {limitInfo.planName} plan.
+                      {limitInfo.remainingSlots === 0 ? (
+                        ' Upgrade to create more auto replies.'
+                      ) : (
+                        ` You have ${limitInfo.remainingSlots} auto repl${limitInfo.remainingSlots !== 1 ? 'ies' : 'y'} remaining.`
+                      )}
+                    </p>
+                    {limitInfo.remainingSlots <= 2 && (
+                      <Button
+                        size="sm"
+                        onClick={() => router.push('/wallet/plans')}
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Upgrade Plan
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
-      <div className="flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 border-slate-200 wark:border-slate-700 hover:border-green-300 wark:hover:border-green-600 hover:bg-green-50 wark:hover:bg-green-900/20"
-          onClick={() => {
-            // Export functionality
-            toast({
-              title: "Coming Soon",
-              description: "Export functionality will be available soon",
-            });
-          }}
-          disabled={filteredAutoReplies.length === 0}
-        >
-          <Download className="h-4 w-4" />
-          Export
-        </Button>
-        <Button
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-        >
-          <Plus className="h-4 w-4" />
-          Create Auto Reply
-        </Button>
-      </div>
-    </div>
+
             {/* Filters & Controls */}
             <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
               <CardContent className="">
@@ -762,564 +876,564 @@ export default function AutomationsPage() {
               </CardContent>
             </Card>
 
-        {/* Content */}
-{isLoading ? (
-  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 backdrop-blur-sm wark:from-muted/40 wark:to-slate-900/10">
-    <CardContent className="p-12">
-      <div className="flex flex-col items-center justify-center space-y-6">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Bot className="w-8 h-8 text-primary animate-pulse" />
-          </div>
-        </div>
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-semibold text-slate-900 wark:text-white">Loading Auto Replies</h3>
-          <p className="text-sm text-slate-600 wark:text-slate-300">Fetching your automation rules...</p>
-          <div className="flex items-center gap-1 text-xs text-slate-500 wark:text-slate-400">
-            <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-            <span>Setting up intelligent responses</span>
-          </div>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-) : filteredAutoReplies.length === 0 ? (
-  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 backdrop-blur-sm wark:from-muted/40 wark:to-slate-900/10">
-    <CardContent className="p-12">
-      <div className="text-center space-y-8">
-        <div className="relative mx-auto w-32 h-32">
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
-            <Bot className="h-16 w-16 text-primary" />
-          </div>
-          <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center animate-bounce">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
-          <div className="absolute -bottom-1 -left-1 w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-500 rounded-full flex items-center justify-center">
-            <Zap className="h-3 w-3 text-white" />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-2xl font-bold text-slate-900 wark:text-white">
-            {searchQuery || statusFilter !== "all" || typeFilter !== "all"
-              ? "No matching auto replies found"
-              : "Ready to automate your responses?"
-            }
-          </h3>
-          <p className="text-slate-600 wark:text-slate-300 max-w-md mx-auto leading-relaxed">
-            {searchQuery || statusFilter !== "all" || typeFilter !== "all"
-              ? "Try adjusting your search or filter criteria to find what you're looking for."
-              : "Create intelligent auto replies to provide instant responses to your customers and boost engagement 24/7."
-            }
-          </p>
-        </div>
-
-        {!searchQuery && statusFilter === "all" && typeFilter === "all" && (
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-              size="lg"
-            >
-              <Plus className="h-5 w-5" />
-              Create Your First Auto Reply
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="gap-2 border-2 hover:border-primary/50 hover:bg-primary/5"
-              onClick={async () => {
-                try {
-                  const response = await fetch('/api/auto-replies/samples', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ wabaId: selectedWabaId }),
-                  });
-
-                  const data = await response.json();
-
-                  if (data.success) {
-                    toast({
-                      title: "Success",
-                      description: data.message,
-                    });
-                    fetchAutoReplies();
-                  } else {
-                    toast({
-                      title: "Error",
-                      description: data.error || "Failed to create samples",
-                      variant: "destructive",
-                    });
-                  }
-                } catch (error) {
-                  toast({
-                    title: "Error",
-                    description: "Failed to create sample auto replies",
-                    variant: "destructive",
-                  });
-                }
-              }}
-            >
-              <Lightbulb className="h-5 w-5" />
-              Use Sample Templates
-            </Button>
-          </div>
-        )}
-
-        {/* Feature highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8 border-t border-slate-200 wark:border-slate-700">
-          <div className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 wark:border-slate-700 bg-white wark:bg-slate-800/50">
-            <div className="h-10 w-10 rounded-xl bg-blue-100 wark:bg-blue-900/30 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-blue-600 wark:text-blue-400" />
-            </div>
-            <div className="text-center">
-              <div className="font-medium text-sm text-slate-900 wark:text-white">Instant Responses</div>
-              <div className="text-xs text-slate-500 wark:text-slate-400">24/7 automation</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 wark:border-slate-700 bg-white wark:bg-slate-800/50">
-            <div className="h-10 w-10 rounded-xl bg-green-100 wark:bg-green-900/30 flex items-center justify-center">
-              <Target className="h-5 w-5 text-green-600 wark:text-green-400" />
-            </div>
-            <div className="text-center">
-              <div className="font-medium text-sm text-slate-900 wark:text-white">Smart Triggers</div>
-              <div className="text-xs text-slate-500 wark:text-slate-400">Keyword matching</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 wark:border-slate-700 bg-white wark:bg-slate-800/50">
-            <div className="h-10 w-10 rounded-xl bg-purple-100 wark:bg-purple-900/30 flex items-center justify-center">
-              <Activity className="h-5 w-5 text-purple-600 wark:text-purple-400" />
-            </div>
-            <div className="text-center">
-              <div className="font-medium text-sm text-slate-900 wark:text-white">Usage Analytics</div>
-              <div className="text-xs text-slate-500 wark:text-slate-400">Track performance</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-) : (
-  <div className="space-y-6">
-    {viewMode === 'grid' ? (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredAutoReplies.map((autoReply) => (
-          <Card
-            key={autoReply._id}
-            className="group relative overflow-hidden border-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 wark:from-muted/40 wark:to-slate-900/10"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-            <CardHeader className="pb-3 relative">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="p-2 rounded-lg bg-slate-100 wark:bg-slate-800 transition-all duration-300 group-hover:scale-110">
-                    <div className="p-1 bg-gradient-to-br from-primary/10 to-primary/20 rounded-md">
-                      {getReplyTypeIcon(autoReply.replyType)}
+            {/* Content */}
+            {isLoading ? (
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 backdrop-blur-sm wark:from-muted/40 wark:to-slate-900/10">
+                <CardContent className="p-12">
+                  <div className="flex flex-col items-center justify-center space-y-6">
+                    <div className="relative">
+                      <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Bot className="w-8 h-8 text-primary animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="text-xl font-semibold text-slate-900 wark:text-white">Loading Auto Replies</h3>
+                      <p className="text-sm text-slate-600 wark:text-slate-300">Fetching your automation rules...</p>
+                      <div className="flex items-center gap-1 text-xs text-slate-500 wark:text-slate-400">
+                        <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+                        <span>Setting up intelligent responses</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <CardTitle
-                      className="text-lg font-semibold text-slate-900 wark:text-white group-hover:text-primary transition-colors cursor-pointer line-clamp-1"
-                      onClick={() => {
-                        setSelectedAutoReply(autoReply);
-                        setIsViewDialogOpen(true);
-                      }}
-                    >
-                      {autoReply.name}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <Badge
-                        variant={autoReply.isActive ? "default" : "secondary"}
-                        className={cn(
-                          "text-xs",
-                          autoReply.isActive
-                            ? "bg-green-100 text-green-700 border-green-200 wark:bg-green-900/30 wark:text-green-300"
-                            : "bg-slate-100 text-slate-600 border-slate-200 wark:bg-slate-800 wark:text-slate-400"
-                        )}
-                      >
-                        {autoReply.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn("text-xs capitalize", getMatchTypeColor(autoReply.matchType))}
-                      >
-                        {autoReply.matchType.replace('_', ' ')}
-                      </Badge>
+                </CardContent>
+              </Card>
+            ) : filteredAutoReplies.length === 0 ? (
+              <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 backdrop-blur-sm wark:from-muted/40 wark:to-slate-900/10">
+                <CardContent className="p-12">
+                  <div className="text-center space-y-8">
+                    <div className="relative mx-auto w-32 h-32">
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center">
+                        <Bot className="h-16 w-16 text-primary" />
+                      </div>
+                      <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full flex items-center justify-center animate-bounce">
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="absolute -bottom-1 -left-1 w-6 h-6 bg-gradient-to-br from-blue-400 to-blue-500 rounded-full flex items-center justify-center">
+                        <Zap className="h-3 w-3 text-white" />
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-100 wark:hover:bg-slate-800"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedAutoReply(autoReply);
-                        setIsViewDialogOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => openEditDialog(autoReply)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleToggleStatus(autoReply)}>
-                      {autoReply.isActive ? (
-                        <>
-                          <Pause className="h-4 w-4 mr-2" />
-                          Deactivate
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Activate
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Duplicate
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-red-600 focus:text-red-600"
-                      onClick={() => {
-                        setSelectedAutoReply(autoReply);
-                        setIsDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
 
-            <CardContent className="space-y-4 relative">
-              <div className="space-y-3">
-                <div className="p-3 bg-slate-50 wark:bg-slate-800/50 rounded-lg border border-slate-200 wark:border-slate-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Target className="h-4 w-4 text-slate-500 wark:text-slate-400" />
-                    <p className="text-sm font-medium text-slate-700 wark:text-slate-300">Triggers</p>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {autoReply.triggers.slice(0, 3).map((trigger, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="text-xs bg-white wark:bg-slate-700 text-slate-700 wark:text-slate-300 border-slate-300 wark:border-slate-600"
-                      >
-                        {trigger}
-                      </Badge>
-                    ))}
-                    {autoReply.triggers.length > 3 && (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-white wark:bg-slate-700 text-slate-700 wark:text-slate-300 border-slate-300 wark:border-slate-600"
-                      >
-                        +{autoReply.triggers.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                    <div className="space-y-4">
+                      <h3 className="text-2xl font-bold text-slate-900 wark:text-white">
+                        {searchQuery || statusFilter !== "all" || typeFilter !== "all"
+                          ? "No matching auto replies found"
+                          : "Ready to automate your responses?"
+                        }
+                      </h3>
+                      <p className="text-slate-600 wark:text-slate-300 max-w-md mx-auto leading-relaxed">
+                        {searchQuery || statusFilter !== "all" || typeFilter !== "all"
+                          ? "Try adjusting your search or filter criteria to find what you're looking for."
+                          : "Create intelligent auto replies to provide instant responses to your customers and boost engagement 24/7."
+                        }
+                      </p>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-3 bg-blue-50 wark:bg-blue-900/20 rounded-lg border border-blue-200 wark:border-blue-700">
-                    <p className="text-xs text-blue-600 wark:text-blue-400">Priority</p>
-                    <p className="font-bold text-blue-900 wark:text-blue-100 text-lg">{autoReply.priority}</p>
-                  </div>
-                  <div className="text-center p-3 bg-green-50 wark:bg-green-900/20 rounded-lg border border-green-200 wark:border-green-700">
-                    <p className="text-xs text-green-600 wark:text-green-400">Usage Count</p>
-                    <p className="font-bold text-green-900 wark:text-green-100 text-lg">{autoReply.usageCount || 0}</p>
-                  </div>
-                </div>
+                    {!searchQuery && statusFilter === "all" && typeFilter === "all" && (
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <Button
+                          onClick={() => setIsCreateDialogOpen(true)}
+                          className="gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                          size="lg"
+                        >
+                          <Plus className="h-5 w-5" />
+                          Create Your First Auto Reply
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          className="gap-2 border-2 hover:border-primary/50 hover:bg-primary/5"
+                          onClick={async () => {
+                            try {
+                              const response = await fetch('/api/auto-replies/samples', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ wabaId: selectedWabaId }),
+                              });
 
-                <div className="p-3 bg-purple-50 wark:bg-purple-900/20 rounded-lg border border-purple-200 wark:border-purple-700">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-purple-600 wark:text-purple-400" />
-                      <span className="text-purple-700 wark:text-purple-300 font-medium">
-                        {autoReply.lastTriggered ? (
-                          <>Last used {format(new Date(autoReply.lastTriggered), "MMM dd")}</>
-                        ) : (
-                          "Never used"
-                        )}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleStatus(autoReply)}
-                      className="h-8 px-3 hover:bg-purple-100 wark:hover:bg-purple-800/30"
-                    >
-                      {autoReply.isActive ? (
-                        <Pause className="h-3 w-3 text-purple-600 wark:text-purple-400" />
-                      ) : (
-                        <Play className="h-3 w-3 text-purple-600 wark:text-purple-400" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
+                              const data = await response.json();
 
-            {/* Decorative hover effect */}
-            <div className="absolute -right-4 -top-4 h-8 w-8 rounded-full bg-primary/10 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110" />
-          </Card>
-        ))}
-      </div>
-    ) : (
-      <Card className="border-0 p-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 backdrop-blur-sm wark:from-muted/40 wark:to-slate-900/10">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-             <TableHeader className="bg-[#D9E6DE] wark:from-slate-800/50 wark:to-slate-900/30">
-                <TableRow className="border-b border-slate-200 wark:border-slate-700">
-                  <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <Bot className="h-4 w-4" />
-                      Name
-                    </div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4" />
-                      Triggers
-                    </div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Type
-                    </div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      Match
-                    </div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <Power className="h-4 w-4" />
-                      Status
-                    </div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" />
-                      Usage
-                    </div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Last Used
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-right font-semibold text-slate-700 wark:text-slate-300">
-                    <div className="flex items-center justify-end gap-2">
-                      <Settings className="h-4 w-4" />
-                      Actions
-                    </div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAutoReplies.map((autoReply, index) => (
-                  <TableRow
-                    key={autoReply._id}
-                    className="hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent wark:hover:from-slate-800/30 wark:hover:to-transparent transition-all duration-200 group border-b border-slate-100 wark:border-slate-800"
-                  >
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div
-                          className="font-medium text-slate-900 wark:text-white hover:text-primary cursor-pointer transition-colors"
-                          onClick={() => {
-                            setSelectedAutoReply(autoReply);
-                            setIsViewDialogOpen(true);
+                              if (data.success) {
+                                toast({
+                                  title: "Success",
+                                  description: data.message,
+                                });
+                                fetchAutoReplies();
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: data.error || "Failed to create samples",
+                                  variant: "destructive",
+                                });
+                              }
+                            } catch (error) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to create sample auto replies",
+                                variant: "destructive",
+                              });
+                            }
                           }}
                         >
-                          {autoReply.name}
+                          <Lightbulb className="h-5 w-5" />
+                          Use Sample Templates
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Feature highlights */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8 border-t border-slate-200 wark:border-slate-700">
+                      <div className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 wark:border-slate-700 bg-white wark:bg-slate-800/50">
+                        <div className="h-10 w-10 rounded-xl bg-blue-100 wark:bg-blue-900/30 flex items-center justify-center">
+                          <Zap className="h-5 w-5 text-blue-600 wark:text-blue-400" />
                         </div>
-                        <div className="text-xs text-slate-500 wark:text-slate-400">
-                          Auto Reply #{index + 1} • Priority: {autoReply.priority}
+                        <div className="text-center">
+                          <div className="font-medium text-sm text-slate-900 wark:text-white">Instant Responses</div>
+                          <div className="text-xs text-slate-500 wark:text-slate-400">24/7 automation</div>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {autoReply.triggers.slice(0, 2).map((trigger, index) => (
-                          <Badge
-                            key={index}
-                            variant="secondary"
-                            className="text-xs bg-slate-100 wark:bg-slate-800 text-slate-700 wark:text-slate-300 border border-slate-200 wark:border-slate-700"
-                          >
-                            {trigger}
-                          </Badge>
-                        ))}
-                        {autoReply.triggers.length > 2 && (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs bg-slate-100 wark:bg-slate-800 text-slate-700 wark:text-slate-300 border border-slate-200 wark:border-slate-700"
-                          >
-                            +{autoReply.triggers.length - 2}
-                          </Badge>
-                        )}
+
+                      <div className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 wark:border-slate-700 bg-white wark:bg-slate-800/50">
+                        <div className="h-10 w-10 rounded-xl bg-green-100 wark:bg-green-900/30 flex items-center justify-center">
+                          <Target className="h-5 w-5 text-green-600 wark:text-green-400" />
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-sm text-slate-900 wark:text-white">Smart Triggers</div>
+                          <div className="text-xs text-slate-500 wark:text-slate-400">Keyword matching</div>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize gap-1 bg-white wark:bg-slate-800">
-                        {getReplyTypeIcon(autoReply.replyType)}
-                        {autoReply.replyType}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn("capitalize text-xs", getMatchTypeColor(autoReply.matchType))}
+
+                      <div className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 wark:border-slate-700 bg-white wark:bg-slate-800/50">
+                        <div className="h-10 w-10 rounded-xl bg-purple-100 wark:bg-purple-900/30 flex items-center justify-center">
+                          <Activity className="h-5 w-5 text-purple-600 wark:text-purple-400" />
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium text-sm text-slate-900 wark:text-white">Usage Analytics</div>
+                          <div className="text-xs text-slate-500 wark:text-slate-400">Track performance</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredAutoReplies.map((autoReply) => (
+                      <Card
+                        key={autoReply._id}
+                        className="group relative overflow-hidden border-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 wark:from-muted/40 wark:to-slate-900/10"
                       >
-                        {autoReply.matchType.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={autoReply.isActive ? "default" : "secondary"}
-                        className={cn(
-                          "gap-1",
-                          autoReply.isActive
-                            ? "bg-green-100 text-green-700 border-green-200 wark:bg-green-900/30 wark:text-green-300"
-                            : "bg-slate-100 text-slate-600 border-slate-200 wark:bg-slate-800 wark:text-slate-400"
-                        )}
-                      >
-                        {autoReply.isActive ? (
-                          <><Power className="h-3 w-3" />Active</>
-                        ) : (
-                          <><PowerOff className="h-3 w-3" />Inactive</>
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="p-2 bg-blue-50 wark:bg-blue-900/20 rounded-lg border border-blue-200 wark:border-blue-700">
-                        <div className="font-bold text-blue-900 wark:text-blue-100 text-sm">
-                          {autoReply.usageCount || 0}
-                        </div>
-                        <div className="text-blue-600 wark:text-blue-400 text-xs">triggers</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {autoReply.lastTriggered ? (
-                        <div className="p-2 bg-green-50 wark:bg-green-900/20 rounded-lg border border-green-200 wark:border-green-700">
-                          <div className="font-medium text-green-900 wark:text-green-100 text-sm">
-                            {format(new Date(autoReply.lastTriggered), "MMM dd, yyyy")}
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                        <CardHeader className="pb-3 relative">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="p-2 rounded-lg bg-slate-100 wark:bg-slate-800 transition-all duration-300 group-hover:scale-110">
+                                <div className="p-1 bg-gradient-to-br from-primary/10 to-primary/20 rounded-md">
+                                  {getReplyTypeIcon(autoReply.replyType)}
+                                </div>
+                              </div>
+                              <div className="flex-1">
+                                <CardTitle
+                                  className="text-lg font-semibold text-slate-900 wark:text-white group-hover:text-primary transition-colors cursor-pointer line-clamp-1"
+                                  onClick={() => {
+                                    setSelectedAutoReply(autoReply);
+                                    setIsViewDialogOpen(true);
+                                  }}
+                                >
+                                  {autoReply.name}
+                                </CardTitle>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <Badge
+                                    variant={autoReply.isActive ? "default" : "secondary"}
+                                    className={cn(
+                                      "text-xs",
+                                      autoReply.isActive
+                                        ? "bg-green-100 text-green-700 border-green-200 wark:bg-green-900/30 wark:text-green-300"
+                                        : "bg-slate-100 text-slate-600 border-slate-200 wark:bg-slate-800 wark:text-slate-400"
+                                    )}
+                                  >
+                                    {autoReply.isActive ? "Active" : "Inactive"}
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn("text-xs capitalize", getMatchTypeColor(autoReply.matchType))}
+                                  >
+                                    {autoReply.matchType.replace('_', ' ')}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-100 wark:hover:bg-slate-800"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedAutoReply(autoReply);
+                                    setIsViewDialogOpen(true);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openEditDialog(autoReply)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleStatus(autoReply)}>
+                                  {autoReply.isActive ? (
+                                    <>
+                                      <Pause className="h-4 w-4 mr-2" />
+                                      Deactivate
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="h-4 w-4 mr-2" />
+                                      Activate
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => {
+                                    setSelectedAutoReply(autoReply);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          <div className="text-green-600 wark:text-green-400 text-xs">
-                            {format(new Date(autoReply.lastTriggered), "HH:mm")}
+                        </CardHeader>
+
+                        <CardContent className="space-y-4 relative">
+                          <div className="space-y-3">
+                            <div className="p-3 bg-slate-50 wark:bg-slate-800/50 rounded-lg border border-slate-200 wark:border-slate-700">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Target className="h-4 w-4 text-slate-500 wark:text-slate-400" />
+                                <p className="text-sm font-medium text-slate-700 wark:text-slate-300">Triggers</p>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {autoReply.triggers.slice(0, 3).map((trigger, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="secondary"
+                                    className="text-xs bg-white wark:bg-slate-700 text-slate-700 wark:text-slate-300 border-slate-300 wark:border-slate-600"
+                                  >
+                                    {trigger}
+                                  </Badge>
+                                ))}
+                                {autoReply.triggers.length > 3 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs bg-white wark:bg-slate-700 text-slate-700 wark:text-slate-300 border-slate-300 wark:border-slate-600"
+                                  >
+                                    +{autoReply.triggers.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-center p-3 bg-blue-50 wark:bg-blue-900/20 rounded-lg border border-blue-200 wark:border-blue-700">
+                                <p className="text-xs text-blue-600 wark:text-blue-400">Priority</p>
+                                <p className="font-bold text-blue-900 wark:text-blue-100 text-lg">{autoReply.priority}</p>
+                              </div>
+                              <div className="text-center p-3 bg-green-50 wark:bg-green-900/20 rounded-lg border border-green-200 wark:border-green-700">
+                                <p className="text-xs text-green-600 wark:text-green-400">Usage Count</p>
+                                <p className="font-bold text-green-900 wark:text-green-100 text-lg">{autoReply.usageCount || 0}</p>
+                              </div>
+                            </div>
+
+                            <div className="p-3 bg-purple-50 wark:bg-purple-900/20 rounded-lg border border-purple-200 wark:border-purple-700">
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-purple-600 wark:text-purple-400" />
+                                  <span className="text-purple-700 wark:text-purple-300 font-medium">
+                                    {autoReply.lastTriggered ? (
+                                      <>Last used {format(new Date(autoReply.lastTriggered), "MMM dd")}</>
+                                    ) : (
+                                      "Never used"
+                                    )}
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleToggleStatus(autoReply)}
+                                  className="h-8 px-3 hover:bg-purple-100 wark:hover:bg-purple-800/30"
+                                >
+                                  {autoReply.isActive ? (
+                                    <Pause className="h-3 w-3 text-purple-600 wark:text-purple-400" />
+                                  ) : (
+                                    <Play className="h-3 w-3 text-purple-600 wark:text-purple-400" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 wark:text-slate-500 italic text-sm">Never used</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end items-center gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleStatus(autoReply)}
-                              className={cn(
-                                "h-8 w-8 p-0",
-                                autoReply.isActive
-                                  ? "hover:bg-amber-100 wark:hover:bg-amber-900/30"
-                                  : "hover:bg-green-100 wark:hover:bg-green-900/30"
-                              )}
-                            >
-                              {autoReply.isActive ? (
-                                <Pause className="h-3.5 w-3.5 text-amber-600 wark:text-amber-400" />
-                              ) : (
-                                <Play className="h-3.5 w-3.5 text-green-600 wark:text-green-400" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {autoReply.isActive ? 'Deactivate' : 'Activate'}
-                          </TooltipContent>
-                        </Tooltip>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-slate-100 wark:hover:bg-slate-800"
-                            >
-                              <MoreVertical className="h-4 w-4 text-slate-600 wark:text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel className="font-semibold">Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedAutoReply(autoReply);
-                                setIsViewDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(autoReply)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => {
-                                setSelectedAutoReply(autoReply);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        </CardContent>
+
+                        {/* Decorative hover effect */}
+                        <div className="absolute -right-4 -top-4 h-8 w-8 rounded-full bg-primary/10 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110" />
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="border-0 p-0 shadow-sm bg-gradient-to-br from-white to-slate-50/30 backdrop-blur-sm wark:from-muted/40 wark:to-slate-900/10">
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader className="bg-[#D9E6DE] wark:from-slate-800/50 wark:to-slate-900/30">
+                            <TableRow className="border-b border-slate-200 wark:border-slate-700">
+                              <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <Bot className="h-4 w-4" />
+                                  Name
+                                </div>
+                              </TableHead>
+                              <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <Target className="h-4 w-4" />
+                                  Triggers
+                                </div>
+                              </TableHead>
+                              <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <MessageSquare className="h-4 w-4" />
+                                  Type
+                                </div>
+                              </TableHead>
+                              <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <Filter className="h-4 w-4" />
+                                  Match
+                                </div>
+                              </TableHead>
+                              <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <Power className="h-4 w-4" />
+                                  Status
+                                </div>
+                              </TableHead>
+                              <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <BarChart3 className="h-4 w-4" />
+                                  Usage
+                                </div>
+                              </TableHead>
+                              <TableHead className="font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  Last Used
+                                </div>
+                              </TableHead>
+                              <TableHead className="text-right font-semibold text-slate-700 wark:text-slate-300">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Settings className="h-4 w-4" />
+                                  Actions
+                                </div>
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredAutoReplies.map((autoReply, index) => (
+                              <TableRow
+                                key={autoReply._id}
+                                className="hover:bg-gradient-to-r hover:from-slate-50 hover:to-transparent wark:hover:from-slate-800/30 wark:hover:to-transparent transition-all duration-200 group border-b border-slate-100 wark:border-slate-800"
+                              >
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    <div
+                                      className="font-medium text-slate-900 wark:text-white hover:text-primary cursor-pointer transition-colors"
+                                      onClick={() => {
+                                        setSelectedAutoReply(autoReply);
+                                        setIsViewDialogOpen(true);
+                                      }}
+                                    >
+                                      {autoReply.name}
+                                    </div>
+                                    <div className="text-xs text-slate-500 wark:text-slate-400">
+                                      Auto Reply #{index + 1} • Priority: {autoReply.priority}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex flex-wrap gap-1">
+                                    {autoReply.triggers.slice(0, 2).map((trigger, index) => (
+                                      <Badge
+                                        key={index}
+                                        variant="secondary"
+                                        className="text-xs bg-slate-100 wark:bg-slate-800 text-slate-700 wark:text-slate-300 border border-slate-200 wark:border-slate-700"
+                                      >
+                                        {trigger}
+                                      </Badge>
+                                    ))}
+                                    {autoReply.triggers.length > 2 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs bg-slate-100 wark:bg-slate-800 text-slate-700 wark:text-slate-300 border border-slate-200 wark:border-slate-700"
+                                      >
+                                        +{autoReply.triggers.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="capitalize gap-1 bg-white wark:bg-slate-800">
+                                    {getReplyTypeIcon(autoReply.replyType)}
+                                    {autoReply.replyType}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn("capitalize text-xs", getMatchTypeColor(autoReply.matchType))}
+                                  >
+                                    {autoReply.matchType.replace('_', ' ')}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={autoReply.isActive ? "default" : "secondary"}
+                                    className={cn(
+                                      "gap-1",
+                                      autoReply.isActive
+                                        ? "bg-green-100 text-green-700 border-green-200 wark:bg-green-900/30 wark:text-green-300"
+                                        : "bg-slate-100 text-slate-600 border-slate-200 wark:bg-slate-800 wark:text-slate-400"
+                                    )}
+                                  >
+                                    {autoReply.isActive ? (
+                                      <><Power className="h-3 w-3" />Active</>
+                                    ) : (
+                                      <><PowerOff className="h-3 w-3" />Inactive</>
+                                    )}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="p-2 bg-blue-50 wark:bg-blue-900/20 rounded-lg border border-blue-200 wark:border-blue-700">
+                                    <div className="font-bold text-blue-900 wark:text-blue-100 text-sm">
+                                      {autoReply.usageCount || 0}
+                                    </div>
+                                    <div className="text-blue-600 wark:text-blue-400 text-xs">triggers</div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {autoReply.lastTriggered ? (
+                                    <div className="p-2 bg-green-50 wark:bg-green-900/20 rounded-lg border border-green-200 wark:border-green-700">
+                                      <div className="font-medium text-green-900 wark:text-green-100 text-sm">
+                                        {format(new Date(autoReply.lastTriggered), "MMM dd, yyyy")}
+                                      </div>
+                                      <div className="text-green-600 wark:text-green-400 text-xs">
+                                        {format(new Date(autoReply.lastTriggered), "HH:mm")}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-400 wark:text-slate-500 italic text-sm">Never used</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end items-center gap-1">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleToggleStatus(autoReply)}
+                                          className={cn(
+                                            "h-8 w-8 p-0",
+                                            autoReply.isActive
+                                              ? "hover:bg-amber-100 wark:hover:bg-amber-900/30"
+                                              : "hover:bg-green-100 wark:hover:bg-green-900/30"
+                                          )}
+                                        >
+                                          {autoReply.isActive ? (
+                                            <Pause className="h-3.5 w-3.5 text-amber-600 wark:text-amber-400" />
+                                          ) : (
+                                            <Play className="h-3.5 w-3.5 text-green-600 wark:text-green-400" />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {autoReply.isActive ? 'Deactivate' : 'Activate'}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 hover:bg-slate-100 wark:hover:bg-slate-800"
+                                        >
+                                          <MoreVertical className="h-4 w-4 text-slate-600 wark:text-slate-400" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-48">
+                                        <DropdownMenuLabel className="font-semibold">Actions</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedAutoReply(autoReply);
+                                            setIsViewDialogOpen(true);
+                                          }}
+                                        >
+                                          <Eye className="h-4 w-4 mr-2" />
+                                          View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => openEditDialog(autoReply)}>
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>
+                                          <Copy className="h-4 w-4 mr-2" />
+                                          Duplicate
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-red-600 focus:text-red-600"
+                                          onClick={() => {
+                                            setSelectedAutoReply(autoReply);
+                                            setIsDeleteDialogOpen(true);
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    )}
-  </div>
-)}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
             {/* Create/Edit Dialog */}
             <Dialog
               open={isCreateDialogOpen || isEditDialogOpen}

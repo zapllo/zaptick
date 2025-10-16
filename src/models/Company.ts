@@ -132,7 +132,7 @@ const CompanySchema = new Schema<ICompany>(
     },
     subscriptionPlan: {
       type: String,
-      enum: ['free', 'starter', 'growth', 'advanced', 'enterprise'],
+      enum: ['free', 'starter', 'growth', 'advanced', 'explore', 'enterprise'],
       default: 'free'
     },
     subscriptionStatus: {

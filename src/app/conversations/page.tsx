@@ -4225,7 +4225,7 @@ function ConversationsPageContent() {
                   </div>
                 ) : (
                   /* Compact 24-hour expired warning */
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="bg-amber-50 w-[70%] border border-amber-200 rounded-lg p-3">
                     <div className="flex items-center gap-3">
                       <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
                       <div className="flex-1">
@@ -6319,7 +6319,7 @@ const TemplatePreviewAndCustomizeModern = ({
                     key={index}
                     variant="outline"
                     className="w-full justify-center h-9 text-sm border-slate-200 text-slate-700"
-                    disabled
+                    // disabled
                   >
                     {button.type === 'URL' && <ExternalLink className="h-3.5 w-3.5 mr-2" />}
                     {button.type === 'PHONE_NUMBER' && <Phone className="h-3.5 w-3.5 mr-2" />}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { verifyToken } from '@/lib/jwt';
 import User from '@/models/User';
-import Workflow from '@/models/Workflow';
+import Chatbot from '@/models/Chatbot';
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,20 +45,20 @@ export async function GET(req: NextRequest) {
     const subscriptionPlan = company?.subscriptionPlan || 'free';
     const subscriptionStatus = company?.subscriptionStatus || 'expired';
 
-    // Define workflow limits based on subscription plan
+    // Define chatbot limits based on subscription plan
     const planLimits = {
       free: 1,
       starter: 1,
       explore: 1,
-      growth: 10,
-      advanced: 50,
+      growth: 5,
+      advanced: 25,
       enterprise: Infinity
     };
 
     const currentLimit = planLimits[subscriptionPlan as keyof typeof planLimits] || planLimits.free;
 
-    // Count existing workflows for this user and WABA
-    const currentCount = await Workflow.countDocuments({
+    // Count existing chatbots for this user and WABA
+    const currentCount = await Chatbot.countDocuments({
       userId: decoded.id,
       wabaId
     });
@@ -66,8 +66,8 @@ export async function GET(req: NextRequest) {
     const planNames = {
       free: 'Free',
       starter: 'Starter',
-      growth: 'Growth',
       explore: 'Explore',
+      growth: 'Growth',
       advanced: 'Advanced',
       enterprise: 'Enterprise'
     };
@@ -86,9 +86,9 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error checking workflow limit:', error);
+    console.error('Error checking chatbot limit:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to check workflow limit' },
+      { success: false, message: 'Failed to check chatbot limit' },
       { status: 500 }
     );
   }

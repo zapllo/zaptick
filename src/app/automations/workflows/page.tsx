@@ -369,6 +369,7 @@ export default function WorkflowsPage() {
     switch (plan) {
       case 'starter': return <Zap className="h-4 w-4" />;
       case 'growth': return <TrendingUp className="h-4 w-4" />;
+      case 'explore': return <TrendingUp className="h-4 w-4" />;
       case 'advanced': return <Sparkles className="h-4 w-4" />;
       case 'enterprise': return <Crown className="h-4 w-4" />;
       default: return <Activity className="h-4 w-4" />;

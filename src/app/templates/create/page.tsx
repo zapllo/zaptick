@@ -408,7 +408,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                     <div className="text-[12px] max-w-full">
 
                       {/* Carousel cards container */}
-                      <div className="flex gap-2 overflow-x-auto scrollbar-hide w-[270px] pb-2">
+                      <div className="flex gap-2 overflow-x-scroll scrollbar- w-[270px] pb-2">
                         {form.carouselCards.length > 0 ? form.carouselCards.map((card, index) => (
                           <div key={index} className="flex-shrink-0 w-[180px] border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                             {/* Card header media */}
@@ -435,6 +435,8 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                               </p>
 
                               {/* Card buttons */}
+
+                              {/* Card buttons */}
                               {card.buttons && card.buttons.length > 0 && (
                                 <div className="space-y-1">
                                   {card.buttons.map((button, buttonIndex) => (
@@ -444,6 +446,11 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                                     >
                                       {button.type === 'URL' && <ExternalLink className="h-3 w-3" />}
                                       {button.type === 'PHONE_NUMBER' && <Phone className="h-3 w-3" />}
+                                      {button.type === 'QUICK_REPLY' && (
+                                        <svg width="13px" height="13px" viewBox="0 0 23 23" fill="#0096DE" xmlns="http://www.w3.org/2000/svg">
+                                          <path d="M9.66667 8.31706V4.65039L3.25 11.0671L9.66667 17.4837V13.7254C14.25 13.7254 17.4583 15.1921 19.75 18.4004C18.8333 13.8171 16.0833 9.23372 9.66667 8.31706Z"></path>
+                                        </svg>
+                                      )}
                                       {button.text || `Button ${buttonIndex + 1}`}
                                     </button>
                                   ))}
@@ -526,7 +533,7 @@ const WhatsAppPreview = ({ form, deviceType, footerText, authSettings }: {
                   )}
                   {deviceType !== 'iphone' && (
                     <div
-                     
+
                     ></div>
                   )}
 

@@ -68,7 +68,7 @@ const integrations: Integration[] = [
     description: 'Sync WhatsApp conversations with HubSpot CRM to manage leads, track interactions, and automate follow-ups',
     logo: '/integrations/hubspot.png',
     status: 'restricted',
-    restrictionReason: 'HubSpot integration is available only on our Pro plan. Upgrade to connect with HubSpot CRM and sync your contacts automatically.',
+    restrictionReason: 'HubSpot integration is available only on our Growth Plan. Upgrade to connect with HubSpot CRM and sync your contacts automatically.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/hubspot-video',
@@ -79,7 +79,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Connect your WhatsApp Business with HubSpot to automatically create contacts, log conversations, and trigger marketing workflows based on customer interactions.',
     features: ['Contact synchronization', 'Deal creation', 'Activity logging', 'Marketing automation triggers'],
     benefits: ['Unified customer data', 'Automated lead nurturing', 'Sales pipeline visibility', 'Marketing automation'],
-    requirements: ['HubSpot account', 'Pro plan subscription', 'API access'],
+    requirements: ['HubSpot account', 'Growth Plan subscription', 'API access'],
     supportedFeatures: ['Contact management', 'Deal tracking', 'Email sequences', 'Reporting']
   },
   {
@@ -110,7 +110,7 @@ const integrations: Integration[] = [
     description: 'Connect WhatsApp with Zoho CRM to manage leads, automate workflows, and track sales performance',
     logo: '/integrations/zohocrm.png',
     status: 'restricted',
-    restrictionReason: 'Zoho CRM integration is available on Pro and Enterprise plans. Upgrade to sync contacts and automate your sales process.',
+    restrictionReason: 'Zoho CRM integration is available on Growth and Enterprise plans. Upgrade to sync contacts and automate your sales process.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/zoho-video',
@@ -121,7 +121,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Seamlessly integrate WhatsApp with Zoho CRM to convert conversations into leads, track customer journey, and automate sales workflows for better conversion rates.',
     features: ['Lead management', 'Contact sync', 'Deal tracking', 'Automation rules'],
     benefits: ['Streamlined sales process', 'Better lead qualification', 'Automated follow-ups', 'Performance analytics'],
-    requirements: ['Zoho CRM account', 'Pro plan or higher', 'API permissions'],
+    requirements: ['Zoho CRM account', 'Growth Plan or higher', 'API permissions'],
     supportedFeatures: ['Leads', 'Contacts', 'Deals', 'Custom fields']
   },
   {
@@ -131,7 +131,7 @@ const integrations: Integration[] = [
     description: 'Create a frictionless payment experience on WhatsApp to improve conversions',
     logo: '/integrations/whatsapp.webp',
     status: 'restricted',
-    restrictionReason: 'WhatsApp Pay integration requires our Pro plan to enable seamless payment processing within WhatsApp conversations.',
+    restrictionReason: 'WhatsApp Pay integration requires our Growth Plan to enable seamless payment processing within WhatsApp conversations.',
     hasVideo: true,
     videoUrl: '',
     setupTime: '10 minutes',
@@ -140,7 +140,7 @@ const integrations: Integration[] = [
     detailedDescription: 'WhatsApp Pay integration allows your customers to make seamless payments directly within WhatsApp conversations, reducing cart abandonment and increasing conversion rates.',
     features: ['Instant payment processing', 'Secure UPI integration', 'Real-time payment status', 'Automated receipts'],
     benefits: ['Reduced cart abandonment', 'Faster checkout process', 'Increased customer trust', 'Higher conversion rates'],
-    requirements: ['Active WhatsApp Business Account', 'Valid business verification', 'Pro plan subscription'],
+    requirements: ['Active WhatsApp Business Account', 'Valid business verification', 'Growth Plan subscription'],
     supportedFeatures: ['Payment links', 'Order confirmation', 'Refund processing', 'Transaction tracking']
   },
   {
@@ -150,7 +150,7 @@ const integrations: Integration[] = [
     description: 'When customers send WhatsApp carts, send payment links automatically in a checkout botflow',
     logo: '/integrations/razorpay.png',
     status: 'restricted',
-    restrictionReason: 'Razorpay integration is available on our Pro plan. Upgrade to enable automated payment links and seamless checkout workflows.',
+    restrictionReason: 'Razorpay integration is available on our Growth Plan. Upgrade to enable automated payment links and seamless checkout workflows.',
     hasVideo: true,
     videoUrl: 'https://example.com/razorpay-video',
     setupTime: '10 minutes',
@@ -159,7 +159,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Razorpay integration enables automatic payment link generation and seamless checkout experience for your WhatsApp commerce with support for multiple payment methods.',
     features: ['Automated payment links', 'Multi-payment options', 'Real-time notifications', 'Subscription billing'],
     benefits: ['Streamlined checkout', 'Higher conversion rates', 'Better customer experience', 'Automated invoicing'],
-    requirements: ['Razorpay account', 'API keys configuration', 'Pro plan subscription'],
+    requirements: ['Razorpay account', 'API keys configuration', 'Growth Plan subscription'],
     supportedFeatures: ['Payment gateway', 'Subscription billing', 'Refund management', 'Analytics dashboard']
   },
   {
@@ -169,7 +169,7 @@ const integrations: Integration[] = [
     description: 'Accept payments through WhatsApp using Stripe\'s secure payment processing infrastructure',
     logo: '/integrations/stripe.png',
     status: 'restricted',
-    restrictionReason: 'Stripe integration requires our Pro plan for secure payment processing and automated checkout workflows.',
+    restrictionReason: 'Stripe integration requires our Growth Plan for secure payment processing and automated checkout workflows.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/stripe-video',
@@ -180,7 +180,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Integrate Stripe with WhatsApp to accept payments globally, handle subscriptions, and provide customers with a secure, seamless payment experience directly in chat.',
     features: ['Global payment processing', 'Subscription management', 'Automated invoicing', 'Advanced fraud protection'],
     benefits: ['Global reach', 'Enhanced security', 'Subscription support', 'Developer-friendly APIs'],
-    requirements: ['Stripe account', 'Pro plan subscription', 'SSL certificate'],
+    requirements: ['Stripe account', 'Growth Plan subscription', 'SSL certificate'],
     supportedFeatures: ['Credit cards', 'Digital wallets', 'Bank transfers', 'Subscriptions']
   },
   {
@@ -190,7 +190,7 @@ const integrations: Integration[] = [
     description: 'Enable UPI, card, and wallet payments through WhatsApp using Cashfree\'s payment gateway',
     logo: '/integrations/cf.png',
     status: 'restricted',
-    restrictionReason: 'Cashfree integration is available on our Pro plan to enable comprehensive payment solutions for Indian businesses.',
+    restrictionReason: 'Cashfree integration is available on our Growth Plan to enable comprehensive payment solutions for Indian businesses.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/cashfree-video',
@@ -201,7 +201,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Cashfree integration provides comprehensive payment solutions for Indian businesses, supporting UPI, cards, wallets, and net banking through WhatsApp.',
     features: ['UPI payments', 'Card processing', 'Wallet integration', 'Net banking support'],
     benefits: ['India-focused features', 'Multiple payment methods', 'Competitive pricing', 'Local support'],
-    requirements: ['Cashfree account', 'Indian business registration', 'Pro plan subscription'],
+    requirements: ['Cashfree account', 'Indian business registration', 'Growth Plan subscription'],
     supportedFeatures: ['UPI', 'Cards', 'Wallets', 'Net banking']
   },
   {
@@ -211,7 +211,7 @@ const integrations: Integration[] = [
     description: 'When customers send WhatsApp carts, send payment links automatically in a auto-checkout workflow',
     logo: '/integrations/payu.png',
     status: 'restricted',
-    restrictionReason: 'PayU integration requires our Pro plan for automated checkout workflows and payment processing capabilities.',
+    restrictionReason: 'PayU integration requires our Growth Plan for automated checkout workflows and payment processing capabilities.',
     hasVideo: true,
     videoUrl: 'https://example.com/payu-video',
     setupTime: '8 minutes',
@@ -220,7 +220,7 @@ const integrations: Integration[] = [
     detailedDescription: 'PayU integration provides robust payment processing capabilities with automated checkout workflows for WhatsApp commerce, supporting multiple payment methods and currencies.',
     features: ['Auto-checkout workflows', 'Multiple payment methods', 'Fraud protection', 'Multi-currency support'],
     benefits: ['Secure transactions', 'Global payment support', 'Easy integration', 'Risk management'],
-    requirements: ['PayU merchant account', 'Business verification', 'Pro plan subscription'],
+    requirements: ['PayU merchant account', 'Business verification', 'Growth Plan subscription'],
     supportedFeatures: ['Payment processing', 'Recurring payments', 'Analytics dashboard', 'Risk management']
   },
   {
@@ -230,7 +230,7 @@ const integrations: Integration[] = [
     description: 'Auto-sync Shopify products & collections to WhatsApp and enable seamless shopping experience',
     logo: '/integrations/shopify.png',
     status: 'restricted',
-    restrictionReason: 'Shopify integration is available on our Pro plan. Sync your products and enable WhatsApp commerce with advanced features.',
+    restrictionReason: 'Shopify integration is available on our Growth Plan. Sync your products and enable WhatsApp commerce with advanced features.',
     hasVideo: true,
     videoUrl: 'https://example.com/shopify-video',
     setupTime: '15 minutes',
@@ -239,7 +239,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Shopify Sales Channel integration automatically syncs your products and collections to WhatsApp, enabling seamless catalog browsing, cart management, and order processing.',
     features: ['Product sync', 'Inventory management', 'Order tracking', 'Cart abandonment recovery'],
     benefits: ['Unified catalog', 'Real-time inventory', 'Streamlined operations', 'Increased sales'],
-    requirements: ['Shopify store', 'Admin access', 'Pro plan subscription'],
+    requirements: ['Shopify store', 'Admin access', 'Growth Plan subscription'],
     supportedFeatures: ['Product catalog', 'Order management', 'Customer data sync', 'Inventory tracking']
   },
   {
@@ -249,7 +249,7 @@ const integrations: Integration[] = [
     description: 'Connect your WooCommerce store with WhatsApp for automated order notifications and customer support',
     logo: '/integrations/woo.png',
     status: 'restricted',
-    restrictionReason: 'WooCommerce integration requires our Pro plan to enable product sync and automated order management.',
+    restrictionReason: 'WooCommerce integration requires our Growth Plan to enable product sync and automated order management.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/woocommerce-video',
@@ -260,7 +260,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Integrate WooCommerce with WhatsApp to sync products, automate order notifications, handle customer inquiries, and provide seamless shopping experience.',
     features: ['Product synchronization', 'Order notifications', 'Customer support integration', 'Abandoned cart recovery'],
     benefits: ['Enhanced customer experience', 'Automated communications', 'Increased conversions', 'Better support'],
-    requirements: ['WooCommerce store', 'WordPress admin access', 'Pro plan subscription'],
+    requirements: ['WooCommerce store', 'WordPress admin access', 'Growth Plan subscription'],
     supportedFeatures: ['Products', 'Orders', 'Customers', 'Inventory']
   },
   {
@@ -270,7 +270,7 @@ const integrations: Integration[] = [
     description: 'Send automatic WhatsApp notifications whenever a new row is added in a sheet and sync contact data',
     logo: '/integrations/sheets.png',
     status: 'restricted',
-    restrictionReason: 'Google Sheets integration is available on our Pro plan. Automate data workflows and sync contacts seamlessly.',
+    restrictionReason: 'Google Sheets integration is available on our Growth Plan. Automate data workflows and sync contacts seamlessly.',
     hasInfo: true,
     infoUrl: 'https://developers.google.com/sheets',
     setupTime: '8 minutes',
@@ -279,7 +279,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Google Sheets integration enables automatic WhatsApp notifications based on spreadsheet changes, contact data synchronization, and workflow automation perfect for lead management.',
     features: ['Real-time triggers', 'Data synchronization', 'Custom notifications', 'Bulk contact import'],
     benefits: ['Automated workflows', 'Easy data management', 'No coding required', 'Real-time updates'],
-    requirements: ['Google account', 'Sheet access permissions', 'Pro plan subscription'],
+    requirements: ['Google account', 'Sheet access permissions', 'Growth Plan subscription'],
     supportedFeatures: ['Row-based triggers', 'Data validation', 'Bulk operations', 'Custom formatting']
   },
   {
@@ -289,7 +289,7 @@ const integrations: Integration[] = [
     description: 'Automatically send WhatsApp messages to new Facebook lead ad submissions for instant follow-up',
     logo: '/integrations/facebook.webp',
     status: 'restricted',
-    restrictionReason: 'Facebook Lead Ads integration requires our Pro plan to enable automated lead follow-up and conversion optimization.',
+    restrictionReason: 'Facebook Lead Ads integration requires our Growth Plan to enable automated lead follow-up and conversion optimization.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/facebook-video',
@@ -300,7 +300,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Connect Facebook Lead Ads with WhatsApp to instantly follow up with new leads, send welcome messages, and guide prospects through your sales funnel automatically.',
     features: ['Instant lead notifications', 'Automated follow-up messages', 'Lead qualification flows', 'Conversion tracking'],
     benefits: ['Faster lead response', 'Higher conversion rates', 'Automated nurturing', 'Better ROI'],
-    requirements: ['Facebook Business account', 'Active ad campaigns', 'Pro plan subscription'],
+    requirements: ['Facebook Business account', 'Active ad campaigns', 'Growth Plan subscription'],
     supportedFeatures: ['Lead forms', 'Custom questions', 'Audience targeting', 'Campaign tracking']
   },
   {
@@ -310,7 +310,7 @@ const integrations: Integration[] = [
     description: 'Connect WhatsApp with 5000+ apps through Zapier for advanced workflow automation',
     logo: '/integrations/zapier.jpeg',
     status: 'restricted',
-    restrictionReason: 'Zapier integration is available on our Pro plan. Connect with thousands of apps and create powerful automation workflows.',
+    restrictionReason: 'Zapier integration is available on our Growth Plan. Connect with thousands of apps and create powerful automation workflows.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/zapier-video',
@@ -321,7 +321,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Zapier integration opens up endless possibilities by connecting WhatsApp with over 5000 applications, enabling complex workflow automation without coding.',
     features: ['5000+ app connections', 'Multi-step workflows', 'Conditional logic', 'Data transformation'],
     benefits: ['Unlimited possibilities', 'No coding required', 'Time savings', 'Process automation'],
-    requirements: ['Zapier account', 'Target app accounts', 'Pro plan subscription'],
+    requirements: ['Zapier account', 'Target app accounts', 'Growth Plan subscription'],
     supportedFeatures: ['Triggers', 'Actions', 'Filters', 'Webhooks']
   },
   {
@@ -331,7 +331,7 @@ const integrations: Integration[] = [
     description: 'Create complex automation scenarios connecting WhatsApp with multiple apps and services',
     logo: '/integrations/make.jpg',
     status: 'restricted',
-    restrictionReason: 'Make integration requires our Pro plan for advanced automation scenarios and complex workflow management.',
+    restrictionReason: 'Make integration requires our Growth Plan for advanced automation scenarios and complex workflow management.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/make-video',
@@ -342,7 +342,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Make (formerly Integromat) integration enables sophisticated automation scenarios with visual workflow builder, connecting WhatsApp to hundreds of services with advanced logic.',
     features: ['Visual workflow builder', 'Advanced routing', 'Error handling', 'Data manipulation'],
     benefits: ['Complex automations', 'Visual design', 'Error recovery', 'Detailed logging'],
-    requirements: ['Make account', 'Pro plan subscription', 'Target service accounts'],
+    requirements: ['Make account', 'Growth Plan subscription', 'Target service accounts'],
     supportedFeatures: ['Scenarios', 'Routers', 'Filters', 'Functions']
   },
   {
@@ -352,7 +352,7 @@ const integrations: Integration[] = [
     description: 'Automate WhatsApp workflows by connecting with popular business applications through Pabbly',
     logo: '/integrations/pabbly.svg',
     status: 'restricted',
-    restrictionReason: 'Pabbly Connect integration is available on our Pro plan. Enable workflow automation with hundreds of business applications.',
+    restrictionReason: 'Pabbly Connect integration is available on our Growth Plan. Enable workflow automation with hundreds of business applications.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/pabbly-video',
@@ -363,7 +363,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Pabbly Connect integration provides affordable automation solutions, connecting WhatsApp with popular business apps for streamlined workflows and data synchronization.',
     features: ['Multi-app workflows', 'Data mapping', 'Conditional workflows', 'Real-time sync'],
     benefits: ['Cost-effective automation', 'Easy setup', 'Reliable execution', 'Good support'],
-    requirements: ['Pabbly Connect account', 'Pro plan subscription', 'Connected app accounts'],
+    requirements: ['Pabbly Connect account', 'Growth Plan subscription', 'Connected app accounts'],
     supportedFeatures: ['Workflows', 'Triggers', 'Actions', 'Data filters']
   },
   {
@@ -373,7 +373,7 @@ const integrations: Integration[] = [
     description: 'Send WhatsApp notifications for new Calendly bookings and automate appointment confirmations',
     logo: '/integrations/calendly.png',
     status: 'restricted',
-    restrictionReason: 'Calendly integration requires our Pro plan to enable automated appointment notifications and booking management.',
+    restrictionReason: 'Calendly integration requires our Growth Plan to enable automated appointment notifications and booking management.',
     hasVideo: true,
     hasInfo: true,
     videoUrl: 'https://example.com/calendly-video',
@@ -384,7 +384,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Calendly integration automates appointment-related communications through WhatsApp, sending booking confirmations, reminders, and follow-up messages to improve show rates.',
     features: ['Booking notifications', 'Appointment reminders', 'Cancellation alerts', 'Follow-up automation'],
     benefits: ['Improved show rates', 'Better communication', 'Automated reminders', 'Enhanced experience'],
-    requirements: ['Calendly account', 'Pro plan subscription', 'Calendar access'],
+    requirements: ['Calendly account', 'Growth Plan subscription', 'Calendar access'],
     supportedFeatures: ['Event types', 'Booking forms', 'Reminders', 'Cancellations']
   },
   {
@@ -394,7 +394,7 @@ const integrations: Integration[] = [
     description: 'Create/Update a Review on Judge.me when a customer completes a Feedback workflow on WhatsApp',
     logo: '/integrations/judge.webp',
     status: 'restricted',
-    restrictionReason: 'Judge.me integration is available on our Pro plan. Automate review collection and boost your store\'s social proof.',
+    restrictionReason: 'Judge.me integration is available on our Growth Plan. Automate review collection and boost your store\'s social proof.',
     hasInfo: true,
     infoUrl: 'https://judge.me/api',
     setupTime: '20 minutes',
@@ -403,7 +403,7 @@ const integrations: Integration[] = [
     detailedDescription: 'Judge.me integration helps you collect and manage customer reviews through WhatsApp feedback workflows, automatically requesting reviews and boosting your store\'s credibility.',
     features: ['Review collection', 'Automated follow-ups', 'Rating management', 'Photo reviews'],
     benefits: ['Increased social proof', 'Higher conversion rates', 'Customer insights', 'Better SEO'],
-    requirements: ['Judge.me account', 'Pro plan subscription', 'Store integration'],
+    requirements: ['Judge.me account', 'Growth Plan subscription', 'Store integration'],
     supportedFeatures: ['Review requests', 'Photo reviews', 'Review analytics', 'Incentives']
   },
 ];
@@ -775,7 +775,7 @@ export default function IntegrationsPage() {
                           )}
                           {integration.status === 'restricted' && (
                             <Badge variant="outline" className="text-xs bg-amber-100 wark:bg-amber-900/30 text-amber-700 wark:text-amber-300 border-amber-200 wark:border-amber-700">
-                              Pro Plan
+                              Growth Plan
                             </Badge>
                           )}
                         </div>
@@ -997,7 +997,7 @@ export default function IntegrationsPage() {
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-amber-50 wark:bg-amber-900/20 text-amber-700 wark:text-amber-300 border-amber-200 wark:border-amber-700">
-                              Pro Plan Required
+                              Growth Plan Required
                             </Badge>
                           )}
                         </div>
@@ -1102,7 +1102,7 @@ export default function IntegrationsPage() {
                       <div className="p-4 bg-red-50 wark:bg-red-900/20 border border-red-200 wark:border-red-700 rounded-xl">
                         <div className="flex items-center gap-2 mb-2">
                           <Shield className="h-4 w-4 text-red-600 wark:text-red-400" />
-                          <h4 className="font-semibold text-red-800 wark:text-red-200">Pro Plan Required</h4>
+                          <h4 className="font-semibold text-red-800 wark:text-red-200">Growth Plan Required</h4>
                         </div>
                         <p className="text-sm text-red-700 wark:text-red-300 mb-4">
                           {selectedIntegration.restrictionReason}
@@ -1110,7 +1110,7 @@ export default function IntegrationsPage() {
                         <Link href="/wallet/plans">
                           <Button size="sm" className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80">
                             <ArrowRight className="h-4 w-4 mr-2" />
-                            Upgrade to Pro Plan
+                            Upgrade to Growth Plan
                           </Button>
                         </Link>
                       </div>

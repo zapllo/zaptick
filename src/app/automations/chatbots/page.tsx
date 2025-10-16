@@ -40,7 +40,9 @@ import {
   Network,
   FileText,
   Calendar,
-  Gauge
+  Gauge,
+  Crown,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,7 +130,15 @@ interface Chatbot {
     };
   };
 }
-
+interface LimitInfo {
+  currentCount: number;
+  limit: number;
+  canCreateMore: boolean;
+  plan: string;
+  planName: string;
+  subscriptionStatus: string;
+  remainingSlots: number;
+}
 export default function ChatbotsPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -245,14 +255,34 @@ export default function ChatbotsPage() {
   useEffect(() => {
     fetchWabaAccounts();
   }, []);
-
+  const [limitInfo, setLimitInfo] = useState<LimitInfo | null>(null);
+  const [isLoadingLimits, setIsLoadingLimits] = useState(false);
   // When WABA ID changes, fetch chatbots
+  const fetchLimits = async () => {
+    if (!selectedWabaId) return;
+
+    setIsLoadingLimits(true);
+    try {
+      const response = await fetch(`/api/chatbots/limit?wabaId=${selectedWabaId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setLimitInfo(data.data);
+      } else {
+        console.error('Failed to fetch limits:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching limits:', error);
+    } finally {
+      setIsLoadingLimits(false);
+    }
+  };
+
+  // Update useEffect to fetch limits
   useEffect(() => {
-    console.log('Selected WABA ID changed:', selectedWabaId);
     if (selectedWabaId) {
       fetchChatbots();
-    } else if (!selectedWabaId) {
-      setIsLoading(false);
+      fetchLimits(); // Add this line
     }
   }, [selectedWabaId]);
 
@@ -357,7 +387,7 @@ export default function ChatbotsPage() {
 
     return matchesSearch && matchesStatus && matchesModel;
   });
-  
+
   // Calculate stats
   const totalChatbots = chatbots.length;
   const activeChatbots = chatbots.filter(cb => cb.isActive).length;
@@ -433,6 +463,26 @@ export default function ChatbotsPage() {
                       {activeChatbots} Active
                     </span>
                   </div>
+
+                  {/* Limit Information */}
+                  {limitInfo && (
+                    <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 wark:from-purple-900/20 wark:to-blue-900/20 border border-purple-200 wark:border-purple-700 px-3 py-1.5 shadow-sm">
+                      <Gauge className="h-3 w-3 text-purple-600 wark:text-purple-400" />
+                      <span className="text-xs font-medium text-purple-700 wark:text-purple-300">
+                        {limitInfo.currentCount}/{limitInfo.limit === Infinity ? '∞' : limitInfo.limit} Used
+                      </span>
+                    </div>
+                  )}
+
+                  {limitInfo && limitInfo.planName && (
+                    <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 wark:from-amber-900/20 wark:to-orange-900/20 border border-amber-200 wark:border-amber-700 px-3 py-1.5 shadow-sm">
+                      <Crown className="h-3 w-3 text-amber-600 wark:text-amber-400" />
+                      <span className="text-xs font-medium text-amber-700 wark:text-amber-300">
+                        {limitInfo.planName} Plan
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 rounded-full bg-white wark:bg-slate-800 border border-slate-200 wark:border-slate-700 px-3 py-1.5 shadow-sm">
                     <div className="h-2 w-2 rounded-full bg-purple-500" />
                     <span className="text-xs font-medium text-slate-700 wark:text-slate-300">
@@ -464,16 +514,73 @@ export default function ChatbotsPage() {
                   <Download className="h-4 w-4" />
                   Export
                 </Button>
-                <Button
-                  onClick={() => router.push('/automations/chatbots/create')}
-                  className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Chatbot
-                </Button>
+                {limitInfo && !limitInfo.canCreateMore ? (
+                  <div className="relative group">
+                    <Button
+                      disabled
+                      className="bg-gradient-to-r from-slate-400 to-slate-500 text-white shadow-lg opacity-60 cursor-not-allowed"
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Create Chatbot
+                    </Button>
+                    <div className="absolute top-full mt-2 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                      <div className="bg-slate-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+                        {limitInfo.subscriptionStatus !== 'active' ? (
+                          <>Subscription required to create chatbots</>
+                        ) : (
+                          <>You've reached the limit for {limitInfo.planName} plan ({limitInfo.limit} chatbots)</>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => router.push('/automations/chatbots/create')}
+                    className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Chatbot
+                    {limitInfo && limitInfo.limit !== Infinity && (
+                      <span className="ml-2 text-xs opacity-75">
+                        ({limitInfo.remainingSlots} left)
+                      </span>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
 
+            {/* Limit Warning Card */}
+            {limitInfo && limitInfo.currentCount >= limitInfo.limit * 0.8 && limitInfo.limit !== Infinity && (
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 wark:from-amber-900/20 wark:to-orange-900/20 border border-amber-200 wark:border-amber-700 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 wark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-amber-800 wark:text-amber-200 mb-1">
+                      Approaching Chatbot Limit
+                    </h3>
+                    <p className="text-sm text-amber-700 wark:text-amber-300 mb-3">
+                      You're using {limitInfo.currentCount} of {limitInfo.limit} chatbots in your {limitInfo.planName} plan.
+                      {limitInfo.remainingSlots === 0 ? (
+                        ' Upgrade to create more chatbots.'
+                      ) : (
+                        ` You have ${limitInfo.remainingSlots} chatbot${limitInfo.remainingSlots !== 1 ? 's' : ''} remaining.`
+                      )}
+                    </p>
+                    {limitInfo.remainingSlots <= 2 && (
+                      <Button
+                        size="sm"
+                        onClick={() => router.push('/wallet/plans')}
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Upgrade Plan
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Enhanced Filters and Search */}
             <Card className="border-0 shadow-sm bg-gradient-to-r from-white to-slate-50/30 backdrop-blur-sm wark:from-muted/40 p-2 wark:to-slate-900/10">
               <CardContent className="p-2">
@@ -1231,7 +1338,7 @@ export default function ChatbotsPage() {
                                 {selectedChatbot.systemPrompt}
                               </p>
                             </div>
-                            </div>
+                          </div>
 
                           {/* Triggers */}
                           <div className="space-y-3">

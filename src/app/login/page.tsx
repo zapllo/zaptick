@@ -542,6 +542,7 @@ export default function LoginPage() {
                 <CardHeader>
                   <div className="flex items-center gap-2 mb-2">
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
                       onClick={goBackToCredentials}

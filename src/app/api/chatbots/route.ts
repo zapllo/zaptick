@@ -114,15 +114,16 @@ export async function POST(req: NextRequest) {
     const planLimits = {
       free: 1,
       starter: 1,
+      explore: 1,
       growth: 5,
       advanced: 25,
       enterprise: Infinity
     };
 
     const currentLimit = planLimits[subscriptionPlan as keyof typeof planLimits] || planLimits.free;
-    const existingChatbotsCount = await Chatbot.countDocuments({ 
+    const existingChatbotsCount = await Chatbot.countDocuments({
       userId: decoded.id,
-      wabaId 
+      wabaId
     });
 
     if (existingChatbotsCount >= currentLimit) {
@@ -158,15 +159,15 @@ export async function POST(req: NextRequest) {
       tags: tags || [],
       isActive: isActive !== false
     });
-// Handle knowledge base if provided
-if (knowledgeBase && knowledgeBase.enabled) {
-  await Chatbot.findByIdAndUpdate(chatbot._id, {
-    $set: {
-      'knowledgeBase.enabled': true,
-      'knowledgeBase.settings': knowledgeBase.settings
+    // Handle knowledge base if provided
+    if (knowledgeBase && knowledgeBase.enabled) {
+      await Chatbot.findByIdAndUpdate(chatbot._id, {
+        $set: {
+          'knowledgeBase.enabled': true,
+          'knowledgeBase.settings': knowledgeBase.settings
+        }
+      });
     }
-  });
-}
     return NextResponse.json({
       success: true,
       chatbot,

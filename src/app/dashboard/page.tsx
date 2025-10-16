@@ -1293,28 +1293,11 @@ export default function DashboardPage() {
                             <span>Last 7 days</span>
                             <span className="font-medium text-slate-900 wark:text-slate-100">{analytics?.totalMessages || 0} total</span>
                           </div>
-                          <div className="grid grid-cols-7 gap-1 h-24">
-                            {(analytics?.messageTrend || []).map((day: any, i: number) => {
-                              const maxCount = Math.max(...(analytics?.messageTrend || []).map((d: any) => d.count));
-                              const percentage = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
 
-                              return (
-                                <div key={i} className="flex flex-col h-full justify-end space-y-1">
-                                  <div
-                                    className="bg-primary/90 rounded-sm w-full"
-                                    style={{ height: `${percentage || 2}%` }}
-                                  ></div>
-                                  <span className="text-xs text-slate-600 wark:text-slate-400 text-center">
-                                    {day.day}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div className="pt-4 space-y-2">
+                          <div className="pt-4 bg- space-y-2">
                             {analytics?.messageTrend?.length > 0 && (
                               <>
-                                <div className="flex justify-between items-center text-sm">
+                                <div className="flex bg-white p- justify-between items-center text-sm">
                                   <span className="text-slate-600 wark:text-slate-400">Busiest day</span>
                                   <span className="font-medium text-slate-900 wark:text-slate-100">
                                     {analytics.messageTrend.reduce(

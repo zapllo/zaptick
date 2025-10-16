@@ -102,8 +102,9 @@ export async function POST(req: NextRequest) {
     // Define workflow limits based on subscription plan
     const planLimits = {
       free: 1, // Only 1 workflow for free plan
-      starter: 3, // Up to 3 workflows for starter plan
-      growth: 20, // Up to 20 workflows for growth plan  
+      starter: 1, // Up to 3 workflows for starter plan
+      explore: 1,
+      growth: 10, // Up to 20 workflows for growth plan
       advanced: 50, // Up to 50 workflows for advanced plan
       enterprise: Infinity // Unlimited workflows
     };
@@ -111,9 +112,9 @@ export async function POST(req: NextRequest) {
     const currentLimit = planLimits[subscriptionPlan as keyof typeof planLimits] || planLimits.free;
 
     // Count existing workflows for this user and WABA
-    const existingWorkflowsCount = await Workflow.countDocuments({ 
+    const existingWorkflowsCount = await Workflow.countDocuments({
       userId: decoded.id,
-      wabaId 
+      wabaId
     });
 
     // Check if creating this workflow would exceed the plan limit

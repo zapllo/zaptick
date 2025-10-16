@@ -48,6 +48,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
+
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.cookies.get('token')?.value;
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
       templateName,
       templateLanguage,
       templateComponents,
-      workflowId, // Added workflow ID
+      workflowId,
       matchType,
       caseSensitive,
       priority,
@@ -104,8 +106,8 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Verify user has access to this WABA
-    const user = await User.findById(decoded.id);
+    // Verify user has access to this WABA and check subscription
+    const user = await User.findById(decoded.id).populate('companyId');
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -113,6 +115,44 @@ export async function POST(req: NextRequest) {
     const hasWabaAccess = user.wabaAccounts?.some((account: any) => account.wabaId === wabaId);
     if (!hasWabaAccess) {
       return NextResponse.json({ error: 'Access denied to this WABA' }, { status: 403 });
+    }
+
+    // Check subscription and limits
+    const company = user.companyId as any;
+    const subscriptionPlan = company?.subscriptionPlan || 'free';
+    const subscriptionStatus = company?.subscriptionStatus || 'expired';
+
+    if (subscriptionStatus !== 'active') {
+      return NextResponse.json({
+        error: 'Your subscription is not active. Please upgrade to create auto replies.',
+        code: 'SUBSCRIPTION_INACTIVE'
+      }, { status: 403 });
+    }
+
+    // Define auto reply limits based on subscription plan
+    const planLimits = {
+      free: 3,
+      starter: 3,
+      explore: 5,
+      growth: 25,
+      advanced: 100,
+      enterprise: Infinity
+    };
+
+    const currentLimit = planLimits[subscriptionPlan as keyof typeof planLimits] || planLimits.free;
+    const existingAutoRepliesCount = await AutoReply.countDocuments({
+      userId: decoded.id,
+      wabaId
+    });
+
+    if (existingAutoRepliesCount >= currentLimit) {
+      return NextResponse.json({
+        error: `You've reached the auto reply limit for your ${subscriptionPlan} plan.`,
+        code: 'AUTO_REPLY_LIMIT_REACHED',
+        currentCount: existingAutoRepliesCount,
+        limit: currentLimit,
+        plan: subscriptionPlan
+      }, { status: 403 });
     }
 
     // If workflow type, verify the workflow exists and belongs to the user
@@ -136,7 +176,7 @@ export async function POST(req: NextRequest) {
       wabaId,
       name,
       triggers: triggers.map((trigger: string) => trigger.trim()).filter(Boolean),
-      replyMessage: replyMessage || `Workflow: ${name}`, // Default message for workflow type
+      replyMessage: replyMessage || `Workflow: ${name}`,
       replyType: replyType || 'text',
       templateName,
       templateLanguage: templateLanguage || 'en',
@@ -150,7 +190,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      autoReply
+      autoReply,
+      autoReplyCount: existingAutoRepliesCount + 1,
+      autoReplyLimit: currentLimit
     });
 
   } catch (error) {
